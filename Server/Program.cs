@@ -8,14 +8,13 @@ namespace CollarControl
 {
     class Program
 	{
-		static List<Connection> connections = new List<Connection>();
+		public static List<Connection> connections = new List<Connection>();
 
 		static void Main(string[] args)
         {
             Console.WriteLine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase));
 
-			Host<User> host = new Host<User>();
-			host.OnClientDisconnected += DisconnectHandler;
+			Host host = new Host();
 			host.OnClientConnected += LoginHandler;
 
 			host.StartListening(10235);
@@ -35,23 +34,7 @@ namespace CollarControl
             //Console.WriteLine(creds.mailAddress);
         }
 
-		static void DisconnectHandler(object caller, Host<User>.ClientConnection client)
-		{
-			foreach (Connection conn in connections)
-			{
-				try
-				{
-					conn.connection?.SendMessage(String.Format("User \"{0}\" has disconnected!", client.Payload.name));
-				}
-				catch (Exception ex)
-                {
-                    Console.WriteLine("[" + conn.user.name + "] " + ex.Message);
-                    conn.connection = null;
-                }
-			}
-		}
-
-		static void LoginHandler(object caller, Host<User>.ClientConnection client)
+		static void LoginHandler(object caller, ClientConnection client)
 		{
             client.Authenticate();
 
@@ -64,9 +47,11 @@ namespace CollarControl
 
 			User user = new User(username);
 
-			connections.Add(new Connection(user, client));
+            client.OnClientDisconnected += user.DisconnectHandler;
 
-            client.StartListening(user);
+            connections.Add(new Connection(user, client));
+
+            client.StartListening();
 
 			foreach	(Connection conn in connections)
 			{
@@ -91,14 +76,30 @@ namespace CollarControl
 		{
 			this.name = name;
 		}
+
+        public void DisconnectHandler()
+        {
+            foreach (Connection conn in Program.connections)
+            {
+                try
+                {
+                    conn.connection?.SendMessage(String.Format("User \"{0}\" has disconnected!", name));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("[" + conn.user.name + "] " + ex.Message);
+                    conn.connection = null;
+                }
+            }
+        }
 	}
 
 	class Connection
 	{
 		public User user;
-		public Host<User>.ClientConnection connection;
+		public ClientConnection connection;
 
-		public Connection(User user, Host<User>.ClientConnection connection)
+		public Connection(User user, ClientConnection connection)
 		{
 			this.user = user;
 			this.connection = connection;

@@ -6,7 +6,64 @@ using System.Threading;
 
 namespace CollarControl
 {
-    public class Client
+    public class Host
+    {
+        private ManualResetEvent _connected = new ManualResetEvent(false);
+
+        public event EventHandler<ClientConnection> OnClientConnected;
+
+        public void StartListening(int port)
+        {
+            // Establish the local endpoint for the socket.
+            IPAddress myIP = Dns.GetHostEntry(Dns.GetHostName()).AddressList[0];
+            IPEndPoint localEndPoint = new IPEndPoint(myIP, port);
+
+            // Create a TCP/IP socket.  
+            Socket listener = new Socket(myIP.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+
+            // Bind the socket to the local endpoint and listen for incoming connections.  
+            try
+            {
+                listener.Bind(localEndPoint);
+                listener.Listen(100);
+
+                while (true)
+                {
+                    // Set the event to nonsignaled state.  
+                    _connected.Reset();
+
+                    // Start an asynchronous socket to listen for connections.  
+                    Console.WriteLine("Waiting for a connection...");
+                    listener.BeginAccept(new AsyncCallback(ClientInstance), listener);
+
+                    // Wait until a connection is made before continuing.  
+                    _connected.WaitOne();
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+        public void ClientInstance(IAsyncResult ar)
+        {
+            // Signal the main thread to continue
+            _connected.Set();
+
+            // Get the socket that handles the client request
+            Socket listener = (Socket)ar.AsyncState;
+            Socket socket = listener.EndAccept(ar);
+
+            // Create client object
+            ClientConnection client = new ClientConnection(socket);
+
+            // Invoke event
+            OnClientConnected.Invoke(null, client);
+        }
+    }
+    public class ClientConnection
     {
         public bool IsConnected
         {
@@ -17,17 +74,21 @@ namespace CollarControl
             }
         }
 
+        public event Action OnClientDisconnected;
+        public event EventHandler<String> OnMessageReceived;
+
         private Socket _socket = null;
         private Thread _thread = null;
         private Crypto _crypto = null;
-        private ManualResetEvent _connected = new ManualResetEvent(false);
+
         private ManualResetEvent _receiveDone = new ManualResetEvent(false);
 
-        public event Action<Client> OnConnected;
-        public event Action<Client> OnClientDisconnected;
-        public event EventHandler<String> OnMessageReceived;
+        public ClientConnection(Socket socket)
+        {
+            _socket = socket;
+        }
 
-        ~Client()
+        ~ClientConnection()
         {
             Cleanup();
         }
@@ -59,90 +120,8 @@ namespace CollarControl
             _crypto = null;
         }
 
-        public void Connect(String hostUri, int port)
+        public bool Authenticate()
         {
-            Cleanup();
-
-            IPAddress ipAddress = null;
-            IPEndPoint remoteEndPoint = null;
-
-            // Establish the local endpoint for the socket.
-            try
-            {
-                ipAddress = Dns.GetHostEntry(hostUri).AddressList[0];
-                remoteEndPoint = new IPEndPoint(ipAddress, port);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Could not find host: " + ex.Message);
-            }
-
-            // Create a TCP/IP socket
-            try
-            {
-                _socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Couldn't make socket" + ex.Message);
-            }
-
-            // Bind the socket to the local endpoint and listen for incoming connections.  
-            try
-            {
-                _socket.BeginConnect(remoteEndPoint, new AsyncCallback(ConnectCallback), _socket);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Couldn't connect to server: " + ex.Message);
-            }
-        }
-
-        private void ConnectCallback(IAsyncResult ar)
-        {
-            // Get the socket that handles the client request
-            Socket client = (Socket)ar.AsyncState;
-
-            try
-            {
-                client.EndConnect(ar);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-
-                // Signal the main thread to continue
-                _connected.Set();
-                return;
-            }
-
-            Console.WriteLine("Socket connected to {0}", client.RemoteEndPoint.ToString());
-
-            // Signal the main thread to continue
-            _connected.Set();
-
-            // Invoke event
-            OnConnected.Invoke(this);
-        }
-
-        public void Authenticate()
-        {
-            byte[] pubKey = _crypto.GetPublicKey();
-
-            if (pubKey == null)
-            {
-                throw new Exception("Could not generate public key");
-            }
-
-            try
-            {
-                SendBytes(pubKey);
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Could not send public key: " + ex.Message);
-            }
-
             byte[] clientPublicKey = null;
 
             try
@@ -151,11 +130,38 @@ namespace CollarControl
             }
             catch (Exception ex)
             {
-                throw new Exception("Could not receive remote public key: " + ex.Message);
+                Console.WriteLine("Could not receive remote public key: " + ex.Message);
+                return false;
+            }
+
+            if (clientPublicKey == null)
+            {
+                Console.WriteLine("Client sent null!");
+                return false;
             }
 
             _crypto = new Crypto();
             _crypto.GenPrivateKey(clientPublicKey);
+
+            byte[] pubKey = _crypto.GetPublicKey();
+
+            if (pubKey == null)
+            {
+                Console.WriteLine("Could not create public key!");
+                return false;
+            }
+
+            try
+            {
+                SendBytes(pubKey);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Could not send public key: " + ex.Message);
+                return false;
+            }
+
+            return true;
         }
 
         public void StartListening()
@@ -167,7 +173,7 @@ namespace CollarControl
             }
             catch (Exception ex)
             {
-                throw new Exception("Could not start receiver handler: " + ex.Message);
+                Console.WriteLine("Could not start receiver handler: " + ex.Message);
             }
         }
 
@@ -180,7 +186,8 @@ namespace CollarControl
             }
             catch (Exception ex)
             {
-                throw new Exception("Couldn't not receive message: " + ex.Message);
+                Console.WriteLine("Couldn't not receive message: " + ex.Message);
+                return null;
             }
 
             string[] strings = null;
@@ -191,12 +198,14 @@ namespace CollarControl
             }
             catch (Exception ex)
             {
-                throw new Exception("Couldn't not convert message to string: " + ex.Message);
+                Console.WriteLine("Couldn't not convert message to string: " + ex.Message);
+                return null;
             }
 
             if (strings.Length != 2)
             {
-                throw new Exception("Malformed received data!");
+                Console.WriteLine("Malformed received data!");
+                return null;
             }
 
             byte[] messageBytes = _crypto.Decrypt(
@@ -206,7 +215,8 @@ namespace CollarControl
 
             if (messageBytes == null)
             {
-                throw new Exception("Could not decrypt received data!");
+                Console.WriteLine("Could not decrypt received data!");
+                return null;
             }
 
             try
@@ -215,8 +225,9 @@ namespace CollarControl
             }
             catch (Exception ex)
             {
-                throw new Exception("Couldn't not convert message to string: " + ex.Message);
+                Console.WriteLine("Couldn't not convert message to string: " + ex.Message);
             }
+            return null;
         }
 
         public void SendMessage(string message)
@@ -280,12 +291,12 @@ namespace CollarControl
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("[ReceiveAsync] Could not receive: " + ex.Message);
+                    Console.WriteLine(ex.Message);
                 }
                 _receiveDone.WaitOne();
             }
 
-            OnClientDisconnected.Invoke(this);
+            OnClientDisconnected.Invoke();
         }
 
         private void MessageLengthReceivedCallback(IAsyncResult asyncResult)
