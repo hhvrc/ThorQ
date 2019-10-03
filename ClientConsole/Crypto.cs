@@ -6,7 +6,7 @@ namespace CollarControl
 {
     public class Crypto
     {
-        private bool _ready = false;
+        private volatile bool _ready = false;
         private byte[] _publicKey = null;
         private byte[] _privateKey = null;
         private ECDiffieHellmanCng _keyPair = null;

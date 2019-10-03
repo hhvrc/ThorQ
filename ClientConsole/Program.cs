@@ -16,6 +16,7 @@ namespace CollarControl
 
             Client client = new Client();
 
+
             //client.OnMessageReceived += ???
             client.OnClientDisconnected += DisconnectHandler;
             client.OnConnected += LoginHandler;
@@ -29,7 +30,7 @@ namespace CollarControl
                 Console.WriteLine("Couldn't initialize client: " + ex.Message);
             }
 
-
+            while (client.IsConnected) { Thread.Sleep(500); }
 
             //CredentialHandler handler = new CredentialHandler();
 
@@ -45,11 +46,12 @@ namespace CollarControl
 
         static void DisconnectHandler(Client client)
         {
-
+			client.Cleanup();
         }
 
         static void LoginHandler(Client client)
         {
+			Console.WriteLine("Logging in...");
             try
             {
                 client.Authenticate();
@@ -58,8 +60,13 @@ namespace CollarControl
             {
                 Console.WriteLine("Could not log in: " + ex.Message);
             }
+			Console.WriteLine("Authenticated!");
 
             client.StartListening();
+
+			client.SendMessage("MyUsername");
+			client.SendMessage("MyPassword");
+			client.SendMessage("PING");
         }
     }
 
