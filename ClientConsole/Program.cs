@@ -3,6 +3,7 @@ using System.IO.Ports;
 using System.Text;
 using System.Threading;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 namespace CollarControl
 {
@@ -11,8 +12,8 @@ namespace CollarControl
         static List<Connection> connections = new List<Connection>();
 
         static void Main(string[] args)
-        {
-            Console.WriteLine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase));
+		{
+			Console.WriteLine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase));
 
             Client client = new Client();
 
@@ -58,15 +59,33 @@ namespace CollarControl
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Could not log in: " + ex.Message);
+                Console.WriteLine("Could authenticate: " + ex.Message);
             }
 			Console.WriteLine("Authenticated!");
 
-            client.StartListening();
+			Console.Write("Username: ");
+			String username = Console.ReadLine();
 
-			client.SendMessage("MyUsername");
-			client.SendMessage("MyPassword");
-			client.SendMessage("PING");
+			Console.Write("password: ");
+			String password = Console.ReadLine();
+
+			Message msg = new Message()
+			{
+				Command = "login",
+				Parameters = new Dictionary<String, String>()
+				{
+					{ "username", username },
+					{ "password", password }
+				}
+			};
+
+			String message = JsonConvert.SerializeObject(msg);
+
+			Console.WriteLine(message.ToString());
+
+			client.SendMessage(message);
+
+            client.StartListening();
         }
     }
 

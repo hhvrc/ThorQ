@@ -1,10 +1,12 @@
 ﻿using System;
+using LiteDB;
 using System.IO.Ports;
 using System.Text;
 using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using Newtonsoft.Json;
 
 // TODO: DDOS/SPAM Protection
 
@@ -15,33 +17,25 @@ namespace CollarControl
 		/// <summary>
 		/// ID, Userdata
 		/// </summary>
-		public static ConcurrentDictionary<Guid, User> _activeUsers = new ConcurrentDictionary<Guid, User>();
+		public static ConcurrentDictionary<Guid, ActiveUser> _activeUsers = new ConcurrentDictionary<Guid, ActiveUser>();
+
+		static LiteDatabase _db = null;
+		static LiteCollection<User> _dbUsers;
 
 		static void Main(string[] args)
 		{
 			Console.WriteLine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase));
 
+			_db = new LiteDatabase(@"D:\MyData.db");
+			_dbUsers = _db.GetCollection<User>("users");
+
 			Host host = new Host();
-			host.OnClientConnected += LoginHandler;
+			host.OnClientConnected += ConnectionHandler;
 
 			host.StartListening(10235);
-
-
-
-
-			//CredentialHandler handler = new CredentialHandler();
-
-			//handler.SetCredentials("HeavenVR", "user@example.com", "password");
-			//CredentialHandler.Creds creds = handler.GetCredentials();
-			//handler.SetCredentials("HeavenVR", "user@example.com", "password");
-			//creds = handler.GetCredentials();
-
-			//Console.WriteLine(creds.username);
-			//Console.WriteLine(creds.passwordHash);
-			//Console.WriteLine(creds.mailAddress);
 		}
 
-		static void LoginHandler(ClientConnection client)
+		static void ConnectionHandler(Connection client)
 		{
 			try
 			{
@@ -49,33 +43,91 @@ namespace CollarControl
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine("Could not authenticate: " + ex.Message);
+				Console.WriteLine("Could not authenticate: {0}", ex.Message);
 			}
 			Console.WriteLine("Authenticated!");
 
-			String username = client.ReceiveMessage();
+			client.OnMessageReceived += MessageHandler;
+
+			client.StartListening();
+		}
+
+		static void MessageHandler(Connection client, String message)
+		{
+			Message msg;
+			try
+			{
+				msg = JsonConvert.DeserializeObject<Message>(message);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Could not deserialize message: {0}", ex.Message);
+				return;
+			}
+
+			switch (msg.Command)
+			{
+				case "login":
+					LoginHandler(client, msg);
+					break;
+				case "register":
+					RegistrationHandler(client, msg);
+					break;
+				case "recover":
+					RecoveryHandler(client, msg);
+					break;
+				default:
+					break;
+			}
+		}
+
+		static void LoginHandler(Connection client, Message msg)
+		{
+			if (!msg.Parameters.ContainsKey("username") || !msg.Parameters.ContainsKey("password"))
+				return;
+
+			String username = msg.Parameters["username"];
+			String password = msg.Parameters["password"];
 
 			if (String.IsNullOrWhiteSpace(username))
 			{
-				//@TODO Disconnect client
+				//@TODO notify user of incorrect username
 				return;
 			}
 
 			Console.WriteLine("Got: " + username);
 
-			String password = client.ReceiveMessage();
-
 			if (String.IsNullOrWhiteSpace(password))
 			{
-				//@TODO Disconnect client
+				//@TODO notify user of incorrect password
 				return;
 			}
 
 			Console.WriteLine("Got: " + password);
 
-			//@TODO (Username <---> Password) checking
+			User result = _dbUsers.FindOne(u => u.Username == username);
+			if (result != null)
+			{
+				if (result.PasswordHash == password) // Hash 'password' before comparison
+				{
+					// Add client connection to user
+				}
+				else
+				{
+					// Kick client connection
+				}
+			}
+			else
+			{
+				User u = new User();
+				u.Username = username;
+				u.PasswordHash = password; // @TODO @URGENT hash this
+				_dbUsers.Insert(u);
 
-			User databaseMockUser = _activeUsers.FirstOrDefault(u => u.Value.name == username).Value;
+				// Add client connection to user
+			}
+
+			ActiveUser databaseMockUser = _activeUsers.FirstOrDefault(u => u.Value.name == username).Value;
 
 			Guid mockGuid;
 			if (databaseMockUser != null)
@@ -90,7 +142,7 @@ namespace CollarControl
 			Console.WriteLine("Guid: " + mockGuid);
 
 			// Add user to active users
-			if (_activeUsers.TryGetValue(mockGuid, out User user))
+			if (_activeUsers.TryGetValue(mockGuid, out ActiveUser user))
 			{
 				client.Id = user.id;
 				user.AddConnection(client);
@@ -98,7 +150,7 @@ namespace CollarControl
 			}
 			else
 			{
-				if (!_activeUsers.TryAdd(mockGuid, new User(username, client))) // @TODO get information from database to create object
+				if (!_activeUsers.TryAdd(mockGuid, new ActiveUser(username, client))) // @TODO get information from database to create object
 				{
 					_activeUsers.TryGetValue(mockGuid, out user);
 					user.AddConnection(client);
@@ -106,94 +158,19 @@ namespace CollarControl
 				}
 			}
 
-			client.OnClientDisconnected += user.DisconnectHandler;
+			//client.OnClientDisconnected += user.DisconnectHandler;
 
-			client.StartListening();
 			Console.WriteLine("Started listening");
 		}
-	}
 
-	class User
-	{
-		public Guid id;
-		public String name;
-		private List<ClientConnection> _connections;
-		public event Action<Guid, String> OnMessageReceived;
-
-		private void HandleMessage(ClientConnection connection, String message)
+		static void RegistrationHandler(Connection client, Message msg)
 		{
-			connection.SendMessage(message + "Ack.");
+
 		}
 
-		public User(string name, ClientConnection connection)
+		static void RecoveryHandler(Connection client, Message msg)
 		{
-			this.name = name;
-			this.id = connection.Id;
-			_connections = new List<ClientConnection>();
-			_connections.Add(connection);
 
-			connection.OnMessageReceived += HandleMessage;
-		}
-
-		public void AddConnection(ClientConnection connection)
-		{
-			lock (_connections)
-			{
-				if (!_connections.Contains(connection))
-				{
-					_connections.Add(connection);
-					connection.OnMessageReceived += HandleMessage;
-				}
-			}
-		}
-
-		public void RemoveConnection(ClientConnection connection)
-		{
-			lock (_connections)
-			{
-				connection.OnMessageReceived -= HandleMessage;
-				_connections.Remove(connection);
-			}
-		}
-
-		public void SendMessage(String message)
-		{
-			lock (_connections)
-			{
-				foreach (ClientConnection connection in _connections)
-				{
-					connection.SendMessage(message);
-				}
-			}
-		}
-
-		public void DisconnectHandler(ClientConnection connection)
-		{
-			bool removeUser = false;
-			lock (_connections)
-			{
-				_connections.Remove(connection);
-				if (_connections.Count == 0)
-				{
-					removeUser = true;
-				}
-			}
-			if (removeUser)
-			{
-				Program._activeUsers.TryRemove(this.id, out _);
-			}
-		}
-	}
-
-	class Connection
-	{
-		public User user;
-		public ClientConnection connection;
-
-		public Connection(User user, ClientConnection connection)
-		{
-			this.user = user;
-			this.connection = connection;
 		}
 	}
 }

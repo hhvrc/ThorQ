@@ -1,14 +1,16 @@
 ﻿using System;
-using System.Net;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace CollarControl
 {
-	public class Client
+	public class Connection
 	{
+		/// <summary>
+		/// Returns whether the client is still connected
+		/// </summary>
 		public bool IsConnected
 		{
 			get
@@ -17,47 +19,71 @@ namespace CollarControl
 			}
 		}
 
+		private object _idLock = new object();
+		private Guid _id;
+		/// <summary>
+		/// ID attribute
+		/// </summary>
+		public Guid Id
+		{
+			get
+			{
+				lock (_idLock)
+					return _id;
+			}
+			set
+			{
+				lock (_idLock)
+					_id = value;
+			}
+		}
+
+		/// <summary>
+		/// Connection
+		/// </summary>
+		public event Action<Connection> OnClientDisconnected;
+
+		/// <summary>
+		/// Connection, Username, Message
+		/// </summary>
+		public event Action<Connection, String> OnMessageReceived;
+
 		private Socket _socket = null;
 		private Thread _thread = null;
 		private Crypto _crypto = null;
-		private ManualResetEvent _connected = new ManualResetEvent(false);
+
 		private ManualResetEvent _receiveDone = new ManualResetEvent(false);
 
-		public event Action<Client> OnConnected; // @TODO change to action
-		public event Action<Client> OnClientDisconnected;
-		public event Action<String> OnMessageReceived;
+		public Connection(Socket socket)
+		{
+			_socket = socket;
+		}
 
-		~Client()
+		~Connection()
 		{
 			Cleanup();
 		}
 
-		public void Cleanup()
+		private void Cleanup()
 		{
-			if (_socket != null)
+			try
 			{
-				try
-				{
-					_socket.Shutdown(SocketShutdown.Both);
-					_socket.Close();
-					_socket.Dispose();
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine("Couldnt cleanup socket: " + ex.Message);
-				}
+				_socket?.Shutdown(SocketShutdown.Both);
+				_socket?.Close();
+				_socket?.Dispose();
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Couldnt cleanup socket: " + ex.Message);
 			}
 
-			if (_thread != null)
+			try
 			{
-				try
-				{
-					_thread.Join();
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine("Couldnt cleanup thread: " + ex.Message);
-				}
+				_thread.Join();
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Couldnt cleanup thread: " + ex.Message);
 			}
 
 			_thread = null;
@@ -65,56 +91,33 @@ namespace CollarControl
 			_crypto = null;
 		}
 
-		public void Connect(String hostUri, int port)
-		{
-			Cleanup();
-
-			IPAddress ipAddress = null;
-			IPEndPoint remoteEndPoint = null;
-
-			// Establish the local endpoint for the socket.
-			try
-			{
-				ipAddress = Dns.GetHostEntry(hostUri).AddressList[0];
-				remoteEndPoint = new IPEndPoint(ipAddress, port);
-			}
-			catch (Exception ex)
-			{
-				throw new Exception("Could not find host: " + ex.Message);
-			}
-
-			// Create a TCP/IP socket
-			try
-			{
-				_socket = new Socket(ipAddress.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-			}
-			catch (Exception ex)
-			{
-				throw new Exception("Couldn't make socket" + ex.Message);
-			}
-
-			// Bind the socket to the local endpoint and listen for incoming connections.  
-			try
-			{
-				_socket.NoDelay = true;
-				_socket.Connect(remoteEndPoint);
-			}
-			catch (Exception ex)
-			{
-				throw new Exception("Couldn't connect to server: " + ex.Message);
-			}
-			Console.WriteLine("Socket connected to {0}:{1}", hostUri, port);
-			OnConnected.Invoke(this);
-		}
-
-		public void Authenticate()
+		public bool Authenticate()
 		{
 			// Create crypto instance
 			_crypto = new Crypto();
 
-			// Get public key
-			byte[] clientKey = _crypto.GetPublicKey();
+			// Receive client public key
+			byte[] clientKey = null;
+			try
+			{
+				clientKey = ReceiveBytes();
+			}
+			catch (Exception ex)
+			{
+				throw new Exception("Could not receive remote public key: " + ex.Message);
+			}
 			if (clientKey == null)
+			{
+				throw new Exception("Client sent null!");
+			}
+			if (clientKey.Length <= 0)
+			{
+				throw new Exception("Client sent empty public key");
+			}
+
+			// Get public key
+			byte[] serverKey = _crypto.GetPublicKey();
+			if (serverKey == null)
 			{
 				throw new Exception("Could not generate public key");
 			}
@@ -122,37 +125,24 @@ namespace CollarControl
 			// Send public key
 			try
 			{
-				SendBytes(clientKey);
+				SendBytes(serverKey);
 			}
 			catch (Exception ex)
 			{
 				throw new Exception("Could not send public key: " + ex.Message);
 			}
 
-			// Receive server public key
-			byte[] serverKey = null;
-			try
-			{
-				serverKey = ReceiveBytes();
-			}
-			catch (Exception ex)
-			{
-				throw new Exception("Could not receive remote public key: " + ex.Message);
-			}
-			if (serverKey == null)
-			{
-				throw new Exception("Server sent null!");
-			}
-
 			// Generate private key
 			try
 			{
-				_crypto.GenPrivateKey(serverKey);
+				_crypto.GenPrivateKey(clientKey);
 			}
 			catch (Exception ex)
 			{
 				throw new Exception("Couldn't generate private key: " + ex.Message);
 			}
+
+			return true;
 		}
 
 		public void StartListening()
@@ -164,7 +154,7 @@ namespace CollarControl
 			}
 			catch (Exception ex)
 			{
-				throw new Exception("Could not start receiver handler: " + ex.Message);
+				Console.WriteLine("Could not start receiver handler: " + ex.Message);
 			}
 		}
 
@@ -206,7 +196,15 @@ namespace CollarControl
 			Console.WriteLine("Str2: " + strings[1]);
 
 			byte[] messageBytes = null;
-			messageBytes = _crypto.Decrypt(Convert.FromBase64String(strings[0]), Convert.FromBase64String(strings[1]));
+
+			try
+			{
+				messageBytes = _crypto.Decrypt(Convert.FromBase64String(strings[0]), Convert.FromBase64String(strings[1]));
+			}
+			catch (Exception ex)
+			{
+				throw new Exception("Couldn't not decrypt message: " + ex.Message);
+			}
 
 			if (messageBytes == null)
 			{
@@ -225,7 +223,9 @@ namespace CollarControl
 
 		public void SendMessage(string message)
 		{
-			byte[] data = _crypto.Encrypt(Encoding.UTF8.GetBytes(message), out byte[] iv);
+			byte[] data = _crypto.Encrypt(
+				Encoding.UTF8.GetBytes(message),
+				out byte[] iv);
 
 			byte[] base64 = Encoding.UTF8.GetBytes(Convert.ToBase64String(data) + '\0' + Convert.ToBase64String(iv));
 
@@ -282,12 +282,12 @@ namespace CollarControl
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine("[ReceiveAsync] Could not receive: " + ex.Message);
+					Console.WriteLine(ex.Message);
 				}
 				_receiveDone.WaitOne();
 			}
 
-			OnClientDisconnected.Invoke(this);
+			OnClientDisconnected.Invoke(this); // @CRASH is null
 		}
 
 		private void MessageLengthReceivedCallback(IAsyncResult asyncResult)
@@ -369,10 +369,7 @@ namespace CollarControl
 						throw new Exception("Received message format is invalid");
 					}
 
-					byte[] messageBytes = _crypto.Decrypt(
-						Convert.FromBase64String(strings[0]),
-						Convert.FromBase64String(strings[1])
-						);
+					byte[] messageBytes = _crypto.Decrypt(Convert.FromBase64String(strings[0]), Convert.FromBase64String(strings[1]));
 
 					if (messageBytes == null)
 					{
@@ -380,7 +377,7 @@ namespace CollarControl
 					}
 
 					_receiveDone.Set();
-					Task.Run(() => OnMessageReceived.Invoke(Encoding.UTF8.GetString(messageBytes)));
+					OnMessageReceived.Invoke(this, Encoding.UTF8.GetString(messageBytes));
 				}
 			}
 			catch (Exception ex)
