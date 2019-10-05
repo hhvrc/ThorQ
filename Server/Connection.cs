@@ -287,7 +287,7 @@ namespace CollarControl
 				_receiveDone.WaitOne();
 			}
 
-			OnClientDisconnected.Invoke(this); // @CRASH is null
+			OnClientDisconnected?.Invoke(this); // @CRASH is null
 		}
 
 		private void MessageLengthReceivedCallback(IAsyncResult asyncResult)

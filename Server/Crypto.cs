@@ -44,19 +44,18 @@ namespace CollarControl
 		/// <param name="key">
 		/// Other public key
 		/// </param>
-		/// <exception cref="System.Exception">
-		/// Thrown if shared priate key could not be generated
-		/// </exception>
+		/// <exception cref="ArgumentNullException"></exception>
+		/// <exception cref="PlatformNotSupportedException"></exception>
+		/// <exception cref="CryptographicException"></exception>
 		public void GenPrivateKey(byte[] key)
 		{
-			try
+			if (key == null)
 			{
-				_privateKey = _keyPair.DeriveKeyMaterial(CngKey.Import(key, CngKeyBlobFormat.EccPublicBlob));
+				throw new ArgumentNullException();
 			}
-			catch (Exception ex)
-			{
-				throw new Exception("Couldn't generate private key: " + ex.Message);
-			}
+
+			_privateKey = _keyPair.DeriveKeyMaterial(CngKey.Import(key, CngKeyBlobFormat.EccPublicBlob));
+
 			_ready = true;
 		}
 
@@ -83,43 +82,39 @@ namespace CollarControl
 		/// <returns>
 		/// Encrypted data
 		/// </returns>
-		/// <exception cref="System.Exception">
-		/// Thrown if class is not set up properly
-		/// </exception>
+		/// <exception cref="ArgumentNullException"></exception>
+		/// <exception cref=""></exception> // @TODO add Custom exception
+		/// <exception cref="PlatformNotSupportedException"></exception>
+		/// <exception cref="ArgumentException"></exception>
+		/// <exception cref="NotSupportedException"></exception>
+		/// <exception cref="ArgumentOutOfRangeException"></exception>
+		/// <exception cref="ArgumentException"></exception>
 		public byte[] Encrypt(byte[] unencryptedData, out byte[] iv)
 		{
 			if (unencryptedData == null)
 			{
-				iv = null;
-				return null;
+				throw new ArgumentNullException();
 			}
+
 			if (!_ready)
 			{
-				iv = null;
-				return null;
+				// Throw custom exception // @TODO add Custom exception
 			}
 
-			try
+			using (Aes aes = new AesCryptoServiceProvider())
 			{
-				using (Aes aes = new AesCryptoServiceProvider())
+				aes.Key = _privateKey;
+				iv = aes.IV;
+
+				// Encrypt the data
+				using (MemoryStream encryptedData = new MemoryStream())
+				using (CryptoStream stream = new CryptoStream(encryptedData, aes.CreateEncryptor(), CryptoStreamMode.Write))
 				{
-					aes.Key = _privateKey;
-					iv = aes.IV;
+					stream.Write(unencryptedData, 0, unencryptedData.Length);
+					stream.Close();
 
-					// Encrypt the data
-					using (MemoryStream encryptedData = new MemoryStream())
-					using (CryptoStream stream = new CryptoStream(encryptedData, aes.CreateEncryptor(), CryptoStreamMode.Write))
-					{
-						stream.Write(unencryptedData, 0, unencryptedData.Length);
-						stream.Close();
-
-						return encryptedData.ToArray();
-					}
+					return encryptedData.ToArray();
 				}
-			}
-			catch (Exception ex)
-			{
-				throw new Exception("Couldn't decrypt data: " + ex.Message);
 			}
 		}
 
@@ -135,39 +130,41 @@ namespace CollarControl
 		/// <returns>
 		/// The decrypted data
 		/// </returns>
-		/// <exception cref="System.Exception">
-		/// Thrown if object is not set up properly
-		/// </exception>
+		/// <exception cref="ArgumentNullException"></exception>
+		/// <exception cref=""></exception> // @TODO add Custom exception
+		/// <exception cref="PlatformNotSupportedException"></exception>
+		/// <exception cref="ArgumentException"></exception>
+		/// <exception cref="NotSupportedException"></exception>
+		/// <exception cref="ArgumentOutOfRangeException"></exception>
+		/// <exception cref="ArgumentException"></exception>
 		public byte[] Decrypt(byte[] encryptedData, byte[] iv)
 		{
-			if (!_ready || encryptedData == null || iv == null)
+			if (encryptedData == null || iv == null)
 			{
-				return null;
+				throw new ArgumentNullException();
 			}
 
-			try
+			if (!_ready)
 			{
-				using (Aes aes = new AesCryptoServiceProvider())
+				// Throw custom exception // @TODO add Custom exception
+			}
+
+			using (Aes aes = new AesCryptoServiceProvider())
+			{
+				aes.Key = _privateKey;
+				aes.IV = iv;
+
+				// Decrypt the data
+				using (MemoryStream decryptedData = new MemoryStream())
 				{
-					aes.Key = _privateKey;
-					aes.IV = iv;
-
-					// Decrypt the data
-					using (MemoryStream decryptedData = new MemoryStream())
+					using (CryptoStream stream = new CryptoStream(decryptedData, aes.CreateDecryptor(), CryptoStreamMode.Write))
 					{
-						using (CryptoStream stream = new CryptoStream(decryptedData, aes.CreateDecryptor(), CryptoStreamMode.Write))
-						{
-							stream.Write(encryptedData, 0, encryptedData.Length);
-							stream.Close();
+						stream.Write(encryptedData, 0, encryptedData.Length);
+						stream.Close();
 
-							return decryptedData.ToArray();
-						}
+						return decryptedData.ToArray();
 					}
 				}
-			}
-			catch (Exception ex)
-			{
-				throw new Exception("Couldn't decrypt data: " + ex.Message);
 			}
 		}
 	}

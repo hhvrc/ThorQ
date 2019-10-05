@@ -19,19 +19,21 @@ namespace CollarControl
 
 
             //client.OnMessageReceived += ???
-            client.OnClientDisconnected += DisconnectHandler;
+            client.OnDisconnected += DisconnectHandler;
             client.OnConnected += LoginHandler;
 
             try
             {
                 client.Connect("127.0.0.1", 10235);
-            }
-            catch (Exception ex)
+				Console.WriteLine("Socket connected to {0}:{1}", "127.0.0.1", 10235);
+			}
+			catch (Exception ex)
             {
                 Console.WriteLine("Couldn't initialize client: " + ex.Message);
             }
+			
 
-            while (client.IsConnected) { Thread.Sleep(500); }
+			while (client.IsConnected) { Thread.Sleep(500); }
 
             //CredentialHandler handler = new CredentialHandler();
 

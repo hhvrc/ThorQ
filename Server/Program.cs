@@ -1,12 +1,12 @@
-﻿using System;
+using System;
 using LiteDB;
-using System.IO.Ports;
-using System.Text;
+using Newtonsoft.Json;
+using System;
 using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using Newtonsoft.Json;
+using System.Linq;
 
 // TODO: DDOS/SPAM Protection
 
@@ -22,7 +22,7 @@ namespace CollarControl
 		static LiteDatabase _db = null;
 		static LiteCollection<User> _dbUsers;
 
-		static void Main(string[] args)
+		static void Main(String[] args)
 		{
 			Console.WriteLine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase));
 
@@ -150,7 +150,8 @@ namespace CollarControl
 			}
 			else
 			{
-				if (!_activeUsers.TryAdd(mockGuid, new ActiveUser(username, client))) // @TODO get information from database to create object
+				user = new ActiveUser(username, client);
+				if (!_activeUsers.TryAdd(mockGuid, user)) // @TODO gekkt information from database to create object
 				{
 					_activeUsers.TryGetValue(mockGuid, out user);
 					user.AddConnection(client);
@@ -158,7 +159,7 @@ namespace CollarControl
 				}
 			}
 
-			//client.OnClientDisconnected += user.DisconnectHandler;
+			client.OnClientDisconnected += user.DisconnectHandler;
 
 			Console.WriteLine("Started listening");
 		}
