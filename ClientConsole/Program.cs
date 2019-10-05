@@ -35,16 +35,16 @@ namespace CollarControl
 
 			while (client.IsConnected) { Thread.Sleep(500); }
 
-            //CredentialHandler handler = new CredentialHandler();
+            /*CredentialHandler handler = new CredentialHandler();
 
-            //handler.SetCredentials("HeavenVR", "user@example.com", "password");
-            //CredentialHandler.Creds creds = handler.GetCredentials();
-            //handler.SetCredentials("HeavenVR", "user@example.com", "password");
-            //creds = handler.GetCredentials();
+            handler.SetCredentials("HeavenVR", "user@example.com", "password");
+            CredentialHandler.Creds creds = handler.GetCredentials();
+            handler.SetCredentials("HeavenVR", "user@example.com", "password");
+            creds = handler.GetCredentials();
 
-            //Console.WriteLine(creds.username);
-            //Console.WriteLine(creds.passwordHash);
-            //Console.WriteLine(creds.mailAddress);
+            Console.WriteLine(creds.username);
+            Console.WriteLine(creds.passwordHash);
+            Console.WriteLine(creds.mailAddress);*/
         }
 
         static void DisconnectHandler(Client client)
@@ -65,6 +65,12 @@ namespace CollarControl
             }
 			Console.WriteLine("Authenticated!");
 
+			Console.Write("command: ");
+			String cmd = Console.ReadLine();
+
+			Console.Write("email: ");
+			String email = Console.ReadLine();
+
 			Console.Write("Username: ");
 			String username = Console.ReadLine();
 
@@ -73,9 +79,10 @@ namespace CollarControl
 
 			Message msg = new Message()
 			{
-				Command = "login",
+				Command = cmd,
 				Parameters = new Dictionary<String, String>()
 				{
+					{ "email", email },
 					{ "username", username },
 					{ "password", password }
 				}

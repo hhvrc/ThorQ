@@ -83,7 +83,7 @@ namespace CollarControl
 		/// Encrypted data
 		/// </returns>
 		/// <exception cref="ArgumentNullException"></exception>
-		/// <exception cref=""></exception> // @TODO add Custom exception
+		/// <exception cref=""></exception> // TODO add Custom exception
 		/// <exception cref="PlatformNotSupportedException"></exception>
 		/// <exception cref="ArgumentException"></exception>
 		/// <exception cref="NotSupportedException"></exception>
@@ -98,7 +98,7 @@ namespace CollarControl
 
 			if (!_ready)
 			{
-				// Throw custom exception // @TODO add Custom exception
+				// Throw custom exception // TODO add Custom exception
 			}
 
 			using (Aes aes = new AesCryptoServiceProvider())
@@ -131,7 +131,7 @@ namespace CollarControl
 		/// The decrypted data
 		/// </returns>
 		/// <exception cref="ArgumentNullException"></exception>
-		/// <exception cref=""></exception> // @TODO add Custom exception
+		/// <exception cref=""></exception> // TODO add Custom exception
 		/// <exception cref="PlatformNotSupportedException"></exception>
 		/// <exception cref="ArgumentException"></exception>
 		/// <exception cref="NotSupportedException"></exception>
@@ -146,7 +146,7 @@ namespace CollarControl
 
 			if (!_ready)
 			{
-				// Throw custom exception // @TODO add Custom exception
+				// Throw custom exception // TODO add Custom exception
 			}
 
 			using (Aes aes = new AesCryptoServiceProvider())

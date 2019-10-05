@@ -170,8 +170,6 @@ namespace CollarControl
 				throw new Exception("Couldn't not receive message: " + ex.Message);
 			}
 
-			Console.WriteLine("[" + Encoding.UTF8.GetString(encMessage) + "]"); // @DEBUG
-
 			string[] strings = null;
 
 			Console.WriteLine("1");
@@ -287,7 +285,7 @@ namespace CollarControl
 				_receiveDone.WaitOne();
 			}
 
-			OnClientDisconnected?.Invoke(this); // @CRASH is null
+			OnClientDisconnected?.Invoke(this); // NOTE Crashes if null
 		}
 
 		private void MessageLengthReceivedCallback(IAsyncResult asyncResult)

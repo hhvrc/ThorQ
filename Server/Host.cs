@@ -26,29 +26,29 @@ namespace CollarControl
 		public void StartListening(int port)
 		{
 			// Establish the local endpoint for the socket.
-			IPAddress myIP = Dns.GetHostEntry(Dns.GetHostName()).AddressList[0]; // @UNHANDLED_ERROR (2)
-			IPEndPoint localEndPoint = new IPEndPoint(myIP, port); // @UNHANDLED_ERROR
+			IPAddress myIP = Dns.GetHostEntry(Dns.GetHostName()).AddressList[0]; // UNHANDLED
+			IPEndPoint localEndPoint = new IPEndPoint(myIP, port); // UNHANDLED
 
 			// Create a TCP/IP socket.  
-			Socket listener = new Socket(myIP.AddressFamily, SocketType.Stream, ProtocolType.Tcp); // @UNHANDLED_ERROR
+			Socket listener = new Socket(myIP.AddressFamily, SocketType.Stream, ProtocolType.Tcp); // UNHANDLED
 
 			// Bind the socket to the local endpoint and listen for incoming connections.  
 			try
 			{
-				listener.Bind(localEndPoint); // @UNHANDLED_ERROR
-				listener.Listen(100); // @UNHANDLED_ERROR
+				listener.Bind(localEndPoint); // UNHANDLED
+				listener.Listen(100); // UNHANDLED
 
 				while (true)
 				{
 					// Set the event to nonsignaled state.  
-					_connected.Reset(); // @UNHANDLED_ERROR
+					_connected.Reset(); // UNHANDLED
 
 					// Start an asynchronous socket to listen for connections.  
-					Console.WriteLine("Waiting for a connection..."); // @UNHANDLED_ERROR
-					listener.BeginAccept(new AsyncCallback(ClientInstance), listener); // @UNHANDLED_ERROR
+					Console.WriteLine("Waiting for a connection..."); // UNHANDLED
+					listener.BeginAccept(new AsyncCallback(ClientInstance), listener); // UNHANDLED
 
 					// Wait until a connection is made before continuing.  
-					_connected.WaitOne(); // @UNHANDLED_ERROR
+					_connected.WaitOne(); // UNHANDLED
 				}
 
 			}
@@ -61,11 +61,11 @@ namespace CollarControl
 		public void ClientInstance(IAsyncResult ar)
 		{
 			// Signal the main thread to continue
-			_connected.Set(); // @UNHANDLED_ERROR
+			_connected.Set(); // UNHANDLED
 
 			// Get the socket that handles the client request
 			Socket listener = (Socket)ar.AsyncState;
-			Socket socket = listener.EndAccept(ar); // @UNHANDLED_ERROR
+			Socket socket = listener.EndAccept(ar); // UNHANDLED
 
 			// Create client object
 			Connection client = new Connection(socket);
