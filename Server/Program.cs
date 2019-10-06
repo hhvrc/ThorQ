@@ -102,6 +102,20 @@ namespace CollarControl
 			}
 		}
 
+		static void Respond(Connection client, Message message)
+		{
+			String msg = JsonConvert.SerializeObject(message);
+
+			if (client != null && !String.IsNullOrEmpty(msg))
+			{
+				client.SendMessage(msg);
+			}
+			else
+			{
+
+			}
+		}
+
 		static void LoginHandler(Connection client, Message msg)
 		{
 			if (!msg.Parameters.ContainsKey("username") || !msg.Parameters.ContainsKey("password"))
@@ -161,6 +175,19 @@ namespace CollarControl
 			Console.WriteLine("Started listening"); // DEBUG
 		}
 
+		static bool IsValidEmail(string email)
+		{
+			try
+			{
+				var addr = new System.Net.Mail.MailAddress(email);
+				return addr.Address == email;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+
 		static void RegistrationHandler(Connection client, Message msg)
 		{
 			if (!msg.Parameters.ContainsKey("email") ||
@@ -172,9 +199,9 @@ namespace CollarControl
 			String username = msg.Parameters["username"];
 			String password = msg.Parameters["password"];
 
-			if (String.IsNullOrWhiteSpace(email))
+			if (String.IsNullOrWhiteSpace(email) && IsValidEmail(email))
 			{
-				// TODO notify user of incorrect password
+				client.SendMessage
 				return;
 			}
 			Console.WriteLine("Got: " + email); // DEBUG
