@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Security.Cryptography;
 
@@ -45,7 +45,8 @@ namespace CollarControl
 		/// Other public key
 		/// </param>
 		/// <exception cref="ArgumentNullException"></exception>
-		/// <exception cref="PlatformNotSupportedException"></exception>
+		/// <exception cref="InvalidOperationException"></exception>
+		/// <exception cref="ArgumentException"></exception>
 		/// <exception cref="CryptographicException"></exception>
 		public void GenPrivateKey(byte[] key)
 		{
@@ -54,7 +55,15 @@ namespace CollarControl
 				throw new ArgumentNullException();
 			}
 
-			_privateKey = _keyPair.DeriveKeyMaterial(CngKey.Import(key, CngKeyBlobFormat.EccPublicBlob));
+			try // DEBUG
+			{
+				_privateKey = _keyPair.DeriveKeyMaterial(CngKey.Import(key, CngKeyBlobFormat.EccPublicBlob));
+			}
+			catch (PlatformNotSupportedException ex) // DEBUG
+			{
+				Console.WriteLine("Well shit... Platform not supported: {0}", ex.Message);
+				return;
+			}
 
 			_ready = true;
 		}
@@ -80,41 +89,42 @@ namespace CollarControl
 		/// Outputs the Initial Vector from the encryption of the data
 		/// </param>
 		/// <returns>
-		/// Encrypted data
+		/// Encrypted data<para/>
+		/// Returns null if input is invalid / ECDH-exchange has not occured
 		/// </returns>
-		/// <exception cref="ArgumentNullException"></exception>
-		/// <exception cref=""></exception> // @TODO add Custom exception
-		/// <exception cref="PlatformNotSupportedException"></exception>
-		/// <exception cref="ArgumentException"></exception>
-		/// <exception cref="NotSupportedException"></exception>
-		/// <exception cref="ArgumentOutOfRangeException"></exception>
-		/// <exception cref="ArgumentException"></exception>
 		public byte[] Encrypt(byte[] unencryptedData, out byte[] iv)
 		{
-			if (unencryptedData == null)
+			if (!_ready || unencryptedData == null)
 			{
-				throw new ArgumentNullException();
+				iv = null;
+				return null;
 			}
 
-			if (!_ready)
+			try // DEBUG
 			{
-				// Throw custom exception // @TODO add Custom exception
-			}
-
-			using (Aes aes = new AesCryptoServiceProvider())
-			{
-				aes.Key = _privateKey;
-				iv = aes.IV;
-
-				// Encrypt the data
-				using (MemoryStream encryptedData = new MemoryStream())
-				using (CryptoStream stream = new CryptoStream(encryptedData, aes.CreateEncryptor(), CryptoStreamMode.Write))
+				using (Aes aes = new AesCryptoServiceProvider())
 				{
-					stream.Write(unencryptedData, 0, unencryptedData.Length);
-					stream.Close();
+					aes.Key = _privateKey;
+					iv = aes.IV;
 
-					return encryptedData.ToArray();
+					// Encrypt the data
+					using (MemoryStream encryptedData = new MemoryStream())
+					{
+						using (CryptoStream stream = new CryptoStream(encryptedData, aes.CreateEncryptor(), CryptoStreamMode.Write))
+						{
+							stream.Write(unencryptedData, 0, unencryptedData.Length);
+							stream.Close();
+
+							return encryptedData.ToArray();
+						}
+					}
 				}
+			}
+			catch (PlatformNotSupportedException ex) // DEBUG
+			{
+				Console.WriteLine("Well shit... Platform not supported: {0}", ex.Message);
+				iv = null;
+				return null;
 			}
 		}
 
@@ -128,43 +138,38 @@ namespace CollarControl
 		/// Initial Vector Output from encryption of message
 		/// </param>
 		/// <returns>
-		/// The decrypted data
-		/// </returns>
-		/// <exception cref="ArgumentNullException"></exception>
-		/// <exception cref=""></exception> // @TODO add Custom exception
-		/// <exception cref="PlatformNotSupportedException"></exception>
-		/// <exception cref="ArgumentException"></exception>
-		/// <exception cref="NotSupportedException"></exception>
-		/// <exception cref="ArgumentOutOfRangeException"></exception>
-		/// <exception cref="ArgumentException"></exception>
+		/// Returns the unencrypted data, or <c>null</c> if (input is invalid / ECDH-exchange has not occured)
 		public byte[] Decrypt(byte[] encryptedData, byte[] iv)
 		{
-			if (encryptedData == null || iv == null)
+			if (!_ready || encryptedData == null || iv == null)
 			{
-				throw new ArgumentNullException();
+				return null;
 			}
 
-			if (!_ready)
+			try // DEBUG
 			{
-				// Throw custom exception // @TODO add Custom exception
-			}
-
-			using (Aes aes = new AesCryptoServiceProvider())
-			{
-				aes.Key = _privateKey;
-				aes.IV = iv;
-
-				// Decrypt the data
-				using (MemoryStream decryptedData = new MemoryStream())
+				using (Aes aes = new AesCryptoServiceProvider())
 				{
-					using (CryptoStream stream = new CryptoStream(decryptedData, aes.CreateDecryptor(), CryptoStreamMode.Write))
-					{
-						stream.Write(encryptedData, 0, encryptedData.Length);
-						stream.Close();
+					aes.Key = _privateKey;
+					aes.IV = iv;
 
-						return decryptedData.ToArray();
+					// Decrypt the data
+					using (MemoryStream decryptedData = new MemoryStream())
+					{
+						using (CryptoStream stream = new CryptoStream(decryptedData, aes.CreateDecryptor(), CryptoStreamMode.Write))
+						{
+							stream.Write(encryptedData, 0, encryptedData.Length);
+							stream.Close();
+
+							return decryptedData.ToArray();
+						}
 					}
 				}
+			}
+			catch (PlatformNotSupportedException ex) // DEBUG
+			{
+				Console.WriteLine("Well shit... Platform not supported: {0}", ex.Message);
+				return null;
 			}
 		}
 	}
