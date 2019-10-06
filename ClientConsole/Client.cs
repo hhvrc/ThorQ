@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Security;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +16,7 @@ namespace CollarControl
 		/// <summary>
 		/// Returns if the socket is still connected
 		/// </summary>
-		public Boolean IsConnected
+		public bool IsConnected
 		{
 			get
 			{
@@ -26,9 +27,7 @@ namespace CollarControl
 		private Socket _socket = null;
 		private Thread _thread = null;
 		private Crypto _crypto = null;
-		private ManualResetEvent _connected = new ManualResetEvent(false);
-		private ManualResetEvent _receiveDone = new ManualResetEvent(false);
-
+		
 		/// <summary>
 		/// Gets invoked on client connect
 		/// </summary>
@@ -93,7 +92,7 @@ namespace CollarControl
 		/// <exception cref="ArgumentOutOfRangeException"></exception>
 		/// <exception cref="SocketException"></exception>
 		/// <exception cref="System.Security.SecurityException"></exception>
-		public Boolean Connect(String hostUri, UInt16 port)
+		public bool Connect(String hostUri, UInt16 port)
 		{
 			Cleanup();
 
@@ -143,16 +142,18 @@ namespace CollarControl
 		}
 
 		/// <summary>
-		/// 
+		/// Perfroms ECDH key-exhange
 		/// </summary>
-		/// <returns></returns>
-		public void Authenticate()
+		/// <returns>
+		/// Returns true if authentication succeeded
+		/// </returns>
+		public bool Authenticate()
 		{
 			// Create crypto instance
 			_crypto = new Crypto();
 
 			// Get public key
-			Byte[] clientKey = _crypto.GetPublicKey();
+			byte[] clientKey = _crypto.GetPublicKey();
 
 			// Send public key
 			try
@@ -161,23 +162,38 @@ namespace CollarControl
 			}
 			catch (SocketException ex)
 			{
-				throw new Exception("Could not send public key: " + ex.Message); // @TODO: implement custom exception
+				Console.WriteLine("SocketException Caught!");
+				Console.WriteLine("Could not send public key: " + ex.Message);
+				_crypto = null;
+				return false;
 			}
 
 			// Receive server public key
-			Byte[] serverKey = null;
+			byte[] serverKey = null;
 			try
 			{
 				serverKey = ReceiveBytes();
 			}
-			catch (Exception ex)
+			catch (SecurityException ex)
 			{
-				throw new Exception("Could not receive remote public key: " + ex.Message); // @TODO: implement custom exception
+				Console.WriteLine("SecurityException Caught!");
+				Console.WriteLine("Could not send public key: " + ex.Message);
+				_crypto = null;
+				return false;
+			}
+			catch (SocketException ex)
+			{
+				Console.WriteLine("SocketException Caught!");
+				Console.WriteLine("Could not send public key: " + ex.Message);
+				_crypto = null;
+				return false;
 			}
 
 			if (serverKey == null)
 			{
-				throw new Exception("Server sent null!"); // @TODO: implement custom exception
+				Console.WriteLine("Server sent null!");
+				_crypto = null;
+				return false;
 			}
 
 			// Generate private key
@@ -187,66 +203,63 @@ namespace CollarControl
 			}
 			catch (Exception ex)
 			{
-				throw new Exception("Couldn't generate private key: " + ex.Message);
+				Console.WriteLine("Couldn't generate private key: " + ex.Message);
+				_crypto = null;
+				return false;
 			}
+			return true;
 		}
 
+		/// <summary>
+		/// Starts message listener thread
+		/// </summary>
+		/// <exception cref="ThreadStateException"></exception>
+		/// <exception cref="OutOfMemoryException"></exception>
 		public void StartListening()
 		{
-			try
-			{
-				_thread = new Thread(new ThreadStart(ReceiveAsync));
-				_thread.Start();
-			}
-			catch (Exception ex)
-			{
-				throw new Exception("Could not start receiver handler: " + ex.Message);
-			}
+			_thread = new Thread(new ThreadStart(ReceiveAsync));
+			_thread.Start();
 		}
 
-		public String ReceiveMessage()
+		/// <summary>
+		/// Reads a incoming message from client (blocking call)
+		/// </summary>
+		/// <returns>
+		/// Returns the read message, or null if it could not be decrypted
+		/// </returns>
+		public string ReceiveMessage()
 		{
-			Byte[] encMessage = null;
+			if (_crypto == null) // DEBUG
+			{
+				Console.WriteLine("Cannot send message, please authenticate first"); // DEBUG
+				return null; // DEBUG
+			}
+
+			byte[] encMessage = null;
 			try
 			{
 				encMessage = ReceiveBytes();
 			}
 			catch (Exception ex)
 			{
-				throw new Exception("Couldn't not receive message: " + ex.Message);
+				return null; // TODO should maybe do something else? (catch when ReceiveBytes() is finished)
 			}
 
-			Console.WriteLine("[" + Encoding.UTF8.GetString(encMessage) + "]"); // @DEBUG
-
-			String[] strings = null;
-
-			Console.WriteLine("1");
-
+			byte[] messageBytes = null;
 			try
 			{
-				strings = Encoding.UTF8.GetString(encMessage).Split('\0');
+				string[] strings = Encoding.UTF8.GetString(encMessage).Split('\0');
+				messageBytes = _crypto.Decrypt(Convert.FromBase64String(strings[0]), Convert.FromBase64String(strings[1]));
 			}
 			catch (Exception ex)
 			{
-				throw new Exception("Couldn't not convert message to string: " + ex.Message);
+				Console.WriteLine("ReceiveMessage -> splitting: " + ex.Message); // DEBUG
+				return null;
 			}
-
-			Console.WriteLine("2");
-
-			if (strings.Length != 2)
-			{
-				throw new Exception("Malformed received data!");
-			}
-
-			Console.WriteLine("Str1: " + strings[0]);
-			Console.WriteLine("Str2: " + strings[1]);
-
-			Byte[] messageBytes = null;
-			messageBytes = _crypto.Decrypt(Convert.FromBase64String(strings[0]), Convert.FromBase64String(strings[1]));
 
 			if (messageBytes == null)
 			{
-				throw new Exception("Could not decrypt received data!");
+				return null;
 			}
 
 			try
@@ -255,71 +268,116 @@ namespace CollarControl
 			}
 			catch (Exception ex)
 			{
-				throw new Exception("Couldn't not convert message to string: " + ex.Message);
-			}
-		}
-
-		public void SendMessage(String message)
-		{
-			Byte[] data = _crypto.Encrypt(Encoding.UTF8.GetBytes(message), out Byte[] iv);
-
-			Byte[] base64 = Encoding.UTF8.GetBytes(Convert.ToBase64String(data) + '\0' + Convert.ToBase64String(iv));
-
-			try
-			{
-				SendBytes(base64);
-			}
-			catch (Exception ex)
-			{
-				throw new Exception("Could not send message: " + ex.Message);
+				Console.WriteLine("ReceiveMessage -> final: " + ex.Message); // DEBUG
+				return null;
 			}
 		}
 
 		/// <summary>
-		/// Recieves bytes from the client (blocking)
+		/// Sends message to client
+		/// </summary>
+		/// <param name="message">
+		/// Message to send to client
+		/// </param>
+		public void SendMessage(string message)
+		{
+			if (_crypto == null) // DEBUG
+			{
+				Console.WriteLine("Cannot send message, please authenticate first"); // DEBUG
+				return; // DEBUG
+			}
+
+			if (string.IsNullOrWhiteSpace(message)) // DEBUG
+			{
+				Console.WriteLine("Cannot send message, input string cant be null/whitespace"); // DEBUG
+				return; // DEBUG
+			}
+
+			byte[] data;
+			byte[] iv = null;
+			try
+			{
+				data = _crypto?.Encrypt(Encoding.UTF8.GetBytes(message), out iv);
+			}
+			catch (EncoderFallbackException ex)
+			{
+				Console.WriteLine("Could not get bytes: " + ex.Message); // DEBUG
+				Console.WriteLine(ex.HelpLink); // DEBUG
+				return;
+			}
+
+			if (data == null || iv == null)
+			{
+				Console.WriteLine("Encryption failed!"); // DEBUG
+				return;
+			}
+
+			try
+			{
+				data = Encoding.UTF8.GetBytes(Convert.ToBase64String(data) + '\0' + Convert.ToBase64String(iv));
+			}
+			catch (EncoderFallbackException ex)
+			{
+				Console.WriteLine("Could not get bytes: " + ex.Message); // DEBUG
+				Console.WriteLine(ex.HelpLink); // DEBUG
+				return;
+			}
+
+			try
+			{
+				SendBytes(data);
+			}
+			catch (SocketException ex)
+			{
+				Console.WriteLine(ex.HelpLink); // DEBUG
+				Console.WriteLine("Could not send message: " + ex.Message); // DEBUG
+			}
+		}
+
+		/// <summary>
+		/// Recieves bytes from the client (blocking call)
 		/// </summary>
 		/// <returns>
-		/// Returns bytes read
+		/// Returns bytes read, or null if it failed
 		/// </returns>
 		/// <exception cref="SocketException"></exception>
-		/// <exception cref="System.Security.SecurityException"></exception>
-		/// <exception cref="NotImplementedException"></exception> // @TODO: throw custom exception
-		private Byte[] ReceiveBytes()
+		/// <exception cref="SecurityException"></exception>
+		private byte[] ReceiveBytes()
 		{
-			Byte[] messageLength = new Byte[2];
+			byte[] data = new byte[2];
 
 			try
 			{
-				_socket.Receive(messageLength, 0, 2, 0);
+				_socket.Receive(data, 0, 2, 0);
 			}
-			catch (ObjectDisposedException ex)
+			catch (ObjectDisposedException)
 			{
-				throw new NotImplementedException(); // @TODO: Throw custom exception
+				return null;
 			}
 
-			UInt16 size = BitConverter.ToUInt16(messageLength, 0);
-			Byte[] messageBytes = new Byte[size];
+			UInt16 size = BitConverter.ToUInt16(data, 0);
+			data = new byte[size];
 
 			try
 			{
-				_socket.Receive(messageBytes, 0, size, 0);
+				_socket.Receive(data, 0, size, 0);
 			}
-			catch (ObjectDisposedException ex)
+			catch (ObjectDisposedException)
 			{
-				throw new NotImplementedException(); // @TODO: Throw custom exception
+				return null;
 			}
 
-			return messageBytes;
+			return data;
 		}
 
 		/// <summary>
-		/// Sends the bytes to the client
+		/// Sends bytes to the client
 		/// </summary>
 		/// <param name="messageBytes"></param>
 		/// <exception cref="ArgumentNullException"></exception>
 		/// <exception cref="ArgumentOutOfRangeException"></exception>
 		/// <exception cref="SocketException"></exception>
-		private void SendBytes(Byte[] messageBytes)
+		private void SendBytes(byte[] messageBytes)
 		{
 			if (messageBytes == null)
 			{
@@ -330,15 +388,16 @@ namespace CollarControl
 			{
 				throw new ArgumentOutOfRangeException("message length can not exceed 65535 bytes!");
 			}
+
 			if (messageBytes.Length == 0)
 			{
-				throw new ArgumentOutOfRangeException("message length can not be 0 bytes!");
+				return;
 			}
 
 			// Get message length to use as a header
-			Byte[] messageLength = BitConverter.GetBytes((UInt16)messageBytes.Length);
+			byte[] messageLength = BitConverter.GetBytes((ushort)messageBytes.Length);
 
-			Byte[] data = new Byte[2 + messageBytes.Length];
+			byte[] data = new byte[2 + messageBytes.Length];
 
 			// Combine the arrays
 			Array.Copy(messageLength, 0, data, 0, 2);
@@ -348,142 +407,132 @@ namespace CollarControl
 			{
 				_socket.Send(data, 0, data.Length, 0);
 			}
-			catch (ObjectDisposedException ex)
+			catch (ObjectDisposedException)
 			{
-				// @TODO: Throw custom exception
+				return;
 			}
 		}
 
+		/// <summary>
+		/// Listens to incoming messages, and starts async receivers (blocking call)
+		/// </summary>
 		private void ReceiveAsync()
 		{
-			while (IsConnected)
+			using (ManualResetEvent receiveDone = new ManualResetEvent(false))
 			{
-				_receiveDone.Reset();
-				try
+				while (IsConnected)
 				{
+					receiveDone.Reset();
 					StateObject state = new StateObject(2);
-
-					_socket.BeginReceive(state.bytes, 0, state.length, 0, new AsyncCallback(MessageLengthReceivedCallback), state);
+					state.signal = receiveDone;
+					try
+					{
+						_socket.BeginReceive(state.bytes, 0, state.length, 0, new AsyncCallback(MessageLengthReceivedCallback), state);
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine("[ReceiveAsync] Could not receive: " + ex.Message);
+					}
+					receiveDone.WaitOne();
 				}
-				catch (Exception ex)
-				{
-					Console.WriteLine("[ReceiveAsync] Could not receive: " + ex.Message);
-				}
-				_receiveDone.WaitOne();
 			}
-
 			OnDisconnected.Invoke(this);
 		}
 
 		private void MessageLengthReceivedCallback(IAsyncResult asyncResult)
 		{
+			StateObject state = (StateObject)asyncResult.AsyncState;
+			int bytesRead = 0;
+
 			try
 			{
-				StateObject state = (StateObject)asyncResult.AsyncState;
-				Int32 bytesRead = 0;
-				try
-				{
-					bytesRead = _socket.EndReceive(asyncResult);
-				}
-				catch (Exception ex)
-				{
-					throw new Exception("Could not receive client message: " + ex.Message);
-				}
-
-				if (bytesRead == state.length)
-				{
-					UInt16 size = BitConverter.ToUInt16(state.bytes, 0);
-
-					state.length = size;
-					state.bytes = new Byte[size];
-
-					try
-					{
-						_socket.BeginReceive(state.bytes, 0, state.length, 0, new AsyncCallback(MessageReceivedCallback), state);
-					}
-					catch (Exception ex)
-					{
-						throw new Exception("Could not receive client message: " + ex.Message);
-					}
-				}
-				else
-				{
-					_receiveDone.Set();
-				}
+				bytesRead = _socket.EndReceive(asyncResult);
 			}
 			catch (Exception ex)
 			{
-				_receiveDone.Set();
-				Console.WriteLine(ex.Message);
+				Console.WriteLine("Could not receive client message: " + ex.Message);
+				state.signal.Set();
+				return;
 			}
+
+			if (bytesRead == state.length)
+			{
+				ushort size = BitConverter.ToUInt16(state.bytes, 0);
+
+				state.length = size;
+				state.bytes = new byte[size];
+
+				try
+				{
+					_socket.BeginReceive(state.bytes, 0, state.length, 0, new AsyncCallback(MessageReceivedCallback), state);
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine("Could not receive client message: " + ex.Message);
+				}
+			}
+			else
+			{
+				Console.WriteLine("Message length mismatch!");
+			}
+			state.signal.Set();
 		}
 
 		private void MessageReceivedCallback(IAsyncResult asyncResult)
 		{
+			StateObject state = (StateObject)asyncResult.AsyncState;
+			int bytesRead = 0;
+
 			try
 			{
-				StateObject state = (StateObject)asyncResult.AsyncState;
-
-				Int32 bytesRead = 0;
-				try
-				{
-					bytesRead = _socket.EndReceive(asyncResult);
-				}
-				catch (Exception ex)
-				{
-					throw new Exception("Could not receive client message: " + ex.Message);
-				}
-
-				if (bytesRead == state.length)
-				{
-					Byte[] encMessage = state.bytes;
-
-					String[] strings = null;
-
-					try
-					{
-						strings = Encoding.UTF8.GetString(encMessage).Split('\0');
-					}
-					catch (Exception ex)
-					{
-						throw new Exception("Couldn't convert bytes to string: " + ex.Message);
-					}
-
-					if (strings.Length != 2)
-					{
-						throw new Exception("Received message format is invalid");
-					}
-
-					Byte[] messageBytes = _crypto.Decrypt(
-						Convert.FromBase64String(strings[0]),
-						Convert.FromBase64String(strings[1])
-						);
-
-					if (messageBytes == null)
-					{
-						throw new Exception("Could not decrypt message");
-					}
-
-					_receiveDone.Set();
-					Task.Run(() => OnMessageReceived.Invoke(Encoding.UTF8.GetString(messageBytes)));
-				}
+				bytesRead = _socket.EndReceive(asyncResult);
 			}
 			catch (Exception ex)
 			{
-				_receiveDone.Set();
-				Console.WriteLine(ex.Message);
+				Console.WriteLine("Could not receive client message: " + ex.Message);
+				state.signal.Set();
+				return;
 			}
+
+			if (bytesRead == state.length)
+			{
+				byte[] encMessage = state.bytes;
+
+				byte[] messageBytes = null;
+
+				try
+				{
+					string[] strings = Encoding.UTF8.GetString(encMessage).Split('\0');
+					messageBytes = _crypto.Decrypt(Convert.FromBase64String(strings[0]), Convert.FromBase64String(strings[1]));
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine("Received message format is invalid: " + ex.Message);
+					state.signal.Set();
+					return;
+				}
+
+				state.signal.Set();
+				Task.Run(() => OnMessageReceived.Invoke(Encoding.UTF8.GetString(messageBytes)));
+				return;
+			}
+			else
+			{
+				Console.WriteLine("Message length mismatch!");
+			}
+			state.signal.Set();
 		}
 
 		private class StateObject
 		{
-			public UInt16 length;
-			public Byte[] bytes;
+			public ushort length;
+			public byte[] bytes;
+			public ManualResetEvent signal;
 
-			public StateObject(UInt16 length)
+			public StateObject(ushort length)
 			{
 				this.length = length;
-				bytes = new Byte[length];
+				bytes = new byte[length];
 			}
 		}
 	}

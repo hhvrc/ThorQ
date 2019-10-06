@@ -32,7 +32,14 @@ namespace CollarControl
 			Host host = new Host();
 			host.OnClientConnected += ConnectionHandler;
 
-			host.StartListening(10235);
+			try
+			{
+				host.Listen(10235);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Server crashed: " + ex.Message);
+			}
 		}
 
 		static void ConnectionHandler(Connection client)

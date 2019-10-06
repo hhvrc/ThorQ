@@ -193,16 +193,7 @@ namespace CollarControl
 			Console.WriteLine("Str1: " + strings[0]);
 			Console.WriteLine("Str2: " + strings[1]);
 
-			byte[] messageBytes = null;
-
-			try
-			{
-				messageBytes = _crypto.Decrypt(Convert.FromBase64String(strings[0]), Convert.FromBase64String(strings[1]));
-			}
-			catch (Exception ex)
-			{
-				throw new Exception("Couldn't not decrypt message: " + ex.Message);
-			}
+			byte[] messageBytes = _crypto.Decrypt(Convert.FromBase64String(strings[0]), Convert.FromBase64String(strings[1]));
 
 			if (messageBytes == null)
 			{
@@ -221,9 +212,12 @@ namespace CollarControl
 
 		public void SendMessage(string message)
 		{
-			byte[] data = _crypto.Encrypt(
-				Encoding.UTF8.GetBytes(message),
-				out byte[] iv);
+			byte[] data = _crypto.Encrypt(Encoding.UTF8.GetBytes(message), out byte[] iv);
+
+			if (data == null)
+			{
+				return;
+			}
 
 			byte[] base64 = Encoding.UTF8.GetBytes(Convert.ToBase64String(data) + '\0' + Convert.ToBase64String(iv));
 
