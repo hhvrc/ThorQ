@@ -6,7 +6,6 @@ using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
 
 // TODO: DDOS/SPAM Protection
 
@@ -201,7 +200,9 @@ namespace CollarControl
 
 			if (String.IsNullOrWhiteSpace(email) && IsValidEmail(email))
 			{
-				client.SendMessage
+				Message thingy = new Message();
+				thingy.Command = "errorsdasdas";
+				Respond(client, thingy);
 				return;
 			}
 			Console.WriteLine("Got: " + email); // DEBUG

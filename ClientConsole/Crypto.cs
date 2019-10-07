@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Security.Cryptography;
+using System.Xml.Serialization;
 
 namespace CollarControl
 {
@@ -24,7 +25,12 @@ namespace CollarControl
 				KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hash,
 				HashAlgorithm = CngAlgorithm.Sha256
 			};
-			_publicKey = _keyPair.PublicKey.ToByteArray();
+
+			using (Stream reader = new MemoryStream(_publicKey, false))
+			{
+				XmlSerializer serializer = new XmlSerializer(typeof(ECDiffieHellmanPublicKey));
+				serializer.Serialize(reader, _keyPair.PublicKey);
+			}
 		}
 
 		~Crypto()
@@ -41,23 +47,28 @@ namespace CollarControl
 		/// <summary>
 		/// Generates shared private key from another public key
 		/// </summary>
-		/// <param name="key">
+		/// <param name="xmlKey">
 		/// Other public key
 		/// </param>
 		/// <exception cref="ArgumentNullException"></exception>
 		/// <exception cref="InvalidOperationException"></exception>
 		/// <exception cref="ArgumentException"></exception>
 		/// <exception cref="CryptographicException"></exception>
-		public void GenPrivateKey(byte[] key)
+		public void GenPrivateKey(byte[] xmlKey)
 		{
-			if (key == null)
+			if (xmlKey == null)
 			{
 				throw new ArgumentNullException();
 			}
 
 			try // DEBUG
 			{
-				_privateKey = _keyPair.DeriveKeyMaterial(CngKey.Import(key, CngKeyBlobFormat.EccPublicBlob));
+				using (Stream reader = new MemoryStream(xmlKey, false))
+				{
+					XmlSerializer serializer = new XmlSerializer(typeof(ECDiffieHellmanPublicKey));
+					ECDiffieHellmanPublicKey pubKey = (ECDiffieHellmanPublicKey)serializer.Deserialize(reader);
+					_privateKey = _keyPair.DeriveKeyMaterial(pubKey);
+				}
 			}
 			catch (PlatformNotSupportedException ex) // DEBUG
 			{
