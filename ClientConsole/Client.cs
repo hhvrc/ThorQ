@@ -27,7 +27,7 @@ namespace CollarControl
 		private Socket _socket = null;
 		private Thread _thread = null;
 		private Crypto _crypto = null;
-		
+
 		/// <summary>
 		/// Gets invoked on client connect
 		/// </summary>
@@ -39,7 +39,7 @@ namespace CollarControl
 		/// <summary>
 		/// Gets invoked when client sends a message
 		/// </summary>
-		public event Action<String> OnMessageReceived;
+		public event Action<Client, string> OnMessageReceived;
 
 		~Client()
 		{
@@ -92,7 +92,7 @@ namespace CollarControl
 		/// <exception cref="ArgumentOutOfRangeException"></exception>
 		/// <exception cref="SocketException"></exception>
 		/// <exception cref="System.Security.SecurityException"></exception>
-		public bool Connect(String hostUri, UInt16 port)
+		public bool Connect(string hostUri, ushort port)
 		{
 			Cleanup();
 
@@ -207,7 +207,10 @@ namespace CollarControl
 				_crypto = null;
 				return false;
 			}
-			return true;
+
+			SendMessage("ACK");
+
+			return ReceiveMessage() == "ACK";
 		}
 
 		/// <summary>
@@ -355,7 +358,7 @@ namespace CollarControl
 				return null;
 			}
 
-			UInt16 size = BitConverter.ToUInt16(data, 0);
+			ushort size = BitConverter.ToUInt16(data, 0);
 			data = new byte[size];
 
 			try
@@ -384,7 +387,7 @@ namespace CollarControl
 				throw new ArgumentNullException();
 			}
 
-			if (messageBytes.Length + 2 > UInt16.MaxValue)
+			if (messageBytes.Length + 2 > ushort.MaxValue)
 			{
 				throw new ArgumentOutOfRangeException("message length can not exceed 65535 bytes!");
 			}
@@ -405,12 +408,17 @@ namespace CollarControl
 
 			try
 			{
-				_socket.Send(data, 0, data.Length, 0);
+				_socket.BeginSend(data, 0, data.Length, 0, new AsyncCallback(SendBytesCallback), null);
 			}
 			catch (ObjectDisposedException)
 			{
 				return;
 			}
+		}
+
+		private void SendBytesCallback(IAsyncResult asyncResult)
+		{
+			_socket.EndSend(asyncResult);
 		}
 
 		/// <summary>
@@ -423,15 +431,16 @@ namespace CollarControl
 				while (IsConnected)
 				{
 					receiveDone.Reset();
-					StateObject state = new StateObject(2);
+					StateObject state = new StateObject();
+					state.length = 2;
+					state.bytes = new byte[2];
 					state.signal = receiveDone;
 					try
 					{
 						_socket.BeginReceive(state.bytes, 0, state.length, 0, new AsyncCallback(MessageLengthReceivedCallback), state);
 					}
-					catch (Exception ex)
+					catch
 					{
-						Console.WriteLine("[ReceiveAsync] Could not receive: " + ex.Message);
 					}
 					receiveDone.WaitOne();
 				}
@@ -457,14 +466,14 @@ namespace CollarControl
 
 			if (bytesRead == state.length)
 			{
-				ushort size = BitConverter.ToUInt16(state.bytes, 0);
+				state.length = BitConverter.ToUInt16(state.bytes, 0);
 
-				state.length = size;
-				state.bytes = new byte[size];
+				state.bytes = new byte[state.length];
 
 				try
 				{
 					_socket.BeginReceive(state.bytes, 0, state.length, 0, new AsyncCallback(MessageReceivedCallback), state);
+					return;
 				}
 				catch (Exception ex)
 				{
@@ -513,7 +522,7 @@ namespace CollarControl
 				}
 
 				state.signal.Set();
-				Task.Run(() => OnMessageReceived.Invoke(Encoding.UTF8.GetString(messageBytes)));
+				Task.Run(() => OnMessageReceived.Invoke(this, Encoding.UTF8.GetString(messageBytes)));
 				return;
 			}
 			else
@@ -528,12 +537,6 @@ namespace CollarControl
 			public ushort length;
 			public byte[] bytes;
 			public ManualResetEvent signal;
-
-			public StateObject(ushort length)
-			{
-				this.length = length;
-				bytes = new byte[length];
-			}
 		}
 	}
 }

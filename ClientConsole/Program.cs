@@ -18,14 +18,19 @@ namespace CollarControl
             Client client = new Client();
 
 
-            //client.OnMessageReceived += ???
+			client.OnMessageReceived += (Client cli, String str) =>
+			{
+				Message msg = new Message { Command = "Ping" };
+				msg.Parameters = new Dictionary<string, string>();
+				cli.SendMessage(JsonConvert.SerializeObject(msg));
+			};
             client.OnDisconnected += DisconnectHandler;
             client.OnConnected += LoginHandler;
 
             try
             {
-                client.Connect("127.0.0.1", 10235);
-				Console.WriteLine("Socket connected to {0}:{1}", "127.0.0.1", 10235);
+                client.Connect("127.0.0.1", 5001);
+				Console.WriteLine("Socket connected to {0}:{1}", "192.168.1.43", 10235);
 			}
 			catch (Exception ex)
             {
@@ -35,7 +40,7 @@ namespace CollarControl
 
 			while (client.IsConnected) { Thread.Sleep(500); }
 
-            /*CredentialHandler handler = new CredentialHandler();
+			/*CredentialHandler handler = new CredentialHandler();
 
             handler.SetCredentials("HeavenVR", "user@example.com", "password");
             CredentialHandler.Creds creds = handler.GetCredentials();
@@ -45,6 +50,8 @@ namespace CollarControl
             Console.WriteLine(creds.username);
             Console.WriteLine(creds.passwordHash);
             Console.WriteLine(creds.mailAddress);*/
+
+			Console.ReadLine();
         }
 
         static void DisconnectHandler(Client client)
@@ -57,15 +64,21 @@ namespace CollarControl
 			Console.WriteLine("Logging in...");
             try
             {
-                client.Authenticate();
+                if (client.Authenticate())
+				{
+					Console.WriteLine("Authenticated!");
+				}
+				else
+				{
+					Console.WriteLine("Authentication failed!");
+				}
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Could authenticate: " + ex.Message);
+                Console.WriteLine("Could not authenticate: " + ex.ToString());
             }
-			Console.WriteLine("Authenticated!");
 
-			Console.Write("command: ");
+			/*Console.Write("command: ");
 			String cmd = Console.ReadLine();
 
 			Console.Write("email: ");
@@ -90,12 +103,13 @@ namespace CollarControl
 
 			String message = JsonConvert.SerializeObject(msg);
 
-			Console.WriteLine(message.ToString());
+			Console.WriteLine(message.ToString());*/
+			Message msg = new Message { Command = "Ping" };
+			msg.Parameters = new Dictionary<string, string>();
+			client.SendMessage(JsonConvert.SerializeObject(msg));
 
-			client.SendMessage(message);
-
-            client.StartListening();
-        }
+			client.StartListening();
+		}
     }
 
     class User

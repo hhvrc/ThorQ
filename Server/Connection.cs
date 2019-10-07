@@ -69,22 +69,22 @@ namespace CollarControl
 			try
 			{
 				_socket?.Shutdown(SocketShutdown.Both);
-				_socket?.Close();
-				_socket?.Dispose();
-			}
-			catch (Exception ex)
+			}finally{}
+
+			try
 			{
-				Console.WriteLine("Couldnt cleanup socket: " + ex.Message);
-			}
+				_socket?.Close();
+			}finally{}
+
+			try
+			{
+				_socket?.Dispose();
+			}finally{}
 
 			try
 			{
 				_thread.Join();
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine("Couldnt cleanup thread: " + ex.Message);
-			}
+			}finally{}
 
 			_thread = null;
 			_socket = null;
@@ -142,7 +142,16 @@ namespace CollarControl
 				throw new Exception("Couldn't generate private key: " + ex.Message);
 			}
 
-			return true;
+
+			string message = ReceiveMessage(); // TODO Fix: Possible freezing of application
+
+			if (String.IsNullOrEmpty(message))
+			{
+				message = "Error";
+			}
+			SendMessage(message);
+
+			return message == "ACK";
 		}
 
 		public void StartListening()
@@ -156,6 +165,11 @@ namespace CollarControl
 			{
 				Console.WriteLine("Could not start receiver handler: " + ex.Message);
 			}
+		}
+
+		public void StopListening()
+		{
+			Cleanup();
 		}
 
 		public String ReceiveMessage()
@@ -172,8 +186,6 @@ namespace CollarControl
 
 			string[] strings = null;
 
-			Console.WriteLine("1");
-
 			try
 			{
 				strings = Encoding.UTF8.GetString(encMessage).Split('\0');
@@ -183,15 +195,10 @@ namespace CollarControl
 				throw new Exception("Couldn't not convert message to string: " + ex.Message);
 			}
 
-			Console.WriteLine("2");
-
 			if (strings.Length != 2)
 			{
 				throw new Exception("Malformed received data!");
 			}
-
-			Console.WriteLine("Str1: " + strings[0]);
-			Console.WriteLine("Str2: " + strings[1]);
 
 			byte[] messageBytes = _crypto.Decrypt(Convert.FromBase64String(strings[0]), Convert.FromBase64String(strings[1]));
 
@@ -235,7 +242,7 @@ namespace CollarControl
 		{
 			byte[] messageLength = new byte[2];
 
-			_socket.Receive(messageLength, 0, messageLength.Length, 0);
+			_socket.Receive(messageLength, 0, 2, 0);
 
 			UInt16 size = BitConverter.ToUInt16(messageLength, 0);
 			byte[] messageBytes = new byte[size];
@@ -253,10 +260,10 @@ namespace CollarControl
 
 			byte[] messageLength = BitConverter.GetBytes((UInt16)messageBytes.Length);
 
-			byte[] data = new byte[messageLength.Length + messageBytes.Length];
+			byte[] data = new byte[2 + messageBytes.Length];
 
-			Array.Copy(messageLength, 0, data, 0, messageLength.Length);
-			Array.Copy(messageBytes, 0, data, messageLength.Length, messageBytes.Length);
+			Array.Copy(messageLength, 0, data, 0, 2);
+			Array.Copy(messageBytes, 0, data, 2, messageBytes.Length);
 
 			_socket.Send(data, 0, data.Length, 0);
 		}
@@ -321,7 +328,7 @@ namespace CollarControl
 			catch (Exception ex)
 			{
 				_receiveDone.Set();
-				Console.WriteLine(ex.Message);
+				//Console.WriteLine(ex.Message);
 			}
 		}
 
@@ -375,7 +382,7 @@ namespace CollarControl
 			catch (Exception ex)
 			{
 				_receiveDone.Set();
-				Console.WriteLine(ex.Message);
+				//Console.WriteLine(ex.Message);
 			}
 		}
 

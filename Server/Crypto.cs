@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Security.Cryptography;
-using System.Xml.Serialization;
 
 namespace CollarControl
 {
@@ -13,20 +12,19 @@ namespace CollarControl
 		private bool _ready = false;
 		private byte[] _publicKey = null;
 		private byte[] _privateKey = null;
-		private ECDiffieHellmanOpenSsl _keyPair = null;
+		private ECDiffieHellmanCng _keyPair = null;
 
 		/// <summary>
 		/// Sets up class, and generates public key
 		/// </summary>
 		public Crypto()
 		{
-			_keyPair = new ECDiffieHellmanOpenSsl();
-
-			using (Stream reader = new MemoryStream(_publicKey, false))
+			_keyPair = new ECDiffieHellmanCng
 			{
-				XmlSerializer serializer = new XmlSerializer(typeof(ECDiffieHellmanPublicKey));
-				serializer.Serialize(reader, _keyPair.PublicKey);
-			}
+				KeyDerivationFunction = ECDiffieHellmanKeyDerivationFunction.Hash,
+				HashAlgorithm = CngAlgorithm.Sha256
+			};
+			_publicKey = _keyPair.PublicKey.ToByteArray();
 		}
 
 		~Crypto()
@@ -59,12 +57,7 @@ namespace CollarControl
 
 			try // DEBUG
 			{
-				using (Stream reader = new MemoryStream(key, false))
-				{
-					XmlSerializer serializer = new XmlSerializer(typeof(ECDiffieHellmanPublicKey));
-					ECDiffieHellmanPublicKey pubKey = (ECDiffieHellmanPublicKey)serializer.Deserialize(reader);
-					_privateKey = _keyPair.DeriveKeyMaterial(pubKey);
-				}
+				_privateKey = _keyPair.DeriveKeyMaterial(CngKey.Import(key, CngKeyBlobFormat.EccPublicBlob));
 			}
 			catch (PlatformNotSupportedException ex) // DEBUG
 			{

@@ -3,12 +3,42 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Serialization;
 
 namespace CollarControl
 {
     public static class ToolBox
     {
-        public static T[] CompileArrays<T>(T[] array, T[] appendArray, params T[][] additional)
+		public static T Deserialize<T>(byte[] xmlData)
+		{
+			try
+			{
+				var stringReader = new System.IO.StringReader(Encoding.UTF8.GetString(xmlData));
+				var serializer = new XmlSerializer(typeof(T));
+				return (T)serializer.Deserialize(stringReader);
+			}
+			catch
+			{
+				throw; // TODO fixme
+			}
+		}
+
+		public static byte[] Serialize<T>(T dataToSerialize)
+		{
+			try
+			{
+				var stringwriter = new System.IO.StringWriter();
+				var serializer = new XmlSerializer(typeof(T));
+				serializer.Serialize(stringwriter, dataToSerialize);
+				return Encoding.UTF8.GetBytes(stringwriter.ToString());
+			}
+			catch
+			{
+				throw; // TODO fixme
+			}
+		}
+
+		public static T[] CompileArrays<T>(T[] array, T[] appendArray, params T[][] additional)
         {
             long resultLength = array.Length + appendArray.Length;
             long offsetSize = resultLength;
@@ -52,6 +82,19 @@ namespace CollarControl
             if (BitConverter.IsLittleEndian)
                 Array.Reverse(bytes);
             return BitConverter.ToInt32(bytes, 0);
-        }
-    }
+		}
+
+		public static bool IsValidEmail(string email)
+		{
+			try
+			{
+				var addr = new System.Net.Mail.MailAddress(email);
+				return addr.Address == email;
+			}
+			catch
+			{
+				return false;
+			}
+		}
+	}
 }

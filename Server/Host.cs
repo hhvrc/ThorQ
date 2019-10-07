@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -21,6 +21,8 @@ namespace CollarControl
 		/// Should it listen to client messages
 		/// </summary>
 		private volatile bool _listen = false;
+
+		private ManualResetEvent _connected = new ManualResetEvent(false);
 
 		/// <summary>
 		/// Gets invoked when a client connects.
@@ -65,21 +67,20 @@ namespace CollarControl
 				while (_listen)
 				{
 					// Set the event to nonsignaled state
-					connected.Reset();
+					_connected.Reset();
+
 					try
 					{
 						// Start an asynchronous socket to listen for connections.
-						Console.WriteLine("[Server] Waiting for a connection...");
 						listener.BeginAccept(new AsyncCallback(ClientInstance), new StateObject { socket = listener, signal = connected });
-
 					}
 					catch (Exception ex)
 					{
-						connected.Set();
+						_connected.Set();
 						Console.WriteLine("[Server] Could not accept: {0}", ex.Message);
 					}
 					// Wait until a connection is made before continuing.
-					connected.WaitOne();
+					_connected.WaitOne();
 				}
 			}
 		}
@@ -104,13 +105,14 @@ namespace CollarControl
 			StateObject state = (StateObject)ar.AsyncState;
 			Socket listener = state.socket;
 
-			// Signal the main thread to continue
-			if (state.signal == null) { return; }
-			state.signal.Set();
-
 			Socket socket;
 
-			if (listener == null) { return; }
+			if (listener == null)
+			{
+				_connected?.Set();
+				return;
+			}
+
 			try
 			{
 				socket = listener.EndAccept(ar);
@@ -118,8 +120,10 @@ namespace CollarControl
 			catch (Exception ex)
 			{
 				Console.WriteLine("Couldn't accept client connection: {0}", ex.Message); // DEBUG
+				_connected?.Set();
 				return;
 			}
+			_connected?.Set();
 
 			// Create client object
 			Connection client = new Connection(socket);

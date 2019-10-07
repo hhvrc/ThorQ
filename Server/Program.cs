@@ -6,6 +6,7 @@ using System.Threading;
 using System.Linq;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using static CollarControl.ToolBox;
 
 // TODO: DDOS/SPAM Protection
 
@@ -33,7 +34,7 @@ namespace CollarControl
 
 			try
 			{
-				host.Listen(10235);
+				host.Listen(5001);
 			}
 			catch (Exception ex)
 			{
@@ -43,15 +44,28 @@ namespace CollarControl
 
 		static void ConnectionHandler(Connection client)
 		{
+			Console.WriteLine("[Client] New client!");
+
 			try
 			{
-				client.Authenticate();
+				if (client.Authenticate())
+				{
+					Console.WriteLine("[Client] Authenticated!");
+				}
+				else
+				{
+					Console.WriteLine("[Client] Authentication failed!");
+					// Close connection
+					client.StopListening();
+					return;
+				}
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine("Could not authenticate: {0}", ex.Message);
+				Console.WriteLine("[Client] Could not authenticate: " + ex.ToString());
+				// Close connection
+				return;
 			}
-			Console.WriteLine("Authenticated!"); // DEBUG
 
 			client.OnMessageReceived += MessageHandler;
 
@@ -96,22 +110,32 @@ namespace CollarControl
 				case "recover":
 					RecoveryHandler(client, msg);
 					break;
+				case "Ping":
+					msg.Command = "ACK";
+					msg.Parameters.Clear();
+					client.SendMessage(JsonConvert.SerializeObject(msg));
+					return;
+				case "exit":
+					client.StopListening();
+					break;
 				default:
 					break;
 			}
 		}
 
-		static void Respond(Connection client, Message message)
+		static void SimpleResponse(Connection client, String key, String value)
 		{
+			Message message = new Message();
+
+			message.Command = "Response";
+			message.Parameters = new Dictionary<string, string>();
+			message.Parameters.Add(key, value);
+
 			String msg = JsonConvert.SerializeObject(message);
 
 			if (client != null && !String.IsNullOrEmpty(msg))
 			{
 				client.SendMessage(msg);
-			}
-			else
-			{
-
 			}
 		}
 
@@ -125,7 +149,7 @@ namespace CollarControl
 
 			if (String.IsNullOrWhiteSpace(username))
 			{
-				// TODO notify user of incorrect username
+				SimpleResponse(client, "Message", "Username cant be empty!");
 				return;
 			}
 
@@ -133,7 +157,7 @@ namespace CollarControl
 
 			if (String.IsNullOrWhiteSpace(password))
 			{
-				// TODO notify user of incorrect password
+				SimpleResponse(client, "Message", "Password cant be empty!");
 				return;
 			}
 
@@ -142,8 +166,7 @@ namespace CollarControl
 			User user = _dbUsers.FindOne(u => u.Username == username);
 			if (user == null || !VerifyHash(user.PasswordHash, user.Id + password))
 			{
-				// TODO Reply "Incorrect Username/Password"
-				Console.WriteLine("{0} entered a incorrect password!", username); // DEBUG
+				SimpleResponse(client, "Message", "Invalid username/password");
 				return;
 			}
 
@@ -174,19 +197,6 @@ namespace CollarControl
 			Console.WriteLine("Started listening"); // DEBUG
 		}
 
-		static bool IsValidEmail(string email)
-		{
-			try
-			{
-				var addr = new System.Net.Mail.MailAddress(email);
-				return addr.Address == email;
-			}
-			catch
-			{
-				return false;
-			}
-		}
-
 		static void RegistrationHandler(Connection client, Message msg)
 		{
 			if (!msg.Parameters.ContainsKey("email") ||
@@ -198,33 +208,35 @@ namespace CollarControl
 			String username = msg.Parameters["username"];
 			String password = msg.Parameters["password"];
 
-			if (String.IsNullOrWhiteSpace(email) && IsValidEmail(email))
+			if (String.IsNullOrWhiteSpace(email))
 			{
-				Message thingy = new Message();
-				thingy.Command = "errorsdasdas";
-				Respond(client, thingy);
+				SimpleResponse(client, "Message", "Email cant be empty!");
+				return;
+			}
+			if (!IsValidEmail(email))
+			{
+				SimpleResponse(client, "Message", "Email is invalid format!");
 				return;
 			}
 			Console.WriteLine("Got: " + email); // DEBUG
 
 			if (String.IsNullOrWhiteSpace(username))
 			{
-				// TODO notify user of incorrect username
+				SimpleResponse(client, "Message", "Username cant be empty!");
 				return;
 			}
 			Console.WriteLine("Got: " + username); // DEBUG
 
 			if (String.IsNullOrWhiteSpace(password))
 			{
-				// TODO notify user of incorrect password
+				SimpleResponse(client, "Message", "Password cant be empty!");
 				return;
 			}
 			Console.WriteLine("Got: " + password); // DEBUG
 
 			if (_dbUsers.Exists(u => u.Username == username))
 			{
-				// TODO Reply "Username taken"
-				Console.WriteLine("Username taken!"); // DEBUG
+				SimpleResponse(client, "Message", "Username taken");
 				return;
 			}
 
