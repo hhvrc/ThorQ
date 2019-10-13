@@ -19,8 +19,16 @@ namespace CollarControl
 			}
 		}
 
+		public bool IsLoggedIn
+		{
+			get
+			{
+				return _id == Guid.Empty;
+			}
+		}
+
 		private object _idLock = new object();
-		private Guid _id;
+		private Guid _id = Guid.Empty;
 		/// <summary>
 		/// ID attribute
 		/// </summary>
@@ -396,6 +404,11 @@ namespace CollarControl
 				this.length = length;
 				bytes = new byte[length];
 			}
+		}
+
+		public static implicit operator Guid(Connection connection)
+		{
+			return connection.Id;
 		}
 	}
 }

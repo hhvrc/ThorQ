@@ -1,11 +1,7 @@
 using BCrypt.Net;
-using LiteDB;
 using Newtonsoft.Json;
 using System;
-using System.Threading;
-using System.Linq;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 using static CollarControl.ToolBox;
 
 // TODO: DDOS/SPAM Protection
@@ -14,22 +10,17 @@ namespace CollarControl
 {
 	class Program
 	{
-		/// <summary>
-		/// ID, Userdata
-		/// </summary>
-		public static ConcurrentDictionary<Guid, ActiveUser> _activeUsers = new ConcurrentDictionary<Guid, ActiveUser>();
+		static UserAPI userAPI = null;
 
-		static LiteDatabase _db = null;
-		static LiteCollection<User> _dbUsers;
-
-		static void Main(String[] args)
+		static void Main(string[] args)
 		{
 			Console.WriteLine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase));
 
-			_db = new LiteDatabase(@"D:\MyData.db");
-			_dbUsers = _db.GetCollection<User>("users");
+			userAPI = new UserAPI(@"D:\MyData.db");
+
 
 			Host host = new Host();
+
 			host.OnClientConnected += ConnectionHandler;
 
 			try
@@ -72,17 +63,17 @@ namespace CollarControl
 			client.StartListening();
 		}
 
-		static String Hash(String input)
+		static string Hash(string input)
 		{
 			return BCrypt.Net.BCrypt.EnhancedHashPassword(input, HashType.SHA512, 13);
 		}
 
-		static bool VerifyHash(String hash, String input)
+		static bool VerifyHash(string hash, string input)
 		{
 			return BCrypt.Net.BCrypt.EnhancedVerify(input, hash, HashType.SHA512);
 		}
 
-		static void MessageHandler(Connection client, String message)
+		static void MessageHandler(Connection client, string message)
 		{
 			Message msg;
 			try
@@ -100,6 +91,7 @@ namespace CollarControl
 				case "message":
 					break;
 				case "friendrequest":
+					FriendRequestHandler(client, msg);
 					break;
 				case "login":
 					LoginHandler(client, msg);
@@ -110,7 +102,7 @@ namespace CollarControl
 				case "recover":
 					RecoveryHandler(client, msg);
 					break;
-				case "Ping":
+				case "ping":
 					msg.Command = "ACK";
 					msg.Parameters.Clear();
 					client.SendMessage(JsonConvert.SerializeObject(msg));
@@ -123,17 +115,75 @@ namespace CollarControl
 			}
 		}
 
-		static void SimpleResponse(Connection client, String key, String value)
+		private static void FriendRequestHandler(Connection client, Message msg)
 		{
-			Message message = new Message();
+			if (!client.IsLoggedIn)
+			{
+				SimpleResponse(client, "message", "Login required");
+				return;
+			}
 
-			message.Command = "Response";
-			message.Parameters = new Dictionary<string, string>();
-			message.Parameters.Add(key, value);
+			// Get parameters
+			if (!msg.Parameters.ContainsKey("username") || !msg.Parameters.ContainsKey("action"))
+			{
+				SimpleResponse(client, "message", "Missing parameters");
+				return;
+			}
+			string username = msg.Parameters["username"];
+			string action = msg.Parameters["action"];
 
-			String msg = JsonConvert.SerializeObject(message);
+			// Check if action requested is valid
+			if (action != "request" && action != "accept" && action != "deny" && action != "get")
+			{
+				SimpleResponse(client, "message", "Invalid action");
+				return;
+			}
 
-			if (client != null && !String.IsNullOrEmpty(msg))
+			// Find this user from database
+			User thisUser = userAPI[client];
+			if (thisUser == null)
+			{
+				SimpleResponse(client, "message", "You are not in the database");
+				return;
+			}
+
+			// Find target user from database
+			User targetUser = userAPI[username];
+			if (targetUser == null)
+			{
+				SimpleResponse(client, "message", "User doesnt exist");
+				return;
+			}
+
+			// Check if other user has blocked this user
+			if (targetUser.HasBlocked(client))
+			{
+				SimpleResponse(client, "message", "You are blocked by this user");
+				return;
+			}
+
+			// Send friend request (and remove potential block)
+			thisUser.Unblock(targetUser);
+			if (!targetUser.HasFriendRequestFromUser(thisUser))
+			{
+				targetUser.AddFriendRequestFromUser(thisUser);
+			}
+		}
+
+		static void SimpleResponse(Connection client, string key, string value)
+		{
+			Message message = new Message()
+			{
+				Command = "Response",
+				Parameters = new Dictionary<string, string>()
+				{
+					{ key, value }
+				}
+			};
+
+			string msg = JsonConvert.SerializeObject(message);
+
+			if (client != null && !string.IsNullOrEmpty(msg))
 			{
 				client.SendMessage(msg);
 			}
@@ -144,57 +194,37 @@ namespace CollarControl
 			if (!msg.Parameters.ContainsKey("username") || !msg.Parameters.ContainsKey("password"))
 				return;
 
-			String username = msg.Parameters["username"];
-			String password = msg.Parameters["password"];
+			string username = msg.Parameters["username"];
+			string password = msg.Parameters["password"];
 
-			if (String.IsNullOrWhiteSpace(username))
+			if (string.IsNullOrWhiteSpace(username))
 			{
-				SimpleResponse(client, "Message", "Username cant be empty!");
+				SimpleResponse(client, "message", "Username cant be empty!");
 				return;
 			}
-
 			Console.WriteLine("Got: " + username); // DEBUG
 
-			if (String.IsNullOrWhiteSpace(password))
+			if (string.IsNullOrWhiteSpace(password))
 			{
-				SimpleResponse(client, "Message", "Password cant be empty!");
+				SimpleResponse(client, "message", "Password cant be empty!");
 				return;
 			}
-
 			Console.WriteLine("Got: " + password); // DEBUG
 
-			User user = _dbUsers.FindOne(u => u.Username == username);
-			if (user == null || !VerifyHash(user.PasswordHash, user.Id + password))
+			User user = userAPI[username];
+			if (user == null || !user.VerifyPassword(password))
 			{
-				SimpleResponse(client, "Message", "Invalid username/password");
+				SimpleResponse(client, "message", "Invalid username/password");
 				return;
 			}
 
-			ActiveUser auser = new ActiveUser(username, client);
-			// Add user to active users
-			if (!_activeUsers.TryAdd(user.Id, auser))
+			client.Id = user.Id;
+			if (!user.AddConnection(client))
 			{
-				if (_activeUsers.TryGetValue(user.Id, out auser))
-				{
-					auser.AddConnection(client);
-					Console.WriteLine("User added another device!"); // DEBUG
-				}
-				else
-				{
-					Console.WriteLine("User did... uhhhhh... Huh???"); // DEBUG
-																	   // NOTE uhhhhhhhhhhhhhhhhhhhhhhhhhhh
-					return;
-				}
-			}
-			else
-			{
-				auser.AddConnection(client);
-				Console.WriteLine("User went online!"); // DEBUG
+				Console.WriteLine("UHHHHH"); // DEBUG
 			}
 
-			client.OnClientDisconnected += auser.DisconnectHandler;
-
-			Console.WriteLine("Started listening"); // DEBUG
+			Console.WriteLine("Started listening to connection"); // DEBUG
 		}
 
 		static void RegistrationHandler(Connection client, Message msg)
@@ -204,58 +234,63 @@ namespace CollarControl
 				!msg.Parameters.ContainsKey("password"))
 				return;
 
-			String email = msg.Parameters["email"];
-			String username = msg.Parameters["username"];
-			String password = msg.Parameters["password"];
+			string email = msg.Parameters["email"];
+			string username = msg.Parameters["username"];
+			string password = msg.Parameters["password"];
 
-			if (String.IsNullOrWhiteSpace(email))
+			if (string.IsNullOrWhiteSpace(email))
 			{
-				SimpleResponse(client, "Message", "Email cant be empty!");
+				SimpleResponse(client, "message", "Email cant be empty");
 				return;
 			}
 			if (!IsValidEmail(email))
 			{
-				SimpleResponse(client, "Message", "Email is invalid format!");
+				SimpleResponse(client, "message", "Email is invalid format");
 				return;
 			}
 			Console.WriteLine("Got: " + email); // DEBUG
 
-			if (String.IsNullOrWhiteSpace(username))
+			if (string.IsNullOrWhiteSpace(username))
 			{
-				SimpleResponse(client, "Message", "Username cant be empty!");
+				SimpleResponse(client, "message", "Username cannot be empty");
 				return;
 			}
 			Console.WriteLine("Got: " + username); // DEBUG
 
-			if (String.IsNullOrWhiteSpace(password))
+			if (string.IsNullOrWhiteSpace(password))
 			{
-				SimpleResponse(client, "Message", "Password cant be empty!");
+				SimpleResponse(client, "message", "Password cannot be empty");
 				return;
 			}
 			Console.WriteLine("Got: " + password); // DEBUG
 
-			if (_dbUsers.Exists(u => u.Username == username))
+			if (userAPI.EmailExists(email))
 			{
-				SimpleResponse(client, "Message", "Username taken");
+				SimpleResponse(client, "message", "Email taken");
 				return;
 			}
 
+			if (userAPI.UserExists(username))
+			{
+				SimpleResponse(client, "message", "Username taken");
+				return;
+			}
 
 			// Add user to active users
-			User user = new User();
-			user.Id = Guid.NewGuid();
-			user.Username = username;
-			user.PasswordHash = Hash(user.Id + password);
-			_dbUsers.Insert(user);
-
-			ActiveUser auser = new ActiveUser(username, client);
-
-			if (!_activeUsers.TryAdd(user.Id, auser))
+			if (!userAPI.AddUser(username, password, email))
 			{
-				Console.WriteLine("User did... uhhhhh... Huh???"); // DEBUG
-																   // NOTE uhhhhhhhhhhhhhhhhhhhhhhh
+				// Does not make sense (SHOULD NOT HAPPEN)
+				SimpleResponse(client, "message", "Server error");
 				return;
 			}
+
+			if (!userAPI[username].AddConnection(client))
+			{
+				// Does not make sense (SHOULD NOT HAPPEN)
+				SimpleResponse(client, "message", "Server error");
+				return;
+			}
+
 			Console.WriteLine("Registered");
 		}
 
