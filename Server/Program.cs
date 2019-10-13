@@ -10,19 +10,18 @@ namespace CollarControl
 {
 	class Program
 	{
+		static Host host = null;
 		static UserAPI userAPI = null;
 
 		static void Main(string[] args)
 		{
 			Console.WriteLine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase));
 
+			host = new Host();
 			userAPI = new UserAPI(@"D:\MyData.db");
 
-
-			Host host = new Host();
-
 			host.OnClientConnected += ConnectionHandler;
-
+			
 			try
 			{
 				host.Listen(5001);
@@ -140,7 +139,7 @@ namespace CollarControl
 			}
 
 			// Find this user from database
-			User thisUser = userAPI[client];
+			User thisUser = userAPI[client.Id];
 			if (thisUser == null)
 			{
 				SimpleResponse(client, "message", "You are not in the database");
@@ -156,17 +155,17 @@ namespace CollarControl
 			}
 
 			// Check if other user has blocked this user
-			if (targetUser.HasBlocked(client))
+			if (targetUser.HasBlocked(client.Id))
 			{
 				SimpleResponse(client, "message", "You are blocked by this user");
 				return;
 			}
 
 			// Send friend request (and remove potential block)
-			thisUser.Unblock(targetUser);
-			if (!targetUser.HasFriendRequestFromUser(thisUser))
+			thisUser.Unblock(targetUser.Id);
+			if (!targetUser.HasFriendRequestFromUser(thisUser.Id))
 			{
-				targetUser.AddFriendRequestFromUser(thisUser);
+				targetUser.AddFriendRequestFromUser(thisUser.Id);
 			}
 		}
 

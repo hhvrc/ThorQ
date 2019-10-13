@@ -405,10 +405,5 @@ namespace CollarControl
 				bytes = new byte[length];
 			}
 		}
-
-		public static implicit operator Guid(Connection connection)
-		{
-			return connection.Id;
-		}
 	}
 }

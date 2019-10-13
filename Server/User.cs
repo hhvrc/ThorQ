@@ -317,10 +317,5 @@ namespace CollarControl
 				}
 			}
 		}
-
-		public static implicit operator Guid(User user)
-		{
-			return user.Id;
-		}
 	}
 }
