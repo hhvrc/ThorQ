@@ -9,6 +9,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Server", "Server\Server.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientConsole", "ClientConsole\ClientConsole.csproj", "{0898FFED-B1BF-426D-87F3-3E6DF75E3589}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyClient", "LegacyClient\LegacyClient.csproj", "{9BA93ECA-4A5A-4312-A6D6-493F57FBD21F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,10 @@ Global
 		{0898FFED-B1BF-426D-87F3-3E6DF75E3589}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0898FFED-B1BF-426D-87F3-3E6DF75E3589}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0898FFED-B1BF-426D-87F3-3E6DF75E3589}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9BA93ECA-4A5A-4312-A6D6-493F57FBD21F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9BA93ECA-4A5A-4312-A6D6-493F57FBD21F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9BA93ECA-4A5A-4312-A6D6-493F57FBD21F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9BA93ECA-4A5A-4312-A6D6-493F57FBD21F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
