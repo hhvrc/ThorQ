@@ -18,7 +18,7 @@ namespace CollarControl
 
 			client = new Client();
 			mainForm = new MainForm();
-			optionsForm = new OptionsForm("127.0.0.1", 25566);
+			optionsForm = new OptionsForm();
 			registerForm = new RegisterForm();
 			recoveryForm = new RecoveryForm();
 
@@ -65,11 +65,15 @@ namespace CollarControl
 				else
 				{
 					Console.WriteLine("Authentication failed!");
+					// @TODO: show errormessage, back to loginscreen
+					return;
 				}
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("Could not authenticate: " + ex.ToString());
+				// @TODO: show errormessage, back to loginscreen
+				return;
 			}
 
 			client.StartListening();
@@ -82,13 +86,14 @@ namespace CollarControl
 				if (client.Connect(optionsForm.ServerHostname, optionsForm.ServerPort))
 					Console.WriteLine("Socket connected to {0}:{1}", optionsForm.ServerHostname, optionsForm.ServerPort);
 				else
-					Console.WriteLine("Failed to connect!");
+					Console.WriteLine("Failed to connect!"); // @TODO: show errormessage, back to loginscreen
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine("Couldn't initialize client: " + ex.Message);
+				Console.WriteLine("Couldn't initialize client: " + ex.Message); // @TODO: show errormessage, back to loginscreen
 			}
-			// Check if everything is correct withthe server
+
+			// @TODO: Check if everything is correct with the server
 
 			this.Hide();
 			mainForm.Show();

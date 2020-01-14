@@ -12,26 +12,49 @@ namespace CollarControl
 {
 	public partial class OptionsForm : Form
 	{
+		object portlock = new object();
 		private UInt16 m_serverPort = 0;
 		private String m_serverHostname = "";
 
 		public String ServerHostname
 		{
-			get { return m_serverHostname; }
-			set { m_serverHostname = value; }
+			get
+			{
+				lock (m_serverHostname)
+					return m_serverHostname;
+			}
+			set
+			{
+				if (value != null)
+					lock (m_serverHostname)
+						m_serverHostname = value;
+			}
 		}
 
 		public UInt16 ServerPort
 		{
-			get { return m_serverPort; }
-			set { m_serverPort = value; }
+			get
+			{
+				lock(portlock)
+					return m_serverPort;
+			}
+			set
+			{
+				lock(portlock)
+					m_serverPort = value;
+			}
 		}
 
-		public OptionsForm(String hostname = "", UInt16 port = 0)
+		public OptionsForm()
 		{
 			InitializeComponent();
-			hostnameBox.Text = ServerHostname = hostname;
-			portBox.Value = ServerPort = port;
+
+			hostnameBox.Text = ServerHostname = Program.CacheGetOrDefault("ServerHostname");
+
+			portBox.Value = ServerPort = Program.CacheTryGet("ServerPort", out String port) ?
+				UInt16.Parse(port)
+				:
+				UInt16.MinValue;
 		}
 
 		private void CheckConnectionButton_Click(object sender, EventArgs e)
@@ -64,6 +87,10 @@ namespace CollarControl
 		{
 			ServerHostname = hostnameBox.Text;
 			ServerPort = (UInt16)portBox.Value;
+
+			Program.CacheUpsert("ServerHostname", ServerHostname);
+			Program.CacheUpsert("ServerPort", ServerPort.ToString());
+
 			this.Hide();
 		}
 
