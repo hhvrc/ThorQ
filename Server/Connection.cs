@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -16,14 +15,6 @@ namespace CollarControl
 			get
 			{
 				return _socket?.Connected ?? false;
-			}
-		}
-
-		public bool IsLoggedIn
-		{
-			get
-			{
-				return _id == Guid.Empty;
 			}
 		}
 
@@ -52,9 +43,9 @@ namespace CollarControl
 		public event Action<Connection> OnClientDisconnected;
 
 		/// <summary>
-		/// Connection, Username, Message
+		/// Connection, Message
 		/// </summary>
-		public event Action<Connection, String> OnMessageReceived;
+		public event Action<Connection, string> OnMessageReceived;
 
 		private Socket _socket = null;
 		private Thread _thread = null;
@@ -74,26 +65,11 @@ namespace CollarControl
 
 		private void Cleanup()
 		{
-			try
-			{
-				_socket?.Shutdown(SocketShutdown.Both);
-			}finally{}
-
-			try
-			{
-				_socket?.Close();
-			}finally{}
-
-			try
-			{
-				_socket?.Dispose();
-			}finally{}
-
-			try
-			{
-				_thread.Join();
-			}finally{}
-
+			// We dont care if anything fails... just shut it down
+			try { _socket?.Shutdown(SocketShutdown.Both); } catch (Exception) { }
+			try { _socket?.Close(); } catch (Exception) { }
+			try { _socket?.Dispose(); } catch (Exception) { }
+			try { _thread?.Join(); } catch (Exception) { }
 			_thread = null;
 			_socket = null;
 			_crypto = null;
@@ -143,21 +119,22 @@ namespace CollarControl
 			// Generate private key
 			try
 			{
-				_crypto.GenPrivateKey(clientKey);
+				_crypto.EstablishSecretKey(clientKey);
 			}
 			catch (Exception ex)
 			{
 				throw new Exception("Couldn't generate private key: " + ex.Message);
 			}
 
-
 			string message = ReceiveMessage(); // TODO Fix: Possible freezing of application
 
-			if (String.IsNullOrEmpty(message))
+			if (string.IsNullOrEmpty(message))
 			{
 				message = "Error";
 			}
 			SendMessage(message);
+
+			Console.WriteLine("[AUTH] Received: {0}", message);
 
 			return message == "ACK";
 		}
@@ -180,7 +157,7 @@ namespace CollarControl
 			Cleanup();
 		}
 
-		public String ReceiveMessage()
+		public string ReceiveMessage()
 		{
 			byte[] encMessage = null;
 			try
@@ -192,23 +169,7 @@ namespace CollarControl
 				throw new Exception("Couldn't not receive message: " + ex.Message);
 			}
 
-			string[] strings = null;
-
-			try
-			{
-				strings = Encoding.UTF8.GetString(encMessage).Split('\0');
-			}
-			catch (Exception ex)
-			{
-				throw new Exception("Couldn't not convert message to string: " + ex.Message);
-			}
-
-			if (strings.Length != 2)
-			{
-				throw new Exception("Malformed received data!");
-			}
-
-			byte[] messageBytes = _crypto.Decrypt(Convert.FromBase64String(strings[0]), Convert.FromBase64String(strings[1]));
+			byte[] messageBytes = _crypto.Decrypt(encMessage);
 
 			if (messageBytes == null)
 			{
@@ -227,18 +188,16 @@ namespace CollarControl
 
 		public void SendMessage(string message)
 		{
-			byte[] data = _crypto.Encrypt(Encoding.UTF8.GetBytes(message), out byte[] iv);
+			byte[] data = _crypto.Encrypt(Encoding.UTF8.GetBytes(message));
 
 			if (data == null)
 			{
 				return;
 			}
 
-			byte[] base64 = Encoding.UTF8.GetBytes(Convert.ToBase64String(data) + '\0' + Convert.ToBase64String(iv));
-
 			try
 			{
-				SendBytes(base64);
+				SendBytes(data);
 			}
 			catch (Exception ex)
 			{
@@ -252,7 +211,7 @@ namespace CollarControl
 
 			_socket.Receive(messageLength, 0, 2, 0);
 
-			UInt16 size = BitConverter.ToUInt16(messageLength, 0);
+			ushort size = BitConverter.ToUInt16(messageLength, 0);
 			byte[] messageBytes = new byte[size];
 
 			_socket.Receive(messageBytes, 0, size, 0);
@@ -263,10 +222,10 @@ namespace CollarControl
 		private void SendBytes(byte[] messageBytes)
 		{
 			// Message should never exceed 64KiB
-			if (messageBytes.Length > UInt16.MaxValue) { return; }
+			if (messageBytes.Length > ushort.MaxValue) { return; }
 			// Convert the string data to byte data using UTF8 encoding.
 
-			byte[] messageLength = BitConverter.GetBytes((UInt16)messageBytes.Length);
+			byte[] messageLength = BitConverter.GetBytes((ushort)messageBytes.Length);
 
 			byte[] data = new byte[2 + messageBytes.Length];
 
@@ -287,9 +246,13 @@ namespace CollarControl
 
 					_socket.BeginReceive(state.bytes, 0, state.length, 0, new AsyncCallback(MessageLengthReceivedCallback), state);
 				}
+				catch (SocketException)
+				{
+					Console.WriteLine("Connection lost!");
+				}
 				catch (Exception ex)
 				{
-					Console.WriteLine(ex.Message);
+					Console.WriteLine("Client error: {0}", ex.Message);
 				}
 				_receiveDone.WaitOne();
 			}
@@ -303,40 +266,32 @@ namespace CollarControl
 			{
 				StateObject state = (StateObject)asyncResult.AsyncState;
 				int bytesRead = 0;
-				try
-				{
-					bytesRead = _socket.EndReceive(asyncResult);
-				}
-				catch (Exception ex)
-				{
-					throw new Exception("Could not receive client message: " + ex.Message);
-				}
+
+				bytesRead = _socket.EndReceive(asyncResult);
 
 				if (bytesRead == state.length)
 				{
-					UInt16 size = BitConverter.ToUInt16(state.bytes, 0);
+					ushort size = BitConverter.ToUInt16(state.bytes, 0);
 
 					state.length = size;
 					state.bytes = new byte[size];
 
-					try
-					{
-						_socket.BeginReceive(state.bytes, 0, state.length, 0, new AsyncCallback(MessageReceivedCallback), state);
-					}
-					catch (Exception ex)
-					{
-						throw new Exception("Could not receive client message: " + ex.Message);
-					}
+					_socket.BeginReceive(state.bytes, 0, state.length, 0, new AsyncCallback(MessageReceivedCallback), state);
 				}
 				else
 				{
 					_receiveDone.Set();
 				}
 			}
+			catch (SocketException)
+			{
+				_receiveDone.Set();
+				Console.WriteLine("Connection lost!");
+			}
 			catch (Exception ex)
 			{
 				_receiveDone.Set();
-				//Console.WriteLine(ex.Message);
+				Console.WriteLine("Client error: {0}", ex.Message);
 			}
 		}
 
@@ -347,36 +302,12 @@ namespace CollarControl
 				StateObject state = (StateObject)asyncResult.AsyncState;
 
 				int bytesRead = 0;
-				try
-				{
-					bytesRead = _socket.EndReceive(asyncResult);
-				}
-				catch (Exception ex)
-				{
-					throw new Exception("Could not receive client message: " + ex.Message);
-				}
+
+				bytesRead = _socket.EndReceive(asyncResult);
 
 				if (bytesRead == state.length)
 				{
-					byte[] encMessage = state.bytes;
-
-					string[] strings = null;
-
-					try
-					{
-						strings = Encoding.UTF8.GetString(encMessage).Split('\0');
-					}
-					catch (Exception ex)
-					{
-						throw new Exception("Couldn't convert bytes to string: " + ex.Message);
-					}
-
-					if (strings.Length != 2)
-					{
-						throw new Exception("Received message format is invalid");
-					}
-
-					byte[] messageBytes = _crypto.Decrypt(Convert.FromBase64String(strings[0]), Convert.FromBase64String(strings[1]));
+					byte[] messageBytes = _crypto.Decrypt(state.bytes);
 
 					if (messageBytes == null)
 					{
@@ -387,19 +318,24 @@ namespace CollarControl
 					OnMessageReceived.Invoke(this, Encoding.UTF8.GetString(messageBytes));
 				}
 			}
+			catch (SocketException)
+			{
+				_receiveDone.Set();
+				Console.WriteLine("Connection lost!");
+			}
 			catch (Exception ex)
 			{
 				_receiveDone.Set();
-				//Console.WriteLine(ex.Message);
+				Console.WriteLine("Client error: {0}", ex.Message);
 			}
 		}
 
 		private class StateObject
 		{
-			public UInt16 length;
+			public ushort length;
 			public byte[] bytes;
 
-			public StateObject(UInt16 length)
+			public StateObject(ushort length)
 			{
 				this.length = length;
 				bytes = new byte[length];

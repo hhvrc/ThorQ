@@ -1,0 +1,457 @@
+using BCrypt.Net;
+using Newtonsoft.Json;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Mail;
+using static CollarControl.ToolBox;
+
+// TODO: DDOS/SPAM Protection
+
+namespace CollarControl
+{
+	class Program
+	{
+		public static Host host = null;
+		public static UserAPI userAPI = null;
+		private static Random random = new Random();
+
+		static void Main(string[] args)
+		{
+			Console.WriteLine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase));
+
+			host = new Host();
+			userAPI = new UserAPI(@"D:\MyData.db");
+
+			host.OnClientConnected += ConnectionHandler;
+
+#if !DEBUG
+			try
+			{
+#endif
+				host.Listen(5001);
+#if !DEBUG
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Server crashed: " + ex.Message);
+			}
+#endif
+		}
+
+		static void ConnectionHandler(Connection client)
+		{
+			Console.WriteLine("[Client] New client!");
+
+#if !DEBUG
+			try
+			{
+#endif
+				if (client.Authenticate())
+				{
+					Console.WriteLine("[Client] Authenticated!");
+				}
+				else
+				{
+					Console.WriteLine("[Client] Authentication failed!");
+					client.StopListening();
+					return;
+				}
+#if !DEBUG
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("[Client] Could not authenticate: " + ex.ToString());
+				client?.StopListening();
+				return;
+			}
+#endif
+
+			client.OnMessageReceived += MessageHandler;
+			client.OnClientDisconnected += DisconnectHandler;
+
+			client.StartListening();
+		}
+
+		static void DisconnectHandler(Connection client)
+		{
+			Console.WriteLine("[Client] Disconnected!");
+		}
+
+		static void MessageHandler(Connection client, string message)
+		{
+			Message msg;
+#if !DEBUG
+			try
+			{
+#endif
+				msg = JsonConvert.DeserializeObject<Message>(message);
+#if !DEBUG
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Could not deserialize message: {0}", ex.Message);
+				return;
+			}
+#endif
+			
+			Console.WriteLine("Got command: " + msg.Command);
+
+			switch (msg.Command)
+			{
+				case "message":
+					break;
+				case "friendrequest":
+					FriendRequestHandler(client, msg);
+					break;
+				case "login":
+					LoginHandler(client, msg);
+					break;
+				case "logout":
+					LogoutHandler(client, msg);
+					break;
+				case "setpassword":
+					SetPassword(client, msg);
+					break;
+				case "register":
+					RegistrationHandler(client, msg);
+					break;
+				case "recover":
+					RecoveryHandler(client, msg);
+					break;
+				case "ping":
+					msg.Command = "ACK";
+					msg.Parameters.Clear();
+					client.SendMessage(JsonConvert.SerializeObject(msg));
+					return;
+				default:
+					SimpleResponse(client, "message", "Invalid request!");
+					return;
+			}
+		}
+
+		private static void FriendRequestHandler(Connection client, Message msg)
+		{
+			// User must be logged in
+			if (client.Id == Guid.Empty)
+			{
+				SimpleResponse(client, "message", "Login required");
+				return;
+			}
+
+			// Get parameters
+			if (!msg.Parameters.ContainsKey("username") || !msg.Parameters.ContainsKey("action"))
+			{
+				SimpleResponse(client, "message", "Missing parameters");
+				return;
+			}
+			string username = msg.Parameters["username"];
+			string action = msg.Parameters["action"];
+
+			// Check if action requested is valid
+			if (action != "request" && action != "accept" && action != "deny" && action != "get")
+			{
+				SimpleResponse(client, "message", "Invalid action");
+				return;
+			}
+
+			// Find this user from database
+			User thisUser = userAPI[client.Id];
+			if (thisUser == null)
+			{
+				SimpleResponse(client, "message", "You are not in the database");
+				return;
+			}
+
+			// Find target user from database
+			User targetUser = userAPI[username];
+			if (targetUser == null)
+			{
+				SimpleResponse(client, "message", "User doesnt exist");
+				return;
+			}
+
+			// Check if other user has blocked this user
+			if (targetUser.BlockedUsers.Exists(u => u.UserID == targetUser.Id))
+			{
+				SimpleResponse(client, "message", "You are blocked by this user");
+				return;
+			}
+
+			// Send friend request (and remove potential block)
+			thisUser.BlockedUsers.RemoveAll(u => u.UserID == targetUser.Id);
+			if (!targetUser.FriendRequests.Exists(r => r.UserID == thisUser.Id))
+			{
+				DbUser.FriendRequest request = new DbUser.FriendRequest(thisUser.Id);
+				targetUser.FriendRequests.Add(request);
+
+				Message message = new Message()
+				{
+					Command = "FriendRequest",
+					Parameters = new Dictionary<String, String>()
+					{
+						{ "RequestId", request.RequestId.ToString() },
+						{ "Username",  thisUser.Username }
+					}
+				};
+
+				String str = JsonConvert.SerializeObject(message);
+
+				targetUser.SendMessage(str);
+			}
+
+			userAPI[thisUser.Id]   = thisUser;
+			userAPI[targetUser.Id] = targetUser;
+		}
+
+		static void SimpleResponse(Connection client, String key, String value)
+		{
+			Message message = new Message()
+			{
+				Command = "Response",
+				Parameters = new Dictionary<String, String>()
+				{
+					{ key, value }
+				}
+			};
+
+			String msg = JsonConvert.SerializeObject(message);
+
+			if (client != null && !String.IsNullOrEmpty(msg))
+			{
+				client.SendMessage(msg);
+			}
+		}
+
+		static void LoginHandler(Connection client, Message msg)
+		{
+			if (client.Id != Guid.Empty)
+			{
+				SimpleResponse(client, "message", "Already logged in!");
+				return;
+			}
+
+			if (!msg.Parameters.ContainsKey("username") || !msg.Parameters.ContainsKey("password"))
+			{
+				SimpleResponse(client, "message", "Invalid request!");
+				return;
+			}
+
+			string username = msg.Parameters["username"];
+			string password = msg.Parameters["password"];
+
+			if (string.IsNullOrWhiteSpace(username))
+			{
+				SimpleResponse(client, "message", "Username cant be empty!");
+				return;
+			}
+			Console.WriteLine("Got: " + username); // DEBUG
+
+			if (string.IsNullOrWhiteSpace(password))
+			{
+				SimpleResponse(client, "message", "Password cant be empty!");
+				return;
+			}
+			Console.WriteLine("Got: " + password); // DEBUG
+
+			User user = userAPI[username];
+			if (user == null || !user.VerifyPassword(password))
+			{
+				SimpleResponse(client, "message", "Invalid username/password");
+				return;
+			}
+
+			if (!user.HasConnection(client))
+				user.AddConnection(client);
+
+			Console.WriteLine("[Client] Logged in"); // DEBUG
+		}
+
+		static void LogoutHandler(Connection client, Message msg)
+		{
+			if (!msg.Parameters.ContainsKey("logoutall"))
+			{
+				SimpleResponse(client, "message", "Invalid request!");
+				return;
+			}
+
+			if (client.Id == Guid.Empty)
+			{
+				SimpleResponse(client, "message", "Already logged out!");
+				return;
+			}
+
+			User user = userAPI[client.Id];
+			if (user == null)
+			{
+				// Client id is not a existing userid
+				SimpleResponse(client, "message", "Server error");
+				return;
+			}
+
+			if (msg.Parameters["logoutall"] == "true")
+			{
+				user.ClearConnections();
+			}
+			else if (msg.Parameters["logoutall"] == "false")
+			{
+				user.RemoveConnection(client);
+			}
+			else
+			{
+				SimpleResponse(client, "message", "Invalid request!");
+				return;
+			}
+
+			Console.WriteLine("[Client] Logged out"); // DEBUG
+		}
+
+		static void RegistrationHandler(Connection client, Message msg)
+		{
+			if (client.Id != Guid.Empty)
+			{
+				SimpleResponse(client, "message", "Already logged in!");
+				return;
+			}
+
+			if (!msg.Parameters.ContainsKey("email") ||
+				!msg.Parameters.ContainsKey("username") ||
+				!msg.Parameters.ContainsKey("password"))
+			{
+				SimpleResponse(client, "message", "Invalid request!");
+				return;
+			}
+
+			string email = msg.Parameters["email"];
+			string username = msg.Parameters["username"];
+			string password = msg.Parameters["password"];
+
+			if (string.IsNullOrWhiteSpace(email))
+			{
+				SimpleResponse(client, "message", "Email cant be empty");
+				return;
+			}
+			if (!IsValidEmail(email))
+			{
+				SimpleResponse(client, "message", "Email is invalid format");
+				return;
+			}
+			Console.WriteLine("Got: " + email); // DEBUG
+
+			if (string.IsNullOrWhiteSpace(username))
+			{
+				SimpleResponse(client, "message", "Username cannot be empty");
+				return;
+			}
+			Console.WriteLine("Got: " + username); // DEBUG
+
+			if (string.IsNullOrWhiteSpace(password))
+			{
+				SimpleResponse(client, "message", "Password cannot be empty");
+				return;
+			}
+			Console.WriteLine("Got: " + password); // DEBUG
+
+			if (userAPI.EmailExists(email))
+			{
+				SimpleResponse(client, "message", "Email taken");
+				return;
+			}
+
+			if (userAPI.UserExists(username))
+			{
+				SimpleResponse(client, "message", "Username taken");
+				return;
+			}
+
+			// Add user
+			userAPI.AddUser(username, password, email);
+
+			userAPI[username].AddConnection(client);
+
+			Console.WriteLine("[Client] Registered");
+		}
+
+		static void RecoveryHandler(Connection client, Message msg)
+		{
+			if (client.Id != Guid.Empty)
+			{
+				SimpleResponse(client, "message", "Already logged in!");
+				return;
+			}
+
+			if (!msg.Parameters.ContainsKey("email") || msg.Parameters.ContainsKey("verify") || msg.Parameters.ContainsKey("newpassword"))
+			{
+				SimpleResponse(client, "message", "Invalid request!");
+				return;
+			}
+
+			string email = msg.Parameters["email"];
+			string verify = msg.Parameters["verify"];
+
+			if (!IsValidEmail(email))
+			{
+				SimpleResponse(client, "message", "Recovery password sent!");
+				return;
+			}
+
+			User user = userAPI.FindUserByEmail(email);
+			if (user != null)
+			{
+				if (verify == "")
+				{
+					if (!user.GeneratePasswordResetToken())
+					{
+						SimpleResponse(client, "message", "Server error!");
+						return;
+					}
+				}
+				else
+				{
+					if (user.VerifyPasswordResetToken(verify))
+					{
+						user.SetPassword(msg.Parameters["newpassword"]);
+						SimpleResponse(client, "message", "Password set!");
+						return;
+					}
+					SimpleResponse(client, "message", "Code is invalid/expired!");
+					return;
+				}
+			}
+
+			SimpleResponse(client, "message", "Recovery password sent!");
+		}
+	
+		static void SetPassword(Connection client, Message msg)
+		{
+			if (!msg.Parameters.ContainsKey("oldpassword") || !msg.Parameters.ContainsKey("newpassword"))
+			{
+				SimpleResponse(client, "message", "Invalid request!");
+				return;
+			}
+
+			if (client.Id == Guid.Empty)
+			{
+				SimpleResponse(client, "message", "Not logged in!");
+				return;
+			}
+
+			User user = userAPI[client.Id];
+			if (user == null)
+			{
+				// Client id is not a existing userid
+				SimpleResponse(client, "message", "Server error");
+				return;
+			}
+
+			if (!user.VerifyPassword(msg.Parameters["oldpassword"]))
+			{
+				SimpleResponse(client, "message", "Invalid password!");
+				return;
+			}
+
+			user.SetPassword(msg.Parameters["newpassword"]);
+			SimpleResponse(client, "message", "Set password!");
+		}
+	}
+}

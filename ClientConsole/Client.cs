@@ -51,30 +51,11 @@ namespace CollarControl
 		/// </summary>
 		public void Cleanup()
 		{
-			if (_socket != null)
-			{
-				try
-				{
-					_socket?.Shutdown(SocketShutdown.Both);
-					_socket?.Close();
-					_socket?.Dispose();
-				}
-				finally
-				{
-				}
-			}
-
-			if (_thread != null)
-			{
-				try
-				{
-					_thread?.Join();
-				}
-				finally
-				{
-				}
-			}
-
+			// We dont care if anything fails... just shut it down
+			try { _socket?.Shutdown(SocketShutdown.Both); } catch (Exception) { }
+			try { _socket?.Close(); } catch (Exception) { }
+			try { _socket?.Dispose(); } catch (Exception) { }
+			try { _thread?.Join(); } catch (Exception) { }
 			_thread = null;
 			_socket = null;
 			_crypto = null;
@@ -199,7 +180,7 @@ namespace CollarControl
 			// Generate private key
 			try
 			{
-				_crypto.GenPrivateKey(serverKey);
+				_crypto.EstablishSecretKey(serverKey);
 			}
 			catch (Exception ex)
 			{
@@ -251,8 +232,7 @@ namespace CollarControl
 			byte[] messageBytes = null;
 			try
 			{
-				string[] strings = Encoding.UTF8.GetString(encMessage).Split('\0');
-				messageBytes = _crypto.Decrypt(Convert.FromBase64String(strings[0]), Convert.FromBase64String(strings[1]));
+				messageBytes = _crypto.Decrypt(encMessage);
 			}
 			catch (Exception ex)
 			{
@@ -297,10 +277,9 @@ namespace CollarControl
 			}
 
 			byte[] data;
-			byte[] iv = null;
 			try
 			{
-				data = _crypto?.Encrypt(Encoding.UTF8.GetBytes(message), out iv);
+				data = _crypto?.Encrypt(Encoding.UTF8.GetBytes(message));
 			}
 			catch (EncoderFallbackException ex)
 			{
@@ -309,20 +288,9 @@ namespace CollarControl
 				return;
 			}
 
-			if (data == null || iv == null)
+			if (data == null)
 			{
 				Console.WriteLine("Encryption failed!"); // DEBUG
-				return;
-			}
-
-			try
-			{
-				data = Encoding.UTF8.GetBytes(Convert.ToBase64String(data) + '\0' + Convert.ToBase64String(iv));
-			}
-			catch (EncoderFallbackException ex)
-			{
-				Console.WriteLine("Could not get bytes: " + ex.Message); // DEBUG
-				Console.WriteLine(ex.HelpLink); // DEBUG
 				return;
 			}
 
@@ -435,12 +403,14 @@ namespace CollarControl
 					state.length = 2;
 					state.bytes = new byte[2];
 					state.signal = receiveDone;
+
 					try
 					{
 						_socket.BeginReceive(state.bytes, 0, state.length, 0, new AsyncCallback(MessageLengthReceivedCallback), state);
 					}
-					catch
+					catch (Exception ex)
 					{
+						Console.WriteLine("Exception caught: {0}", ex.Message);
 					}
 					receiveDone.WaitOne();
 				}
@@ -506,13 +476,11 @@ namespace CollarControl
 			if (bytesRead == state.length)
 			{
 				byte[] encMessage = state.bytes;
-
 				byte[] messageBytes = null;
 
 				try
 				{
-					string[] strings = Encoding.UTF8.GetString(encMessage).Split('\0');
-					messageBytes = _crypto.Decrypt(Convert.FromBase64String(strings[0]), Convert.FromBase64String(strings[1]));
+					messageBytes = _crypto.Decrypt(encMessage);
 				}
 				catch (Exception ex)
 				{

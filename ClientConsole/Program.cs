@@ -17,42 +17,55 @@ namespace CollarControl
 
             Client client = new Client();
 
+			client.OnConnected += LoginHandler;
+			client.OnDisconnected += DisconnectHandler;
+			client.OnMessageReceived += MessageReceivedHandler;
 
-			client.OnMessageReceived += (Client cli, String str) =>
-			{
-				Message msg = new Message { Command = "Ping" };
-				msg.Parameters = new Dictionary<string, string>();
-				cli.SendMessage(JsonConvert.SerializeObject(msg));
-			};
-            client.OnDisconnected += DisconnectHandler;
-            client.OnConnected += LoginHandler;
-
+#if !DEBUG
             try
             {
-                client.Connect("127.0.0.1", 5001);
-				Console.WriteLine("Socket connected to {0}:{1}", "192.168.1.43", 10235);
+#endif
+			String addr = args[0];
+			UInt16 port = UInt16.Parse(args[1]);
+
+				client.Connect(addr, port);
+				Console.WriteLine("Socket connected to {0}:{1}", addr, port);
+#if !DEBUG
 			}
 			catch (Exception ex)
             {
                 Console.WriteLine("Couldn't initialize client: " + ex.Message);
             }
+#endif
 			
 
 			while (client.IsConnected) { Thread.Sleep(500); }
 
-			/*CredentialHandler handler = new CredentialHandler();
-
-            handler.SetCredentials("HeavenVR", "user@example.com", "password");
-            CredentialHandler.Creds creds = handler.GetCredentials();
-            handler.SetCredentials("HeavenVR", "user@example.com", "password");
-            creds = handler.GetCredentials();
-
-            Console.WriteLine(creds.username);
-            Console.WriteLine(creds.passwordHash);
-            Console.WriteLine(creds.mailAddress);*/
-
 			Console.ReadLine();
         }
+
+		static void MessageReceivedHandler(Client client, String str)
+		{
+			Console.WriteLine(str);
+
+			Thread.Sleep(5000);
+
+			Message message = new Message()
+			{
+				Command = "logout",
+				Parameters = new Dictionary<String, String>()
+				{
+					{ "logoutall", "false" }
+				}
+			};
+
+			String msg = JsonConvert.SerializeObject(message);
+
+			if (client != null && !String.IsNullOrEmpty(msg))
+			{
+				client.SendMessage(msg);
+			}
+		}
 
         static void DisconnectHandler(Client client)
         {
@@ -62,8 +75,11 @@ namespace CollarControl
         static void LoginHandler(Client client)
         {
 			Console.WriteLine("Logging in...");
+
+#if !DEBUG
             try
             {
+#endif
                 if (client.Authenticate())
 				{
 					Console.WriteLine("Authenticated!");
@@ -71,42 +87,42 @@ namespace CollarControl
 				else
 				{
 					Console.WriteLine("Authentication failed!");
+					return;
 				}
+
+			Message message = new Message()
+			{
+				Command = "login",
+				Parameters = new Dictionary<String, String>()
+				{
+					{ "username", "test" },
+					{ "password", "Passw" }
+				}
+			};
+			/*Message message = new Message()
+			{
+				Command = "register",
+				Parameters = new Dictionary<String, String>()
+				{
+					{ "email", "user@example.com" },
+					{ "username", "test" },
+					{ "password", "Passw" }
+				}
+			};*/
+
+			String msg = JsonConvert.SerializeObject(message);
+
+			if (client != null && !String.IsNullOrEmpty(msg))
+			{
+				client.SendMessage(msg);
+			}
+#if !DEBUG
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Could not authenticate: " + ex.ToString());
             }
-
-			/*Console.Write("command: ");
-			String cmd = Console.ReadLine();
-
-			Console.Write("email: ");
-			String email = Console.ReadLine();
-
-			Console.Write("Username: ");
-			String username = Console.ReadLine();
-
-			Console.Write("password: ");
-			String password = Console.ReadLine();
-
-			Message msg = new Message()
-			{
-				Command = cmd,
-				Parameters = new Dictionary<String, String>()
-				{
-					{ "email", email },
-					{ "username", username },
-					{ "password", password }
-				}
-			};
-
-			String message = JsonConvert.SerializeObject(msg);
-
-			Console.WriteLine(message.ToString());*/
-			Message msg = new Message { Command = "Ping" };
-			msg.Parameters = new Dictionary<string, string>();
-			client.SendMessage(JsonConvert.SerializeObject(msg));
+#endif
 
 			client.StartListening();
 		}

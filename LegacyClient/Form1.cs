@@ -14,7 +14,7 @@ namespace CollarControl
     public partial class MainForm : Form
     {
         [Serializable]
-        struct InqMessage
+        struct CollarMessage
         {
             public string Signature;
             public string SessionID;
@@ -22,7 +22,7 @@ namespace CollarControl
             public string Message;
             public DateTime TimeStamp;
         }
-        class InqUser
+        class CollarUser
         {
             public string Username;
             public string SessionID;
@@ -40,12 +40,12 @@ namespace CollarControl
         Thread netHandler = null;
         private volatile bool _isRunning = true;
         private Color _defaultColor;
-        private List<InqUser> _activeUsers = null;
+        private List<CollarUser> _activeUsers = null;
         private string _activeMasterSessionId = "";
         private DateTime lastDateTime = DateTime.UtcNow;
 
         private delegate void TextboxDelegate(string text);
-        private delegate void ComboboxDelegate(InqUser user);
+        private delegate void ComboboxDelegate(CollarUser user);
 
         public string ActiveMasterSessionId
         {
@@ -101,7 +101,7 @@ namespace CollarControl
             }
         }
 
-        private void AddToComboboxActiveUsers(InqUser user)
+        private void AddToComboboxActiveUsers(CollarUser user)
         {
             if (ComboboxActiveUsers.InvokeRequired)
             {
@@ -114,7 +114,7 @@ namespace CollarControl
             }
         }
 
-        private void RemoveFromComboboxActiveUsers(InqUser user)
+        private void RemoveFromComboboxActiveUsers(CollarUser user)
         {
             if (ComboboxActiveUsers.InvokeRequired)
             {
@@ -125,7 +125,7 @@ namespace CollarControl
             {
                 if (user != null)
 				{
-                    if (((InqUser)ComboboxActiveUsers.SelectedItem) == user)
+                    if (((CollarUser)ComboboxActiveUsers.SelectedItem) == user)
                     {
                         ComboboxActiveUsers.SelectedIndex = -1;
                         SetOutUsername("");
@@ -141,7 +141,7 @@ namespace CollarControl
         public MainForm()
         {
             InitializeComponent();
-            _activeUsers = new List<InqUser>();
+            _activeUsers = new List<CollarUser>();
             netHandler = new Thread(NetHandler);
             netHandler.Start();
 
@@ -174,8 +174,8 @@ namespace CollarControl
             {
                 lock (_activeUsers)
                 {
-                    List<InqUser> users = _activeUsers.FindAll(u => u.LastSeenTime < (DateTime.UtcNow - TimeSpan.FromSeconds(20)));
-                    foreach (InqUser user in users)
+                    List<CollarUser> users = _activeUsers.FindAll(u => u.LastSeenTime < (DateTime.UtcNow - TimeSpan.FromSeconds(20)));
+                    foreach (CollarUser user in users)
                     {
                         Console.WriteLine("[{0}] User {1} timed out!", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), user.Username);
                         RemoveFromComboboxActiveUsers(user);
@@ -211,59 +211,59 @@ namespace CollarControl
                         continue;
                     }
 
-                    InqMessage[] inqs = JsonConvert.DeserializeObject<InqMessage[]>(html);
+                    CollarMessage[] messages = JsonConvert.DeserializeObject<CollarMessage[]>(html);
 
-                    if (inqs == null || inqs.Length == 0)
+                    if (messages == null || messages.Length == 0)
                     {
                         continue;
                     }
                     
-                    for (int i = inqs.Length - 1; i >= 0; i--)
+                    for (int i = messages.Length - 1; i >= 0; i--)
                     {
-                        InqMessage inq = inqs[i];
+                        CollarMessage message = messages[i];
 
                         lock (_activeUsers)
                         {
-                            int index = _activeUsers.FindIndex(u => u.SessionID == inq.SessionID);
+                            int index = _activeUsers.FindIndex(u => u.SessionID == message.SessionID);
                             if (index >= 0)
                             {
-                                _activeUsers[index].LastSeenTime = inq.TimeStamp;
-                                if (inq.Message == "LoggedOut")
+                                _activeUsers[index].LastSeenTime = message.TimeStamp;
+                                if (message.Message == "LoggedOut")
                                 {
-                                    InqUser user = _activeUsers[index];
+                                    CollarUser user = _activeUsers[index];
                                     RemoveFromComboboxActiveUsers(user);
                                     _activeUsers.Remove(user);
-                                    Console.WriteLine("[{0}] User {1} logged off!", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), inq.Username);
+                                    Console.WriteLine("[{0}] User {1} logged off!", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), message.Username);
                                 }
                             }
                             else
                             {
-                                InqUser inqUser = new InqUser() { Username = inq.Username, SessionID = inq.SessionID, LastSeenTime = inq.TimeStamp };
+                                CollarUser inqUser = new CollarUser() { Username = message.Username, SessionID = message.SessionID, LastSeenTime = message.TimeStamp };
                                 _activeUsers.Add(inqUser);
-                                Console.WriteLine("[{0}] User {1} is online!", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), inq.Username);
+                                Console.WriteLine("[{0}] User {1} is online!", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), message.Username);
                                 AddToComboboxActiveUsers(inqUser);
                             }
                         }
-                        if (arduino.IsOpen && inq.SessionID == ActiveMasterSessionId)
+                        if (arduino.IsOpen && message.SessionID == ActiveMasterSessionId)
                         {
-                            switch (inq.Message)
+                            switch (message.Message)
                             {
                                 case "PunishmentStart":
                                     lock (MasterInfoBox)
                                         MasterInfoBox.BackColor = Color.Red;
-                                    Console.WriteLine("[{0}] Master {1} began punishment", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), inq.Username);
+                                    Console.WriteLine("[{0}] Master {1} began punishment", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), message.Username);
                                     arduino.Write(PUNISH_ENABLE_KEY, 0, PUNISH_ENABLE_KEY.Length);
                                     break;
                                 case "WarningStart":
                                     lock (MasterInfoBox)
                                         MasterInfoBox.BackColor = Color.Orange;
-                                    Console.WriteLine("[{0}] Master {1} sent a warning", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), inq.Username);
+                                    Console.WriteLine("[{0}] Master {1} sent a warning", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), message.Username);
                                     arduino.Write(WARNING_ENABLE_KEY, 0, WARNING_ENABLE_KEY.Length);
                                     break;
                                 case "AllStop":
                                     lock (MasterInfoBox)
                                         MasterInfoBox.BackColor = _defaultColor;
-                                    Console.WriteLine("[{0}] Master {1} stopped", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), inq.Username);
+                                    Console.WriteLine("[{0}] Master {1} stopped", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), message.Username);
                                     arduino.Write(ALL_STOP_KEY, 0, ALL_STOP_KEY.Length);
                                     break;
                                 default:
@@ -271,7 +271,7 @@ namespace CollarControl
                             }
                         }
 
-                        lastDateTime = inq.TimeStamp;
+                        lastDateTime = message.TimeStamp;
                     }
                 }
                 catch (Exception e)
@@ -292,7 +292,7 @@ namespace CollarControl
 
         private void BtnSetMaster_Click(object sender, EventArgs e)
         {
-            InqUser user = (InqUser)ComboboxActiveUsers.SelectedItem;
+            CollarUser user = (CollarUser)ComboboxActiveUsers.SelectedItem;
             ActiveMasterSessionId = user.SessionID;
             SetOutSessionID(user.SessionID);
             SetOutUsername(user.Username);

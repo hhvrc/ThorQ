@@ -8,13 +8,13 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace ClientForms
+namespace CollarControl
 {
-    public partial class Form1 : Form
-    {
-        public Form1()
-        {
-            InitializeComponent();
-        }
-    }
+	public partial class RecoveryForm : Form
+	{
+		public RecoveryForm()
+		{
+			InitializeComponent();
+		}
+	}
 }

@@ -11,7 +11,7 @@ namespace CollarControl
 	{
 		private bool _ready = false;
 		private byte[] _publicKey = null;
-		private byte[] _privateKey = null;
+		private byte[] _sharedKey = null;
 		private ECDiffieHellmanCng _keyPair = null;
 
 		/// <summary>
@@ -30,12 +30,7 @@ namespace CollarControl
 		~Crypto()
 		{
 			if (_keyPair != null)
-			{
 				_keyPair.Dispose();
-				_keyPair = null;
-			}
-			_publicKey = null;
-			_privateKey = null;
 		}
 
 		/// <summary>
@@ -48,8 +43,9 @@ namespace CollarControl
 		/// <exception cref="InvalidOperationException"></exception>
 		/// <exception cref="ArgumentException"></exception>
 		/// <exception cref="CryptographicException"></exception>
-		public void GenPrivateKey(byte[] key)
+		public void EstablishSecretKey(byte[] key)
 		{
+			_ready = false;
 			if (key == null)
 			{
 				throw new ArgumentNullException();
@@ -57,11 +53,11 @@ namespace CollarControl
 
 			try // DEBUG
 			{
-				_privateKey = _keyPair.DeriveKeyMaterial(CngKey.Import(key, CngKeyBlobFormat.EccPublicBlob));
+				_sharedKey = _keyPair.DeriveKeyMaterial(CngKey.Import(key, CngKeyBlobFormat.EccPublicBlob));
 			}
-			catch (PlatformNotSupportedException ex) // DEBUG
+			catch (Exception ex) // DEBUG
 			{
-				Console.WriteLine("Well shit... Platform not supported: {0}", ex.Message);
+				Console.WriteLine("Exception caught: {0}", ex.Message);
 				return;
 			}
 
@@ -92,40 +88,41 @@ namespace CollarControl
 		/// Encrypted data<para/>
 		/// Returns null if input is invalid / ECDH-exchange has not occured
 		/// </returns>
-		public byte[] Encrypt(byte[] unencryptedData, out byte[] iv)
+		public byte[] Encrypt(byte[] unencryptedData)
 		{
 			if (!_ready || unencryptedData == null)
-			{
-				iv = null;
 				return null;
-			}
 
 			try // DEBUG
 			{
 				using (Aes aes = new AesCryptoServiceProvider())
 				{
-					aes.Key = _privateKey;
-					iv = aes.IV;
+					aes.Key = _sharedKey;
+					byte[] iv = aes.IV;
 
 					// Encrypt the data
-					using (MemoryStream encryptedData = new MemoryStream())
+					using (MemoryStream ms = new MemoryStream())
 					{
-						using (CryptoStream stream = new CryptoStream(encryptedData, aes.CreateEncryptor(), CryptoStreamMode.Write))
-						{
-							stream.Write(unencryptedData, 0, unencryptedData.Length);
-							stream.Close();
+						using (CryptoStream cs = new CryptoStream(ms, aes.CreateEncryptor(), CryptoStreamMode.Write))
+							cs.Write(unencryptedData, 0, unencryptedData.Length);
 
-							return encryptedData.ToArray();
-						}
+						byte[] encryptedContent = ms.ToArray();
+
+						byte[] result = new byte[iv.Length + encryptedContent.Length];
+
+						//copy our 2 array into one
+						System.Buffer.BlockCopy(iv, 0, result, 0, iv.Length);
+						System.Buffer.BlockCopy(encryptedContent, 0, result, iv.Length, encryptedContent.Length);
+
+						return result;
 					}
 				}
 			}
-			catch (PlatformNotSupportedException ex) // DEBUG
+			catch (Exception ex) // DEBUG
 			{
-				Console.WriteLine("Well shit... Platform not supported: {0}", ex.Message);
-				iv = null;
-				return null;
+				Console.WriteLine("Exception caught: {0}", ex.Message);
 			}
+			return null;
 		}
 
 		/// <summary>
@@ -139,38 +136,40 @@ namespace CollarControl
 		/// </param>
 		/// <returns>
 		/// Returns the unencrypted data, or <c>null</c> if (input is invalid / ECDH-exchange has not occured)
-		public byte[] Decrypt(byte[] encryptedData, byte[] iv)
+		/// </returns>
+		public byte[] Decrypt(byte[] encryptedData)
 		{
-			if (!_ready || encryptedData == null || iv == null)
-			{
+			if (!_ready || encryptedData == null)
 				return null;
-			}
+
+			byte[] iv = new byte[16];
+			byte[] dat = new byte[encryptedData.Length - iv.Length];
+
+			System.Buffer.BlockCopy(encryptedData, 0, iv, 0, iv.Length);
+			System.Buffer.BlockCopy(encryptedData, iv.Length, dat, 0, dat.Length);
 
 			try // DEBUG
 			{
 				using (Aes aes = new AesCryptoServiceProvider())
 				{
-					aes.Key = _privateKey;
+					aes.Key = _sharedKey;
 					aes.IV = iv;
 
 					// Decrypt the data
-					using (MemoryStream decryptedData = new MemoryStream())
+					using (MemoryStream ms = new MemoryStream())
 					{
-						using (CryptoStream stream = new CryptoStream(decryptedData, aes.CreateDecryptor(), CryptoStreamMode.Write))
-						{
-							stream.Write(encryptedData, 0, encryptedData.Length);
-							stream.Close();
+						using (CryptoStream cs = new CryptoStream(ms, aes.CreateDecryptor(), CryptoStreamMode.Write))
+							cs.Write(dat, 0, dat.Length);
 
-							return decryptedData.ToArray();
-						}
+						return ms.ToArray();
 					}
 				}
 			}
-			catch (PlatformNotSupportedException ex) // DEBUG
+			catch (Exception ex) // DEBUG
 			{
-				Console.WriteLine("Well shit... Platform not supported: {0}", ex.Message);
-				return null;
+				Console.WriteLine("Exception caught: {0}", ex.Message);
 			}
+			return null;
 		}
 	}
 }

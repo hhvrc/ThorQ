@@ -1,90 +1,80 @@
 ﻿using LiteDB;
 using System;
 using System.Collections.Generic;
+using System.Net.Mail;
 
 namespace CollarControl
 {
-	class User
+	class DbUser
 	{
-		private object _idLock = new object();
-		private Guid _id = Guid.Empty;
-		public Guid Id
+		public DbUser()
 		{
-			get
-			{
-				lock (_idLock)
-					return _id;
-			}
-			set
-			{
-				lock (_idLock)
-					_id = value;
-			}
-		}
-		public String _username;
-		public String Username
-		{
-			get
-			{
-				lock (_username)
-					return _username;
-			}
-			set
-			{
-				lock (_username)
-				{
-					_username = value;
-				}
-			}
-		}
-		public String _email;
-		public String Email
-		{
-			get
-			{
-				lock (_email)
-					return _email;
-			}
-			set
-			{
-				lock (_email)
-					_email = value.ToLower();
-			}
+			Friends = new List<Guid>();
+			FriendRequests = new List<FriendRequest>();
+			BlockedUsers = new List<BlockedUser>();
 		}
 
-		private String _passwordHash;
-		private List<Guid> _friends;
-		private List<RequestIDpair> _friendRequests;
-		private List<BlockedUser> _blockedUsers;
-		[BsonIgnore]
+		[BsonId]
+		public Guid Id { get; set; }
+		public string Username { get; set; }
+		public string Email { get; set; }
+		public string PasswordHash { get; set; }
+		public List<Guid> Friends { get; set; }
+		public List<FriendRequest> FriendRequests { get; set; }
+		public List<BlockedUser> BlockedUsers { get; set; }
+		public class FriendRequest
+		{
+			public FriendRequest(Guid userId)
+			{
+				RequestId = Guid.NewGuid();
+				UserID = userId;
+			}
+			[BsonId]
+			public Guid RequestId { get; set; }
+			public Guid UserID { get; set; }
+		}
+		public class BlockedUser
+		{
+			public BlockedUser(Guid userID, string username)
+			{
+				BlockId = Guid.NewGuid();
+				UserID = userID;
+				UsernameWhenBlocked = username;
+			}
+			[BsonId]
+			public Guid BlockId { get; set; }
+			public Guid UserID { get; set; }
+			public string UsernameWhenBlocked { get; set; }
+		}
+	}
+
+	class User : DbUser
+	{
+		// Runtime variables
+		private string passwordResetToken;
+		private DateTime passwordResetExpieriDate;
 		private List<Connection> _connections = new List<Connection>();
-		[BsonIgnore]
-		public event Action<Guid, string> OnMessageReceived;
 
-		private void HandleMessage(Connection connection, string message)
+		// Events
+		public event Action<User, bool> OnIsOnlineChanged;
+		public event Action<User, Connection, string> OnMessageReceived;
+
+		~User()
 		{
-			connection.SendMessage(message + "Ack."); // DEBUG
+			ClearConnections();
 		}
 
-		public bool AddConnection(Connection connection)
+		// Functions
+		public bool IsOnline
 		{
-			// Do NOT lock one object inside another
-			Guid thisId = Id;
-
-			lock (_connections)
+			get
 			{
-				if (!_connections.Contains(connection))
-				{
-					connection.Id = thisId;
-					_connections.Add(connection);
-					connection.OnMessageReceived += HandleMessage;
-					connection.OnClientDisconnected += DisconnectHandler;
-					return true;
-				}
-				return false;
+				bool online = false;
+				lock (_connections)
+					online = _connections.Count > 0;
+				return online;
 			}
 		}
-
 		public bool HasConnection(Connection connection)
 		{
 			lock (_connections)
@@ -92,15 +82,52 @@ namespace CollarControl
 				return _connections.Contains(connection);
 			}
 		}
+		public void AddConnection(Connection connection)
+		{
+			connection.Id = this.Id;
 
+			lock (_connections)
+			{
+				_connections.Add(connection);
+				connection.OnMessageReceived += ConnectionMessageHandler;
+				connection.OnClientDisconnected += RemoveConnection;
+				if (_connections.Count == 1)
+					OnIsOnlineChanged.Invoke(this, true);
+			}
+		}
 		public void RemoveConnection(Connection connection)
+		{
+			connection.Id = Guid.Empty;
+
+			lock (_connections)
+			{
+				if (_connections.Contains(connection))
+				{
+					connection.OnMessageReceived -= ConnectionMessageHandler;
+					connection.OnClientDisconnected -= RemoveConnection;
+					_connections.Remove(connection);
+					if (_connections.Count == 0)
+						OnIsOnlineChanged.Invoke(this, false);
+				}
+			}
+		}
+		public void ClearConnections()
 		{
 			lock (_connections)
 			{
-				_connections.Remove(connection);
+				if (_connections.Count != 0)
+				{
+					foreach (Connection conn in _connections)
+					{
+						conn.Id = Guid.Empty;
+						conn.OnMessageReceived -= ConnectionMessageHandler;
+						conn.OnClientDisconnected -= RemoveConnection;
+					}
+					_connections.Clear();
+					OnIsOnlineChanged.Invoke(this, false);
+				}
 			}
 		}
-
 		public void SendMessage(string message)
 		{
 			lock (_connections)
@@ -111,211 +138,54 @@ namespace CollarControl
 				}
 			}
 		}
-
-		public void DisconnectHandler(Connection connection)
-		{
-			lock (_connections)
-			{
-				_connections.Remove(connection);
-			}
-		}
-
 		public void SetPassword(string password)
 		{
-			lock (_passwordHash)
-			{
-				_passwordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(password, BCrypt.Net.HashType.SHA512, 13);
-			}
+			PasswordHash = BCrypt.Net.BCrypt.HashPassword(password, BCrypt.Net.BCrypt.GenerateSalt(13), false, BCrypt.Net.HashType.SHA512);
 		}
-
-
 		public bool VerifyPassword(string password)
 		{
-			lock (_passwordHash)
+			return BCrypt.Net.BCrypt.Verify(password, PasswordHash, false, BCrypt.Net.HashType.SHA512);
+		}
+		public bool SendPasswordResetToken()
+		{
+			string token = ToolBox.GetUniqueToken(10);
+
+			lock (passwordResetToken)
 			{
-				return BCrypt.Net.BCrypt.EnhancedVerify(password, _passwordHash, BCrypt.Net.HashType.SHA512);
+				passwordResetToken = token;
+				passwordResetExpieriDate = DateTime.UtcNow.AddMinutes(60);
+			}
+
+#if !DEBUG
+			try
+			{
+#endif
+			return ToolBox.SendEmail(
+				new String[] { Email },
+				"Password Recovery",
+				"Here is your recovery code:\n" + token
+				);
+#if !DEBUG
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Exception caught while sending email: {0}", ex.Message);
+			}
+#endif
+			return false;
+		}
+		public bool VerifyPasswordResetToken(string token)
+		{
+			lock (passwordResetToken)
+			{
+				return (passwordResetToken == token) && (passwordResetExpieriDate > DateTime.UtcNow);
 			}
 		}
 
-		public bool HasBlocked(Guid userID)
+		// Handlers TODO: (Relays signals to Program.cs)
+		private void ConnectionMessageHandler(Connection con, String msg)
 		{
-			lock (_blockedUsers)
-			{
-				return _blockedUsers.Exists(u => u.UserID == userID);
-			}
-		}
-
-		public void Block(Guid userID, string username)
-		{
-			lock (_blockedUsers)
-			{
-				_blockedUsers.Add(new BlockedUser(userID, username));
-			}
-		}
-
-		public void Unblock(Guid userID)
-		{
-			lock (_blockedUsers)
-			{
-				_blockedUsers.RemoveAll(u => u.UserID == userID);
-			}
-		}
-
-		public void Unblock(string usernameWhenBlocked)
-		{
-			lock (_blockedUsers)
-			{
-				_blockedUsers.RemoveAll(u => u.UsernameWhenBlocked == usernameWhenBlocked);
-			}
-		}
-
-		public void ClearBlocks()
-		{
-			lock (_blockedUsers)
-			{
-				_blockedUsers.Clear();
-			}
-		}
-
-		public bool HasFriendRequestFromUser(Guid userID)
-		{
-			lock (_friendRequests)
-			{
-				return _friendRequests.Exists(r => r.UserID == userID);
-			}
-		}
-
-		public void AddFriendRequestFromUser(Guid userID)
-		{
-			lock (_friendRequests)
-			{
-				_friendRequests.Add(new RequestIDpair(userID));
-			}
-			// TODO Notify this user
-		}
-
-		public void AcceptFriendRequest(Guid requestID)
-		{
-			lock (_friendRequests)
-			{
-				// TODO remove request from this user
-			}
-			lock (_friends)
-			{
-				// TODO add friend to this user
-				// TODO add friend to other user
-			}
-			// TODO notify users
-		}
-
-		public void DenyFriendRequest(Guid requestID)
-		{
-			lock (_friendRequests)
-			{
-				// TODO remove request from this user
-			}
-			// TODO notify this user
-		}
-
-		public void ClearFriendRequests()
-		{
-			lock (_friendRequests)
-			{
-				_friendRequests.Clear();
-			}
-		}
-
-		private class RequestIDpair
-		{
-			public RequestIDpair(Guid userID)
-			{
-				_requestID = Guid.NewGuid();
-				this._userID = userID;
-			}
-			private object _ridLock = new object();
-			private Guid _requestID;
-			public Guid RequestID
-			{
-				get
-				{
-					lock (_ridLock)
-					{
-						return _requestID;
-					}
-				}
-				set
-				{
-					lock (_ridLock)
-					{
-						_requestID = value;
-					}
-				}
-			}
-			private object _uidLock = new object();
-			private Guid _userID;
-			public Guid UserID
-			{
-				get
-				{
-					lock (_uidLock)
-					{
-						return _userID;
-					}
-				}
-				set
-				{
-					lock (_uidLock)
-					{
-						_userID = value;
-					}
-				}
-			}
-		}
-
-		private class BlockedUser
-		{
-			public BlockedUser(Guid userID, string username)
-			{
-				this._userID = userID;
-				this._usernameWhenBlocked = username;
-			}
-			private object _uidLock = new object();
-			private Guid _userID;
-			public Guid UserID
-			{
-				get
-				{
-					lock (_uidLock)
-					{
-						return _userID;
-					}
-				}
-				set
-				{
-					lock (_uidLock)
-					{
-						_userID = value;
-					}
-				}
-			}
-			private string _usernameWhenBlocked;
-			public String UsernameWhenBlocked
-			{
-				get
-				{
-					lock (_usernameWhenBlocked)
-					{
-						return _usernameWhenBlocked;
-					}
-				}
-				set
-				{
-					lock (_usernameWhenBlocked)
-					{
-						_usernameWhenBlocked = value;
-					}
-				}
-			}
+			OnMessageReceived.Invoke(this, con, msg);
 		}
 	}
 }
