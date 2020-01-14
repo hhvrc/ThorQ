@@ -59,35 +59,5 @@ namespace CollarControl.Properties {
                 resourceCulture = value;
             }
         }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap _69301981_p0___乳の日終わったから見せなくていいよもう {
-            get {
-                object obj = ResourceManager.GetObject("69301981_p0 - 乳の日終わったから見せなくていいよもう", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap _77607987_p0___少女 {
-            get {
-                object obj = ResourceManager.GetObject("77607987_p0 - 少女", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
-        
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap sy61 {
-            get {
-                object obj = ResourceManager.GetObject("sy61", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
     }
 }

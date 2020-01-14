@@ -6,7 +6,7 @@ using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
-namespace hh.heavenvr.tech
+namespace CollarControl
 {
 	public partial class Access : System.Web.UI.Page
 	{

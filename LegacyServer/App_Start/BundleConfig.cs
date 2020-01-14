@@ -1,7 +1,7 @@
 ﻿using System.Web;
 using System.Web.Optimization;
 
-namespace hh.heavenvr.tech
+namespace CollarControl
 {
     public class BundleConfig
     {

@@ -6,7 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 
-namespace hh.heavenvr.tech.Controllers
+namespace CollarControl.Controllers
 {
 	public class InputsController : ApiController
 	{

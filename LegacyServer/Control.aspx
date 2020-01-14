@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Control.aspx.cs" Inherits="hh.heavenvr.tech.Control" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeBehind="Control.aspx.cs" Inherits="CollarControl.Control" %>
 
 <!DOCTYPE html>
 

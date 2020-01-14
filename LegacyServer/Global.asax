@@ -1,1 +1,1 @@
-﻿<%@ Application Codebehind="Global.asax.cs" Inherits="hh.heavenvr.tech.Global" Language="C#" %>
+﻿<%@ Application Codebehind="Global.asax.cs" Inherits="CollarControl.Global" Language="C#" %>

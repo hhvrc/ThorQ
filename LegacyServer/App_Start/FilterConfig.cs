@@ -1,7 +1,7 @@
 ﻿using System.Web;
 using System.Web.Mvc;
 
-namespace hh.heavenvr.tech
+namespace CollarControl
 {
     public class FilterConfig
     {

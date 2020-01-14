@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 
-namespace hh.heavenvr.tech
+namespace CollarControl
 {
 	public static class Singleton
 	{
