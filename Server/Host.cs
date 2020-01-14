@@ -47,12 +47,12 @@ namespace CollarControl
 			_listen = true;
 
 			IPEndPoint endPoint = new IPEndPoint(
-				IPAddress.Any,
+				(useIPv6 ? IPAddress.IPv6Any : IPAddress.Any),
 				port
 				);
 
 			Socket listener = new Socket(
-				useIPv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork,
+				(useIPv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork),
 				SocketType.Stream,
 				ProtocolType.Tcp
 				);

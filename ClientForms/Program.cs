@@ -10,12 +10,12 @@ namespace CollarControl
 	{
 		static private Dictionary<string, string> m_appCache = null;
 
-		public static void CacheUpsert(String key, String value)
+		public static void CacheUpsert(string key, string value)
 		{
 			lock (m_appCache)
 			{
 				bool updated = false;
-				if (m_appCache.TryGetValue(key, out String oldvalue))
+				if (m_appCache.TryGetValue(key, out string oldvalue))
 				{
 					if (oldvalue != value)
 					{
@@ -32,14 +32,14 @@ namespace CollarControl
 					File.WriteAllText("cache.txt", JsonConvert.SerializeObject(m_appCache));
 			}
 		}
-		public static bool CacheTryGet(String key, out String value)
+		public static bool CacheTryGet(string key, out string value)
 		{
 			lock (m_appCache)
 				return m_appCache.TryGetValue(key, out value);
 		}
-		public static String CacheGetOrDefault(String key)
+		public static string CacheGetOrDefault(string key)
 		{
-			if (CacheTryGet(key, out String value))
+			if (CacheTryGet(key, out string value))
 				return value;
 			return "";
 		}
@@ -57,7 +57,11 @@ namespace CollarControl
 
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new LoginForm());
+			LoginForm form = new LoginForm();
+			Application.Run(form);
+			form.Hide();
+			form.Close();
+			form.Dispose();
 		}
 	}
 }

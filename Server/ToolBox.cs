@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text;
@@ -18,7 +19,7 @@ namespace CollarControl
 			}
 			catch (Exception ex)
 			{
-				throw; // TODO fixme
+				throw; // @TODO: fixme
 			}
 		}
 
@@ -156,6 +157,14 @@ namespace CollarControl
 
 			SmtpServer.Send(mail);
 			return true;
+		}
+
+		public static string GetExeDirectory()
+		{
+			string path = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase);
+			if (path.Substring(0, 5) == "file:")
+				path = path.Substring(6);
+			return path;
 		}
 	}
 }

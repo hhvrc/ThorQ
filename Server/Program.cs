@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using static CollarControl.ToolBox;
 
@@ -16,26 +17,37 @@ namespace CollarControl
 
 		static void Main(string[] args)
 		{
+			string thisPath = ToolBox.GetExeDirectory();
+			Console.WriteLine(thisPath);
+#if DEBUG
+			args = new string[] { "5001", "1" };
+#endif
+
 			if (args.Length != 2)
 			{
 				Console.WriteLine("Server.exe [port] [useIPv6?]");
 				return;
 			}
 
-			if (!UInt16.TryParse(args[0], out UInt16 port))
+			if (!ushort.TryParse(args[0], out ushort port))
 			{
 				Console.WriteLine("Port number invalid!");
 				return;
 			}
 
-			if (bool.TryParse(args[1], out bool useIPv6))
+			bool useIPv6 = false;
+			if (args[1].ToLower() == "true" || args[1] == "1")
+				useIPv6 = true;
+			else if (args[1].ToLower() == "false" || args[1] == "0")
+				useIPv6 = false;
+			else
 			{
 				Console.WriteLine("Invalid boolean input!");
 				return;
 			}
 
 			host = new Host();
-			userAPI = new UserAPI("MyData.db");
+			userAPI = new UserAPI(Path.Combine(thisPath, "MyData.db"));
 
 			host.OnClientConnected += (Connection con) =>
 				{

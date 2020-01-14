@@ -1,11 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace CollarControl
@@ -13,10 +7,10 @@ namespace CollarControl
 	public partial class OptionsForm : Form
 	{
 		object portlock = new object();
-		private UInt16 m_serverPort = 0;
-		private String m_serverHostname = "";
+		private ushort m_serverPort = 0;
+		private string m_serverHostname = "";
 
-		public String ServerHostname
+		public string ServerHostname
 		{
 			get
 			{
@@ -31,16 +25,16 @@ namespace CollarControl
 			}
 		}
 
-		public UInt16 ServerPort
+		public ushort ServerPort
 		{
 			get
 			{
-				lock(portlock)
+				lock (portlock)
 					return m_serverPort;
 			}
 			set
 			{
-				lock(portlock)
+				lock (portlock)
 					m_serverPort = value;
 			}
 		}
@@ -51,10 +45,10 @@ namespace CollarControl
 
 			hostnameBox.Text = ServerHostname = Program.CacheGetOrDefault("ServerHostname");
 
-			portBox.Value = ServerPort = Program.CacheTryGet("ServerPort", out String port) ?
-				UInt16.Parse(port)
+			portBox.Value = ServerPort = Program.CacheTryGet("ServerPort", out string port) ?
+				ushort.Parse(port)
 				:
-				UInt16.MinValue;
+				ushort.MinValue;
 		}
 
 		private void CheckConnectionButton_Click(object sender, EventArgs e)
@@ -62,7 +56,7 @@ namespace CollarControl
 			try
 			{
 				Client client = new Client();
-				if (client.Connect(hostnameBox.Text, (UInt16)portBox.Value))
+				if (client.Connect(hostnameBox.Text, (ushort)portBox.Value))
 					if (client.Authenticate())
 						CheckConnectionButton.BackColor = Color.Green;
 					else
@@ -86,7 +80,7 @@ namespace CollarControl
 		private void OkButton_Click(object sender, EventArgs e)
 		{
 			ServerHostname = hostnameBox.Text;
-			ServerPort = (UInt16)portBox.Value;
+			ServerPort = (ushort)portBox.Value;
 
 			Program.CacheUpsert("ServerHostname", ServerHostname);
 			Program.CacheUpsert("ServerPort", ServerPort.ToString());
