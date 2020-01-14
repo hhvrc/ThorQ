@@ -104,21 +104,35 @@ namespace CollarControl
 				return false;
 			}
 
-			if (addresses.Length == 0 || addresses[0] == null)
+			if (addresses == null || addresses.Length == 0)
 			{
 				return false;
 			}
 
-			IPEndPoint remoteEndPoint = new IPEndPoint(addresses[0], port);
+			foreach (IPAddress addr in addresses)
+			{
+				IPEndPoint remoteEndPoint = new IPEndPoint(addresses[0], port);
 
-			// Create a TCP/IP socket
-			_socket = new Socket(addresses[0].AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+				// Create a TCP/IP socket
+				_socket = new Socket(addresses[0].AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
-			// Bind the socket to the local endpoint and listen for incoming connections
-			_socket.Connect(remoteEndPoint);
+				// Bind the socket to the local endpoint and listen for incoming connections
+				try
+				{
+					_socket.Connect(remoteEndPoint);
+				}
+				catch (Exception)
+				{
+					// @TODO: handle exception
+					_socket.Dispose();
+					continue;
+				}
 
-			try { OnConnected.Invoke(this); } catch (Exception) { }
-			return true;
+
+				try { OnConnected.Invoke(this); } catch (Exception) { }
+				return true;
+			}
+			return false;
 		}
 
 		/// <summary>

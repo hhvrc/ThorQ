@@ -18,7 +18,7 @@ namespace CollarControl
 		{
 			if (args.Length != 2)
 			{
-				Console.WriteLine("Server.exe [port] [use IPv6?]");
+				Console.WriteLine("Server.exe [port] [useIPv6?]");
 				return;
 			}
 
