@@ -42,26 +42,24 @@ namespace CollarControl
 		/// <exception cref="SocketException"></exception>
 		/// <exception cref="SecurityException"></exception>
 		/// <exception cref="NotSupportedException"></exception>
-		public void Listen(ushort port)
+		public void Listen(ushort port, bool useIPv6)
 		{
 			_listen = true;
-			
-			if (port >= UInt16.MaxValue - 1)
-			{
-				Console.WriteLine("Port too high!");
-				return;
-			}
-			
-			IPEndPoint ipv4Endpoint = new IPEndPoint(IPAddress.Any, port);
-			Socket ipv4Listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-			ipv4Listener.Bind(ipv4Endpoint);
-			ipv4Listener.Listen(16);
-			/*
-			IPEndPoint ipv6Endpoint = new IPEndPoint(IPAddress.IPv6Any, port);
-			Socket ipv6Listener = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp);
-			ipv6Listener.Bind(ipv6Endpoint);
-			ipv6Listener.Listen(16);
-			*/
+
+			IPEndPoint endPoint = new IPEndPoint(
+				IPAddress.Any,
+				port
+				);
+
+			Socket listener = new Socket(
+				useIPv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork,
+				SocketType.Stream,
+				ProtocolType.Tcp
+				);
+
+			listener.Bind(endPoint);
+			listener.Listen(32);
+
 			while (_listen)
 			{
 				// Set the event to nonsignaled state
@@ -69,10 +67,9 @@ namespace CollarControl
 
 				try
 				{
-				// Start an asynchronous socket to listen for connections.
+					// Start an asynchronous socket to listen for connections.
 
-				ipv4Listener.BeginAccept(new AsyncCallback(ClientInstance), new StateObject { socket = ipv4Listener });
-				//ipv6Listener.BeginAccept(new AsyncCallback(ClientInstance), new StateObject { socket = ipv6Listener });
+					listener.BeginAccept(new AsyncCallback(ClientInstance), new StateObject { socket = listener });
 				}
 				catch (Exception ex)
 				{
@@ -132,4 +129,3 @@ namespace CollarControl
 		}
 	}
 }
- 

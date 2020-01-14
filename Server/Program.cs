@@ -16,10 +16,26 @@ namespace CollarControl
 
 		static void Main(string[] args)
 		{
-			Console.WriteLine(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase));
+			if (args.Length != 2)
+			{
+				Console.WriteLine("Server.exe [port] [use IPv6?]");
+				return;
+			}
+
+			if (!UInt16.TryParse(args[0], out UInt16 port))
+			{
+				Console.WriteLine("Port number invalid!");
+				return;
+			}
+
+			if (bool.TryParse(args[1], out bool useIPv6))
+			{
+				Console.WriteLine("Invalid boolean input!");
+				return;
+			}
 
 			host = new Host();
-			userAPI = new UserAPI(@"D:\MyData.db");
+			userAPI = new UserAPI("MyData.db");
 
 			host.OnClientConnected += (Connection con) =>
 				{
@@ -27,7 +43,7 @@ namespace CollarControl
 				};
 			try
 			{
-				host.Listen(25566);
+				host.Listen(port, useIPv6);
 			}
 			catch (Exception ex)
 			{
