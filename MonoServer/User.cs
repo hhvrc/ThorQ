@@ -1,12 +1,18 @@
 ﻿using LiteDB;
 using System;
 using System.Collections.Generic;
-using System.Net.Mail;
 
 namespace CollarControl
 {
 	class DbUser
 	{
+		public DbUser()
+		{
+			Friends = new List<Guid>();
+			FriendRequests = new List<FriendRequest>();
+			BlockedUsers = new List<BlockedUser>();
+		}
+
 		[BsonId]
 		public Guid Id { get; set; }
 		public string Username { get; set; }
@@ -15,7 +21,6 @@ namespace CollarControl
 		public List<Guid> Friends { get; set; }
 		public List<FriendRequest> FriendRequests { get; set; }
 		public List<BlockedUser> BlockedUsers { get; set; }
-
 		public class FriendRequest
 		{
 			public FriendRequest(Guid userId)
@@ -27,7 +32,6 @@ namespace CollarControl
 			public Guid RequestId { get; set; }
 			public Guid UserID { get; set; }
 		}
-
 		public class BlockedUser
 		{
 			public BlockedUser(Guid userID, string username)
@@ -45,12 +49,21 @@ namespace CollarControl
 
 	class User : DbUser
 	{
+		// Runtime variables
 		private string passwordResetToken;
 		private DateTime passwordResetExpieriDate;
 		private List<Connection> _connections = new List<Connection>();
-		public event Action<bool> OnIsOnlineChanged;
-		public event Action<Connection, string> OnMessageReceived;
 
+		// Events
+		public event Action<User, bool> OnIsOnlineChanged;
+		public event Action<User, Connection, string> OnMessageReceived;
+
+		~User()
+		{
+			ClearConnections();
+		}
+
+		// Functions
 		public bool IsOnline
 		{
 			get
@@ -75,10 +88,10 @@ namespace CollarControl
 			lock (_connections)
 			{
 				_connections.Add(connection);
-				connection.OnMessageReceived += OnMessageReceived.Invoke;
+				connection.OnMessageReceived += ConnectionMessageHandler;
 				connection.OnClientDisconnected += RemoveConnection;
 				if (_connections.Count == 1)
-					OnIsOnlineChanged.Invoke(true);
+					OnIsOnlineChanged.Invoke(this, true);
 			}
 		}
 		public void RemoveConnection(Connection connection)
@@ -89,11 +102,11 @@ namespace CollarControl
 			{
 				if (_connections.Contains(connection))
 				{
-					connection.OnMessageReceived -= OnMessageReceived.Invoke;
+					connection.OnMessageReceived -= ConnectionMessageHandler;
 					connection.OnClientDisconnected -= RemoveConnection;
 					_connections.Remove(connection);
 					if (_connections.Count == 0)
-						OnIsOnlineChanged.Invoke(false);
+						OnIsOnlineChanged.Invoke(this, false);
 				}
 			}
 		}
@@ -106,11 +119,11 @@ namespace CollarControl
 					foreach (Connection conn in _connections)
 					{
 						conn.Id = Guid.Empty;
-						conn.OnMessageReceived -= OnMessageReceived.Invoke;
+						conn.OnMessageReceived -= ConnectionMessageHandler;
 						conn.OnClientDisconnected -= RemoveConnection;
 					}
 					_connections.Clear();
-					OnIsOnlineChanged.Invoke(false);
+					OnIsOnlineChanged.Invoke(this, false);
 				}
 			}
 		}
@@ -126,13 +139,13 @@ namespace CollarControl
 		}
 		public void SetPassword(string password)
 		{
-			PasswordHash = BCrypt.Net.BCrypt.EnhancedHashPassword(password, BCrypt.Net.HashType.SHA512, 13);
+			PasswordHash = BCrypt.Net.BCrypt.HashPassword(password, BCrypt.Net.BCrypt.GenerateSalt(13), false, BCrypt.Net.HashType.SHA512);
 		}
 		public bool VerifyPassword(string password)
 		{
-			return BCrypt.Net.BCrypt.EnhancedVerify(password, PasswordHash, BCrypt.Net.HashType.SHA512);
+			return BCrypt.Net.BCrypt.Verify(password, PasswordHash, false, BCrypt.Net.HashType.SHA512);
 		}
-		public bool GeneratePasswordResetToken()
+		public bool SendPasswordResetToken()
 		{
 			string token = ToolBox.GetUniqueToken(10);
 
@@ -142,31 +155,18 @@ namespace CollarControl
 				passwordResetExpieriDate = DateTime.UtcNow.AddMinutes(60);
 			}
 
-#if !DEBUG
 			try
 			{
-#endif
-				MailMessage mail = new MailMessage();
-				SmtpClient SmtpServer = new SmtpClient("smtp.gmail.com");
-
-				mail.From = new MailAddress("user@example.com");
-				mail.To.Add(Email);
-				mail.Subject = "Password Recovery";
-				mail.Body = "Here is your recovery code:\n" + token;
-
-				SmtpServer.Port = 587;
-				SmtpServer.Credentials = new System.Net.NetworkCredential("user@example.com", "CollarControlPassword");
-				SmtpServer.EnableSsl = true;
-
-				SmtpServer.Send(mail);
-				return true;
-#if !DEBUG
+				return ToolBox.SendEmail(
+					new string[] { Email },
+					"Password Recovery",
+					"Here is your recovery code:\n" + token
+					);
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("Exception caught while sending email: {0}", ex.Message);
 			}
-#endif
 			return false;
 		}
 		public bool VerifyPasswordResetToken(string token)
@@ -175,6 +175,12 @@ namespace CollarControl
 			{
 				return (passwordResetToken == token) && (passwordResetExpieriDate > DateTime.UtcNow);
 			}
+		}
+
+		// Handlers TODO: (Relays signals to Program.cs)
+		private void ConnectionMessageHandler(Connection con, string msg)
+		{
+			OnMessageReceived.Invoke(this, con, msg);
 		}
 	}
 }

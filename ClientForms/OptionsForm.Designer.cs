@@ -62,6 +62,7 @@
 			this.hostnameBox.Name = "hostnameBox";
 			this.hostnameBox.Size = new System.Drawing.Size(100, 20);
 			this.hostnameBox.TabIndex = 2;
+			this.hostnameBox.TextChanged += new System.EventHandler(this.hostnameBox_TextChanged);
 			// 
 			// CheckConnectionButton
 			// 
@@ -104,6 +105,7 @@
 			this.portBox.Name = "portBox";
 			this.portBox.Size = new System.Drawing.Size(100, 20);
 			this.portBox.TabIndex = 7;
+			this.portBox.ValueChanged += new System.EventHandler(this.portBox_ValueChanged);
 			// 
 			// OptionsForm
 			// 

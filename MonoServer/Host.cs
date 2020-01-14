@@ -1,8 +1,8 @@
 using System;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
 using System.Security;
+using System.Threading;
 
 namespace CollarControl
 {
@@ -42,50 +42,45 @@ namespace CollarControl
 		/// <exception cref="SocketException"></exception>
 		/// <exception cref="SecurityException"></exception>
 		/// <exception cref="NotSupportedException"></exception>
-		public void Listen(UInt16 port)
+		public void Listen(ushort port)
 		{
 			_listen = true;
 
-			// Establish the local endpoint for the socket.
-			IPHostEntry entry = Dns.GetHostEntry(Dns.GetHostName());
-
-			if (entry.AddressList.Length == 0) { return; }
-
-			IPAddress myIP = entry.AddressList[0];
-
-			IPEndPoint localEndPoint = new IPEndPoint(myIP, port);
-
-			// Create a TCP/IP socket.  
-			Socket listener = new Socket(myIP.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-
-			using (ManualResetEvent connected = new ManualResetEvent(false))
+			if (port >= UInt16.MaxValue - 1)
 			{
-				// Bind the socket to the local endpoint and listen for incoming connections.
-				listener.Bind(localEndPoint);
-				listener.Listen(100);
+				Console.WriteLine("Port too high!");
+				return;
+			}
+			/*
+			IPEndPoint ipv4Endpoint = new IPEndPoint(IPAddress.Any, port);
+			Socket ipv4Listener = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+			ipv4Listener.Bind(ipv4Endpoint);
+			ipv4Listener.Listen(16);
+			*/
+			IPEndPoint ipv6Endpoint = new IPEndPoint(IPAddress.IPv6Any, port);
+			Socket ipv6Listener = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp);
+			ipv6Listener.Bind(ipv6Endpoint);
+			ipv6Listener.Listen(16);
 
-				while (_listen)
+			while (_listen)
+			{
+				// Set the event to nonsignaled state
+				_connected.Reset();
+
+				try
 				{
-					// Set the event to nonsignaled state
-					_connected.Reset();
+					// Start an asynchronous socket to listen for connections.
 
-#if !DEBUG
-					try
-					{
-#endif
-						// Start an asynchronous socket to listen for connections.
-						listener.BeginAccept(new AsyncCallback(ClientInstance), new StateObject { socket = listener, signal = connected });
-#if !DEBUG
-					}
-					catch (Exception ex)
-					{
-						_connected.Set();
-						Console.WriteLine("[Server] Could not accept: {0}", ex.Message);
-					}
-#endif
-					// Wait until a connection is made before continuing.
-					_connected.WaitOne();
+					//ipv4Listener.BeginAccept(new AsyncCallback(ClientInstance), new StateObject { socket = ipv4Listener });
+					ipv6Listener.BeginAccept(new AsyncCallback(ClientInstance), new StateObject { socket = ipv6Listener });
 				}
+				catch (Exception ex)
+				{
+					_connected.Set();
+					Console.WriteLine("[Server] Could not accept: {0}", ex.Message);
+				}
+				// Wait until a connection is made before continuing.
+				_connected.WaitOne();
 			}
 		}
 
@@ -117,12 +112,9 @@ namespace CollarControl
 				return;
 			}
 
-#if !DEBUG
 			try
 			{
-#endif
-			socket = listener.EndAccept(ar);
-#if !DEBUG
+				socket = listener.EndAccept(ar);
 			}
 			catch (Exception ex)
 			{
@@ -130,7 +122,6 @@ namespace CollarControl
 				_connected?.Set();
 				return;
 			}
-#endif
 			_connected?.Set();
 
 			// Create client object

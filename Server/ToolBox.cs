@@ -10,39 +10,31 @@ namespace CollarControl
 	{
 		public static T Deserialize<T>(byte[] xmlData)
 		{
-#if !DEBUG
 			try
 			{
-#endif
 				var stringReader = new System.IO.StringReader(Encoding.UTF8.GetString(xmlData));
 				var serializer = new XmlSerializer(typeof(T));
 				return (T)serializer.Deserialize(stringReader);
-#if !DEBUG
-		}
+			}
 			catch (Exception ex)
 			{
 				throw; // TODO fixme
 			}
-#endif
 		}
 
 		public static byte[] Serialize<T>(T dataToSerialize)
 		{
-#if !DEBUG
 			try
 			{
-#endif
-			var stringwriter = new System.IO.StringWriter();
+				var stringwriter = new System.IO.StringWriter();
 				var serializer = new XmlSerializer(typeof(T));
 				serializer.Serialize(stringwriter, dataToSerialize);
 				return Encoding.UTF8.GetBytes(stringwriter.ToString());
-#if !DEBUG
 			}
 			catch (Exception ex)
 			{
 				throw; // TODO fixme
 			}
-#endif
 		}
 
 		public static T[] CompileArrays<T>(T[] array, T[] appendArray, params T[][] additional)
@@ -93,19 +85,15 @@ namespace CollarControl
 
 		public static bool IsValidEmail(string email)
 		{
-#if !DEBUG
 			try
 			{
-#endif
-			var addr = new System.Net.Mail.MailAddress(email);
+				var addr = new System.Net.Mail.MailAddress(email);
 				return addr.Address == email;
-#if !DEBUG
 			}
 			catch (Exception ex)
 			{
 				return false;
 			}
-#endif
 		}
 
 		public static string GetUniqueToken(int length, string chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!#%&/()=?@${[]}+*-_.:,;<>")
@@ -149,7 +137,7 @@ namespace CollarControl
 
 		public static bool SendEmail(string[] recepients, string subject, string body)
 		{
-			if (recepients == null || String.IsNullOrWhiteSpace(subject) || String.IsNullOrWhiteSpace(subject))
+			if (recepients == null || string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(subject))
 				return false;
 
 			MailMessage mail = new MailMessage();

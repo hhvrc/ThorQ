@@ -115,10 +115,9 @@ namespace CollarControl
 			_socket = new Socket(addresses[0].AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
 			// Bind the socket to the local endpoint and listen for incoming connections
-			_socket.NoDelay = true;
 			_socket.Connect(remoteEndPoint);
 
-			OnConnected.Invoke(this);
+			try { OnConnected.Invoke(this); } catch (Exception) { }
 			return true;
 		}
 
@@ -158,14 +157,14 @@ namespace CollarControl
 			catch (SecurityException ex)
 			{
 				Console.WriteLine("SecurityException Caught!");
-				Console.WriteLine("Could not send public key: " + ex.Message);
+				Console.WriteLine("Could not read public key: " + ex.Message);
 				_crypto = null;
 				return false;
 			}
 			catch (SocketException ex)
 			{
 				Console.WriteLine("SocketException Caught!");
-				Console.WriteLine("Could not send public key: " + ex.Message);
+				Console.WriteLine("Could not read public key: " + ex.Message);
 				_crypto = null;
 				return false;
 			}

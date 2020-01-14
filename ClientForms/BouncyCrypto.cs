@@ -1,4 +1,5 @@
-﻿using Org.BouncyCastle.Asn1.Nist;
+﻿/*
+using Org.BouncyCastle.Asn1.Nist;
 using Org.BouncyCastle.Asn1.Sec;
 using Org.BouncyCastle.Asn1.X9;
 using Org.BouncyCastle.Crypto;
@@ -61,37 +62,33 @@ namespace CollarControl
 				throw new ArgumentNullException();
 			}
 
-#if !DEBUG
 			try // DEBUG
 			{
-#endif
-			string str = Encoding.UTF8.GetString(key);
-			string[] elements = str.Split(',');
-			if (elements.Length != 2)
-				throw new ArgumentException();
+				string str = Encoding.UTF8.GetString(key);
+				string[] elements = str.Split(',');
+				if (elements.Length != 2)
+					throw new ArgumentException();
 
-			ECPoint point = m_x9EC.Curve.CreatePoint(
-				new BigInteger(Convert.FromBase64String(elements[0])),
-				new BigInteger(Convert.FromBase64String(elements[1]))
-				);
+				ECPoint point = m_x9EC.Curve.CreatePoint(
+					new BigInteger(Convert.FromBase64String(elements[0])),
+					new BigInteger(Convert.FromBase64String(elements[1]))
+					);
 
-			ECPublicKeyParameters remotePubKey = new ECPublicKeyParameters("ECDH", point, SecObjectIdentifiers.SecP521r1);
+				ECPublicKeyParameters remotePubKey = new ECPublicKeyParameters("ECDH", point, SecObjectIdentifiers.SecP521r1);
 
-			IBasicAgreement aKeyAgree = AgreementUtilities.GetBasicAgreement("ECDH");
-			aKeyAgree.Init(m_myPrivKey);
+				IBasicAgreement aKeyAgree = AgreementUtilities.GetBasicAgreement("ECDH");
+				aKeyAgree.Init(m_myPrivKey);
 
-			byte[] secretKey = aKeyAgree.CalculateAgreement(remotePubKey).ToByteArray();
-			m_secretKey = new byte[16];
-			System.Buffer.BlockCopy(secretKey, 0, m_secretKey, 0, 16);
+				byte[] secretKey = aKeyAgree.CalculateAgreement(remotePubKey).ToByteArray();
+				m_secretKey = new byte[16];
+				System.Buffer.BlockCopy(secretKey, 0, m_secretKey, 0, 16);
 
-#if !DEBUG
 			}
 			catch (Exception ex) // DEBUG
 			{
 				Console.WriteLine("Exception caught: {0}", ex.Message);
 				return;
 			}
-#endif
 
 			_ready = true;
 		}
@@ -127,42 +124,38 @@ namespace CollarControl
 			if (!_ready || unencryptedData == null)
 				return null;
 
-#if !DEBUG
 			try // DEBUG
 			{
-#endif
-			using (MemoryStream ms = new MemoryStream())
-			{
-				using (System.Security.Cryptography.AesManaged cryptor = new System.Security.Cryptography.AesManaged())
+				using (MemoryStream ms = new MemoryStream())
 				{
-					cryptor.Mode = System.Security.Cryptography.CipherMode.CBC;
-					cryptor.Padding = System.Security.Cryptography.PaddingMode.PKCS7;
-					cryptor.KeySize = 128;
-					cryptor.BlockSize = 128;
+					using (System.Security.Cryptography.AesManaged cryptor = new System.Security.Cryptography.AesManaged())
+					{
+						cryptor.Mode = System.Security.Cryptography.CipherMode.CBC;
+						cryptor.Padding = System.Security.Cryptography.PaddingMode.PKCS7;
+						cryptor.KeySize = 128;
+						cryptor.BlockSize = 128;
 
-					byte[] iv = cryptor.IV;
+						byte[] iv = cryptor.IV;
 
-					using (System.Security.Cryptography.CryptoStream cs = new System.Security.Cryptography.CryptoStream(ms, cryptor.CreateEncryptor(m_secretKey, iv), System.Security.Cryptography.CryptoStreamMode.Write))
-						cs.Write(unencryptedData, 0, unencryptedData.Length);
+						using (System.Security.Cryptography.CryptoStream cs = new System.Security.Cryptography.CryptoStream(ms, cryptor.CreateEncryptor(m_secretKey, iv), System.Security.Cryptography.CryptoStreamMode.Write))
+							cs.Write(unencryptedData, 0, unencryptedData.Length);
 
-					byte[] encryptedContent = ms.ToArray();
+						byte[] encryptedContent = ms.ToArray();
 
-					byte[] result = new byte[iv.Length + encryptedContent.Length];
+						byte[] result = new byte[iv.Length + encryptedContent.Length];
 
-					//copy our 2 array into one
-					System.Buffer.BlockCopy(iv, 0, result, 0, iv.Length);
-					System.Buffer.BlockCopy(encryptedContent, 0, result, iv.Length, encryptedContent.Length);
+						//copy our 2 array into one
+						System.Buffer.BlockCopy(iv, 0, result, 0, iv.Length);
+						System.Buffer.BlockCopy(encryptedContent, 0, result, iv.Length, encryptedContent.Length);
 
-					return result;
+						return result;
+					}
 				}
-			}
-#if !DEBUG
 			}
 			catch (Exception ex) // DEBUG
 			{
 				Console.WriteLine("Exception caught: {0}", ex.Message);
 			}
-#endif
 			return null;
 		}
 
@@ -185,34 +178,31 @@ namespace CollarControl
 			System.Buffer.BlockCopy(encryptedData, 0, iv, 0, iv.Length);
 			System.Buffer.BlockCopy(encryptedData, iv.Length, dat, 0, dat.Length);
 
-#if !DEBUG
 			try // DEBUG
 			{
-#endif
-			using (MemoryStream ms = new MemoryStream())
-			{
-				using (System.Security.Cryptography.AesManaged cryptor = new System.Security.Cryptography.AesManaged())
+				using (MemoryStream ms = new MemoryStream())
 				{
-					cryptor.Mode = System.Security.Cryptography.CipherMode.CBC;
-					cryptor.Padding = System.Security.Cryptography.PaddingMode.PKCS7;
-					cryptor.KeySize = 128;
-					cryptor.BlockSize = 128;
+					using (System.Security.Cryptography.AesManaged cryptor = new System.Security.Cryptography.AesManaged())
+					{
+						cryptor.Mode = System.Security.Cryptography.CipherMode.CBC;
+						cryptor.Padding = System.Security.Cryptography.PaddingMode.PKCS7;
+						cryptor.KeySize = 128;
+						cryptor.BlockSize = 128;
 
-					// Decrypt the data
-					using (System.Security.Cryptography.CryptoStream cs = new System.Security.Cryptography.CryptoStream(ms, cryptor.CreateDecryptor(m_secretKey, iv), System.Security.Cryptography.CryptoStreamMode.Write))
-						cs.Write(dat, 0, dat.Length);
+						// Decrypt the data
+						using (System.Security.Cryptography.CryptoStream cs = new System.Security.Cryptography.CryptoStream(ms, cryptor.CreateDecryptor(m_secretKey, iv), System.Security.Cryptography.CryptoStreamMode.Write))
+							cs.Write(dat, 0, dat.Length);
 
-					return ms.ToArray();
+						return ms.ToArray();
+					}
 				}
-			}
-#if !DEBUG
 			}
 			catch (Exception ex) // DEBUG
 			{
 				Console.WriteLine("Exception caught: {0}", ex.Message);
 			}
-#endif
 			return null;
 		}
 	}
 }
+*/

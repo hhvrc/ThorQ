@@ -21,23 +21,18 @@ namespace CollarControl
 			client.OnDisconnected += DisconnectHandler;
 			client.OnMessageReceived += MessageReceivedHandler;
 
-#if !DEBUG
             try
             {
-#endif
 			String addr = args[0];
 			UInt16 port = UInt16.Parse(args[1]);
 
 				client.Connect(addr, port);
 				Console.WriteLine("Socket connected to {0}:{1}", addr, port);
-#if !DEBUG
 			}
 			catch (Exception ex)
             {
                 Console.WriteLine("Couldn't initialize client: " + ex.Message);
             }
-#endif
-			
 
 			while (client.IsConnected) { Thread.Sleep(500); }
 
@@ -76,10 +71,8 @@ namespace CollarControl
         {
 			Console.WriteLine("Logging in...");
 
-#if !DEBUG
             try
             {
-#endif
                 if (client.Authenticate())
 				{
 					Console.WriteLine("Authenticated!");
@@ -116,13 +109,11 @@ namespace CollarControl
 			{
 				client.SendMessage(msg);
 			}
-#if !DEBUG
             }
             catch (Exception ex)
             {
                 Console.WriteLine("Could not authenticate: " + ex.ToString());
             }
-#endif
 
 			client.StartListening();
 		}

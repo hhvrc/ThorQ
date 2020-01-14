@@ -25,19 +25,14 @@ namespace CollarControl
 				{
 					Task.Run(() => ConnectionHandler(con));
 				};
-
-#if !DEBUG
 			try
 			{
-#endif
-			host.Listen(25566);
-#if !DEBUG
+				host.Listen(25566);
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("Server crashed: " + ex.Message);
 			}
-#endif
 		}
 
 
@@ -65,53 +60,52 @@ namespace CollarControl
 		{
 			Console.WriteLine("[Client] New client!");
 
-#if !DEBUG
 			try
 			{
-#endif
-			if (client.Authenticate())
-			{
-				Console.WriteLine("[Client] Authenticated!");
-			}
-			else
-			{
-				Console.WriteLine("[Client] Authentication failed!");
-				client.StopListening();
-				return;
-			}
-
-#if !DEBUG
-			try
-			{
-#endif
-			while (client.IsConnected)
-			{
-				Message msg = JsonConvert.DeserializeObject<Message>(client.ReceiveMessage());
-
-				switch (msg.Command)
+				if (client.Authenticate())
 				{
-					case "login":
-						LoginHandler(client, msg);
-						break;
-					case "register":
-						RegistrationHandler(client, msg);
-						break;
-					case "recover":
-						RecoveryHandler(client, msg);
-						break;
-					default:
-						SimpleResponse(client, "message", "Invalid request!");
-						goto end;
+					Console.WriteLine("[Client] Authenticated!");
 				}
-			}
-		end:
-#if !DEBUG
+				else
+				{
+					Console.WriteLine("[Client] Authentication failed!");
+					client.StopListening();
+					return;
+				}
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("[Client] Could not authenticate: " + ex.ToString());
 			}
-#endif
+
+			try
+			{
+				while (client.IsConnected)
+				{
+					Message msg = JsonConvert.DeserializeObject<Message>(client.ReceiveMessage());
+
+					switch (msg.Command)
+					{
+						case "login":
+							LoginHandler(client, msg);
+							break;
+						case "register":
+							RegistrationHandler(client, msg);
+							break;
+						case "recover":
+							RecoveryHandler(client, msg);
+							break;
+						default:
+							SimpleResponse(client, "message", "Invalid request!");
+							goto end;
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("[Client] Could not receive message: " + ex.ToString());
+			}
+		end:
 			try { client?.StopListening(); } catch (Exception) { }
 		}
 		static void LoginHandler(Connection client, Message msg)
@@ -297,7 +291,7 @@ namespace CollarControl
 						{ "isonline", online?"true":"false" }
 					}
 				};
-				String msg = JsonConvert.SerializeObject(message);
+				string msg = JsonConvert.SerializeObject(message);
 
 				friend.SendMessage(msg);
 			}
@@ -305,19 +299,16 @@ namespace CollarControl
 		static void UserMessageHandler(User user, Connection client, string message)
 		{
 			Message msg;
-#if !DEBUG
+
 			try
 			{
-#endif
-			msg = JsonConvert.DeserializeObject<Message>(message);
-#if !DEBUG
+				msg = JsonConvert.DeserializeObject<Message>(message);
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("Could not deserialize message: {0}", ex.Message);
 				return;
 			}
-#endif
 
 			Console.WriteLine("Got command: " + msg.Command);
 

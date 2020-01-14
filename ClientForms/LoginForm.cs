@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace CollarControl
@@ -19,23 +18,13 @@ namespace CollarControl
 
 			client = new Client();
 			mainForm = new MainForm();
-			optionsForm = new OptionsForm();
+			optionsForm = new OptionsForm("127.0.0.1", 25566);
 			registerForm = new RegisterForm();
 			recoveryForm = new RecoveryForm();
 
 			client.OnConnected += LoginHandler;
 			client.OnDisconnected += DisconnectHandler;
 			client.OnMessageReceived += MessageReceivedHandler;
-
-			try
-			{
-				client.Connect("127.0.0.1", 5001);
-				Console.WriteLine("Socket connected to {0}:{1}", "192.168.1.43", 10235);
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine("Couldn't initialize client: " + ex.Message);
-			}
 		}
 		~LoginForm()
 		{
@@ -50,7 +39,7 @@ namespace CollarControl
 			try { recoveryForm.Close(); } catch (Exception) { }
 			try { recoveryForm.Dispose(); } catch (Exception) { }
 
-			this.Close();
+			try { this.Close(); } catch (Exception) { }
 		}
 
 		static void MessageReceivedHandler(Client client, string str)
@@ -88,6 +77,17 @@ namespace CollarControl
 
 		private void LoginButton_Click(object sender, EventArgs e)
 		{
+			try
+			{
+				if (client.Connect(optionsForm.ServerHostname, optionsForm.ServerPort))
+					Console.WriteLine("Socket connected to {0}:{1}", optionsForm.ServerHostname, optionsForm.ServerPort);
+				else
+					Console.WriteLine("Failed to connect!");
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Couldn't initialize client: " + ex.Message);
+			}
 			// Check if everything is correct withthe server
 
 			this.Hide();

@@ -27,18 +27,36 @@ namespace CollarControl
 			set { m_serverPort = value; }
 		}
 
-		public OptionsForm()
+		public OptionsForm(String hostname = "", UInt16 port = 0)
 		{
 			InitializeComponent();
+			hostnameBox.Text = ServerHostname = hostname;
+			portBox.Value = ServerPort = port;
 		}
 
 		private void CheckConnectionButton_Click(object sender, EventArgs e)
 		{
-
+			try
+			{
+				Client client = new Client();
+				if (client.Connect(hostnameBox.Text, (UInt16)portBox.Value))
+					if (client.Authenticate())
+						CheckConnectionButton.BackColor = Color.Green;
+					else
+						CheckConnectionButton.BackColor = Color.Red;
+				else
+					CheckConnectionButton.BackColor = Color.Red;
+			}
+			catch (Exception)
+			{
+				CheckConnectionButton.BackColor = Color.Red;
+			}
 		}
 
 		private void CancelButton_Click(object sender, EventArgs e)
 		{
+			hostnameBox.Text = ServerHostname;
+			portBox.Value = ServerPort;
 			this.Hide();
 		}
 
@@ -49,10 +67,14 @@ namespace CollarControl
 			this.Hide();
 		}
 
-		private void OptionsForm_Shown(object sender, EventArgs e)
+		private void portBox_ValueChanged(object sender, EventArgs e)
 		{
-			hostnameBox.Text = ServerHostname;
-			portBox.Value = ServerPort;
+			CheckConnectionButton.BackColor = Color.White;
+		}
+
+		private void hostnameBox_TextChanged(object sender, EventArgs e)
+		{
+			CheckConnectionButton.BackColor = Color.White;
 		}
 	}
 }

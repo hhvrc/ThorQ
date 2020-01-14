@@ -43,7 +43,7 @@ namespace CollarControl
 		public event Action<Connection> OnClientDisconnected;
 
 		/// <summary>
-		/// Connection, Username, Message
+		/// Connection, Message
 		/// </summary>
 		public event Action<Connection, string> OnMessageReceived;
 
@@ -65,46 +65,11 @@ namespace CollarControl
 
 		private void Cleanup()
 		{
-#if !DEBUG
-			try
-			{
-#endif
-				_socket?.Shutdown(SocketShutdown.Both);
-#if !DEBUG
-			}
-			catch (Exception) { }
-#endif
-
-#if !DEBUG
-			try
-			{
-#endif
-				_socket?.Close();
-#if !DEBUG
-			}
-			catch (Exception) { }
-#endif
-
-#if !DEBUG
-			try
-			{
-#endif
-				_socket?.Dispose();
-#if !DEBUG
-			}
-			catch (Exception) { }
-#endif
-
-#if !DEBUG
-			try
-			{
-#endif
-				_thread.Join();
-#if !DEBUG
-			}
-			catch (Exception) { }
-#endif
-
+			// We dont care if anything fails... just shut it down
+			try { _socket?.Shutdown(SocketShutdown.Both); } catch (Exception) { }
+			try { _socket?.Close(); } catch (Exception) { }
+			try { _socket?.Dispose(); } catch (Exception) { }
+			try { _thread?.Join(); } catch (Exception) { }
 			_thread = null;
 			_socket = null;
 			_crypto = null;
@@ -117,18 +82,14 @@ namespace CollarControl
 
 			// Receive client public key
 			byte[] clientKey = null;
-#if !DEBUG
 			try
 			{
-#endif
 				clientKey = ReceiveBytes();
-#if !DEBUG
 			}
 			catch (Exception ex)
 			{
 				throw new Exception("Could not receive remote public key: " + ex.Message);
 			}
-#endif
 			if (clientKey == null)
 			{
 				throw new Exception("Client sent null!");
@@ -146,32 +107,24 @@ namespace CollarControl
 			}
 
 			// Send public key
-#if !DEBUG
 			try
 			{
-#endif
 				SendBytes(serverKey);
-#if !DEBUG
 			}
 			catch (Exception ex)
 			{
 				throw new Exception("Could not send public key: " + ex.Message);
 			}
-#endif
 
 			// Generate private key
-#if !DEBUG
 			try
 			{
-#endif
 				_crypto.EstablishSecretKey(clientKey);
-#if !DEBUG
 			}
 			catch (Exception ex)
 			{
 				throw new Exception("Couldn't generate private key: " + ex.Message);
 			}
-#endif
 
 			string message = ReceiveMessage(); // TODO Fix: Possible freezing of application
 
@@ -188,19 +141,15 @@ namespace CollarControl
 
 		public void StartListening()
 		{
-#if !DEBUG
 			try
 			{
-#endif
 				_thread = new Thread(new ThreadStart(ReceiveAsync));
 				_thread.Start();
-#if !DEBUG
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("Could not start receiver handler: " + ex.Message);
 			}
-#endif
 		}
 
 		public void StopListening()
@@ -211,18 +160,14 @@ namespace CollarControl
 		public string ReceiveMessage()
 		{
 			byte[] encMessage = null;
-#if !DEBUG
 			try
 			{
-#endif
 				encMessage = ReceiveBytes();
-#if !DEBUG
 			}
 			catch (Exception ex)
 			{
 				throw new Exception("Couldn't not receive message: " + ex.Message);
 			}
-#endif
 
 			byte[] messageBytes = _crypto.Decrypt(encMessage);
 
@@ -231,18 +176,14 @@ namespace CollarControl
 				throw new Exception("Could not decrypt received data!");
 			}
 
-#if !DEBUG
 			try
 			{
-#endif
 				return Encoding.UTF8.GetString(messageBytes);
-#if !DEBUG
 			}
 			catch (Exception ex)
 			{
 				throw new Exception("Couldn't not convert message to string: " + ex.Message);
 			}
-#endif
 		}
 
 		public void SendMessage(string message)
@@ -254,18 +195,14 @@ namespace CollarControl
 				return;
 			}
 
-#if !DEBUG
 			try
 			{
-#endif
 				SendBytes(data);
-#if !DEBUG
 			}
 			catch (Exception ex)
 			{
 				throw new Exception("Could not send message: " + ex.Message);
 			}
-#endif
 		}
 
 		private byte[] ReceiveBytes()
@@ -313,12 +250,10 @@ namespace CollarControl
 				{
 					Console.WriteLine("Connection lost!");
 				}
-#if !DEBUG
 				catch (Exception ex)
 				{
-				Console.WriteLine("Client error: {0}", ex.Message);
+					Console.WriteLine("Client error: {0}", ex.Message);
 				}
-#endif
 				_receiveDone.WaitOne();
 			}
 
@@ -353,13 +288,11 @@ namespace CollarControl
 				_receiveDone.Set();
 				Console.WriteLine("Connection lost!");
 			}
-#if !DEBUG
 			catch (Exception ex)
 			{
-			_receiveDone.Set();
+				_receiveDone.Set();
 				Console.WriteLine("Client error: {0}", ex.Message);
 			}
-#endif
 		}
 
 		private void MessageReceivedCallback(IAsyncResult asyncResult)
@@ -370,7 +303,7 @@ namespace CollarControl
 
 				int bytesRead = 0;
 
-					bytesRead = _socket.EndReceive(asyncResult);
+				bytesRead = _socket.EndReceive(asyncResult);
 
 				if (bytesRead == state.length)
 				{
@@ -390,13 +323,11 @@ namespace CollarControl
 				_receiveDone.Set();
 				Console.WriteLine("Connection lost!");
 			}
-#if !DEBUG
 			catch (Exception ex)
 			{
-			_receiveDone.Set();
+				_receiveDone.Set();
 				Console.WriteLine("Client error: {0}", ex.Message);
 			}
-#endif
 		}
 
 		private class StateObject

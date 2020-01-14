@@ -1,7 +1,6 @@
 ﻿using LiteDB;
 using System;
 using System.Collections.Generic;
-using System.Net.Mail;
 
 namespace CollarControl
 {
@@ -156,22 +155,18 @@ namespace CollarControl
 				passwordResetExpieriDate = DateTime.UtcNow.AddMinutes(60);
 			}
 
-#if !DEBUG
 			try
 			{
-#endif
-			return ToolBox.SendEmail(
-				new String[] { Email },
-				"Password Recovery",
-				"Here is your recovery code:\n" + token
-				);
-#if !DEBUG
+				return ToolBox.SendEmail(
+					new string[] { Email },
+					"Password Recovery",
+					"Here is your recovery code:\n" + token
+					);
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("Exception caught while sending email: {0}", ex.Message);
 			}
-#endif
 			return false;
 		}
 		public bool VerifyPasswordResetToken(string token)
@@ -183,7 +178,7 @@ namespace CollarControl
 		}
 
 		// Handlers TODO: (Relays signals to Program.cs)
-		private void ConnectionMessageHandler(Connection con, String msg)
+		private void ConnectionMessageHandler(Connection con, string msg)
 		{
 			OnMessageReceived.Invoke(this, con, msg);
 		}

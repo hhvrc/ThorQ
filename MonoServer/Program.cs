@@ -1,9 +1,7 @@
-using BCrypt.Net;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net.Mail;
+using System.Threading.Tasks;
 using static CollarControl.ToolBox;
 
 // TODO: DDOS/SPAM Protection
@@ -23,30 +21,47 @@ namespace CollarControl
 			host = new Host();
 			userAPI = new UserAPI(@"D:\MyData.db");
 
-			host.OnClientConnected += ConnectionHandler;
-
-#if !DEBUG
+			host.OnClientConnected += (Connection con) =>
+			{
+				Task.Run(() => ConnectionHandler(con));
+			};
 			try
 			{
-#endif
-				host.Listen(5001);
-#if !DEBUG
+				host.Listen(25566);
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("Server crashed: " + ex.Message);
 			}
-#endif
 		}
 
+
+		static void SimpleResponse(Connection client, string key, string value)
+		{
+			Message message = new Message()
+			{
+				Command = "Response",
+				Parameters = new Dictionary<string, string>()
+				{
+					{ key, value }
+				}
+			};
+
+			string msg = JsonConvert.SerializeObject(message);
+
+			if (client != null && !string.IsNullOrEmpty(msg))
+			{
+				client.SendMessage(msg);
+			}
+		}
+
+		// Functions for logged out clients
 		static void ConnectionHandler(Connection client)
 		{
 			Console.WriteLine("[Client] New client!");
 
-#if !DEBUG
 			try
 			{
-#endif
 				if (client.Authenticate())
 				{
 					Console.WriteLine("[Client] Authenticated!");
@@ -57,172 +72,42 @@ namespace CollarControl
 					client.StopListening();
 					return;
 				}
-#if !DEBUG
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("[Client] Could not authenticate: " + ex.ToString());
-				client?.StopListening();
-				return;
 			}
-#endif
 
-			client.OnMessageReceived += MessageHandler;
-			client.OnClientDisconnected += DisconnectHandler;
-
-			client.StartListening();
-		}
-
-		static void DisconnectHandler(Connection client)
-		{
-			Console.WriteLine("[Client] Disconnected!");
-		}
-
-		static void MessageHandler(Connection client, string message)
-		{
-			Message msg;
-#if !DEBUG
 			try
 			{
-#endif
-				msg = JsonConvert.DeserializeObject<Message>(message);
-#if !DEBUG
+				while (client.IsConnected)
+				{
+					Message msg = JsonConvert.DeserializeObject<Message>(client.ReceiveMessage());
+
+					switch (msg.Command)
+					{
+						case "login":
+							LoginHandler(client, msg);
+							break;
+						case "register":
+							RegistrationHandler(client, msg);
+							break;
+						case "recover":
+							RecoveryHandler(client, msg);
+							break;
+						default:
+							SimpleResponse(client, "message", "Invalid request!");
+							goto end;
+					}
+				}
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine("Could not deserialize message: {0}", ex.Message);
-				return;
+				Console.WriteLine("[Client] Could not receive message: " + ex.ToString());
 			}
-#endif
-			
-			Console.WriteLine("Got command: " + msg.Command);
-
-			switch (msg.Command)
-			{
-				case "message":
-					break;
-				case "friendrequest":
-					FriendRequestHandler(client, msg);
-					break;
-				case "login":
-					LoginHandler(client, msg);
-					break;
-				case "logout":
-					LogoutHandler(client, msg);
-					break;
-				case "setpassword":
-					SetPassword(client, msg);
-					break;
-				case "register":
-					RegistrationHandler(client, msg);
-					break;
-				case "recover":
-					RecoveryHandler(client, msg);
-					break;
-				case "ping":
-					msg.Command = "ACK";
-					msg.Parameters.Clear();
-					client.SendMessage(JsonConvert.SerializeObject(msg));
-					return;
-				default:
-					SimpleResponse(client, "message", "Invalid request!");
-					return;
-			}
+		end:
+			try { client?.StopListening(); } catch (Exception) { }
 		}
-
-		private static void FriendRequestHandler(Connection client, Message msg)
-		{
-			// User must be logged in
-			if (client.Id == Guid.Empty)
-			{
-				SimpleResponse(client, "message", "Login required");
-				return;
-			}
-
-			// Get parameters
-			if (!msg.Parameters.ContainsKey("username") || !msg.Parameters.ContainsKey("action"))
-			{
-				SimpleResponse(client, "message", "Missing parameters");
-				return;
-			}
-			string username = msg.Parameters["username"];
-			string action = msg.Parameters["action"];
-
-			// Check if action requested is valid
-			if (action != "request" && action != "accept" && action != "deny" && action != "get")
-			{
-				SimpleResponse(client, "message", "Invalid action");
-				return;
-			}
-
-			// Find this user from database
-			User thisUser = userAPI[client.Id];
-			if (thisUser == null)
-			{
-				SimpleResponse(client, "message", "You are not in the database");
-				return;
-			}
-
-			// Find target user from database
-			User targetUser = userAPI[username];
-			if (targetUser == null)
-			{
-				SimpleResponse(client, "message", "User doesnt exist");
-				return;
-			}
-
-			// Check if other user has blocked this user
-			if (targetUser.BlockedUsers.Exists(u => u.UserID == targetUser.Id))
-			{
-				SimpleResponse(client, "message", "You are blocked by this user");
-				return;
-			}
-
-			// Send friend request (and remove potential block)
-			thisUser.BlockedUsers.RemoveAll(u => u.UserID == targetUser.Id);
-			if (!targetUser.FriendRequests.Exists(r => r.UserID == thisUser.Id))
-			{
-				DbUser.FriendRequest request = new DbUser.FriendRequest(thisUser.Id);
-				targetUser.FriendRequests.Add(request);
-
-				Message message = new Message()
-				{
-					Command = "FriendRequest",
-					Parameters = new Dictionary<String, String>()
-					{
-						{ "RequestId", request.RequestId.ToString() },
-						{ "Username",  thisUser.Username }
-					}
-				};
-
-				String str = JsonConvert.SerializeObject(message);
-
-				targetUser.SendMessage(str);
-			}
-
-			userAPI[thisUser.Id]   = thisUser;
-			userAPI[targetUser.Id] = targetUser;
-		}
-
-		static void SimpleResponse(Connection client, String key, String value)
-		{
-			Message message = new Message()
-			{
-				Command = "Response",
-				Parameters = new Dictionary<String, String>()
-				{
-					{ key, value }
-				}
-			};
-
-			String msg = JsonConvert.SerializeObject(message);
-
-			if (client != null && !String.IsNullOrEmpty(msg))
-			{
-				client.SendMessage(msg);
-			}
-		}
-
 		static void LoginHandler(Connection client, Message msg)
 		{
 			if (client.Id != Guid.Empty)
@@ -261,51 +146,14 @@ namespace CollarControl
 				return;
 			}
 
+			user.OnMessageReceived += UserMessageHandler;
+			user.OnIsOnlineChanged += UserOnlineChanged;
+
 			if (!user.HasConnection(client))
 				user.AddConnection(client);
 
 			Console.WriteLine("[Client] Logged in"); // DEBUG
 		}
-
-		static void LogoutHandler(Connection client, Message msg)
-		{
-			if (!msg.Parameters.ContainsKey("logoutall"))
-			{
-				SimpleResponse(client, "message", "Invalid request!");
-				return;
-			}
-
-			if (client.Id == Guid.Empty)
-			{
-				SimpleResponse(client, "message", "Already logged out!");
-				return;
-			}
-
-			User user = userAPI[client.Id];
-			if (user == null)
-			{
-				// Client id is not a existing userid
-				SimpleResponse(client, "message", "Server error");
-				return;
-			}
-
-			if (msg.Parameters["logoutall"] == "true")
-			{
-				user.ClearConnections();
-			}
-			else if (msg.Parameters["logoutall"] == "false")
-			{
-				user.RemoveConnection(client);
-			}
-			else
-			{
-				SimpleResponse(client, "message", "Invalid request!");
-				return;
-			}
-
-			Console.WriteLine("[Client] Logged out"); // DEBUG
-		}
-
 		static void RegistrationHandler(Connection client, Message msg)
 		{
 			if (client.Id != Guid.Empty)
@@ -365,13 +213,16 @@ namespace CollarControl
 			}
 
 			// Add user
-			userAPI.AddUser(username, password, email);
+			if (!userAPI.TryAddUser(username, password, email))
+			{
+				SimpleResponse(client, "message", "Username/Email taken");
+				return;
+			}
 
 			userAPI[username].AddConnection(client);
 
 			Console.WriteLine("[Client] Registered");
 		}
-
 		static void RecoveryHandler(Connection client, Message msg)
 		{
 			if (client.Id != Guid.Empty)
@@ -400,7 +251,7 @@ namespace CollarControl
 			{
 				if (verify == "")
 				{
-					if (!user.GeneratePasswordResetToken())
+					if (!user.SendPasswordResetToken())
 					{
 						SimpleResponse(client, "message", "Server error!");
 						return;
@@ -421,18 +272,210 @@ namespace CollarControl
 
 			SimpleResponse(client, "message", "Recovery password sent!");
 		}
-	
-		static void SetPassword(Connection client, Message msg)
+
+		static void UserOnlineChanged(User user, bool online)
 		{
-			if (!msg.Parameters.ContainsKey("oldpassword") || !msg.Parameters.ContainsKey("newpassword"))
+			foreach (Guid id in user.Friends)
+			{
+				User friend = userAPI[id];
+
+				if (friend == null)
+					continue;
+
+				Message message = new Message()
+				{
+					Command = "onlinechanged",
+					Parameters = new Dictionary<string, string>()
+					{
+						{ "username", user.Username },
+						{ "isonline", online?"true":"false" }
+					}
+				};
+				string msg = JsonConvert.SerializeObject(message);
+
+				friend.SendMessage(msg);
+			}
+		}
+		static void UserMessageHandler(User user, Connection client, string message)
+		{
+			Message msg;
+
+			try
+			{
+				msg = JsonConvert.DeserializeObject<Message>(message);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine("Could not deserialize message: {0}", ex.Message);
+				return;
+			}
+
+			Console.WriteLine("Got command: " + msg.Command);
+
+			switch (msg.Command)
+			{
+				case "message":
+					DmHandler(client, msg);
+					break;
+				case "friendrequest":
+					FriendRequestHandler(client, msg);
+					break;
+				case "logout":
+					LogoutHandler(client, msg);
+					break;
+				case "setpassword":
+					SetPassword(client, msg);
+					break;
+				case "ping":
+					msg.Command = "ACK";
+					msg.Parameters.Clear();
+					client.SendMessage(JsonConvert.SerializeObject(msg));
+					return;
+				default:
+					SimpleResponse(client, "message", "Invalid request!");
+					return;
+			}
+		}
+		static void DmHandler(Connection client, Message msg)
+		{
+			// Get parameters
+			if (!msg.Parameters.ContainsKey("username") || !msg.Parameters.ContainsKey("content"))
+			{
+				SimpleResponse(client, "message", "Missing parameters");
+				return;
+			}
+			string username = msg.Parameters["username"];
+			string content = msg.Parameters["content"];
+
+			User user = userAPI[username];
+
+			if (user != null)
+			{
+				Message message = new Message()
+				{
+					Command = "dm",
+					Parameters = new Dictionary<string, string>()
+					{
+						{ "sender", userAPI[client.Id].Username },
+						{ "content", content }
+					}
+				};
+
+				string str = JsonConvert.SerializeObject(message);
+
+				user.SendMessage(str);
+			}
+			else
+			{
+				SimpleResponse(client, "message", "Invalid user");
+			}
+		}
+		// FIXME
+		static void FriendRequestHandler(Connection client, Message msg)
+		{
+			// Get parameters
+			if (!msg.Parameters.ContainsKey("username") || !msg.Parameters.ContainsKey("action"))
+			{
+				SimpleResponse(client, "message", "Missing parameters");
+				return;
+			}
+			string username = msg.Parameters["username"];
+			string action = msg.Parameters["action"];
+
+			// Check if action requested is valid
+			if (action != "request" && action != "accept" && action != "deny" && action != "get")
+			{
+				SimpleResponse(client, "message", "Invalid action");
+				return;
+			}
+
+			// Find this user from database
+			User thisUser = userAPI[client.Id];
+			if (thisUser == null)
+			{
+				SimpleResponse(client, "message", "You are not in the database");
+				return;
+			}
+
+			// Find target user from database
+			User targetUser = userAPI[username];
+			if (targetUser == null)
+			{
+				SimpleResponse(client, "message", "User doesnt exist");
+				return;
+			}
+
+			// Check if other user has blocked this user
+			if (targetUser.BlockedUsers.Exists(u => u.UserID == targetUser.Id))
+			{
+				SimpleResponse(client, "message", "You are blocked by this user");
+				return;
+			}
+
+			// Send friend request (and remove potential block)
+			thisUser.BlockedUsers.RemoveAll(u => u.UserID == targetUser.Id);
+			if (!targetUser.FriendRequests.Exists(r => r.UserID == thisUser.Id))
+			{
+				DbUser.FriendRequest request = new DbUser.FriendRequest(thisUser.Id);
+				targetUser.FriendRequests.Add(request);
+
+				Message message = new Message()
+				{
+					Command = "FriendRequest",
+					Parameters = new Dictionary<string, string>()
+					{
+						{ "RequestId", request.RequestId.ToString() },
+						{ "Username",  thisUser.Username }
+					}
+				};
+
+				string str = JsonConvert.SerializeObject(message);
+
+				targetUser.SendMessage(str);
+			}
+
+			userAPI[thisUser.Id] = thisUser;
+			userAPI[targetUser.Id] = targetUser;
+		}
+		static void LogoutHandler(Connection client, Message msg)
+		{
+			if (!msg.Parameters.ContainsKey("logoutall"))
 			{
 				SimpleResponse(client, "message", "Invalid request!");
 				return;
 			}
 
-			if (client.Id == Guid.Empty)
+			string logoutall = msg.Parameters["logoutall"];
+
+			User user = userAPI[client.Id];
+			if (user == null)
 			{
-				SimpleResponse(client, "message", "Not logged in!");
+				// Client id is not a existing userid
+				SimpleResponse(client, "message", "Server error");
+				return;
+			}
+
+			if (logoutall == "true")
+			{
+				user.ClearConnections();
+			}
+			else if (logoutall == "false")
+			{
+				user.RemoveConnection(client);
+			}
+			else
+			{
+				SimpleResponse(client, "message", "Invalid request!");
+				return;
+			}
+
+			Console.WriteLine("[Client] Logged out"); // DEBUG
+		}
+		static void SetPassword(Connection client, Message msg)
+		{
+			if (!msg.Parameters.ContainsKey("oldpassword") || !msg.Parameters.ContainsKey("newpassword"))
+			{
+				SimpleResponse(client, "message", "Invalid request!");
 				return;
 			}
 
