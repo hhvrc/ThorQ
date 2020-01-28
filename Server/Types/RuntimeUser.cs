@@ -1,63 +1,11 @@
 ﻿using LiteDB;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 
-namespace CollarControl
+namespace Server
 {
-	public class DbUser
-	{
-		public enum Activity
-		{
-			Offline,
-			Inactive,
-			DoNotDisturb,
-			Online,
-		}
-		public DbUser()
-		{
-			Friends = new List<Guid>();
-			FriendRequests = new List<FriendRequest>();
-			BlockedUsers = new List<BlockedUser>();
-		}
-
-		[BsonId]
-		public Guid Id;
-		public string Username;
-		public string Email;
-		public string PasswordHash;
-		public Activity state = Activity.Offline;
-		public string status;
-		public List<Guid> Friends;
-		//public List<Conversation> conversations; // @TODO: implement me
-		public List<FriendRequest> FriendRequests;
-		public List<BlockedUser> BlockedUsers;
-		public class FriendRequest
-		{
-			public FriendRequest(Guid userId)
-			{
-				RequestId = Guid.NewGuid();
-				UserID = userId;
-			}
-			[BsonId]
-			public Guid RequestId;
-			public Guid UserID;
-		}
-		public class BlockedUser
-		{
-			public BlockedUser(Guid userID, string username)
-			{
-				BlockId = Guid.NewGuid();
-				UserID = userID;
-				UsernameWhenBlocked = username;
-			}
-			[BsonId]
-			public Guid BlockId { get; set; }
-			public Guid UserID { get; set; }
-			public string UsernameWhenBlocked { get; set; }
-		}
-	}
-
-	public class User : DbUser
+	public class RuntimeUser : DbUser
 	{
 		// Runtime variables
 		private string passwordResetToken;
@@ -65,21 +13,14 @@ namespace CollarControl
 		private List<Connection> _connections = new List<Connection>();
 
 		// Events
-		public event Action<User, bool> OnIsOnlineChanged;
-		public event Action<User, Connection, string> OnMessageReceived;
+		public event Action<RuntimeUser, bool> IsOnlineChanged;
+		public event Action<RuntimeUser, Connection, string> MessageReceived;
 
-		public User()
-		{ }
-		public User(
-			Guid id,
-			String username,
-			String email,
-			String password,
-			Activity state = Activity.Offline,
-			String status = ""
-			)
+		// Constructors
+		public RuntimeUser() { }
+		public RuntimeUser(string username, string email, string password, UserActivity state = UserActivity.Offline, string status = "")
 		{
-			base.Id = id;
+			base.Id = Guid.NewGuid();
 			base.Username = username;
 			base.Email = email;
 			SetPassword(password);
@@ -87,7 +28,7 @@ namespace CollarControl
 			base.status = status;
 			_connections = new List<Connection>();
 		}
-		public User(DbUser baseObject)
+		public RuntimeUser(DbUser baseObject)
 		{
 			Id = baseObject.Id;
 			Username = baseObject.Username;
@@ -96,13 +37,12 @@ namespace CollarControl
 			state = baseObject.state;
 			status = baseObject.status;
 			Friends = baseObject.Friends;
-			//conversations; // @TODO: implement me
+			Conversations = baseObject.Conversations;
 			FriendRequests = baseObject.FriendRequests;
 			BlockedUsers = baseObject.BlockedUsers;
 			_connections = new List<Connection>();
 		}
-
-		~User()
+		~RuntimeUser()
 		{
 			ClearConnections();
 		}
@@ -127,21 +67,17 @@ namespace CollarControl
 		}
 		public void AddConnection(Connection connection)
 		{
-			connection.Id = this.Id;
-
 			lock (_connections)
 			{
 				_connections.Add(connection);
 				connection.OnMessageReceived += ConnectionMessageHandler;
 				connection.OnClientDisconnected += RemoveConnection;
 				if (_connections.Count == 1)
-					OnIsOnlineChanged.Invoke(this, true);
+					IsOnlineChanged.Invoke(this, true);
 			}
 		}
 		public void RemoveConnection(Connection connection)
 		{
-			connection.Id = Guid.Empty;
-
 			lock (_connections)
 			{
 				if (_connections.Contains(connection))
@@ -150,7 +86,7 @@ namespace CollarControl
 					connection.OnClientDisconnected -= RemoveConnection;
 					_connections.Remove(connection);
 					if (_connections.Count == 0)
-						OnIsOnlineChanged.Invoke(this, false);
+						IsOnlineChanged.Invoke(this, false);
 				}
 			}
 		}
@@ -162,12 +98,12 @@ namespace CollarControl
 				{
 					foreach (Connection conn in _connections)
 					{
-						conn.Id = Guid.Empty;
+						conn.StopListening();
 						conn.OnMessageReceived -= ConnectionMessageHandler;
 						conn.OnClientDisconnected -= RemoveConnection;
 					}
 					_connections.Clear();
-					OnIsOnlineChanged.Invoke(this, false);
+					IsOnlineChanged.Invoke(this, false);
 				}
 			}
 		}
@@ -178,12 +114,48 @@ namespace CollarControl
 					return true;
 			return false;
 		}
+		public bool IsMemberOfConversation(Guid conversationId)
+		{
+			foreach (Guid id in Conversations)
+				if (id == conversationId)
+					return true;
+			return false;
+		}
 		public bool HasBlocked(Guid userId)
 		{
 			foreach (BlockedUser blocked in BlockedUsers)
-				if (blocked.UserID == userId)
+				if (blocked.blockedId == userId)
 					return true;
 			return false;
+		}
+		public void SendUpdatedFriendsList()
+		{
+			List<ServerPayloads.Friend> friends = new List<ServerPayloads.Friend>();
+
+			foreach (var id in Friends)
+			{
+				var friend = Program.userAPI.GetById(id);
+
+				ServerPayloads.Friend f = new ServerPayloads.Friend()
+				{
+					userId = friend.Id,
+					username = friend.Username,
+					status = friend.status,
+					state = friend.state,
+				};
+
+				friends.Add(f);
+			}
+
+			ServerPackage message = new ServerPackage()
+			{
+				code = ResponseCode.UPDATE_DATA,
+				type = ResponseDataType.FRIEND_LIST,
+				requestId = Guid.Empty,
+				payload = JsonConvert.SerializeObject(friends),
+			};
+
+			SendMessage(message.Serialize());
 		}
 		public void SendMessage(string message)
 		{
@@ -238,7 +210,7 @@ namespace CollarControl
 		// Handlers TODO: (Relays signals to Program.cs)
 		private void ConnectionMessageHandler(Connection con, string msg)
 		{
-			OnMessageReceived.Invoke(this, con, msg);
+			MessageReceived.Invoke(this, con, msg);
 		}
 	}
 }

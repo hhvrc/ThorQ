@@ -33,7 +33,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <StartupObject>CollarControl.Program</StartupObject>
+    <StartupObject>Server.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="BCrypt.Net-Next, Version=3.2.1.0, Culture=neutral, PublicKeyToken=1e11be04b6288443, processorArchitecture=MSIL">
@@ -58,22 +58,38 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ApiBlockedUsers.cs" />
-    <Compile Include="ApiConversations.cs" />
-    <Compile Include="ApiFriends.cs" />
-    <Compile Include="ApiP2PConnection.cs" />
-    <Compile Include="ApiRPCMessage.cs" />
-    <Compile Include="BouncyCrypto.cs" />
-    <Compile Include="Connection.cs" />
-    <Compile Include="Conversation.cs" />
-    <Compile Include="Crypto.cs" />
-    <Compile Include="Host.cs" />
-    <Compile Include="ClientMessage.cs" />
+    <Compile Include="Crypto\BouncyCrypto.cs" />
+    <Compile Include="Connectivity\Connection.cs" />
+    <Compile Include="enums.cs" />
+    <Compile Include="RequestHandlers\Account.cs" />
+    <Compile Include="RequestHandlers\Conversation.cs" />
+    <Compile Include="RequestHandlers\Email.cs" />
+    <Compile Include="RequestHandlers\Friend.cs" />
+    <Compile Include="RequestHandlers\FriendRequest.cs" />
+    <Compile Include="RequestHandlers\Message.cs" />
+    <Compile Include="RequestHandlers\BlockedUser.cs" />
+    <Compile Include="RequestHandlers\P2PRequest.cs" />
+    <Compile Include="RequestHandlers\Password.cs" />
+    <Compile Include="RequestHandlers\Recovery.cs" />
+    <Compile Include="RequestHandlers\RPC.cs" />
+    <Compile Include="RequestHandlers\Username.cs" />
+    <Compile Include="Types\BlockedUser.cs" />
+    <Compile Include="Types\Conversation.cs" />
+    <Compile Include="API-Conversation.cs" />
+    <Compile Include="Crypto\Crypto.cs" />
+    <Compile Include="Connectivity\Host.cs" />
+    <Compile Include="MessageFormats\Client\Package.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="MessageFormats\Client\Payloads.cs" />
+    <Compile Include="MessageFormats\Server\Payloads.cs" />
+    <Compile Include="MessageFormats\Server\Package.cs" />
     <Compile Include="ToolBox.cs" />
-    <Compile Include="User.cs" />
-    <Compile Include="UserAPI.cs" />
+    <Compile Include="Types\DbUser.cs" />
+    <Compile Include="Types\FriendRequest.cs" />
+    <Compile Include="Types\Message.cs" />
+    <Compile Include="Types\RuntimeUser.cs" />
+    <Compile Include="API-User.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

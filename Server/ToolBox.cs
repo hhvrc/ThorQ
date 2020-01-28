@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Serialization;
 
-namespace CollarControl
+namespace Server
 {
 	public static class ToolBox
 	{
@@ -19,7 +19,7 @@ namespace CollarControl
 			}
 			catch (Exception ex)
 			{
-				throw; // @TODO: fixme
+				throw; // TODO fixme
 			}
 		}
 

@@ -3,7 +3,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
-namespace CollarControl
+namespace Server
 {
 	public class Connection
 	{
@@ -15,25 +15,6 @@ namespace CollarControl
 			get
 			{
 				return _socket?.Connected ?? false;
-			}
-		}
-
-		private object _idLock = new object();
-		private Guid _id = Guid.Empty;
-		/// <summary>
-		/// ID attribute
-		/// </summary>
-		public Guid Id
-		{
-			get
-			{
-				lock (_idLock)
-					return _id;
-			}
-			set
-			{
-				lock (_idLock)
-					_id = value;
 			}
 		}
 
