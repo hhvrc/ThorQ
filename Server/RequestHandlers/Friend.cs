@@ -26,7 +26,8 @@ namespace Server
 		}
 		static void Get(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
 		{
-			throw new NotImplementedException("Friend_RequestHandler.Get()");
+			// TODO implement me
+			throw new NotImplementedException($"Friend_RequestHandler.Get({thisUser},{client},{requestId},{payload})");
 		}
 		static void Delete(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
 		{

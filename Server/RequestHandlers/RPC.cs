@@ -22,7 +22,8 @@ namespace Server
 		}
 		static void Post(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
 		{
-			throw new NotImplementedException("RPC");
+			// TODO implement me
+			throw new NotImplementedException($"RPC_RequestHandler.Post({thisUser},{client},{requestId},{payload})");
 		}
 	}
 }

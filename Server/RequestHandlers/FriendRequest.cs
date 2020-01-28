@@ -83,12 +83,12 @@ namespace Server
 		static void Accept(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
 		{
 			// TODO implement me
-			throw new NotImplementedException("FriendRequest_RequestHandler.Accept()");
+			throw new NotImplementedException($"FriendRequest_RequestHandler.Accept({thisUser},{client},{requestId},{payload})");
 		}
 		static void Deny(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
 		{
 			// TODO implement me
-			throw new NotImplementedException("FriendRequest_RequestHandler.Deny()");
+			throw new NotImplementedException($"FriendRequest_RequestHandler.Deny({thisUser},{client},{requestId},{payload})");
 		}
 	}
 }

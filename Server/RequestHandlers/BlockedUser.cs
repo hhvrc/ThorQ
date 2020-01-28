@@ -28,15 +28,18 @@ namespace Server
 		}
 		static void Get(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
 		{
-			throw new NotImplementedException();
+			// TODO implement me
+			throw new NotImplementedException($"BlockedUser_RequestHandler.Get({thisUser},{client},{requestId},{payload})");
 		}
 		static void Post(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
 		{
-			throw new NotImplementedException();
+			// TODO implement me
+			throw new NotImplementedException($"BlockedUser_RequestHandler.Post({thisUser},{client},{requestId},{payload})");
 		}
 		static void Delete(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
 		{
-			throw new NotImplementedException();
+			// TODO implement me
+			throw new NotImplementedException($"BlockedUser_RequestHandler.Delete({thisUser},{client},{requestId},{payload})");
 		}
 
 	}

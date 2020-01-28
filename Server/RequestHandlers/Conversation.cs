@@ -111,7 +111,8 @@ namespace Server
 		}
 		static void Delete(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
 		{
-			throw new NotImplementedException("MessageDelete");
+			// TODO implement me
+			throw new NotImplementedException($"Conversation_RequestHandler.Delete({thisUser},{client},{requestId},{payload})");
 		}
 	}
 }

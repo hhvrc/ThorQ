@@ -28,15 +28,18 @@ namespace Server
 		}
 		static void Post(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
 		{
-			throw new NotImplementedException();
+			// TODO implement me
+			throw new NotImplementedException($"P2PRequest_RequestHandler.Post({thisUser},{client},{requestId},{payload})");
 		}
 		static void Accept(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
 		{
-			throw new NotImplementedException();
+			// TODO implement me
+			throw new NotImplementedException($"P2PRequest_RequestHandler.Accept({thisUser},{client},{requestId},{payload})");
 		}
 		static void Deny(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
 		{
-			throw new NotImplementedException();
+			// TODO implement me
+			throw new NotImplementedException($"P2PRequest_RequestHandler.Deny({thisUser},{client},{requestId},{payload})");
 		}
 
 	}
