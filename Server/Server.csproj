@@ -58,12 +58,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApiBlockedUsers.cs" />
+    <Compile Include="ApiConversations.cs" />
+    <Compile Include="ApiFriends.cs" />
+    <Compile Include="ApiP2PConnection.cs" />
+    <Compile Include="ApiRPCMessage.cs" />
     <Compile Include="BouncyCrypto.cs" />
     <Compile Include="Connection.cs" />
     <Compile Include="Conversation.cs" />
     <Compile Include="Crypto.cs" />
     <Compile Include="Host.cs" />
-    <Compile Include="Message.cs" />
+    <Compile Include="ClientMessage.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ToolBox.cs" />

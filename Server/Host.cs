@@ -14,7 +14,6 @@ namespace CollarControl
 		struct StateObject
 		{
 			public Socket socket;
-			public ManualResetEvent signal;
 		}
 
 		/// <summary>

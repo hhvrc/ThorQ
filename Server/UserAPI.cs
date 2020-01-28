@@ -1,9 +1,9 @@
 ﻿using LiteDB;
-using System;
-using System.Linq;
 using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
+using System.Linq;
+using System.Text;
 
 namespace CollarControl
 {
@@ -12,98 +12,176 @@ namespace CollarControl
 		private object l_add = new object();
 		private LiteDatabase _db = null;
 		private LiteCollection<DbUser> _dbUsers;
-		private ConcurrentDictionary<Guid, User> _activeUsers;
-		
+		private Dictionary<Guid, User> _activeUsers;
+		private List<Guid> _lockedUsers = new List<Guid>();
+
+		public bool TryLockUser(Guid id)
+		{
+			lock (_lockedUsers)
+			{
+				if (!_lockedUsers.Contains(id))
+					_lockedUsers.Add(id);
+				else
+					return false;
+				return true;
+			}
+		}
+		public void UnlockUser(Guid id)
+		{
+			lock (_lockedUsers)
+				if (_lockedUsers.Contains(id))
+					_lockedUsers.Remove(id);
+		}
+
 		public UserAPI(string dbPath)
 		{
 			_db = new LiteDatabase(dbPath);
 			_dbUsers = _db.GetCollection<DbUser>("users");
-			_activeUsers = new ConcurrentDictionary<Guid, User>();
+			_activeUsers = new Dictionary<Guid, User>();
+
+			var users = _dbUsers.FindAll();
+			foreach (var usr in users)
+				_activeUsers.Add(usr.Id, new User(usr));
 		}
-		public void broadcastNotification(String title, String content)
+		public void broadcastNotification(string subject, string body)
 		{
-			Message message = new Message()
+			try
 			{
-				Command = "Notification",
-				Parameters = new Dictionary<string, string>()
+				ServerMessage message = new ServerMessage()
+				{
+					code = ServerMessage.Code.ADMIN_MSG,
+					type = ServerMessage.DataType.STRING,
+					requestId = Guid.Empty,
+					payload = $"{Convert.ToBase64String(Encoding.Unicode.GetBytes(subject))}_{Convert.ToBase64String(Encoding.Unicode.GetBytes(body))}"
+				};
+
+				string msg = JsonConvert.SerializeObject(message);
+
+				var users = _dbUsers.FindAll();
+
+				foreach (User user in users)
+				{
+					try
 					{
-						{ "title", title },
-						{ "content", content }
+						user.SendMessage(msg);
 					}
-			};
-			String msg = JsonConvert.SerializeObject(message);
-
-			foreach (User user in _activeUsers.Values)
+					catch (Exception ex)
+					{
+						Console.WriteLine($"Error broadcasting to {user.Username}: {ex.Message}");
+					}
+				}
+			}
+			catch (Exception ex)
 			{
-				user.SendMessage(msg);
+				Console.WriteLine($"Error starting broadcast: {ex.Message}");
 			}
 		}
-		public void BroadcastEmail(String subject, String body)
+		public void BroadcastEmail(string subject, string body)
 		{
-			IEnumerable<DbUser> users = _dbUsers.FindAll();
-			String[] emails = new String[users.Count()];
-
-			int i = 0;
-			foreach (DbUser user in users)
+			try
 			{
-				emails[i] = user.Email;
-				i++;
+				var users = _dbUsers.FindAll();
+				var emails = new string[users.Count()];
+
+				int i = 0;
+				foreach (DbUser user in users)
+				{
+					emails[i] = user.Email;
+					i++;
+				}
+
+				ToolBox.SendEmail(emails, subject, body);
 			}
-
-			ToolBox.SendEmail(emails, subject, body);
-		}
-		public bool TryAddUser(String username, String password, String email)
-		{
-			lock(l_add)
+			catch (Exception ex)
 			{
-				if (_dbUsers.Exists(u => (u.Username == username) || (u.Email == email)))
+				Console.WriteLine($"Error broadcastin emails: {ex.Message}");
+			}
+		}
+		public bool TryAddUser(string username, string password, string email)
+		{
+			lock (_activeUsers)
+			{
+				email = email.ToLower();
+				String lowerName = username.ToLower();
+				if (_dbUsers.Exists(u => (u.Username.ToLower() == lowerName) || (u.Email == email)))
 					return false;
 
-				User user = new User();
-				user.Id = Guid.NewGuid();
-				user.Username = username;
-				user.Email = email;
-				user.SetPassword(password);
+				User user = new User(Guid.NewGuid(), username, email.ToLower(), password);
 				_dbUsers.Insert(user);
-				_activeUsers.TryAdd(user.Id, user);
+				lock(_activeUsers)
+					_activeUsers.Add(user.Id, user);
 				return true;
 			}
 		}
-		public bool EmailExists(String email)
+		public void RemoveUser(string username)
+		{
+			lock (_activeUsers)
+			{
+				username = username.ToLower();
+
+				User usr = _activeUsers.FirstOrDefault(u => u.Value.Username.ToLower() == username).Value;
+				if (usr != null)
+					return;
+
+				Guid id = usr.Id;
+				_dbUsers.Delete(u => u.Id == id);
+				_activeUsers.Remove(id);
+			}
+		}
+		public void RemoveUser(Guid id)
+		{
+			lock (_activeUsers)
+			{
+				if (_activeUsers.ContainsKey(id))
+					return;
+
+				_dbUsers.Delete(u => u.Id == id);
+				_activeUsers.Remove(id);
+			}
+		}
+		public bool EmailExists(string email)
 		{
 			email = email.ToLower();
-			return _dbUsers.Exists(e => e.Email.ToLower() == email);
+			lock (_activeUsers)
+				return _activeUsers.Any(u => u.Value.Email.ToLower() == email);
 		}
-		public bool UserExists(String username)
+		public bool UserExists(string username)
 		{
 			username = username.ToLower();
-			return _dbUsers.Exists(u => u.Username.ToLower() == username);
+			lock (_activeUsers)
+				return _activeUsers.Any(u => u.Value.Username.ToLower() == username);
 		}
 		public bool UserExists(Guid userID)
 		{
-			return _dbUsers.FindById(userID) != null;
+			lock (_activeUsers)
+				return _activeUsers.ContainsKey(userID);
 		}
-		public User FindUserByEmail(String email)
+		public User FindUserByEmail(string email)
 		{
 			email = email.ToLower();
-			return this[_dbUsers.FindOne(u => u.Email.ToLower() == email)?.Id??Guid.Empty];
+			lock (_activeUsers)
+				return _activeUsers.FirstOrDefault(u => u.Value.Email.ToLower() == email).Value;
 		}
-		public User this[String username]
+		public User this[string username]
 		{
 			set
 			{
 				username = username.ToLower();
-				if (value == null || !_dbUsers.Exists(u => u.Username.ToLower() == username))
-					return;
+				lock (_activeUsers)
+					if (value == null || !_activeUsers.Any(u => u.Value.Username.ToLower() == username))
+						return;
 
 				_dbUsers.Update(value);
 				if (value.Id != Guid.Empty)
-					_activeUsers.TryUpdate(value.Id, value, value);
+					lock (_activeUsers)
+						_activeUsers[value.Id] = value;
 			}
 			get
 			{
 				username = username.ToLower();
-				User user = _activeUsers.FirstOrDefault(u => u.Value.Username.ToLower() == username).Value;
+				User user;
+				lock (_activeUsers)
+					user = _activeUsers.FirstOrDefault(u => u.Value.Username.ToLower() == username).Value;
 				if (user == null)
 					return (User)_dbUsers.FindOne(u => u.Username.ToLower() == username);
 				return user;
@@ -117,11 +195,14 @@ namespace CollarControl
 					return;
 
 				_dbUsers.Update(value);
-				_activeUsers.TryUpdate(userID, value, value);
+				lock (_activeUsers)
+					_activeUsers[userID] = value;
 			}
 			get
 			{
-				User user = _activeUsers[userID];
+				User user;
+				lock (_activeUsers)
+					user = _activeUsers[userID];
 				if (user == null)
 					return (User)_dbUsers.FindById(userID);
 				return user;

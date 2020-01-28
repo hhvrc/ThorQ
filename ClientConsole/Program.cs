@@ -22,9 +22,14 @@ namespace CollarControl
 			client.OnMessageReceived += MessageReceivedHandler;
 
             try
-            {
-			String addr = args[0];
-			UInt16 port = UInt16.Parse(args[1]);
+			{
+#if !DEBUG
+				String addr = args[0];
+				UInt16 port = UInt16.Parse(args[1]);
+#else
+				String addr = "localhost";
+				UInt16 port = 5001;;
+#endif
 
 				client.Connect(addr, port);
 				Console.WriteLine("Socket connected to {0}:{1}", addr, port);

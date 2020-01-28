@@ -4,8 +4,15 @@ using System.Collections.Generic;
 
 namespace CollarControl
 {
-	class DbUser
+	public class DbUser
 	{
+		public enum Activity
+		{
+			Offline,
+			Inactive,
+			DoNotDisturb,
+			Online,
+		}
 		public DbUser()
 		{
 			Friends = new List<Guid>();
@@ -14,13 +21,16 @@ namespace CollarControl
 		}
 
 		[BsonId]
-		public Guid Id { get; set; }
-		public string Username { get; set; }
-		public string Email { get; set; }
-		public string PasswordHash { get; set; }
-		public List<Guid> Friends { get; set; }
-		public List<FriendRequest> FriendRequests { get; set; }
-		public List<BlockedUser> BlockedUsers { get; set; }
+		public Guid Id;
+		public string Username;
+		public string Email;
+		public string PasswordHash;
+		public Activity state = Activity.Offline;
+		public string status;
+		public List<Guid> Friends;
+		//public List<Conversation> conversations; // @TODO: implement me
+		public List<FriendRequest> FriendRequests;
+		public List<BlockedUser> BlockedUsers;
 		public class FriendRequest
 		{
 			public FriendRequest(Guid userId)
@@ -29,8 +39,8 @@ namespace CollarControl
 				UserID = userId;
 			}
 			[BsonId]
-			public Guid RequestId { get; set; }
-			public Guid UserID { get; set; }
+			public Guid RequestId;
+			public Guid UserID;
 		}
 		public class BlockedUser
 		{
@@ -47,7 +57,7 @@ namespace CollarControl
 		}
 	}
 
-	class User : DbUser
+	public class User : DbUser
 	{
 		// Runtime variables
 		private string passwordResetToken;
@@ -57,6 +67,40 @@ namespace CollarControl
 		// Events
 		public event Action<User, bool> OnIsOnlineChanged;
 		public event Action<User, Connection, string> OnMessageReceived;
+
+		public User()
+		{ }
+		public User(
+			Guid id,
+			String username,
+			String email,
+			String password,
+			Activity state = Activity.Offline,
+			String status = ""
+			)
+		{
+			base.Id = id;
+			base.Username = username;
+			base.Email = email;
+			SetPassword(password);
+			base.state = state;
+			base.status = status;
+			_connections = new List<Connection>();
+		}
+		public User(DbUser baseObject)
+		{
+			Id = baseObject.Id;
+			Username = baseObject.Username;
+			Email = baseObject.Email;
+			PasswordHash = baseObject.PasswordHash;
+			state = baseObject.state;
+			status = baseObject.status;
+			Friends = baseObject.Friends;
+			//conversations; // @TODO: implement me
+			FriendRequests = baseObject.FriendRequests;
+			BlockedUsers = baseObject.BlockedUsers;
+			_connections = new List<Connection>();
+		}
 
 		~User()
 		{
@@ -126,6 +170,20 @@ namespace CollarControl
 					OnIsOnlineChanged.Invoke(this, false);
 				}
 			}
+		}
+		public bool IsFriendsWith(Guid userId)
+		{
+			foreach (Guid friend in Friends)
+				if (friend == userId)
+					return true;
+			return false;
+		}
+		public bool HasBlocked(Guid userId)
+		{
+			foreach (BlockedUser blocked in BlockedUsers)
+				if (blocked.UserID == userId)
+					return true;
+			return false;
 		}
 		public void SendMessage(string message)
 		{
