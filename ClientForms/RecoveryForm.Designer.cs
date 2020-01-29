@@ -50,6 +50,7 @@
 			this.Controls.Add(this.button1);
 			this.Name = "RecoveryForm";
 			this.Text = "RecoveryForm";
+			this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.OnClosed);
 			this.ResumeLayout(false);
 
 		}

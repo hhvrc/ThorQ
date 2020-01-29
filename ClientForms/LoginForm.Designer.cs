@@ -162,7 +162,7 @@
 			this.MinimizeBox = false;
 			this.Name = "LoginForm";
 			this.Text = "Login";
-			this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.LoginForm_Closed);
+			this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.OnClosed);
 			this.ResumeLayout(false);
 			this.PerformLayout();
 

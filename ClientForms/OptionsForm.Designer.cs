@@ -37,11 +37,11 @@
 			this.portBox = new System.Windows.Forms.NumericUpDown();
 			this.NetworkingBox = new System.Windows.Forms.GroupBox();
 			this.groupBox2 = new System.Windows.Forms.GroupBox();
+			this.PortSelector = new System.Windows.Forms.ComboBox();
+			this.BaudSelector = new System.Windows.Forms.ComboBox();
 			this.CollarPortLabel = new System.Windows.Forms.Label();
 			this.CollarBaudLabel = new System.Windows.Forms.Label();
 			this.button3 = new System.Windows.Forms.Button();
-			this.BaudSelector = new System.Windows.Forms.ComboBox();
-			this.PortSelector = new System.Windows.Forms.ComboBox();
 			((System.ComponentModel.ISupportInitialize)(this.portBox)).BeginInit();
 			this.NetworkingBox.SuspendLayout();
 			this.groupBox2.SuspendLayout();
@@ -146,6 +146,22 @@
 			this.groupBox2.TabStop = false;
 			this.groupBox2.Text = "Collar";
 			// 
+			// PortSelector
+			// 
+			this.PortSelector.FormattingEnabled = true;
+			this.PortSelector.Location = new System.Drawing.Point(67, 13);
+			this.PortSelector.Name = "PortSelector";
+			this.PortSelector.Size = new System.Drawing.Size(100, 21);
+			this.PortSelector.TabIndex = 10;
+			// 
+			// BaudSelector
+			// 
+			this.BaudSelector.FormattingEnabled = true;
+			this.BaudSelector.Location = new System.Drawing.Point(67, 38);
+			this.BaudSelector.Name = "BaudSelector";
+			this.BaudSelector.Size = new System.Drawing.Size(100, 21);
+			this.BaudSelector.TabIndex = 10;
+			// 
 			// CollarPortLabel
 			// 
 			this.CollarPortLabel.AutoSize = true;
@@ -173,22 +189,6 @@
 			this.button3.Text = "Check Connection";
 			this.button3.UseVisualStyleBackColor = true;
 			// 
-			// BaudSelector
-			// 
-			this.BaudSelector.FormattingEnabled = true;
-			this.BaudSelector.Location = new System.Drawing.Point(67, 38);
-			this.BaudSelector.Name = "BaudSelector";
-			this.BaudSelector.Size = new System.Drawing.Size(100, 21);
-			this.BaudSelector.TabIndex = 10;
-			// 
-			// PortSelector
-			// 
-			this.PortSelector.FormattingEnabled = true;
-			this.PortSelector.Location = new System.Drawing.Point(67, 13);
-			this.PortSelector.Name = "PortSelector";
-			this.PortSelector.Size = new System.Drawing.Size(100, 21);
-			this.PortSelector.TabIndex = 10;
-			// 
 			// OptionsForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -203,6 +203,7 @@
 			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
 			this.Name = "OptionsForm";
 			this.Text = "Options";
+			this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.OnClosed);
 			this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.OptionsForm_MouseDown);
 			((System.ComponentModel.ISupportInitialize)(this.portBox)).EndInit();
 			this.NetworkingBox.ResumeLayout(false);

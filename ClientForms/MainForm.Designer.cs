@@ -51,6 +51,8 @@
 			this.DoubleBuffered = true;
 			this.Name = "MainForm";
 			this.Text = "CollarControl";
+			this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.OnClosing);
+			this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.OnClosed);
 			this.ResumeLayout(false);
 
 		}

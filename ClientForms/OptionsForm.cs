@@ -14,82 +14,33 @@ namespace CollarControl
 		[System.Runtime.InteropServices.DllImport("user32.dll")]
 		public static extern bool ReleaseCapture();
 
-		object portlock = new object();
-		private ushort m_serverPort = 0;
-		private string m_serverHostname = "";
-
-		public string ServerHostname
-		{
-			get
-			{
-				lock (m_serverHostname)
-					return m_serverHostname;
-			}
-			set
-			{
-				if (value != null)
-					lock (m_serverHostname)
-						m_serverHostname = value;
-			}
-		}
-
-		public ushort ServerPort
-		{
-			get
-			{
-				lock (portlock)
-					return m_serverPort;
-			}
-			set
-			{
-				lock (portlock)
-					m_serverPort = value;
-			}
-		}
-
 		public OptionsForm()
 		{
 			InitializeComponent();
 
-			hostnameBox.Text = ServerHostname = Program.CacheGetOrDefault("ServerHostname");
-
-			portBox.Value = ServerPort = Program.CacheTryGet("ServerPort", out string port) ?
-				ushort.Parse(port)
-				:
-				ushort.MinValue;
+			hostnameBox.Text = Connection.ServerHostname;
+			portBox.Value = Connection.ServerPort;
 		}
 
 		private void CheckConnectionButton_Click(object sender, EventArgs e)
 		{
-			Color c = Color.Red;
-			Client client = null;
-			try
-			{
-				client = new Client();
-				if (client.Connect(hostnameBox.Text, (ushort)portBox.Value) && client.Authenticate())
-					c = Color.Green;
-			}
-			catch (Exception){}
-			client?.Cleanup();
-			CheckConnectionButton.BackColor = c;
+			CheckConnectionButton.BackColor = 
+				Connection.TestAddress(hostnameBox.Text, (ushort)portBox.Value)?
+				Color.Green
+				:
+				Color.Red;
 		}
 
 		private void CancelButton_Click(object sender, EventArgs e)
 		{
-			hostnameBox.Text = ServerHostname;
-			portBox.Value = ServerPort;
-			this.Hide();
+			this.Close();
 		}
 
 		private void OkButton_Click(object sender, EventArgs e)
 		{
-			ServerHostname = hostnameBox.Text;
-			ServerPort = (ushort)portBox.Value;
-
-			Program.CacheUpsert("ServerHostname", ServerHostname);
-			Program.CacheUpsert("ServerPort", ServerPort.ToString());
-
-			this.Hide();
+			Connection.ServerHostname = hostnameBox.Text;
+			Connection.ServerPort = (ushort)portBox.Value;
+			this.Close();
 		}
 
 		private void portBox_ValueChanged(object sender, EventArgs e)
@@ -109,6 +60,11 @@ namespace CollarControl
 				ReleaseCapture();
 				SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
 			}
+		}
+
+		private void OnClosed(object sender, FormClosedEventArgs e)
+		{
+			AppState.CloseWindow(AppState.WindowType.Options);
 		}
 	}
 }

@@ -52,7 +52,7 @@ namespace CollarControl
 			try { _socket?.Shutdown(SocketShutdown.Both); } catch (Exception) { }
 			try { _socket?.Close(); } catch (Exception) { }
 			try { _socket?.Dispose(); } catch (Exception) { }
-			try { _thread?.Join(); } catch (Exception) { }
+			try { _thread?.Abort(); } catch (Exception) { }
 			_thread = null;
 			_socket = null;
 			_crypto = null;

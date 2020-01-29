@@ -50,6 +50,7 @@
 			this.Controls.Add(this.button1);
 			this.Name = "RegisterForm";
 			this.Text = "RegisterForm";
+			this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.OnClosed);
 			this.ResumeLayout(false);
 
 		}

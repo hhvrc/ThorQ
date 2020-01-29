@@ -19,7 +19,12 @@ namespace CollarControl
 
 		private void button1_Click(object sender, EventArgs e)
 		{
-			this.Hide();
+			this.Close();
+		}
+
+		private void OnClosed(object sender, FormClosedEventArgs e)
+		{
+			AppState.CloseWindow(AppState.WindowType.Recovery);
 		}
 	}
 }
