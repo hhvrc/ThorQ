@@ -426,7 +426,7 @@ namespace CollarControl
 			catch (Exception ex)
 			{
 				Console.WriteLine("Could not receive client message: " + ex.Message);
-				state.signal.Set();
+				try { state.signal.Set(); } catch (Exception) { }
 				return;
 			}
 
@@ -465,7 +465,7 @@ namespace CollarControl
 			catch (Exception ex)
 			{
 				Console.WriteLine("Could not receive client message: " + ex.Message);
-				state.signal.Set();
+				try { state.signal.Set(); } catch (Exception) { }
 				return;
 			}
 
