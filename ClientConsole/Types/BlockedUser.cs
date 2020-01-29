@@ -1,5 +1,4 @@
-﻿using LiteDB;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +16,6 @@ namespace CollarControl
 			this.blockedId = blockedId;
 			frozenUsername = blockedUsername;
 		}
-		[BsonId]
 		public Guid id;
 		public Guid blockedId;
 		public string frozenUsername;

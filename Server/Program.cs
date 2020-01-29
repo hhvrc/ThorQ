@@ -2,11 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using static Server.ToolBox;
+using static CollarControl.ToolBox;
 
-// TODO: DDOS/SPAM Protection
-
-namespace Server
+namespace CollarControl
 {
 	class Program
 	{
@@ -51,8 +49,6 @@ namespace Server
 			LiteDB.LiteDatabase db = new LiteDB.LiteDatabase(Path.Combine(thisPath, "MyData.db"), null);
 			userAPI = new UserAPI(db, OnUserOnlineChanged, OnUserMessageReceived);
 			conversationAPI = new ConversationAPI(db);
-
-			// TODO Init all users to allocated object, and connect signals to OnUserOnlineChanged
 
 			host.OnClientConnected += (Connection con) =>
 				{

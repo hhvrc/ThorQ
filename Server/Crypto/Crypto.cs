@@ -2,7 +2,7 @@
 using System.IO;
 using System.Security.Cryptography;
 
-namespace Server
+namespace CollarControl
 {
 	/// <summary>
 	/// Implements AES encryption/decryption and ECDH key-exchange

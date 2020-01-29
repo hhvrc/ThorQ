@@ -10,31 +10,23 @@ namespace CollarControl
 	{
 		public static T Deserialize<T>(byte[] xmlData)
 		{
-			try
-			{
-				var stringReader = new System.IO.StringReader(Encoding.UTF8.GetString(xmlData));
-				var serializer = new XmlSerializer(typeof(T));
-				return (T)serializer.Deserialize(stringReader);
-			}
-			catch (Exception ex)
-			{
-				throw; // TODO fixme
-			}
+			if (xmlData == null)
+				return default;
+
+			var stringReader = new System.IO.StringReader(Encoding.UTF8.GetString(xmlData));
+			var serializer = new XmlSerializer(typeof(T));
+			return (T)serializer.Deserialize(stringReader);
 		}
 
 		public static byte[] Serialize<T>(T dataToSerialize)
 		{
-			try
-			{
-				var stringwriter = new System.IO.StringWriter();
-				var serializer = new XmlSerializer(typeof(T));
-				serializer.Serialize(stringwriter, dataToSerialize);
-				return Encoding.UTF8.GetBytes(stringwriter.ToString());
-			}
-			catch (Exception ex)
-			{
-				throw; // TODO fixme
-			}
+			if (dataToSerialize == null)
+				return default;
+
+			var stringwriter = new System.IO.StringWriter();
+			var serializer = new XmlSerializer(typeof(T));
+			serializer.Serialize(stringwriter, dataToSerialize);
+			return Encoding.UTF8.GetBytes(stringwriter.ToString());
 		}
 
 		public static T[] CompileArrays<T>(T[] array, T[] appendArray, params T[][] additional)

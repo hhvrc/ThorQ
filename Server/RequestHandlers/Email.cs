@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using System;
 
-namespace Server
+namespace CollarControl
 {
 	public static class Email_RequestHandler
 	{

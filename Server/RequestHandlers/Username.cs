@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Server
+namespace CollarControl
 {
 	class Username_RequestHandler
 	{

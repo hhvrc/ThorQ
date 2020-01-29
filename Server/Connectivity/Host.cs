@@ -4,7 +4,7 @@ using System.Net.Sockets;
 using System.Security;
 using System.Threading;
 
-namespace Server
+namespace CollarControl
 {
 	/// <summary>
 	/// Listen for incoming connections, and create a new <c>Connection</c> object when when a client connects

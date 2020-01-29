@@ -6,26 +6,58 @@ namespace CollarControl
 {
 	public partial class LoginForm : Form
 	{
-		static Client client = null;
-		static MainForm mainForm = null;
-		static OptionsForm optionsForm = null;
-		static RegisterForm registerForm = null;
-		static RecoveryForm recoveryForm = null;
+		private static Client client = null;
+		private static MainForm mainForm = null;
+		private static OptionsForm optionsForm = null;
+		private static RegisterForm registerForm = null;
+		private static RecoveryForm recoveryForm = null;
 
 		public LoginForm()
 		{
 			InitializeComponent();
 
-			client = new Client();
 			mainForm = new MainForm();
-			optionsForm = new OptionsForm();
-			registerForm = new RegisterForm();
-			recoveryForm = new RecoveryForm();
+			mainForm.VisibleChanged += MainForm_VisibleChanged;
 
-			client.OnConnected += LoginHandler;
-			client.OnDisconnected += DisconnectHandler;
-			client.OnMessageReceived += MessageReceivedHandler;
+			optionsForm = new OptionsForm();
+			optionsForm.VisibleChanged += OptionsForm_VisibleChanged;
+
+			registerForm = new RegisterForm();
+			registerForm.VisibleChanged += RegisterForm_VisibleChanged;
+
+			recoveryForm = new RecoveryForm();
+			recoveryForm.VisibleChanged += RecoveryForm_VisibleChanged;
 		}
+
+		private void RecoveryForm_VisibleChanged(object sender, EventArgs e)
+		{
+			this.Enabled = !recoveryForm.Visible;
+			this.Visible = !recoveryForm.Visible;
+		}
+
+		private void RegisterForm_VisibleChanged(object sender, EventArgs e)
+		{
+			this.Enabled = !registerForm.Visible;
+			this.Visible = !registerForm.Visible;
+		}
+
+		private void MainForm_VisibleChanged(object sender, EventArgs e)
+		{
+			this.Enabled = !mainForm.Visible;
+			this.Visible = !mainForm.Visible;
+
+			if (!mainForm.Visible)
+			{
+				client.Cleanup();
+				client = null;
+			}
+		}
+
+		private void OptionsForm_VisibleChanged(object sender, EventArgs e)
+		{
+			this.Enabled = !optionsForm.Visible;
+		}
+
 		~LoginForm()
 		{
 			try { client.Cleanup(); } catch (Exception) { }
@@ -47,9 +79,10 @@ namespace CollarControl
 			Console.WriteLine(str);
 		}
 
-		static void DisconnectHandler(Client client)
+		private void DisconnectHandler(Client cli)
 		{
 			client.Cleanup();
+			client = null;
 		}
 
 		static void LoginHandler(Client client)
@@ -76,13 +109,23 @@ namespace CollarControl
 				return;
 			}
 
+			mainForm.Show();
 			client.StartListening();
 		}
 
 		private void LoginButton_Click(object sender, EventArgs e)
 		{
+			if (client != null)
+				return;
+
 			try
 			{
+				client = new Client();
+
+				client.OnConnected += LoginHandler;
+				client.OnDisconnected += DisconnectHandler;
+				client.OnMessageReceived += MessageReceivedHandler;
+
 				if (client.Connect(optionsForm.ServerHostname, optionsForm.ServerPort))
 					Console.WriteLine("Socket connected to {0}:{1}", optionsForm.ServerHostname, optionsForm.ServerPort);
 				else
@@ -92,31 +135,15 @@ namespace CollarControl
 			{
 				Console.WriteLine("Couldn't initialize client: " + ex.Message); // @TODO: show errormessage, back to loginscreen
 			}
-
-			// @TODO: Check if everything is correct with the server
-
-			this.Hide();
-			mainForm.Show();
-
-			Thread.Sleep(1000);
-
-			this.Show();
 		}
 
 		private void LoginForm_Closed(object sender, FormClosedEventArgs e)
 		{
-			client.Cleanup();
-			client = null;
 		}
 
 		private void RegistrationButton_Click(object sender, EventArgs e)
 		{
 			registerForm.Show();
-		}
-
-		private void LoginForm_Load(object sender, EventArgs e)
-		{
-
 		}
 
 		private void OptionsButton_Click(object sender, EventArgs e)
@@ -127,28 +154,6 @@ namespace CollarControl
 		private void ForgotPasswordButton_Click(object sender, EventArgs e)
 		{
 			recoveryForm.Show();
-		}
-	}
-
-	class User
-	{
-		public string name;
-
-		public User(string name)
-		{
-			this.name = name;
-		}
-	}
-
-	class Connection
-	{
-		public User user;
-		public Client connection;
-
-		public Connection(User user, Client connection)
-		{
-			this.user = user;
-			this.connection = connection;
 		}
 	}
 }

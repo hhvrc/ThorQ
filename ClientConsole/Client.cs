@@ -214,7 +214,7 @@ namespace CollarControl
 		{
 			if (_crypto == null) // DEBUG
 			{
-				Console.WriteLine("Cannot send message, please authenticate first"); // DEBUG
+				Console.WriteLine("Cannot receive message, please authenticate first"); // DEBUG
 				return null; // DEBUG
 			}
 

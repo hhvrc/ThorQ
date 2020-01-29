@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 
-namespace Server
+namespace CollarControl
 {
 	public class RuntimeUser : DbUser
 	{

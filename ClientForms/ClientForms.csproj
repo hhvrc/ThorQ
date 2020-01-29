@@ -61,6 +61,7 @@
     <Compile Include="BouncyCrypto.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="Crypto.cs" />
+    <Compile Include="enums.cs" />
     <Compile Include="LoginForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -73,7 +74,10 @@
     <Compile Include="MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Message.cs" />
+    <Compile Include="MessageFormats\Client\Package.cs" />
+    <Compile Include="MessageFormats\Client\Payloads.cs" />
+    <Compile Include="MessageFormats\Server\Package.cs" />
+    <Compile Include="MessageFormats\Server\Payloads.cs" />
     <Compile Include="OptionsForm.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -100,6 +104,10 @@
       <DependentUpon>RegisterForm.cs</DependentUpon>
     </Compile>
     <Compile Include="ToolBox.cs" />
+    <Compile Include="Types\BlockedUser.cs" />
+    <Compile Include="Types\Conversation.cs" />
+    <Compile Include="Types\FriendRequest.cs" />
+    <Compile Include="Types\Message.cs" />
     <EmbeddedResource Include="LoginForm.resx">
       <DependentUpon>LoginForm.cs</DependentUpon>
     </EmbeddedResource>

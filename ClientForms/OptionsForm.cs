@@ -6,6 +6,14 @@ namespace CollarControl
 {
 	public partial class OptionsForm : Form
 	{
+		public const int WM_NCLBUTTONDOWN = 0xA1;
+		public const int HT_CAPTION = 0x2;
+
+		[System.Runtime.InteropServices.DllImport("user32.dll")]
+		public static extern int SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+		[System.Runtime.InteropServices.DllImport("user32.dll")]
+		public static extern bool ReleaseCapture();
+
 		object portlock = new object();
 		private ushort m_serverPort = 0;
 		private string m_serverHostname = "";
@@ -53,21 +61,17 @@ namespace CollarControl
 
 		private void CheckConnectionButton_Click(object sender, EventArgs e)
 		{
+			Client client = null;
+			Color c = Color.Red;
 			try
 			{
-				Client client = new Client();
-				if (client.Connect(hostnameBox.Text, (ushort)portBox.Value))
-					if (client.Authenticate())
-						CheckConnectionButton.BackColor = Color.Green;
-					else
-						CheckConnectionButton.BackColor = Color.Red;
-				else
-					CheckConnectionButton.BackColor = Color.Red;
+				client = new Client();
+				if (client.Connect(hostnameBox.Text, (ushort)portBox.Value) && client.Authenticate())
+					c = Color.Green;
 			}
-			catch (Exception)
-			{
-				CheckConnectionButton.BackColor = Color.Red;
-			}
+			catch (Exception){}
+			CheckConnectionButton.BackColor = c;
+			client.Cleanup();
 		}
 
 		private void CancelButton_Click(object sender, EventArgs e)
@@ -96,6 +100,15 @@ namespace CollarControl
 		private void hostnameBox_TextChanged(object sender, EventArgs e)
 		{
 			CheckConnectionButton.BackColor = Color.White;
+		}
+
+		private void OptionsForm_MouseDown(object sender, MouseEventArgs e)
+		{
+			if (e.Button == MouseButtons.Left)
+			{
+				ReleaseCapture();
+				SendMessage(Handle, WM_NCLBUTTONDOWN, HT_CAPTION, 0);
+			}
 		}
 	}
 }

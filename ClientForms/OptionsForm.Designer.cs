@@ -41,24 +41,26 @@
 			// label1
 			// 
 			this.label1.AutoSize = true;
-			this.label1.Location = new System.Drawing.Point(12, 15);
+			this.label1.Location = new System.Drawing.Point(10, 31);
 			this.label1.Name = "label1";
 			this.label1.Size = new System.Drawing.Size(55, 13);
 			this.label1.TabIndex = 0;
 			this.label1.Text = "Hostname";
+			this.label1.MouseDown += new System.Windows.Forms.MouseEventHandler(this.OptionsForm_MouseDown);
 			// 
 			// label2
 			// 
 			this.label2.AutoSize = true;
-			this.label2.Location = new System.Drawing.Point(12, 41);
+			this.label2.Location = new System.Drawing.Point(10, 57);
 			this.label2.Name = "label2";
 			this.label2.Size = new System.Drawing.Size(26, 13);
 			this.label2.TabIndex = 1;
 			this.label2.Text = "Port";
+			this.label2.MouseDown += new System.Windows.Forms.MouseEventHandler(this.OptionsForm_MouseDown);
 			// 
 			// hostnameBox
 			// 
-			this.hostnameBox.Location = new System.Drawing.Point(73, 12);
+			this.hostnameBox.Location = new System.Drawing.Point(71, 28);
 			this.hostnameBox.Name = "hostnameBox";
 			this.hostnameBox.Size = new System.Drawing.Size(100, 20);
 			this.hostnameBox.TabIndex = 2;
@@ -66,7 +68,7 @@
 			// 
 			// CheckConnectionButton
 			// 
-			this.CheckConnectionButton.Location = new System.Drawing.Point(12, 64);
+			this.CheckConnectionButton.Location = new System.Drawing.Point(10, 80);
 			this.CheckConnectionButton.Name = "CheckConnectionButton";
 			this.CheckConnectionButton.Size = new System.Drawing.Size(160, 22);
 			this.CheckConnectionButton.TabIndex = 4;
@@ -76,7 +78,7 @@
 			// 
 			// CancelButton
 			// 
-			this.CancelButton.Location = new System.Drawing.Point(12, 92);
+			this.CancelButton.Location = new System.Drawing.Point(10, 108);
 			this.CancelButton.Name = "CancelButton";
 			this.CancelButton.Size = new System.Drawing.Size(71, 24);
 			this.CancelButton.TabIndex = 5;
@@ -86,7 +88,7 @@
 			// 
 			// OkButton
 			// 
-			this.OkButton.Location = new System.Drawing.Point(89, 92);
+			this.OkButton.Location = new System.Drawing.Point(87, 108);
 			this.OkButton.Name = "OkButton";
 			this.OkButton.Size = new System.Drawing.Size(83, 24);
 			this.OkButton.TabIndex = 6;
@@ -96,7 +98,7 @@
 			// 
 			// portBox
 			// 
-			this.portBox.Location = new System.Drawing.Point(73, 38);
+			this.portBox.Location = new System.Drawing.Point(71, 54);
 			this.portBox.Maximum = new decimal(new int[] {
             65534,
             0,
@@ -112,7 +114,7 @@
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
-			this.ClientSize = new System.Drawing.Size(182, 122);
+			this.ClientSize = new System.Drawing.Size(182, 144);
 			this.Controls.Add(this.portBox);
 			this.Controls.Add(this.OkButton);
 			this.Controls.Add(this.CancelButton);
@@ -121,9 +123,10 @@
 			this.Controls.Add(this.label2);
 			this.Controls.Add(this.label1);
 			this.DoubleBuffered = true;
-			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
+			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
 			this.Name = "OptionsForm";
 			this.Text = "Options";
+			this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.OptionsForm_MouseDown);
 			((System.ComponentModel.ISupportInitialize)(this.portBox)).EndInit();
 			this.ResumeLayout(false);
 			this.PerformLayout();
