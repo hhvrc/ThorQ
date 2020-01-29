@@ -147,7 +147,7 @@ namespace CollarControl
 			Register,
 		}
 
-		public static void OpenWindow(WindowType type)
+		public static void QueueWindow(WindowType type)
 		{
 			lock (appStack)
 				appStack.Add(type);
@@ -230,7 +230,6 @@ namespace CollarControl
 
 	static class Program
 	{
-
 		/// <summary>
 		/// The main entry point for the application.
 		/// </summary>
@@ -240,7 +239,7 @@ namespace CollarControl
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
 
-			AppState.OpenWindow(AppState.WindowType.Login);
+			AppState.QueueWindow(AppState.WindowType.Login);
 
 			Form activeForm = null;
 			while (!AppState.IsExiting())

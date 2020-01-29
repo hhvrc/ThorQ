@@ -19,7 +19,7 @@ namespace CollarControl
 			if (Connection.Connect())
 			{
 				Console.WriteLine("Socket connected to {0}:{1}", Connection.ServerHostname, Connection.ServerPort);
-				AppState.OpenWindow(AppState.WindowType.Main);
+				AppState.QueueWindow(AppState.WindowType.Main);
 				this.Close();
 			}
 			else
@@ -30,19 +30,19 @@ namespace CollarControl
 
 		private void RegistrationButton_Click(object sender, EventArgs e)
 		{
-			AppState.OpenWindow(AppState.WindowType.Register);
+			AppState.QueueWindow(AppState.WindowType.Register);
 			this.Close();
 		}
 
 		private void OptionsButton_Click(object sender, EventArgs e)
 		{
-			AppState.OpenWindow(AppState.WindowType.Options);
+			AppState.QueueWindow(AppState.WindowType.Options);
 			this.Close();
 		}
 
 		private void ForgotPasswordButton_Click(object sender, EventArgs e)
 		{
-			AppState.OpenWindow(AppState.WindowType.Recovery);
+			AppState.QueueWindow(AppState.WindowType.Recovery);
 			this.Close();
 		}
 
