@@ -88,41 +88,11 @@ namespace CollarControl
 					Console.WriteLine("Authentication failed!");
 					return;
 				}
-
-				ClientPayloads.AccountGetRequest ser = new ClientPayloads.AccountGetRequest()
-				{
-					username = "test",
-					password = "test",
-				};
-				ClientPackage message = new ClientPackage()
-				{
-					id = Guid.NewGuid(),
-					method = RequestMethod.GET,
-					request = RequestType.Account,
-					payload = ser.Serialize(),
-				};
-
-				/*Message message = new Message()
-				{
-					Command = "register",
-					Parameters = new Dictionary<String, String>()
-					{
-						{ "email", "user@example.com" },
-						{ "username", "test" },
-						{ "password", "Passw" }
-					}
-				};*/
-
-				string msg = JsonConvert.SerializeObject(message);
-
-				if (client != null && !string.IsNullOrEmpty(msg))
-				{
-					client.SendMessage(msg);
-				}
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("Could not authenticate: " + ex.ToString());
+				return;
 			}
 
 			client.StartListening();

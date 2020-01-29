@@ -12,7 +12,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace CollarControl
+namespace Server
 {
 	/// <summary>
 	/// Implements AES encryption/decryption and ECDH key-exchange

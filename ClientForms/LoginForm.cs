@@ -58,7 +58,7 @@ namespace CollarControl
 			this.Enabled = !optionsForm.Visible;
 		}
 
-		~LoginForm()
+		public new void Dispose()
 		{
 			try { client.Cleanup(); } catch (Exception) { }
 
@@ -72,6 +72,8 @@ namespace CollarControl
 			try { recoveryForm.Dispose(); } catch (Exception) { }
 
 			try { this.Close(); } catch (Exception) { }
+
+			base.Dispose();
 		}
 
 		static void MessageReceivedHandler(Client client, string str)
@@ -98,19 +100,19 @@ namespace CollarControl
 				else
 				{
 					Console.WriteLine("Authentication failed!");
-					// @TODO: show errormessage, back to loginscreen
+					// TODO show errormessage, back to loginscreen
 					return;
 				}
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("Could not authenticate: " + ex.ToString());
-				// @TODO: show errormessage, back to loginscreen
+				// TODO show errormessage, back to loginscreen
 				return;
 			}
 
-			mainForm.Show();
 			client.StartListening();
+			mainForm.Show();
 		}
 
 		private void LoginButton_Click(object sender, EventArgs e)
@@ -129,11 +131,11 @@ namespace CollarControl
 				if (client.Connect(optionsForm.ServerHostname, optionsForm.ServerPort))
 					Console.WriteLine("Socket connected to {0}:{1}", optionsForm.ServerHostname, optionsForm.ServerPort);
 				else
-					Console.WriteLine("Failed to connect!"); // @TODO: show errormessage, back to loginscreen
+					Console.WriteLine("Failed to connect!"); // TODO show errormessage, back to loginscreen
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine("Couldn't initialize client: " + ex.Message); // @TODO: show errormessage, back to loginscreen
+				Console.WriteLine("Couldn't initialize client: " + ex.Message); // TODO show errormessage, back to loginscreen
 			}
 		}
 

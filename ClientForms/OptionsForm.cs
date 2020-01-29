@@ -61,8 +61,8 @@ namespace CollarControl
 
 		private void CheckConnectionButton_Click(object sender, EventArgs e)
 		{
-			Client client = null;
 			Color c = Color.Red;
+			Client client = null;
 			try
 			{
 				client = new Client();
@@ -70,8 +70,8 @@ namespace CollarControl
 					c = Color.Green;
 			}
 			catch (Exception){}
+			client?.Cleanup();
 			CheckConnectionButton.BackColor = c;
-			client.Cleanup();
 		}
 
 		private void CancelButton_Click(object sender, EventArgs e)

@@ -32,19 +32,16 @@ namespace CollarControl
 		/// Gets invoked on client connect
 		/// </summary>
 		public event Action<Client> OnConnected;
+
 		/// <summary>
 		/// Gets invoked on client disconnect
 		/// </summary>
 		public event Action<Client> OnDisconnected;
+
 		/// <summary>
 		/// Gets invoked when client sends a message
 		/// </summary>
 		public event Action<Client, string> OnMessageReceived;
-
-		~Client()
-		{
-			Cleanup();
-		}
 
 		/// <summary>
 		/// Closes the connection and stops the thread
@@ -104,35 +101,21 @@ namespace CollarControl
 				return false;
 			}
 
-			if (addresses == null || addresses.Length == 0)
+			if (addresses.Length == 0 || addresses[0] == null)
 			{
 				return false;
 			}
 
-			foreach (IPAddress addr in addresses)
-			{
-				IPEndPoint remoteEndPoint = new IPEndPoint(addresses[0], port);
+			IPEndPoint remoteEndPoint = new IPEndPoint(addresses[0], port);
 
-				// Create a TCP/IP socket
-				_socket = new Socket(addresses[0].AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+			// Create a TCP/IP socket
+			_socket = new Socket(addresses[0].AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 
-				// Bind the socket to the local endpoint and listen for incoming connections
-				try
-				{
-					_socket.Connect(remoteEndPoint);
-				}
-				catch (Exception)
-				{
-					// @TODO: handle exception
-					_socket.Dispose();
-					continue;
-				}
+			// Bind the socket to the local endpoint and listen for incoming connections
+			_socket.Connect(remoteEndPoint);
 
-
-				try { OnConnected.Invoke(this); } catch (Exception) { }
-				return true;
-			}
-			return false;
+			OnConnected?.Invoke(this);
+			return true;
 		}
 
 		/// <summary>
@@ -171,14 +154,14 @@ namespace CollarControl
 			catch (SecurityException ex)
 			{
 				Console.WriteLine("SecurityException Caught!");
-				Console.WriteLine("Could not read public key: " + ex.Message);
+				Console.WriteLine("Could not send public key: " + ex.Message);
 				_crypto = null;
 				return false;
 			}
 			catch (SocketException ex)
 			{
 				Console.WriteLine("SocketException Caught!");
-				Console.WriteLine("Could not read public key: " + ex.Message);
+				Console.WriteLine("Could not send public key: " + ex.Message);
 				_crypto = null;
 				return false;
 			}
@@ -228,7 +211,7 @@ namespace CollarControl
 		{
 			if (_crypto == null) // DEBUG
 			{
-				Console.WriteLine("Cannot send message, please authenticate first"); // DEBUG
+				Console.WriteLine("Cannot receive message, please authenticate first"); // DEBUG
 				return null; // DEBUG
 			}
 
@@ -306,7 +289,7 @@ namespace CollarControl
 				Console.WriteLine("Encryption failed!"); // DEBUG
 				return;
 			}
-			
+
 			try
 			{
 				SendBytes(data);
@@ -420,11 +403,11 @@ namespace CollarControl
 					try
 					{
 						_socket.BeginReceive(state.bytes, 0, state.length, 0, new AsyncCallback(MessageLengthReceivedCallback), state);
-				}
-				catch(Exception ex)
-				{
-					Console.WriteLine("Exception caught: {0}", ex.Message);
-				}
+					}
+					catch (Exception ex)
+					{
+						Console.WriteLine("Exception caught: {0}", ex.Message);
+					}
 					receiveDone.WaitOne();
 				}
 			}

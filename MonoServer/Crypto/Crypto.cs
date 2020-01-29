@@ -90,7 +90,7 @@ namespace CollarControl
 		/// </returns>
 		public byte[] Encrypt(byte[] unencryptedData)
 		{
-			if (!_ready || unencryptedData == null)
+			if (!_ready || unencryptedData == null || unencryptedData.Length == 0)
 				return null;
 
 			try // DEBUG
@@ -139,7 +139,7 @@ namespace CollarControl
 		/// </returns>
 		public byte[] Decrypt(byte[] encryptedData)
 		{
-			if (!_ready || encryptedData == null)
+			if (!_ready || encryptedData == null || encryptedData.Length <= 16)
 				return null;
 
 			byte[] iv = new byte[16];

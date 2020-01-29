@@ -98,9 +98,9 @@ namespace CollarControl
 				{
 					foreach (Connection conn in _connections)
 					{
-						conn.StopListening();
 						conn.OnMessageReceived -= ConnectionMessageHandler;
 						conn.OnClientDisconnected -= RemoveConnection;
+						conn.Dispose();
 					}
 					_connections.Clear();
 					IsOnlineChanged.Invoke(this, false);

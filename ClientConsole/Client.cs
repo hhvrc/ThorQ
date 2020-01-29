@@ -32,19 +32,16 @@ namespace CollarControl
 		/// Gets invoked on client connect
 		/// </summary>
 		public event Action<Client> OnConnected;
+
 		/// <summary>
 		/// Gets invoked on client disconnect
 		/// </summary>
 		public event Action<Client> OnDisconnected;
+
 		/// <summary>
 		/// Gets invoked when client sends a message
 		/// </summary>
 		public event Action<Client, string> OnMessageReceived;
-
-		~Client()
-		{
-			Cleanup();
-		}
 
 		/// <summary>
 		/// Closes the connection and stops the thread

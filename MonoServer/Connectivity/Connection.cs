@@ -5,7 +5,10 @@ using System.Threading;
 
 namespace CollarControl
 {
-	public class Connection
+	/// <summary>
+	/// Connection instance
+	/// </summary>
+	public class Connection : IDisposable
 	{
 		/// <summary>
 		/// Returns whether the client is still connected
@@ -18,38 +21,20 @@ namespace CollarControl
 			}
 		}
 
-		private object _idLock = new object();
-		private Guid _id = Guid.Empty;
-		/// <summary>
-		/// ID attribute
-		/// </summary>
-		public Guid Id
-		{
-			get
-			{
-				lock (_idLock)
-					return _id;
-			}
-			set
-			{
-				lock (_idLock)
-					_id = value;
-			}
-		}
+		private Socket _socket = null;
+		private Thread _thread = null;
+		private Crypto _crypto = null;
 
 		/// <summary>
-		/// Connection
+		/// Gets invoked on connection established
 		/// </summary>
 		public event Action<Connection> OnClientDisconnected;
 
 		/// <summary>
-		/// Connection, Message
+		/// Gets invoked on connection lost
 		/// </summary>
 		public event Action<Connection, string> OnMessageReceived;
 
-		private Socket _socket = null;
-		private Thread _thread = null;
-		private Crypto _crypto = null;
 
 		private ManualResetEvent _receiveDone = new ManualResetEvent(false);
 
@@ -58,12 +43,10 @@ namespace CollarControl
 			_socket = socket;
 		}
 
-		~Connection()
-		{
-			Cleanup();
-		}
-
-		private void Cleanup()
+		/// <summary>
+		/// Closes the connection and stops the thread
+		/// </summary>
+		public void Dispose()
 		{
 			// We dont care if anything fails... just shut it down
 			try { _socket?.Shutdown(SocketShutdown.Both); } catch (Exception) { }
@@ -150,11 +133,6 @@ namespace CollarControl
 			{
 				Console.WriteLine("Could not start receiver handler: " + ex.Message);
 			}
-		}
-
-		public void StopListening()
-		{
-			Cleanup();
 		}
 
 		public string ReceiveMessage()

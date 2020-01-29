@@ -91,14 +91,14 @@ namespace CollarControl
 				else
 				{
 					Console.WriteLine("[Client] Authentication failed");
-					client.StopListening();
+					client?.Dispose();
 					return;
 				}
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine($"[Client] Could not authenticate: {ex.Message}");
-				try { client?.StopListening(); } catch (Exception) { }
+				client?.Dispose();
 				return;
 			}
 
@@ -107,6 +107,8 @@ namespace CollarControl
 
 			client.OnClientDisconnected += OnClientDisconnected;
 			client.OnMessageReceived += OnClientMessageReceived;
+
+			client.StartListening();
 		}
 		public static void OnClientDisconnected(Connection client)
 		{
