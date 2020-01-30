@@ -8,6 +8,7 @@ namespace CollarControl
 		public LoginForm()
 		{
 			InitializeComponent();
+			this.CenterToScreen();
 		}
 
 

@@ -28,6 +28,7 @@
 		/// </summary>
 		private void InitializeComponent()
 		{
+			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(RecoveryForm));
 			this.button1 = new System.Windows.Forms.Button();
 			this.SuspendLayout();
 			// 
@@ -48,6 +49,7 @@
 			this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(30)))), ((int)(((byte)(30)))), ((int)(((byte)(30)))));
 			this.ClientSize = new System.Drawing.Size(800, 450);
 			this.Controls.Add(this.button1);
+			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.Name = "RecoveryForm";
 			this.Text = "RecoveryForm";
 			this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.OnClosed);

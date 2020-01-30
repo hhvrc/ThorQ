@@ -17,6 +17,7 @@ namespace CollarControl
 		public OptionsForm()
 		{
 			InitializeComponent();
+			this.CenterToScreen();
 
 			hostnameBox.Text = Connection.ServerHostname;
 			portBox.Value = Connection.ServerPort;
