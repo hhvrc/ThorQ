@@ -3,12 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using HeavenLib.Connectivity;
+using CollarLib;
 
 namespace CollarControl
 {
 	public static class P2PRequest_RequestHandler
 	{
-		public static void Dispatch(RuntimeUser thisUser, Connection client, RequestMethod method, Guid requestId, string payload)
+		public static void Dispatch(RuntimeUser thisUser, HostConnection client, RequestMethod method, Guid requestId, string payload)
 		{
 			switch (method)
 			{
@@ -26,17 +28,17 @@ namespace CollarControl
 					break;
 			}
 		}
-		static void Post(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Post(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			// TODO implement me
 			throw new NotImplementedException($"P2PRequest_RequestHandler.Post({thisUser},{client},{requestId},{payload})");
 		}
-		static void Accept(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Accept(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			// TODO implement me
 			throw new NotImplementedException($"P2PRequest_RequestHandler.Accept({thisUser},{client},{requestId},{payload})");
 		}
-		static void Deny(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Deny(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			// TODO implement me
 			throw new NotImplementedException($"P2PRequest_RequestHandler.Deny({thisUser},{client},{requestId},{payload})");

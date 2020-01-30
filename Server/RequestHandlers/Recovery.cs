@@ -1,11 +1,14 @@
 ﻿using Newtonsoft.Json;
 using System;
+using HeavenLib;
+using HeavenLib.Connectivity;
+using CollarLib;
 
 namespace CollarControl
 {
 	public static class Recovery_RequestHandler
 	{
-		public static void Dispatch(RuntimeUser thisUser, Connection client, RequestMethod method, Guid requestId, string payload)
+		public static void Dispatch(RuntimeUser thisUser, HostConnection client, RequestMethod method, Guid requestId, string payload)
 		{
 			switch (method)
 			{
@@ -17,7 +20,7 @@ namespace CollarControl
 					break;
 			}
 		}
-		static void Post(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Post(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			if (thisUser != null)
 			{
@@ -25,10 +28,10 @@ namespace CollarControl
 				return;
 			}
 
-			ClientPayloads.RecoveryPostRequest recovery;
+			CollarLib.ClientPayloads.RecoveryPostRequest recovery;
 			try
 			{
-				recovery = JsonConvert.DeserializeObject<ClientPayloads.RecoveryPostRequest>(payload);
+				recovery = JsonConvert.DeserializeObject<CollarLib.ClientPayloads.RecoveryPostRequest>(payload);
 			}
 			catch (Exception)
 			{

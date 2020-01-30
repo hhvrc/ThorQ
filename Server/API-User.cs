@@ -5,6 +5,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using HeavenLib;
+using HeavenLib.Connectivity;
+using CollarLib;
 
 namespace CollarControl
 {
@@ -13,7 +16,7 @@ namespace CollarControl
 		private LiteCollection<DbUser> _dbUsers;
 		private ConcurrentDictionary<Guid, RuntimeUser> _activeUsers;
 
-		public UserAPI(LiteDatabase db, Action<RuntimeUser,bool> initOnlineChaned, Action<RuntimeUser, Connection, string> initMessageReceived)
+		public UserAPI(LiteDatabase db, Action<RuntimeUser,bool> initOnlineChaned, Action<RuntimeUser, HostConnection, string> initMessageReceived)
 		{
 			_dbUsers = db.GetCollection<DbUser>("users");
 			_activeUsers = new ConcurrentDictionary<Guid, RuntimeUser>();
@@ -32,7 +35,7 @@ namespace CollarControl
 		{
 			try
 			{
-				ServerPackage message = new ServerPackage()
+				Response message = new Response()
 				{
 					code = ResponseCode.ADMIN_MSG,
 					type = ResponseDataType.STRING,

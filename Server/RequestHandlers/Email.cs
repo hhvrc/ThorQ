@@ -1,11 +1,13 @@
 ﻿using Newtonsoft.Json;
 using System;
+using HeavenLib.Connectivity;
+using CollarLib;
 
 namespace CollarControl
 {
 	public static class Email_RequestHandler
 	{
-		public static void Dispatch(RuntimeUser thisUser, Connection client, RequestMethod method, Guid requestId, string payload)
+		public static void Dispatch(RuntimeUser thisUser, HostConnection client, RequestMethod method, Guid requestId, string payload)
 		{
 			switch (method)
 			{
@@ -20,16 +22,16 @@ namespace CollarControl
 					break;
 			}
 		}
-		static void Get(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Get(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			Program.SimpleClientResponse(client, requestId, ResponseCode.OK, thisUser.Email);
 		}
-		static void Set(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Set(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
-			ClientPayloads.EmailSetRequest recovery;
+			CollarLib.ClientPayloads.EmailSetRequest recovery;
 			try
 			{
-				recovery = ClientPayloads.EmailSetRequest.Deserialize(payload);
+				recovery = CollarLib.ClientPayloads.EmailSetRequest.Deserialize(payload);
 			}
 			catch (Exception)
 			{

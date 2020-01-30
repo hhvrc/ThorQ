@@ -3,12 +3,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using HeavenLib;
+using HeavenLib.Connectivity;
+using CollarLib;
+using CollarLib;
 
 namespace CollarControl
 {
 	public static class Account_RequestHandler
 	{
-		public static void Dispatch(RuntimeUser thisUser, Connection client, RequestMethod method, Guid requestId, string payload)
+		public static void Dispatch(RuntimeUser thisUser, HostConnection client, RequestMethod method, Guid requestId, string payload)
 		{
 			switch (method)
 			{
@@ -26,7 +30,7 @@ namespace CollarControl
 					break;
 			}
 		}
-		static void Get(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Get(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			if (thisUser != null)
 			{
@@ -34,7 +38,7 @@ namespace CollarControl
 				return;
 			}
 
-			ClientPayloads.AccountGetRequest request = ClientPayloads.AccountGetRequest.Deserialize(payload);
+			CollarLib.ClientPayloads.AccountGetRequest request = CollarLib.ClientPayloads.AccountGetRequest.Deserialize(payload);
 
 			if (string.IsNullOrWhiteSpace(request.username))
 			{
@@ -63,13 +67,13 @@ namespace CollarControl
 				user.AddConnection(client);
 			}
 
-			ServerPayloads.Account response = new ServerPayloads.Account();
+			CollarLib.ServerPayloads.Account response = new CollarLib.ServerPayloads.Account();
 			response.username = user.Username;
 			response.state = user.state;
 			response.status = user.status;
 			response.email = user.Email;
 
-			ServerPackage message = new ServerPackage()
+			Response message = new Response()
 			{
 				code = ResponseCode.OK,
 				type = ResponseDataType.ACCOUNT,
@@ -81,7 +85,7 @@ namespace CollarControl
 
 			Console.WriteLine("[Client] Logged in"); // DEBUG
 		}
-		static void Post(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Post(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			if (thisUser != null)
 			{
@@ -89,7 +93,7 @@ namespace CollarControl
 				return;
 			}
 
-			ClientPayloads.AccountPostRequest request = ClientPayloads.AccountPostRequest.Deserialize(payload);
+			CollarLib.ClientPayloads.AccountPostRequest request = CollarLib.ClientPayloads.AccountPostRequest.Deserialize(payload);
 
 			if (string.IsNullOrWhiteSpace(request.email))
 			{
@@ -140,7 +144,7 @@ namespace CollarControl
 			Program.SimpleClientResponse(client, requestId, ResponseCode.CREATED, "Account created");
 			Console.WriteLine("[Client] Registered");
 		}
-		static void Delete(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Delete(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			if (thisUser == null)
 			{

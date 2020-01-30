@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using static CollarControl.ToolBox;
+using HeavenLib;
+using HeavenLib.Connectivity;
+using CollarLib;
 
 namespace CollarControl
 {
@@ -12,7 +14,7 @@ namespace CollarControl
 		public static UserAPI userAPI = null;
 		public static ConversationAPI conversationAPI = null;
 		public static Random random = new Random();
-		public static List<Connection> nonAuthedConnections = new List<Connection>();
+		public static List<HostConnection> nonAuthedConnections = new List<HostConnection>();
 
 		static void Main(string[] args)
 		{
@@ -50,7 +52,7 @@ namespace CollarControl
 			userAPI = new UserAPI(db, OnUserOnlineChanged, OnUserMessageReceived);
 			conversationAPI = new ConversationAPI(db);
 
-			host.OnClientConnected += (Connection con) =>
+			host.OnClientConnected += (HostConnection con) =>
 				{
 					Task.Run(() => OnClientConnected(con));
 				};
@@ -64,9 +66,9 @@ namespace CollarControl
 			}
 		}
 
-		public static void SimpleClientResponse(Connection client, Guid requestId, ResponseCode code, string message)
+		public static void SimpleClientResponse(HostConnection client, Guid requestId, ResponseCode code, string message)
 		{
-			ServerPackage messageObject = new ServerPackage()
+			Response messageObject = new Response()
 			{
 				code = code,
 				type = ((message == null) ? ResponseDataType.NULL : ResponseDataType.STRING),
@@ -78,7 +80,7 @@ namespace CollarControl
 		}
 
 		// Client event handlers
-		public static void OnClientConnected(Connection client)
+		public static void OnClientConnected(HostConnection client)
 		{
 			Console.WriteLine("[Client] New client");
 
@@ -110,17 +112,17 @@ namespace CollarControl
 
 			client.StartListening();
 		}
-		public static void OnClientDisconnected(Connection client)
+		public static void OnClientDisconnected(HostConnection client)
 		{
 			client.OnClientDisconnected -= OnClientDisconnected;
 			client.OnMessageReceived -= OnClientMessageReceived;
 			nonAuthedConnections.Remove(client);
 		}
-		public static void OnClientMessageReceived(Connection client, string str)
+		public static void OnClientMessageReceived(HostConnection client, string str)
 		{
 			try
 			{
-				ClientPackage msg = ClientPackage.Deserialize(str);
+				Request msg = Request.Deserialize(str);
 
 				switch (msg.request)
 				{
@@ -155,11 +157,11 @@ namespace CollarControl
 		}
 
 		// User event handlers
-		public static void OnUserMessageReceived(RuntimeUser thisUser, Connection client, string str)
+		public static void OnUserMessageReceived(RuntimeUser thisUser, HostConnection client, string str)
 		{
 			try
 			{
-				ClientPackage msg = ClientPackage.Deserialize(str);
+				Request msg = Request.Deserialize(str);
 
 				switch (msg.request)
 				{
@@ -212,14 +214,14 @@ namespace CollarControl
 		}
 		public static void OnUserOnlineChanged(RuntimeUser thisUser, bool online)
 		{
-			ServerPayloads.Friend friendMsg = new ServerPayloads.Friend()
+			CollarLib.ServerPayloads.Friend friendMsg = new CollarLib.ServerPayloads.Friend()
 			{
 				userId = thisUser.Id,
 				username = thisUser.Username,
 				state = (online ? thisUser.state : UserActivity.Offline),
 				status = thisUser.status
 			};
-			ServerPackage message = new ServerPackage()
+			Response message = new Response()
 			{
 				code = ResponseCode.UPDATE_DATA,
 				type = ResponseDataType.FRIEND,

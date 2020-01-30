@@ -1,10 +1,12 @@
 ﻿using System;
+using HeavenLib.Connectivity;
+using CollarLib;
 
 namespace CollarControl
 {
 	class Password_RequestHandler
 	{
-		public static void Dispatch(RuntimeUser thisUser, Connection client, RequestMethod method, Guid requestId, string payload)
+		public static void Dispatch(RuntimeUser thisUser, HostConnection client, RequestMethod method, Guid requestId, string payload)
 		{
 			switch (method)
 			{
@@ -16,12 +18,12 @@ namespace CollarControl
 					break;
 			}
 		}
-		static void Post(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Post(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
-			ClientPayloads.PasswordSetRequest recovery;
+			CollarLib.ClientPayloads.PasswordSetRequest recovery;
 			try
 			{
-				recovery = ClientPayloads.PasswordSetRequest.Deserialize(payload);
+				recovery = CollarLib.ClientPayloads.PasswordSetRequest.Deserialize(payload);
 			}
 			catch (Exception)
 			{

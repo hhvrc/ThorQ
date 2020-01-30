@@ -1,10 +1,12 @@
-﻿using CollarControl.ServerPayloads;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Windows.Forms;
+using HeavenLib.Connectivity;
+using CollarLib;
+using CollarLib.ServerPayloads;
 
 namespace CollarControl
 {
@@ -15,9 +17,9 @@ namespace CollarControl
 		public string status;
 		public UserActivity activity;
 		public List<Friend> friends = new List<Friend>();
-		public List<BlockedUser> blockedUsers = new List<BlockedUser>();
+		public List<CollarLib.BlockedUser> blockedUsers = new List<CollarLib.BlockedUser>();
 		public List<FriendRequest> friendRequests = new List<FriendRequest>();
-		public List<Conversation> conversations = new List<Conversation>();
+		public List<CollarLib.Conversation> conversations = new List<CollarLib.Conversation>();
 		public IPAddress activeP2PConnection = null;
 	}
 

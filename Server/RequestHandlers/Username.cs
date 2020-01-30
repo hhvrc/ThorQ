@@ -1,10 +1,12 @@
 ﻿using System;
+using HeavenLib.Connectivity;
+using CollarLib;
 
 namespace CollarControl
 {
 	class Username_RequestHandler
 	{
-		public static void Dispatch(RuntimeUser thisUser, Connection client, RequestMethod method, Guid requestId, string payload)
+		public static void Dispatch(RuntimeUser thisUser, HostConnection client, RequestMethod method, Guid requestId, string payload)
 		{
 			switch (method)
 			{
@@ -19,11 +21,11 @@ namespace CollarControl
 					break;
 			}
 		}
-		static void Get(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Get(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			Program.SimpleClientResponse(client, requestId, ResponseCode.OK, thisUser.Username);
 		}
-		static void Set(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Set(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			if (string.IsNullOrWhiteSpace(payload))
 			{

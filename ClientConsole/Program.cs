@@ -2,6 +2,9 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using HeavenLib.Connectivity;
+using CollarLib;
+using CollarLib.ClientPayloads;
 
 namespace CollarControl
 {
@@ -48,12 +51,12 @@ namespace CollarControl
 
 			Thread.Sleep(5000);
 
-			ClientPayloads.AccountGetRequest ser = new ClientPayloads.AccountGetRequest()
+			AccountGetRequest ser = new AccountGetRequest()
 			{
 				username = "test",
 				password = "test",
 			};
-			ClientPackage message = new ClientPackage()
+			Request message = new Request()
 			{
 				method = RequestMethod.GET,
 				request = RequestType.Account,

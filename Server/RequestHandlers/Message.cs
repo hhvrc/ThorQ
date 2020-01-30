@@ -4,12 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using HeavenLib.Connectivity;
+using CollarLib;
 
 namespace CollarControl
 {
 	public static class Message_RequestHandler
 	{
-		public static void Dispatch(RuntimeUser thisUser, Connection client, RequestMethod method, Guid requestId, string payload)
+		public static void Dispatch(RuntimeUser thisUser, HostConnection client, RequestMethod method, Guid requestId, string payload)
 		{
 			switch (method)
 			{
@@ -30,12 +32,12 @@ namespace CollarControl
 					break;
 			}
 		}
-		static void Get(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Get(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
-			ClientPayloads.ConversationGetRequest request;
+			CollarLib.ClientPayloads.ConversationGetRequest request;
 			try
 			{
-				request = JsonConvert.DeserializeObject< ClientPayloads.ConversationGetRequest>(payload);
+				request = JsonConvert.DeserializeObject<CollarLib.ClientPayloads.ConversationGetRequest>(payload);
 			}
 			catch (Exception)
 			{
@@ -45,7 +47,7 @@ namespace CollarControl
 
 			var messages = Program.conversationAPI.GetMessages(request.conversationId, request.offset, request.nMessages);
 
-			ServerPackage serv = new ServerPackage()
+			Response serv = new Response()
 			{
 				code = ResponseCode.OK,
 				type = ResponseDataType.MESSAGE_LIST,
@@ -54,17 +56,17 @@ namespace CollarControl
 			};
 			client.SendMessage(serv.Serialize());
 		}
-		static void Set(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Set(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			// TODO implement me
 			throw new NotImplementedException($"Message_RequestHandler.Set({thisUser},{client},{requestId},{payload})");
 		}
-		static void Post(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Post(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
-			ClientPayloads.MessagePostRequest request;
+			CollarLib.ClientPayloads.MessagePostRequest request;
 			try
 			{
-				request = ClientPayloads.MessagePostRequest.Deserialize(payload);
+				request = CollarLib.ClientPayloads.MessagePostRequest.Deserialize(payload);
 			}
 			catch (Exception)
 			{
@@ -72,7 +74,7 @@ namespace CollarControl
 				return;
 			}
 
-			Message? message = Program.conversationAPI.AddMessage(request.conversationId, thisUser.Id, request.content);
+			ConvMessage? message = Program.conversationAPI.AddMessage(request.conversationId, thisUser.Id, request.content);
 
 			if (message == null)
 			{
@@ -82,7 +84,7 @@ namespace CollarControl
 
 			List<Guid> members = Program.conversationAPI.MemberList(request.conversationId);
 
-			ServerPackage serv = new ServerPackage()
+			Response serv = new Response()
 			{
 				code = ResponseCode.OK,
 				type = ResponseDataType.MESSAGE,
@@ -99,7 +101,7 @@ namespace CollarControl
 					Program.userAPI.GetById(id)?.SendMessage(message?.Serialize());
 			}
 		}
-		static void Delete(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Delete(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			// TODO implement me
 			throw new NotImplementedException($"Message_RequestHandler.Delete({thisUser},{client},{requestId},{payload})");

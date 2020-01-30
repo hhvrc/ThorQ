@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CollarLib;
 
 namespace CollarControl
 {
@@ -86,13 +87,13 @@ namespace CollarControl
 			return convo.members;
 		}
 
-		public Message? AddMessage(Guid conversationId, Guid memberFrom, String content)
+		public ConvMessage? AddMessage(Guid conversationId, Guid memberFrom, String content)
 		{
 			Conversation convo = _dbConversations.FindById(conversationId);
 			if (convo == null || !convo.members.Contains(memberFrom))
 				return null;
 
-			Message msg = new Message()
+			ConvMessage msg = new ConvMessage()
 			{
 				id = Guid.NewGuid(),
 				usrId = memberFrom,
@@ -106,7 +107,7 @@ namespace CollarControl
 
 			return msg;
 		}
-		public List<Message> GetMessages(Guid conversationId, ulong offset, ulong nMessages)
+		public List<ConvMessage> GetMessages(Guid conversationId, ulong offset, ulong nMessages)
 		{
 			Conversation convo = _dbConversations.FindById(conversationId);
 			if (convo == null || convo.messages.Count < 0)

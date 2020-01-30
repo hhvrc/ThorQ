@@ -4,12 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using HeavenLib.Connectivity;
+using CollarLib;
 
 namespace CollarControl
 {
 	public static class Friend_RequestHandler
 	{
-		public static void Dispatch(RuntimeUser thisUser, Connection client, RequestMethod method, Guid requestId, string payload)
+		public static void Dispatch(RuntimeUser thisUser, HostConnection client, RequestMethod method, Guid requestId, string payload)
 		{
 			switch (method)
 			{
@@ -24,12 +26,12 @@ namespace CollarControl
 					break;
 			}
 		}
-		static void Get(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Get(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			// TODO implement me
 			throw new NotImplementedException($"Friend_RequestHandler.Get({thisUser},{client},{requestId},{payload})");
 		}
-		static void Delete(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Delete(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			Guid request;
 			try

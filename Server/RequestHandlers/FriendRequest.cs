@@ -4,12 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using HeavenLib.Connectivity;
+using CollarLib;
 
 namespace CollarControl
 {
 	public static class FriendRequest_RequestHandler
 	{
-		public static void Dispatch(RuntimeUser thisUser, Connection client, RequestMethod method, Guid requestId, string payload)
+		public static void Dispatch(RuntimeUser thisUser, HostConnection client, RequestMethod method, Guid requestId, string payload)
 		{
 			// Get/Set username
 			switch (method)
@@ -31,9 +33,9 @@ namespace CollarControl
 					break;
 			}
 		}
-		static void Get(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Get(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
-			ServerPackage messageObject = new ServerPackage()
+			Response messageObject = new Response()
 			{
 				code = ResponseCode.OK,
 				type = ResponseDataType.FRIEND_REQUEST_LIST,
@@ -43,7 +45,7 @@ namespace CollarControl
 
 			client.SendMessage(JsonConvert.SerializeObject(messageObject));
 		}
-		static void Post(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Post(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			RuntimeUser thatUser = Program.userAPI.GetByName(payload);
 			if (thatUser != null)
@@ -56,23 +58,23 @@ namespace CollarControl
 			if (thatUser.HasBlocked(thisUser.Id))
 			{
 				// To keep anonymity, dont respond differently
-				Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Friendrequest sent");
+				Program.SimpleClientResponse(client, requestId, CollarLib.ResponseCode.OK, "Friendrequest sent");
 				return;
 			}
 
 			if (thatUser.IsFriendsWith(thisUser.Id))
 			{
-				Program.SimpleClientResponse(client, requestId, ResponseCode.NOPE, "Already friends");
+				Program.SimpleClientResponse(client, requestId, CollarLib.ResponseCode.NOPE, "Already friends");
 				return;
 			}
-			FriendRequest req = new FriendRequest(thisUser.Id);
+			CollarLib.FriendRequest req = new CollarLib.FriendRequest(thisUser.Id);
 			thatUser.FriendRequests.Add(req);
 			Program.userAPI.TryUpdate(thatUser);
 
-			ServerPackage messageObject = new ServerPackage()
+			CollarLib.Response messageObject = new CollarLib.Response()
 			{
-				code = ResponseCode.OK,
-				type = ResponseDataType.FRIEND_REQUEST,
+				code = CollarLib.ResponseCode.OK,
+				type = CollarLib.ResponseDataType.FRIEND_REQUEST,
 				requestId = requestId,
 				payload = req.Serialize(),
 			};
@@ -80,12 +82,12 @@ namespace CollarControl
 			thatUser.SendMessage(messageObject.Serialize());
 			Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Friendrequest sent");
 		}
-		static void Accept(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Accept(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			// TODO implement me
 			throw new NotImplementedException($"FriendRequest_RequestHandler.Accept({thisUser},{client},{requestId},{payload})");
 		}
-		static void Deny(RuntimeUser thisUser, Connection client, Guid requestId, string payload)
+		static void Deny(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
 			// TODO implement me
 			throw new NotImplementedException($"FriendRequest_RequestHandler.Deny({thisUser},{client},{requestId},{payload})");
