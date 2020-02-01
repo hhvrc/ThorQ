@@ -1,7 +1,7 @@
-﻿<Application x:Class="ClientWpf.App"
+﻿<Application x:Class="CollarControl.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:ClientWpf"
+             xmlns:local="clr-namespace:CollarControl"
              StartupUri="Login.xaml">
     <Application.Resources>
          

@@ -58,6 +58,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AppCache.cs" />
+    <Compile Include="AppState.cs" />
+    <Compile Include="Connection.cs" />
+    <Compile Include="Instance.cs" />
     <Compile Include="LoginForm.cs">
       <SubType>Form</SubType>
     </Compile>

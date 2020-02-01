@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace ClientWpf.Properties
+namespace CollarControl.Properties
 {
 
 

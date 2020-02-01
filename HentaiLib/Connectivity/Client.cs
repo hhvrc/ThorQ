@@ -428,7 +428,7 @@ namespace HeavenLib.Connectivity
 			catch (Exception ex)
 			{
 				Console.WriteLine("Could not receive client message: " + ex.Message);
-				state.signal.Set();
+				try { state.signal.Set(); } catch (Exception) { }
 				return;
 			}
 
@@ -452,7 +452,7 @@ namespace HeavenLib.Connectivity
 			{
 				Console.WriteLine("Message length mismatch!");
 			}
-			state.signal.Set();
+			try { state.signal.Set(); } catch (Exception) { }
 		}
 
 		private void MessageReceivedCallback(IAsyncResult asyncResult)
@@ -467,7 +467,7 @@ namespace HeavenLib.Connectivity
 			catch (Exception ex)
 			{
 				Console.WriteLine("Could not receive client message: " + ex.Message);
-				state.signal.Set();
+				try { state.signal.Set(); } catch (Exception) { }
 				return;
 			}
 
@@ -483,11 +483,11 @@ namespace HeavenLib.Connectivity
 				catch (Exception ex)
 				{
 					Console.WriteLine("Received message format is invalid: " + ex.Message);
-					state.signal.Set();
+					try { state.signal.Set(); } catch (Exception) { }
 					return;
 				}
 
-				state.signal.Set();
+				try { state.signal.Set(); } catch (Exception) { }
 				Task.Run(() => OnMessageReceived.Invoke(this, Encoding.UTF8.GetString(messageBytes)));
 				return;
 			}
@@ -495,7 +495,7 @@ namespace HeavenLib.Connectivity
 			{
 				Console.WriteLine("Message length mismatch!");
 			}
-			state.signal.Set();
+			try { state.signal.Set(); } catch (Exception) { }
 		}
 
 		private class StateObject

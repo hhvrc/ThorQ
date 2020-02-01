@@ -12,16 +12,21 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 
-namespace ClientWpf
+namespace CollarControl
 {
 	/// <summary>
 	/// Interaction logic for Window1.xaml
 	/// </summary>
-	public partial class Window1 : Window
+	public partial class MainWindow : Window
 	{
-		public Window1()
+		public MainWindow()
 		{
 			InitializeComponent();
+		}
+
+		private void OnLogoutButtonClicked(object sender, RoutedEventArgs e)
+		{
+			this.Hide();
 		}
 	}
 }
