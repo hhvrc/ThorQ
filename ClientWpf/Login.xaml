@@ -7,6 +7,19 @@
         mc:Ignorable="d"
         Title="CollarControl Login" Height="370" Width="350" FontSize="18" Background="#323232">
     <Border BorderThickness="5">
+        <Grid>
+            <Popup Name="Popup1" Width="200" Height="75" IsOpen="False" Placement="Mouse">
+                <Grid Background="LightGray">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="2*"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock x:Name="PopupText" Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+                    <Button x:Name="PopupOkButton" Grid.Row="1" Content="Ok"/>
+                </Grid>
+            </Popup>
         <TabControl Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="2" Height="auto" Background="#323232">
             <TabItem>
                 <TabItem.Header>
@@ -152,21 +165,9 @@
                             x:Name="CollarConnectionTestButton" Content="Test Connection"/>
                         </Grid>
                     </Border>
-
-                    <Popup Grid.Column="1" Grid.Row="5" Name="Popup1" Width="200" Height="75" IsOpen="False" Placement="Mouse">
-                        <Grid Background="LightGray">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="2*"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <TextBlock x:Name="PopupText" Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
-
-                            <Button x:Name="PopupOkButton" Grid.Row="1" Content="Ok"/>
-                        </Grid>
-                    </Popup>
                 </Grid>
             </TabItem>
-        </TabControl>
+            </TabControl>
+        </Grid>
     </Border>
 </Window>
