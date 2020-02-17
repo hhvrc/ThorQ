@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using CollarLib;
 using HeavenLib;
 using HeavenLib.Connectivity;
-using CollarLib;
-using CollarLib;
+using System;
 
 namespace CollarControl
 {
@@ -52,38 +47,81 @@ namespace CollarControl
 				return;
 			}
 
-			RuntimeUser user = Program.userAPI.GetByName(request.username);
-			if (user == null || !user.VerifyPassword(request.password))
+			Program.userAPI.GetByName(request.username, (dbUser) =>
+			{
+				if (!dbUser.VerifyPassword(request.password))
+				{
+					Program.SimpleClientResponse(client, requestId, ResponseCode.UNAUTHORIZED, "Invalid username/password");
+					return;
+				}
+
+				if (thisUser.TryAddConnection(client))
+				{
+					client.OnClientDisconnected -= Program.OnClientDisconnected;
+					client.OnMessageReceived -= Program.OnClientMessageReceived;
+					Program.nonAuthedConnections.Remove(client);
+				}
+
+				Program.userAPI.GetMultipleById(dbUser.Friends, (users) => {
+					Program.conversationAPI.GetMultipleNameAndMembers(dbUser.Conversations, (convos) => {
+
+						var response = new CollarLib.ServerPayloads.AccountInstance();
+
+						response.Username = dbUser.Username;
+						response.Status = dbUser.Status;
+						response.Activity = dbUser.Activity;
+
+						foreach (var user in users) {
+							var friend = new CollarLib.ServerPayloads.Friend();
+
+							friend.UserId = user.Id;
+							friend.Username = user.Username;
+							friend.Activity = user.Activity;
+							friend.Status = user.Status;
+
+							response.Friends.Add(friend);
+						}
+
+						foreach (var blockedUser in dbUser.BlockedUsers)
+						{
+							response.BlockedUsers.Add(
+								new CollarLib.ServerPayloads.BlockedUser(
+									blockedUser.id,
+									blockedUser.frozenUsername
+									)
+								);
+						}
+
+						response.FriendRequests = dbUser.FriendRequests;
+
+						foreach (var convo in convos) {
+							response.Conversations.Add(
+								new CollarLib.ServerPayloads.Conversation(
+									convo.Item1,
+									convo.Item2,
+									convo.Item3
+									)
+								);
+						}
+
+						Response message = new Response()
+						{
+							code = ResponseCode.OK,
+							type = ResponseType.ACCOUNT,
+							requestId = requestId,
+							payload = request.Serialize(),
+						};
+
+						client.SendMessage(message.Serialize());
+
+						Console.WriteLine("[Client] Logged in"); // DEBUG
+					});
+				});
+			},
+			() =>
 			{
 				Program.SimpleClientResponse(client, requestId, ResponseCode.UNAUTHORIZED, "Invalid username/password");
-				return;
-			}
-
-			if (!user.HasConnection(client))
-			{
-				client.OnClientDisconnected -= Program.OnClientDisconnected;
-				client.OnMessageReceived -= Program.OnClientMessageReceived;
-				Program.nonAuthedConnections.Remove(client);
-				user.AddConnection(client);
-			}
-
-			CollarLib.ServerPayloads.Account response = new CollarLib.ServerPayloads.Account();
-			response.username = user.Username;
-			response.state = user.state;
-			response.status = user.status;
-			response.email = user.Email;
-
-			Response message = new Response()
-			{
-				code = ResponseCode.OK,
-				type = ResponseDataType.ACCOUNT,
-				requestId = requestId,
-				payload = request.Serialize(),
-			};
-
-			client.SendMessage(message.Serialize());
-
-			Console.WriteLine("[Client] Logged in"); // DEBUG
+			});
 		}
 		static void Post(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
@@ -118,31 +156,34 @@ namespace CollarControl
 				return;
 			}
 
-			if (Program.userAPI.EmailExists(request.email))
-			{
-				Program.SimpleClientResponse(client, requestId, ResponseCode.NOPE, "Email taken");
-				return;
-			}
+			Program.userAPI.AddUser(request.username, request.password, request.email,
+				(DbUser dbUser) =>
+				{
+					thisUser = new RuntimeUser(dbUser.Id);
 
-			thisUser = Program.userAPI.TryAdd(request.username, request.password, request.email);
-			if (thisUser == null)
-			{
-				Program.SimpleClientResponse(client, requestId, ResponseCode.NOPE, "Username/Email taken");
-				return;
-			}
-			thisUser.IsOnlineChanged += Program.OnUserOnlineChanged;
-			thisUser.MessageReceived += Program.OnUserMessageReceived;
+					thisUser.TryAddConnection(client);
 
-			client.OnClientDisconnected -= Program.OnClientDisconnected;
-			client.OnMessageReceived -= Program.OnClientMessageReceived;
+					if (!Program.initializedUsers.TryAdd(thisUser.Id, thisUser))
+						Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, "Server has encountered an error!");
 
-			Program.nonAuthedConnections.Remove(client);
+					thisUser.IsOnlineChanged += Program.OnUserOnlineChanged;
+					thisUser.MessageReceived += Program.OnUserMessageReceived;
 
-			thisUser.AddConnection(client);
-			Program.userAPI.TryUpdate(thisUser);
+					client.OnClientDisconnected -= Program.OnClientDisconnected;
+					client.OnMessageReceived -= Program.OnClientMessageReceived;
 
-			Program.SimpleClientResponse(client, requestId, ResponseCode.CREATED, "Account created");
-			Console.WriteLine("[Client] Registered");
+					Program.nonAuthedConnections.Remove(client);
+
+					thisUser.TryAddConnection(client);
+
+					Program.SimpleClientResponse(client, requestId, ResponseCode.CREATED, "Account created");
+					Console.WriteLine("[Client] Registered");
+				},
+				(String err) =>
+				{
+					Program.SimpleClientResponse(client, requestId, ResponseCode.NOPE, err);
+				});
+
 		}
 		static void Delete(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
@@ -156,23 +197,39 @@ namespace CollarControl
 				Program.SimpleClientResponse(client, requestId, ResponseCode.INVALID_PARAMS, "Password cannot be empty");
 				return;
 			}
-			
-			if (!thisUser.VerifyPassword(payload))
+
+			Program.userAPI.GetById(thisUser.Id, (dbUser) =>
 			{
-				Program.SimpleClientResponse(client, requestId, ResponseCode.UNAUTHORIZED, "Invalid password");
-				return;
-			}
+				if (!dbUser.VerifyPassword(payload))
+				{
+					Program.SimpleClientResponse(client, requestId, ResponseCode.UNAUTHORIZED, "Invalid password");
+					return;
+				}
+				thisUser.RemoveConnection(client);
+				Program.userAPI.RemoveUser(thisUser.Id, () =>
+				{
+					Program.nonAuthedConnections.Add(client);
 
-			thisUser.RemoveConnection(client);
-			Program.userAPI.TryRemove(thisUser.Id);
+					client.OnClientDisconnected += Program.OnClientDisconnected;
+					client.OnMessageReceived += Program.OnClientMessageReceived;
 
-			Program.nonAuthedConnections.Add(client);
+					Program.SimpleClientResponse(client, requestId, ResponseCode.DELETED, "Account deleted");
+					Console.WriteLine("[Client] Deleted account"); // DEBUG
+				},
+				() =>
+				{
+					Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, "Server error");
+					Console.WriteLine("[Client] Error deleting account"); // DEBUG
+				});
+			},
+			(err) =>
+			{
+				Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, "Server error");
+				Console.WriteLine("[Client] Error deleting account"); // DEBUG
+			});
 
-			client.OnClientDisconnected += Program.OnClientDisconnected;
-			client.OnMessageReceived += Program.OnClientMessageReceived;
 
-			Program.SimpleClientResponse(client, requestId, ResponseCode.DELETED, "Account deleted");
-			Console.WriteLine("[Client] Deleted account"); // DEBUG
+
 		}
 	}
 }

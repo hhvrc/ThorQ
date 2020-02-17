@@ -24,6 +24,21 @@ namespace CollarControl
 			InitializeComponent();
 		}
 
+		private Instance m_instance;
+		public Instance ActiveInstance
+		{
+			get
+			{
+				lock (m_instance)
+					return m_instance;
+			}
+			set
+			{
+				lock (m_instance)
+					m_instance = value;
+			}
+		}
+
 		private void OnLogoutButtonClicked(object sender, RoutedEventArgs e)
 		{
 			this.Hide();

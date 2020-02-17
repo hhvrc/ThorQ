@@ -30,14 +30,27 @@ namespace CollarControl
 				Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, "Invalid payload");
 				return;
 			}
-			if (thisUser.VerifyPassword(recovery.oldPassword))
+
+			Program.userAPI.GetById(thisUser.Id, (dbUser) =>
 			{
-				Console.WriteLine("Got: " + recovery.newPassword); // DEBUG
-				thisUser.SetPassword(recovery.newPassword);
-				Program.userAPI.TryUpdate(thisUser);
-				Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Password set!");
-			}
-			Program.SimpleClientResponse(client, requestId, ResponseCode.UNAUTHORIZED, "Invalid password");
+				if (dbUser.VerifyPassword(recovery.oldPassword))
+				{
+					Console.WriteLine("Got: " + recovery.newPassword); // DEBUG
+					Program.userAPI.SetPassword(thisUser.Id, recovery.newPassword, () =>
+					{
+						Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Password set!");
+					},
+					(err) =>
+					{
+						Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, err);
+					});
+				}
+				Program.SimpleClientResponse(client, requestId, ResponseCode.UNAUTHORIZED, "Invalid password");
+			},
+			(err) =>
+			{
+				Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, err);
+			});
 		}
 	}
 }

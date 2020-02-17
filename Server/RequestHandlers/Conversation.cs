@@ -29,39 +29,44 @@ namespace CollarControl
 					break;
 			}
 		}
-		static void Get(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
+		static void Get(RuntimeUser thisUser, HostConnection client, Guid requestId, string _)
 		{
-			List<CollarLib.ServerPayloads.Conversation> conversations = new List<CollarLib.ServerPayloads.Conversation>();
-			foreach (Guid id in thisUser.Conversations)
+			Program.userAPI.GetById(thisUser.Id, (dbUser) =>
 			{
-				CollarLib.ServerPayloads.Conversation conv = new CollarLib.ServerPayloads.Conversation()
+				Program.conversationAPI.GetMultipleNameAndMembers(dbUser.Conversations, (conversations) =>
 				{
-					id = id,
-					name = Program.conversationAPI.GetName(id),
-					members = Program.conversationAPI.MemberList(id),
-				};
+					var convos = new List<CollarLib.ServerPayloads.Conversation>();
+					foreach (var conversation in conversations)
+					{
+						convos.Add(new CollarLib.ServerPayloads.Conversation
+						{
+							Id = conversation.Item1,
+							Name = conversation.Item2,
+							Members = conversation.Item3
+						});
+					}
 
-				conversations.Add(conv);
-			}
-
-			Response messageObject = new Response()
+					var messageObject = new CollarLib.Response()
+					{
+						code = ResponseCode.OK,
+						type = ResponseType.CONVERSATION_LIST,
+						requestId = requestId,
+						payload = JsonConvert.SerializeObject(convos),
+					};
+					client.SendMessage(messageObject.Serialize());
+				});
+			},
+			(err) =>
 			{
-				code = ResponseCode.OK,
-				type = ResponseDataType.CONVERSATION_LIST,
-				requestId = requestId,
-				payload = JsonConvert.SerializeObject(conversations),
-			};
-
-			string jsonMessage = messageObject.Serialize();
-
-			client.SendMessage(jsonMessage);
+				Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, err);
+			});
 		}
 		static void Post(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
-			List<Guid> request;
+			List<Guid> memberIds;
 			try
 			{
-				request = JsonConvert.DeserializeObject<List<Guid>>(payload);
+				memberIds = JsonConvert.DeserializeObject<List<Guid>>(payload);
 			}
 			catch (Exception)
 			{
@@ -69,47 +74,54 @@ namespace CollarControl
 				return;
 			}
 
-			var conversationName = thisUser.Username;
-			var conversationMembers = new List<RuntimeUser>();
-			for (int i = 0; i < request.Count; i++)
+
+			Program.userAPI.LimitIdsToUserFriendslist(thisUser.Id, memberIds, (friendMemberIds) =>
 			{
-				var user = Program.userAPI.GetById(request[i]);
-				if (user != null)
+				if (memberIds.Count == 0)
 				{
-					conversationMembers.Add(user);
-					conversationName += $", {user.Username}";
+					Program.SimpleClientResponse(client, requestId, ResponseCode.NOPE, "Cannot add non-friended users to conversation!");
+					return;
 				}
-				else
+
+				memberIds.Add(thisUser.Id);
+
+				Program.userAPI.GetMultipleById(friendMemberIds, (friendMembers) =>
 				{
-					request.RemoveAt(i--);
-				}
-			}
+					String convName = "";
+					foreach (var member in friendMembers)
+						convName += $", {member.Username}";
 
-			Guid conversationId = Program.conversationAPI.Add(conversationName, request);
+					Program.conversationAPI.Add(convName, friendMemberIds, (conversationId) =>
+					{
+						Program.userAPI.AddConversationToUsers(friendMemberIds, conversationId);
 
-			CollarLib.ServerPayloads.Conversation conversationResponse = new CollarLib.ServerPayloads.Conversation()
+						Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Conversation created!");
+
+						foreach (var member in friendMembers)
+						{
+							if (Program.initializedUsers.TryGetValue(member.Id, out var user))
+							{
+								List<Guid> convoList = new List<Guid>();
+								convoList.AddRange(member.Conversations);
+								convoList.Add(conversationId);
+
+								var messageObject = new CollarLib.Response()
+								{
+									code = ResponseCode.UPDATE_DATA,
+									type = ResponseType.CONVERSATION_LIST,
+									requestId = Guid.Empty,
+									payload = JsonConvert.SerializeObject(convoList),
+								};
+								user.SendMessage(messageObject.Serialize());
+							}
+						}
+					});
+				});
+			},
+			(err) =>
 			{
-				id = conversationId,
-				name = conversationName,
-				members = request,
-			};
-
-			Response message = new Response()
-			{
-				code = ResponseCode.OK,
-				type = ResponseDataType.CONVERSATION,
-				requestId = requestId,
-				payload = conversationResponse.Serialize(),
-			};
-			client.SendMessage(message.Serialize());
-			message.code = ResponseCode.UPDATE_DATA;
-			message.requestId = Guid.Empty;
-
-			foreach (Guid id in request)
-			{
-				if (id != thisUser.Id)
-					Program.userAPI.GetById(id)?.SendMessage(message.Serialize());
-			}
+				Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, err);
+			});
 		}
 		static void Delete(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{

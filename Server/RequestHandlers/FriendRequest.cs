@@ -35,52 +35,47 @@ namespace CollarControl
 		}
 		static void Get(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
-			Response messageObject = new Response()
+			Program.userAPI.GetById(thisUser.Id, (dbUser) =>
 			{
-				code = ResponseCode.OK,
-				type = ResponseDataType.FRIEND_REQUEST_LIST,
-				requestId = requestId,
-				payload = JsonConvert.SerializeObject(thisUser.FriendRequests),
-			};
+				Response messageObject = new Response()
+				{
+					code = ResponseCode.OK,
+					type = ResponseType.FRIEND_REQUEST_LIST,
+					requestId = requestId,
+					payload = JsonConvert.SerializeObject(dbUser.FriendRequests)
+				};
 
-			client.SendMessage(JsonConvert.SerializeObject(messageObject));
+				client.SendMessage(JsonConvert.SerializeObject(messageObject));
+			},
+			(err) =>
+			{
+				Console.WriteLine($"FriendRequest_RequestHandler.Get: {err}");
+				Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, "Error getting friendslist");
+			});
 		}
 		static void Post(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
-			RuntimeUser thatUser = Program.userAPI.GetByName(payload);
-			if (thatUser != null)
+			Program.userAPI.AddFriendRequest(thisUser.Id, payload, (friendRequestId, targetUserId) =>
 			{
+				Response messageObject = new Response()
+				{
+					code = ResponseCode.OK,
+					type = ResponseType.FRIEND_REQUEST,
+					requestId = requestId,
+					payload = friendRequestId.ToString()
+				};
+
+				if (Program.initializedUsers.TryGetValue(targetUserId, out var runtimeUser))
+					runtimeUser.SendMessage(messageObject.Serialize());
+
+				Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Friendrequest sent");
+			},
+			(err) =>
+			{
+				Console.WriteLine($"FriendRequest_RequestHandler.Post: {err}");
 				// To keep anonymity, dont respond differently
 				Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Friendrequest sent");
-				return;
-			}
-
-			if (thatUser.HasBlocked(thisUser.Id))
-			{
-				// To keep anonymity, dont respond differently
-				Program.SimpleClientResponse(client, requestId, CollarLib.ResponseCode.OK, "Friendrequest sent");
-				return;
-			}
-
-			if (thatUser.IsFriendsWith(thisUser.Id))
-			{
-				Program.SimpleClientResponse(client, requestId, CollarLib.ResponseCode.NOPE, "Already friends");
-				return;
-			}
-			CollarLib.FriendRequest req = new CollarLib.FriendRequest(thisUser.Id);
-			thatUser.FriendRequests.Add(req);
-			Program.userAPI.TryUpdate(thatUser);
-
-			CollarLib.Response messageObject = new CollarLib.Response()
-			{
-				code = CollarLib.ResponseCode.OK,
-				type = CollarLib.ResponseDataType.FRIEND_REQUEST,
-				requestId = requestId,
-				payload = req.Serialize(),
-			};
-
-			thatUser.SendMessage(messageObject.Serialize());
-			Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Friendrequest sent");
+			});
 		}
 		static void Accept(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{

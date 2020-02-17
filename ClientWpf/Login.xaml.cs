@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -29,7 +30,6 @@ namespace CollarControl
 		public LoginWindow()
 		{
 			InitializeComponent();
-
 			mainWindow.Closing += MainWindow_Closing;
 			mainWindow.IsVisibleChanged += MainWindow_IsVisibleChanged;
 
@@ -40,7 +40,7 @@ namespace CollarControl
 			ConnectionTestButton.Click += ConnectionTestButton_Click;
 			PopupOkButton.Click += PopupOkButton_Click;
 
-			Connection.MessageReceived += Connection_MessageReceived;
+			Connection.ServerMessageReceived += OnNonRequestedResponse;
 			connectionOk = Connection.Connect();
 			OptHostname.Text = Connection.ServerHostname;
 			OptNetworkPort.Text = Connection.ServerPort.ToString();
@@ -56,75 +56,33 @@ namespace CollarControl
 			}));
 		}
 
-		private void Connection_MessageReceived(string obj)
+		private void OnNonRequestedResponse(CollarLib.Response resp)
 		{
-			if (obj == null)
-				return;
-
-			CollarLib.Response resp;
-
 			try
 			{
-				resp = JsonConvert.DeserializeObject<CollarLib.Response>(obj);
-
-				if (resp.code == CollarLib.ResponseCode.NOPE)
+				switch (resp.code)
 				{
-					ShowPopup("NOPE: " + resp.payload);
-					return;
-				}
-				else if (resp.code == CollarLib.ResponseCode.FORBIDDEN)
-				{
-					ShowPopup("FORBIDDEN: " + resp.payload);
-					return;
-				}
-				else if (resp.code == CollarLib.ResponseCode.UNAUTHORIZED)
-				{
-					ShowPopup("UNAUTHORIZED: " + resp.payload);
-					return;
-				}
-				else if (resp.code == CollarLib.ResponseCode.ERROR)
-				{
-					ShowPopup("ERROR: " + resp.payload);
-					return;
-				}
-
-				switch (resp.type)
-				{
-					case CollarLib.ResponseDataType.NULL:
+					case CollarLib.ResponseCode.OK:
+					case CollarLib.ResponseCode.ACCEPTED:
+					case CollarLib.ResponseCode.CREATED:
+					case CollarLib.ResponseCode.DELETED:
+					case CollarLib.ResponseCode.NOPE:
+					case CollarLib.ResponseCode.ERROR:
+					case CollarLib.ResponseCode.FORBIDDEN:
+					case CollarLib.ResponseCode.UNAUTHORIZED:
+					case CollarLib.ResponseCode.INVALID_PARAMS:
+					case CollarLib.ResponseCode.INVALID_REQUEST:
+						Console.WriteLine($"Got an unrequested response, this should not happen!\n{resp.payload}");
 						break;
-					case CollarLib.ResponseDataType.STRING:
-						break;
-					case CollarLib.ResponseDataType.RPC:
-						break;
-					case CollarLib.ResponseDataType.P2PR:
-						break;
-					case CollarLib.ResponseDataType.ACCOUNT:
-						/*
-						var acc = JsonConvert.DeserializeObject<CollarLib.ServerPayloads.Account>(resp.payload);
-						acc.*/
-						break;
-					case CollarLib.ResponseDataType.BLOCKED_USER:
-						break;
-					case CollarLib.ResponseDataType.BLOCKED_USER_LIST:
-						break;
-					case CollarLib.ResponseDataType.FRIEND:
-						break;
-					case CollarLib.ResponseDataType.FRIEND_LIST:
-						break;
-					case CollarLib.ResponseDataType.FRIEND_REQUEST:
-						break;
-					case CollarLib.ResponseDataType.FRIEND_REQUEST_LIST:
-						break;
-					case CollarLib.ResponseDataType.MESSAGE:
-						break;
-					case CollarLib.ResponseDataType.MESSAGE_LIST:
-						break;
-					case CollarLib.ResponseDataType.CONVERSATION:
-						break;
-					case CollarLib.ResponseDataType.CONVERSATION_LIST:
-						break;
+					case CollarLib.ResponseCode.UPDATE_DATA:
+						HandleUpdateData(resp);
+						return;
+					case CollarLib.ResponseCode.ADMIN_MSG:
+						HandleAdminMsg(resp);
+						return;
 					default:
-						break;
+						Console.WriteLine($"Got an unrecognized response:\n{resp.payload}");
+						return;
 				}
 			}
 			catch (Exception ex)
@@ -132,10 +90,53 @@ namespace CollarControl
 				Console.WriteLine(ex.Message);
 				return;
 			}
+		}
 
-			
+		private void HandleAdminMsg(CollarLib.Response resp)
+		{
+			if (resp.type == CollarLib.ResponseType.STRING)
+			{
+				ShowPopup($"SERVER: {resp.payload}");
+			}
+		}
 
-			Console.WriteLine(obj);
+		private void HandleUpdateData(CollarLib.Response resp)
+		{
+			switch (resp.type)
+			{
+				case CollarLib.ResponseType.NULL:
+					break;
+				case CollarLib.ResponseType.STRING:
+					break;
+				case CollarLib.ResponseType.RPC:
+					break;
+				case CollarLib.ResponseType.P2PR:
+					break;
+				case CollarLib.ResponseType.ACCOUNT:
+					break;
+				case CollarLib.ResponseType.BLOCKED_USER:
+					break;
+				case CollarLib.ResponseType.BLOCKED_USER_LIST:
+					break;
+				case CollarLib.ResponseType.FRIEND:
+					break;
+				case CollarLib.ResponseType.FRIEND_LIST:
+					break;
+				case CollarLib.ResponseType.FRIEND_REQUEST:
+					break;
+				case CollarLib.ResponseType.FRIEND_REQUEST_LIST:
+					break;
+				case CollarLib.ResponseType.MESSAGE:
+					break;
+				case CollarLib.ResponseType.MESSAGE_LIST:
+					break;
+				case CollarLib.ResponseType.CONVERSATION:
+					break;
+				case CollarLib.ResponseType.CONVERSATION_LIST:
+					break;
+				default:
+					break;
+			}
 		}
 
 		private void PopupOkButton_Click(object sender, RoutedEventArgs e)
@@ -223,15 +224,53 @@ namespace CollarControl
 				password = PasswordInput.Password,
 			};
 
-			CollarLib.Request request = new CollarLib.Request()
+			Connection.SendMessage(payload.Serialize(), CollarLib.RequestMethod.GET, CollarLib.RequestType.Account, (resp)=>
 			{
-				id = Guid.NewGuid(),
-				request = CollarLib.RequestType.Account,
-				method = CollarLib.RequestMethod.GET,
-				payload = payload.Serialize(),
-			};
+				try
+				{
+					if (resp.code != CollarLib.ResponseCode.OK) {
+						ShowPopup("INVALID PARAMETERS: " + resp.payload);
+						return;
+					}
 
-			Connection.SendMessage(request.Serialize());
+					CollarLib.ServerPayloads.AccountInstance account = CollarLib.ServerPayloads.AccountInstance.Deserialize(resp.payload);
+
+					Instance instance = new Instance();
+					instance.username = account.Username;
+					instance.status = account.Status;
+					instance.activity = account.Activity;
+					instance.friends = account.Friends;
+
+					foreach (var blockedUser in account.BlockedUsers) {
+						instance.blockedUsers.Add(
+							new CollarLib.BlockedUser(
+								blockedUser.BlockId,
+								blockedUser.FrozenUsername
+								)
+							);
+					}
+
+					instance.friendRequests = account.FriendRequests;
+
+					foreach (var convo in account.Conversations)
+					{
+						instance.conversations.Add(
+							new CollarLib.Conversation(
+								convo.Id,
+								convo.Name,
+								convo.Members
+								)
+							);
+					}
+
+					mainWindow.ActiveInstance = instance;
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine(ex.Message);
+					return;
+				}
+			});
 		}
 
 		private void IsInputUInt16(object sender, TextCompositionEventArgs e)

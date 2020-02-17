@@ -1,124 +1,253 @@
-﻿using LiteDB;
+﻿using CollarLib;
+using LiteDB;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using CollarLib;
 
 namespace CollarControl
 {
 	class ConversationAPI
 	{
-		private LiteCollection<Conversation> _dbConversations;
+		private DbCollectionHandler<DbConversation> _dbCollectionHandler;
 
 		public ConversationAPI(LiteDatabase db)
 		{
-			_dbConversations = db.GetCollection<Conversation>("conversations");
+			_dbCollectionHandler = new DbCollectionHandler<DbConversation>(db, "conversations");
 		}
 
 		/// <summary>
 		/// Adds a new conversation
 		/// </summary>
+		/// <param name="name"></param>
 		/// <param name="members"></param>
-		/// <returns>
-		/// Id of conversation
-		/// </returns>
-		public Guid Add(String name, List<Guid> members)
+		/// <param name="onDone"></param>
+		public void Add(string name, List<Guid> members, Action<Guid> onDone)
 		{
-			Conversation convo = new Conversation();
-			convo.name = name;
-			convo.members = members;
-			_dbConversations.Insert(convo);
-			return convo.id;
-		}
+			var convo = new DbConversation();
+			convo.Name = name;
+			convo.Members = members;
 
-		public String GetName(Guid conversationId)
-		{
-			Conversation convo = _dbConversations.FindById(conversationId);
-			if (convo == null)
-				return null;
-			return convo.name;
-		}
-		public bool SetName(Guid conversationId, String newName)
-		{
-			Conversation convo = _dbConversations.FindById(conversationId);
-			if (convo == null)
-				return false;
-			convo.name = newName;
-			_dbConversations.Update(convo);
-			return true;
-		}
-
-		public bool MemberAdd(Guid conversationId, Guid memberId)
-		{
-			Conversation convo = _dbConversations.FindById(conversationId);
-
-			if (convo == null || convo.members.Contains(memberId))
-				return false;
-
-			convo.members.Add(memberId);
-
-			_dbConversations.Update(convo);
-
-			return true;
-		}
-		public bool MemberRemove(Guid conversationId, Guid memberId)
-		{
-			Conversation convo = _dbConversations.FindById(conversationId);
-
-			if (convo == null || !convo.members.Contains(memberId))
-				return false;
-
-			convo.members.Remove(memberId);
-
-			if (convo.members.Count == 0)
-				_dbConversations.Delete(c => c.id == convo.id);
-			else
-				_dbConversations.Update(convo);
-			return true;
-		}
-		public List<Guid> MemberList(Guid conversationId)
-		{
-			Conversation convo = _dbConversations.FindById(conversationId);
-			if (convo == null)
-				return null;
-			return convo.members;
-		}
-
-		public ConvMessage? AddMessage(Guid conversationId, Guid memberFrom, String content)
-		{
-			Conversation convo = _dbConversations.FindById(conversationId);
-			if (convo == null || !convo.members.Contains(memberFrom))
-				return null;
-
-			ConvMessage msg = new ConvMessage()
+			_dbCollectionHandler.AddJob((ILiteCollection<DbConversation> dbCollection) =>
 			{
-				id = Guid.NewGuid(),
-				usrId = memberFrom,
-				utcTime = DateTime.UtcNow,
-				content = content,
-			};
-
-			convo.messages.Add(msg);
-
-			_dbConversations.Update(convo);
-
-			return msg;
+				dbCollection.Insert(convo);
+				Task.Run(() => onDone.Invoke(convo.Id));
+			});
 		}
-		public List<ConvMessage> GetMessages(Guid conversationId, ulong offset, ulong nMessages)
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="conversationId"></param>
+		/// <param name="onSuccess"></param>
+		/// <param name="onError"></param>
+		public void GetNameAndMembers(Guid conversationId, Action<string, List<Guid>> onSuccess, Action onError)
 		{
-			Conversation convo = _dbConversations.FindById(conversationId);
-			if (convo == null || convo.messages.Count < 0)
-				return null;
+			_dbCollectionHandler.AddJob((ILiteCollection<DbConversation> dbCollection) =>
+			{
+				var convo = dbCollection.FindById(conversationId);
+				if (convo == null)
+					Task.Run(() => { onError.Invoke(); });
+				else
+					Task.Run(() => { onSuccess.Invoke(convo.Name, convo.Members); });
+			});
+		}
 
-			if (offset > (ulong)convo.messages.Count)
-				return null;
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="conversationId"></param>
+		/// <param name="onSuccess"></param>
+		/// <param name="onError"></param>
+		public void GetMultipleNameAndMembers(List<Guid> conversationIds, Action<List<(Guid, string, List<Guid>)>> onDone)
+		{
+			_dbCollectionHandler.AddJob((ILiteCollection<DbConversation> dbCollection) =>
+			{
+				var convos = new List<(Guid, string, List<Guid>)>();
+				foreach(var id in conversationIds)
+				{
+					var convo = dbCollection.FindById(id);
+					if (convo != null)
+						convos.Add((id, convo.Name, convo.Members));
+				}
+				Task.Run(() => { onDone.Invoke(convos); });
+			});
+		}
 
-			nMessages = Math.Min((uint)convo.messages.Count - offset, nMessages);
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="conversationId"></param>
+		/// <param name="onSuccess"></param>
+		/// <param name="onError"></param>
+		public void GetName(Guid conversationId, Action<string> onSuccess, Action onError)
+		{
+			_dbCollectionHandler.AddJob((ILiteCollection<DbConversation> dbCollection) =>
+			{
+				var convo = dbCollection.FindById(conversationId);
+				if (convo == null)
+					Task.Run(() => { onError.Invoke(); });
+				else
+					Task.Run(() => { onSuccess.Invoke(convo.Name); });
+			});
+		}
 
-			return convo.messages.GetRange((int)offset, (int)nMessages);
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="conversationId"></param>
+		/// <param name="newName"></param>
+		/// <param name="onSuccess"></param>
+		/// <param name="onError"></param>
+		public void SetName(Guid conversationId, string newName, Action onSuccess, Action onError)
+		{
+			_dbCollectionHandler.AddJob((ILiteCollection<DbConversation> dbCollection) =>
+			{
+				var convo = dbCollection.FindById(conversationId);
+				if (convo == null)
+					Task.Run(() => { onError.Invoke(); });
+				else
+				{
+					convo.Name = newName;
+					dbCollection.Update(convo);
+					Task.Run(() => { onSuccess.Invoke(); });
+				}
+			});
+		}
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="conversationId"></param>
+		/// <param name="memberId"></param>
+		/// <param name="onSuccess"></param>
+		/// <param name="onError"></param>
+		public void MemberAdd(Guid conversationId, Guid memberId, Action onSuccess, Action onError)
+		{
+			_dbCollectionHandler.AddJob((ILiteCollection<DbConversation> dbCollection) =>
+			{
+				var convo = dbCollection.FindById(conversationId);
+				if (convo == null || convo.Members.Contains(memberId))
+					Task.Run(() => { onError.Invoke(); });
+				else
+				{
+					convo.Members.Add(memberId);
+					dbCollection.Update(convo);
+					Task.Run(() => { onSuccess.Invoke(); });
+				}
+			});
+		}
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="conversationId"></param>
+		/// <param name="memberId"></param>
+		/// <param name="onSuccess"></param>
+		/// <param name="onError"></param>
+		public void MemberRemove(Guid conversationId, Guid memberId, Action onSuccess, Action onError)
+		{
+			_dbCollectionHandler.AddJob((ILiteCollection<DbConversation> dbCollection) =>
+			{
+				var convo = dbCollection.FindById(conversationId);
+				if (convo == null || !convo.Members.Contains(memberId))
+					Task.Run(() => { onError.Invoke(); });
+				else
+				{
+					convo.Members.Remove(memberId);
+					if (convo.Members.Count == 0)
+						dbCollection.DeleteMany(c => c.Id == convo.Id);
+					else
+						dbCollection.Update(convo);
+					Task.Run(() => { onSuccess.Invoke(); });
+				}
+			});
+		}
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="conversationId"></param>
+		/// <param name="onSuccess"></param>
+		/// <param name="onError"></param>
+		public void MemberList(Guid conversationId, Action<List<Guid>> onSuccess, Action onError)
+		{
+			_dbCollectionHandler.AddJob((ILiteCollection<DbConversation> dbCollection) =>
+			{
+				var convo = dbCollection.FindById(conversationId);
+				if (convo == null)
+					Task.Run(() => { onError.Invoke(); });
+				else
+					Task.Run(() => { onSuccess.Invoke(convo.Members); });
+			});
+		}
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="conversationId"></param>
+		/// <param name="memberFrom"></param>
+		/// <param name="content"></param>
+		/// <param name="onSuccess"></param>
+		/// <param name="onError"></param>
+		public void AddMessage(Guid conversationId, Guid memberFrom, string content, Action<ConvMessage> onSuccess, Action<string> onError)
+		{
+			_dbCollectionHandler.AddJob((ILiteCollection<DbConversation> dbCollection) =>
+			{
+				var convo = dbCollection.FindById(conversationId);
+				if (convo == null)
+				{
+					Task.Run(() => { onError.Invoke("Conversation doesnt exist"); });
+					return;
+				}
+
+				if (!convo.Members.Contains(memberFrom))
+				{
+					Task.Run(() => { onError.Invoke("Not part of conversation!"); });
+					return;
+				}
+
+				var msg = new ConvMessage()
+				{
+					id = Guid.NewGuid(),
+					usrId = memberFrom,
+					utcTime = DateTime.UtcNow,
+					content = content,
+				};
+
+				convo.Messages.Add(msg);
+
+				dbCollection.Update(convo);
+
+				Task.Run(() => { onSuccess.Invoke(msg); });
+			});
+		}
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="conversationId"></param>
+		/// <param name="offset"></param>
+		/// <param name="nMessages"></param>
+		/// <param name="onSuccess"></param>
+		/// <param name="onError"></param>
+		public void GetMessages(Guid conversationId, ulong offset, ulong nMessages, Action<List<ConvMessage>> onSuccess, Action onError)
+		{
+			_dbCollectionHandler.AddJob((ILiteCollection<DbConversation> dbCollection) =>
+			{
+				var convo = dbCollection.FindById(conversationId);
+				if (convo == null ||
+					convo.Messages.Count < 0 ||
+					offset > (ulong)convo.Messages.Count)
+				{
+					Task.Run(() => { onError.Invoke(); });
+				}
+				else
+				{
+					nMessages = Math.Min((uint)convo.Messages.Count - offset, nMessages);
+
+					Task.Run(() => { onSuccess.Invoke(convo.Messages.GetRange((int)offset, (int)nMessages)); });
+				}
+			});
 		}
 	}
 }

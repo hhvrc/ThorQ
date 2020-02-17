@@ -58,10 +58,14 @@ namespace CollarLib
 		UPDATE_DATA, // Received non-requested data from friend
 		ADMIN_MSG, // Received non-requested data from admin
 	}
-	public enum ResponseDataType
+	public enum ResponseType
 	{
 		NULL,
 		STRING,
+
+		USERNAME,
+		EMAIL,
+		PASSWORD,
 
 		RPC, // RPC command
 		P2PR, // Peer2Peer connection request

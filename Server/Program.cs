@@ -1,10 +1,13 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
+using CollarLib;
+using Newtonsoft.Json;
 using HeavenLib;
 using HeavenLib.Connectivity;
-using CollarLib;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Threading.Tasks;
 
 namespace CollarControl
 {
@@ -14,6 +17,8 @@ namespace CollarControl
 		public static UserAPI userAPI = null;
 		public static ConversationAPI conversationAPI = null;
 		public static Random random = new Random();
+
+		public static ConcurrentDictionary<Guid, RuntimeUser> initializedUsers;
 		public static List<HostConnection> nonAuthedConnections = new List<HostConnection>();
 
 		static void Main(string[] args)
@@ -48,14 +53,30 @@ namespace CollarControl
 			}
 
 			host = new Host();
-			LiteDB.LiteDatabase db = new LiteDB.LiteDatabase(Path.Combine(thisPath, "MyData.db"), null);
-			userAPI = new UserAPI(db, OnUserOnlineChanged, OnUserMessageReceived);
+
+			var db = new LiteDB.LiteDatabase(Path.Combine(thisPath, "MyData.db"));
+
+			userAPI = new UserAPI(db);
 			conversationAPI = new ConversationAPI(db);
 
-			host.OnClientConnected += (HostConnection con) =>
+			userAPI.GetAllUsers((IEnumerable<DbUser> users) =>
+			{
+				foreach (var usr in users)
 				{
-					Task.Run(() => OnClientConnected(con));
-				};
+					var user = new RuntimeUser(usr.Id);
+					user.IsOnlineChanged += OnUserOnlineChanged;
+					user.MessageReceived += OnUserMessageReceived;
+					initializedUsers.TryAdd(usr.Id, user);
+				}
+			});
+
+			initializedUsers = new ConcurrentDictionary<Guid, RuntimeUser>();
+
+			host.OnClientConnected += (HostConnection con) =>
+			{
+				Task.Run(() => OnClientConnected(con));
+			};
+
 			try
 			{
 				host.Listen(port, useIPv6);
@@ -68,10 +89,10 @@ namespace CollarControl
 
 		public static void SimpleClientResponse(HostConnection client, Guid requestId, ResponseCode code, string message)
 		{
-			Response messageObject = new Response()
+			var messageObject = new Response()
 			{
 				code = code,
-				type = ((message == null) ? ResponseDataType.NULL : ResponseDataType.STRING),
+				type = ((message == null) ? ResponseType.NULL : ResponseType.STRING),
 				requestId = requestId,
 				payload = message,
 			};
@@ -122,15 +143,15 @@ namespace CollarControl
 		{
 			try
 			{
-				Request msg = Request.Deserialize(str);
+				var msg = ClientRequest.Deserialize(str);
 
-				switch (msg.request)
+				switch (msg.Request)
 				{
 					case RequestType.Account:
-						Account_RequestHandler.Dispatch(null, client, msg.method, msg.id, msg.payload);
+						Account_RequestHandler.Dispatch(null, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					case RequestType.Recovery:
-						Recovery_RequestHandler.Dispatch(null, client, msg.method, msg.id, msg.payload);
+						Recovery_RequestHandler.Dispatch(null, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					case RequestType.Username:
 					case RequestType.Email:
@@ -142,10 +163,10 @@ namespace CollarControl
 					case RequestType.Message:
 					case RequestType.P2PRequest:
 					case RequestType.RPC:
-						SimpleClientResponse(client, msg.id, ResponseCode.UNAUTHORIZED, "Not logged in");
+						SimpleClientResponse(client, msg.Id, ResponseCode.UNAUTHORIZED, "Not logged in");
 						break;
 					default:
-						SimpleClientResponse(client, msg.id, ResponseCode.INVALID_REQUEST, "Not a valid request");
+						SimpleClientResponse(client, msg.Id, ResponseCode.INVALID_REQUEST, "Not a valid request");
 						break;
 				}
 			}
@@ -161,48 +182,48 @@ namespace CollarControl
 		{
 			try
 			{
-				Request msg = Request.Deserialize(str);
+				var msg = ClientRequest.Deserialize(str);
 
-				switch (msg.request)
+				switch (msg.Request)
 				{
 					case RequestType.Account:
-						Account_RequestHandler.Dispatch(thisUser, client, msg.method, msg.id, msg.payload);
+						Account_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					case RequestType.Recovery:
-						Recovery_RequestHandler.Dispatch(thisUser, client, msg.method, msg.id, msg.payload);
+						Recovery_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					case RequestType.Username:
-						Username_RequestHandler.Dispatch(thisUser, client, msg.method, msg.id, msg.payload);
+						Username_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					case RequestType.Email:
-						Email_RequestHandler.Dispatch(thisUser, client, msg.method, msg.id, msg.payload);
+						Email_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					case RequestType.Password:
-						Password_RequestHandler.Dispatch(thisUser, client, msg.method, msg.id, msg.payload);
+						Password_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					case RequestType.BlockedUsers:
-						BlockedUser_RequestHandler.Dispatch(thisUser, client, msg.method, msg.id, msg.payload);
+						BlockedUser_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					case RequestType.FriendRequest:
-						FriendRequest_RequestHandler.Dispatch(thisUser, client, msg.method, msg.id, msg.payload);
+						FriendRequest_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					case RequestType.Friends:
-						Friend_RequestHandler.Dispatch(thisUser, client, msg.method, msg.id, msg.payload);
+						Friend_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					case RequestType.Conversation:
-						Conversation_RequestHandler.Dispatch(thisUser, client, msg.method, msg.id, msg.payload);
+						Conversation_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					case RequestType.Message:
-						Message_RequestHandler.Dispatch(thisUser, client, msg.method, msg.id, msg.payload);
+						Message_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					case RequestType.P2PRequest:
-						P2PRequest_RequestHandler.Dispatch(thisUser, client, msg.method, msg.id, msg.payload);
+						P2PRequest_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					case RequestType.RPC:
-						RPC_RequestHandler.Dispatch(thisUser, client, msg.method, msg.id, msg.payload);
+						RPC_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
 						break;
 					default:
-						SimpleClientResponse(client, msg.id, ResponseCode.INVALID_REQUEST, "Not a valid request");
+						SimpleClientResponse(client, msg.Id, ResponseCode.INVALID_REQUEST, "Not a valid request");
 						break;
 				}
 			}
@@ -212,32 +233,76 @@ namespace CollarControl
 				Console.WriteLine($"[Client] Could not receive message: {ex.Message}");
 			}
 		}
-		public static void OnUserOnlineChanged(RuntimeUser thisUser, bool online)
+		public static void OnUserOnlineChanged(RuntimeUser user, bool online)
 		{
-			CollarLib.ServerPayloads.Friend friendMsg = new CollarLib.ServerPayloads.Friend()
-			{
-				userId = thisUser.Id,
-				username = thisUser.Username,
-				state = (online ? thisUser.state : UserActivity.Offline),
-				status = thisUser.status
-			};
-			Response message = new Response()
-			{
-				code = ResponseCode.UPDATE_DATA,
-				type = ResponseDataType.FRIEND,
-				requestId = Guid.Empty,
-				payload = friendMsg.Serialize(),
-			};
-			string jsonMessage = message.Serialize();
+			userAPI.GetById(user.Id,
+				(dbUser)=>
+				{
+					var friendMsg = new CollarLib.ServerPayloads.Friend()
+					{
+						UserId = dbUser.Id,
+						Username = dbUser.Username,
+						Activity = (online ? dbUser.Activity : UserActivity.Offline),
+						Status = dbUser.Status
+					};
+					var message = new Response()
+					{
+						code = ResponseCode.UPDATE_DATA,
+						type = ResponseType.FRIEND,
+						requestId = Guid.Empty,
+						payload = friendMsg.Serialize(),
+					};
+					var jsonMessage = message.Serialize();
 
-			foreach (Guid id in thisUser.Friends)
-			{
-				RuntimeUser friend;
-				friend = userAPI.GetById(id);
+					foreach (Guid id in dbUser.Friends)
+						if (initializedUsers.TryGetValue(id, out RuntimeUser friend))
+							friend.SendMessage(jsonMessage);
+				},
+				(err)=>
+				{
+					Console.WriteLine($"OnUserOnlineChanged(): {err}");
+				});
 
-				if (friend != null)
-					friend.SendMessage(jsonMessage);
+		}
+
+		public void BroadcastNotification(string subject, string body)
+		{
+			try
+			{
+				var message = new Response()
+				{
+					code = ResponseCode.ADMIN_MSG,
+					type = ResponseType.STRING,
+					requestId = Guid.Empty,
+					payload = $"{Convert.ToBase64String(Encoding.Unicode.GetBytes(subject))}_{Convert.ToBase64String(Encoding.Unicode.GetBytes(body))}"
+				};
+
+				var jsonMessage = JsonConvert.SerializeObject(message);
+
+				var users = initializedUsers.Values;
+
+				foreach (var user in users)
+				{
+					try
+					{
+						user.SendMessage(jsonMessage);
+					}
+					catch (Exception ex)
+					{
+						userAPI.GetById(user.Id,
+						(dbUser)=>
+						{
+							Console.WriteLine($"Error broadcasting notification to { dbUser.Username }: {ex.Message}");
+						},
+						(err)=>{});
+					}
+				}
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Error starting notification broadcast: {ex.Message}");
 			}
 		}
+
 	}
 }

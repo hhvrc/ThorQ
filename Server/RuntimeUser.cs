@@ -8,8 +8,19 @@ using CollarLib;
 
 namespace CollarControl
 {
-	public class RuntimeUser : DbUser
+	public class RuntimeUser : IDisposable
 	{
+		private Guid m_id = new Guid();
+		private object l_id = new object();
+		public Guid Id
+		{
+			get
+			{
+				lock (l_id)
+					return m_id;
+			}
+		}
+
 		// Runtime variables
 		private string passwordResetToken;
 		private DateTime passwordResetExpieriDate;
@@ -20,32 +31,9 @@ namespace CollarControl
 		public event Action<RuntimeUser, HostConnection, string> MessageReceived;
 
 		// Constructors
-		public RuntimeUser() { }
-		public RuntimeUser(string username, string email, string password, UserActivity state = UserActivity.Offline, string status = "")
-		{
-			base.Id = Guid.NewGuid();
-			base.Username = username;
-			base.Email = email;
-			SetPassword(password);
-			base.state = state;
-			base.status = status;
-			_connections = new List<HostConnection>();
-		}
-		public RuntimeUser(DbUser baseObject)
-		{
-			Id = baseObject.Id;
-			Username = baseObject.Username;
-			Email = baseObject.Email;
-			PasswordHash = baseObject.PasswordHash;
-			state = baseObject.state;
-			status = baseObject.status;
-			Friends = baseObject.Friends;
-			Conversations = baseObject.Conversations;
-			FriendRequests = baseObject.FriendRequests;
-			BlockedUsers = baseObject.BlockedUsers;
-			_connections = new List<HostConnection>();
-		}
-		~RuntimeUser()
+		public RuntimeUser(Guid userId) { lock (l_id) { m_id = userId; } }
+
+		public void Dispose()
 		{
 			ClearConnections();
 		}
@@ -68,15 +56,19 @@ namespace CollarControl
 				return _connections.Contains(connection);
 			}
 		}
-		public void AddConnection(HostConnection connection)
+		public bool TryAddConnection(HostConnection connection)
 		{
 			lock (_connections)
 			{
+				if (_connections.Contains(connection))
+					return false;
+
 				_connections.Add(connection);
 				connection.OnMessageReceived += ConnectionMessageHandler;
 				connection.OnClientDisconnected += RemoveConnection;
 				if (_connections.Count == 1)
 					IsOnlineChanged.Invoke(this, true);
+				return true;
 			}
 		}
 		public void RemoveConnection(HostConnection connection)
@@ -110,50 +102,12 @@ namespace CollarControl
 				}
 			}
 		}
-		public bool IsFriendsWith(Guid userId)
+		public void SendFriendsList(List<CollarLib.ServerPayloads.Friend> friends)
 		{
-			foreach (Guid friend in Friends)
-				if (friend == userId)
-					return true;
-			return false;
-		}
-		public bool IsMemberOfConversation(Guid conversationId)
-		{
-			foreach (Guid id in Conversations)
-				if (id == conversationId)
-					return true;
-			return false;
-		}
-		public bool HasBlocked(Guid userId)
-		{
-			foreach (BlockedUser blocked in BlockedUsers)
-				if (blocked.blockedId == userId)
-					return true;
-			return false;
-		}
-		public void SendUpdatedFriendsList()
-		{
-			List<CollarLib.ServerPayloads.Friend> friends = new List<CollarLib.ServerPayloads.Friend>();
-
-			foreach (var id in Friends)
-			{
-				var friend = Program.userAPI.GetById(id);
-
-				CollarLib.ServerPayloads.Friend f = new CollarLib.ServerPayloads.Friend()
-				{
-					userId = friend.Id,
-					username = friend.Username,
-					status = friend.status,
-					state = friend.state,
-				};
-
-				friends.Add(f);
-			}
-
-			Response message = new Response()
+			var message = new Response()
 			{
 				code = ResponseCode.UPDATE_DATA,
-				type = ResponseDataType.FRIEND_LIST,
+				type = ResponseType.FRIEND_LIST,
 				requestId = Guid.Empty,
 				payload = JsonConvert.SerializeObject(friends),
 			};
@@ -170,15 +124,13 @@ namespace CollarControl
 				}
 			}
 		}
-		public void SetPassword(string password)
+
+		// Handlers TODO: (Relays signals to Program.cs)
+		private void ConnectionMessageHandler(HostConnection con, string msg)
 		{
-			PasswordHash = BCrypt.Net.BCrypt.HashPassword(password, BCrypt.Net.BCrypt.GenerateSalt(13), false, BCrypt.Net.HashType.SHA512);
+			MessageReceived.Invoke(this, con, msg);
 		}
-		public bool VerifyPassword(string password)
-		{
-			return BCrypt.Net.BCrypt.Verify(password, PasswordHash, false, BCrypt.Net.HashType.SHA512);
-		}
-		public bool SendPasswordResetToken()
+		public void SendPasswordResetToken(Action onSuccess, Action<String> onFailure)
 		{
 			string token = ToolBox.GetUniqueToken(10);
 
@@ -190,17 +142,23 @@ namespace CollarControl
 
 			try
 			{
-				return ToolBox.SendEmail(
-					new string[] { Email },
+				Program.userAPI.GetById(Id,(dbUser)=>
+				{
+					bool success = ToolBox.SendEmail(
+					new string[] { dbUser.Email },
 					"Password Recovery",
 					"Here is your recovery code:\n" + token
 					);
+					if (success)
+						onSuccess.Invoke();
+					else
+						onFailure.Invoke("Failed to send email");
+				},onFailure);
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine("Exception caught while sending email: {0}", ex.Message);
+				onFailure.Invoke($"Exception caught while sending email: {ex.Message}");
 			}
-			return false;
 		}
 		public bool VerifyPasswordResetToken(string token)
 		{
@@ -208,12 +166,6 @@ namespace CollarControl
 			{
 				return (passwordResetToken == token) && (passwordResetExpieriDate > DateTime.UtcNow);
 			}
-		}
-
-		// Handlers TODO: (Relays signals to Program.cs)
-		private void ConnectionMessageHandler(HostConnection con, string msg)
-		{
-			MessageReceived.Invoke(this, con, msg);
 		}
 	}
 }

@@ -13,11 +13,11 @@ namespace CollarLib
 		public BlockedUser(Guid blockedId, string blockedUsername)
 		{
 			id = Guid.NewGuid();
-			this.blockedId = blockedId;
+			this.blockedUserId = blockedId;
 			frozenUsername = blockedUsername;
 		}
 		public Guid id;
-		public Guid blockedId;
+		public Guid blockedUserId;
 		public string frozenUsername;
 
 		public String Serialize()

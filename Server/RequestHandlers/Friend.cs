@@ -33,10 +33,10 @@ namespace CollarControl
 		}
 		static void Delete(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
-			Guid request;
+			Guid targetUserId;
 			try
 			{
-				request = JsonConvert.DeserializeObject<Guid>(payload);
+				targetUserId = JsonConvert.DeserializeObject<Guid>(payload);
 			}
 			catch (Exception)
 			{
@@ -44,31 +44,29 @@ namespace CollarControl
 				return;
 			}
 
-			if (!thisUser.IsFriendsWith(request))
+			Program.userAPI.RemoveFriendship(thisUser.Id, targetUserId, (thisDbUser, targetDbUser) =>
 			{
-				Program.SimpleClientResponse(client, requestId, ResponseCode.UNAUTHORIZED, "Friend not found");
-				return;
-			}
+				Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Friend removed");
 
-			RuntimeUser thatUser = Program.userAPI.GetById(request);
-			if (thatUser == null)
+				var response = new CollarLib.Response
+				{
+					code = ResponseCode.DELETED,
+					payload = targetUserId.ToString(),
+					requestId = requestId,
+					type = ResponseType.FRIEND
+				};
+				thisUser.SendMessage(response.Serialize());
+				if (Program.initializedUsers.TryGetValue(targetUserId, out var targetUser))
+				{
+					response.payload = thisUser.Id.ToString();
+					response.requestId = Guid.Empty;
+					targetUser.SendMessage(response.Serialize());
+				}
+			},
+			(err) =>
 			{
-				Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, "Server error");
-				return;
-			}
-
-			// Remove friend from this user
-			thatUser.Friends.Remove(thisUser.Id);
-			Program.userAPI.TryUpdate(thisUser);
-
-			// Remove friend from other user
-			thisUser.Friends.Remove(thatUser.Id);
-			Program.userAPI.TryUpdate(thatUser);
-
-			Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Friend removed");
-
-			thisUser.SendUpdatedFriendsList();
-			thatUser.SendUpdatedFriendsList();
+				Program.SimpleClientResponse(client, requestId, ResponseCode.NOPE, err);
+			});
 		}
 	}
 }

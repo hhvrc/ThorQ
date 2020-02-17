@@ -9,28 +9,35 @@ using System.Threading.Tasks;
 namespace CollarLib.ServerPayloads
 {
 	[Serializable]
-	public struct Account
+	public struct AccountInstance
 	{
-		public string username;
-		public UserActivity state;
-		public string status;
-		public string email;    // Only needed during registration
-		public string password;
+		public string Username { get; set; }
+		public string Status { get; set; }
+		public UserActivity Activity { get; set; }
+		public List<Friend> Friends { get; set; }
+		public List<BlockedUser> BlockedUsers { get; set; }
+		public List<FriendRequest> FriendRequests { get; set; }
+		public List<Conversation> Conversations { get; set; }
 
 		public String Serialize()
 		{
 			return JsonConvert.SerializeObject(this);
 		}
-		public static Account Deserialize(String str)
+		public static AccountInstance Deserialize(String str)
 		{
-			return JsonConvert.DeserializeObject<Account>(str);
+			return JsonConvert.DeserializeObject<AccountInstance>(str);
 		}
 	}
 	[Serializable]
 	public struct BlockedUser
 	{
-		public Guid blockId;
-		public string username; // Name of user, frozen since the time the block got applied
+		public BlockedUser(Guid blockId, String frozenUsername)
+		{
+			BlockId = blockId;
+			FrozenUsername = frozenUsername;
+		}
+		public Guid BlockId { get; set; }
+		public string FrozenUsername { get; set; } // Name of user, frozen since the time the block got applied
 
 		public String Serialize()
 		{
@@ -44,10 +51,10 @@ namespace CollarLib.ServerPayloads
 	[Serializable]
 	public struct Friend
 	{
-		public Guid userId;
-		public string username;
-		public UserActivity state;
-		public string status;
+		public Guid UserId { get; set; }
+		public string Username { get; set; }
+		public UserActivity Activity { get; set; }
+		public string Status { get; set; }
 
 		public String Serialize()
 		{
@@ -61,10 +68,10 @@ namespace CollarLib.ServerPayloads
 	[Serializable]
 	public struct FriendMessage
 	{
-		public Guid senderId;
-		public Guid messageId;
-		public DateTime utcTime;
-		public string messageContent;
+		public Guid SenderId { get; set; }
+		public Guid MessageId { get; set; }
+		public DateTime UtcTime { get; set; }
+		public string MessageContent { get; set; }
 
 		public String Serialize()
 		{
@@ -78,9 +85,16 @@ namespace CollarLib.ServerPayloads
 	[Serializable]
 	public struct Conversation
 	{
-		public Guid id;
-		public string name;
-		public List<Guid> members;
+		public Conversation(Guid id, String name, List<Guid> members)
+		{
+			Id = id;
+			Name = name;
+			Members = members;
+		}
+
+		public Guid Id { get; set; }
+		public string Name { get; set; }
+		public List<Guid> Members { get; set; }
 
 		public String Serialize()
 		{
@@ -94,9 +108,9 @@ namespace CollarLib.ServerPayloads
 	[Serializable]
 	public struct P2PRequest
 	{
-		public Guid userId;
-		public Guid requestId;
-		public IPAddress address;
+		public Guid UserId { get; set; }
+		public Guid RequestId { get; set; }
+		public IPAddress Address { get; set; }
 
 		public String Serialize()
 		{

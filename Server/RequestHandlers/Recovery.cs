@@ -1,8 +1,8 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using CollarLib;
+using Newtonsoft.Json;
 using HeavenLib;
 using HeavenLib.Connectivity;
-using CollarLib;
+using System;
 
 namespace CollarControl
 {
@@ -45,32 +45,37 @@ namespace CollarControl
 				return;
 			}
 
-			RuntimeUser user = Program.userAPI.GetByEmail(recovery.email);
-			if (user != null)
+			if (Program.initializedUsers.TryGetValue(thisUser.Id, out RuntimeUser user))
 			{
 				if (recovery.token == "")
 				{
-					if (!user.SendPasswordResetToken())
+					user.SendPasswordResetToken(() => { }, (err) =>
 					{
-						Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, "Failed to send email!");
-						return;
-					}
+						Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, err);
+					});
 				}
 				else
 				{
 					if (user.VerifyPasswordResetToken(recovery.token))
 					{
-						user.SetPassword(recovery.newPassword);
-						Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Password set!");
-						return;
+						Program.userAPI.SetPassword(user.Id, recovery.newPassword, () =>
+						{
+							Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Password set!");
+						}, (err) =>
+						{
+							Console.WriteLine($"Failed to set password: {err}");
+						});
 					}
-					Program.SimpleClientResponse(client, requestId, ResponseCode.NOPE, "Code is invalid/expired!");
-					return;
+					else
+					{
+						Program.SimpleClientResponse(client, requestId, ResponseCode.NOPE, "Code is invalid/expired!");
+					}
 				}
 			}
-
-			Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Recovery password sent!");
-
+			else
+			{
+				Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Recovery password sent!");
+			}
 		}
 	}
 }

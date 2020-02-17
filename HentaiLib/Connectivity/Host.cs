@@ -101,24 +101,23 @@ namespace HeavenLib.Connectivity
 			Socket listener = state.socket;
 
 			Socket socket;
-
-			if (listener == null)
-			{
-				_connected?.Set();
-				return;
-			}
-
+			
 			try
 			{
+				if (listener == null)
+					return;
+
 				socket = listener.EndAccept(ar);
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine("Couldn't accept client connection: {0}", ex.Message); // DEBUG
-				_connected?.Set();
 				return;
 			}
-			_connected?.Set();
+			finally
+			{
+				_connected?.Set();
+			}
 
 			// Create client object
 			HostConnection client = new HostConnection(socket);

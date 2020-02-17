@@ -8,14 +8,13 @@ namespace CollarControl
 {
 	public class Instance
 	{
-		public Guid id;
-		public string name;
-		public string status;
-		public UserActivity activity;
-		public List<Friend> friends = new List<Friend>();
-		public List<CollarLib.BlockedUser> blockedUsers = new List<CollarLib.BlockedUser>();
-		public List<FriendRequest> friendRequests = new List<FriendRequest>();
-		public List<CollarLib.Conversation> conversations = new List<CollarLib.Conversation>();
-		public IPAddress activeP2PConnection = null;
+		public string username { get; set; }
+		public string status { get; set; }
+		public UserActivity activity { get; set; }
+		public List<Friend> friends { get; set; } = new List<Friend>();
+		public List<CollarLib.BlockedUser> blockedUsers { get; set; } = new List<CollarLib.BlockedUser>();
+		public List<FriendRequest> friendRequests { get; set; } = new List<FriendRequest>();
+		public List<CollarLib.Conversation> conversations { get; set; } = new List<CollarLib.Conversation>();
+		public IPAddress activeP2PConnection { get; set; } = null;
 	}
 }

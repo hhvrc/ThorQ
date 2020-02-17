@@ -56,11 +56,11 @@ namespace CollarControl
 				username = "test",
 				password = "test",
 			};
-			Request message = new Request()
+			ClientRequest message = new ClientRequest()
 			{
-				method = RequestMethod.GET,
-				request = RequestType.Account,
-				payload = ser.Serialize(),
+				Method = RequestMethod.GET,
+				Request = RequestType.Account,
+				Payload = ser.Serialize(),
 			};
 
 			string msg = JsonConvert.SerializeObject(message);

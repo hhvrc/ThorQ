@@ -1,5 +1,7 @@
-﻿using HeavenLib.Connectivity;
+﻿using Newtonsoft.Json;
+using HeavenLib.Connectivity;
 using System;
+using System.Collections.Concurrent;
 
 namespace CollarControl
 {
@@ -7,9 +9,18 @@ namespace CollarControl
 	{
 		static object cliLock = new object();
 		static Client client = null;
+		static ConcurrentDictionary<Guid, Action<CollarLib.Response>> responseCallbacks = new ConcurrentDictionary<Guid, Action<CollarLib.Response>>();
 		static void MessageHandler(Client client, string payload)
 		{
-			MessageReceived?.Invoke(payload);
+			var resp = JsonConvert.DeserializeObject<CollarLib.Response>(payload);
+
+			if (responseCallbacks.TryGetValue(resp.requestId, out var action))
+			{
+				action(resp);
+				return;
+			}
+
+			ServerMessageReceived?.Invoke(resp);
 		}
 		static void DisconnectHandler(Client client)
 		{
@@ -23,7 +34,7 @@ namespace CollarControl
 		}
 
 		public static event Action Disconnected;
-		public static event Action<string> MessageReceived;
+		public static event Action<CollarLib.Response> ServerMessageReceived;
 
 		public static bool IsConnected
 		{
@@ -95,8 +106,20 @@ namespace CollarControl
 				client = null;
 			}
 		}
-		public static void SendMessage(String message)
+		public static void SendMessage(String payload, CollarLib.RequestMethod requestMethod, CollarLib.RequestType requestType, Action<CollarLib.Response> onResponse)
 		{
+			CollarLib.ClientRequest req = new CollarLib.ClientRequest
+			{
+				Id = Guid.NewGuid(),
+				Method = requestMethod,
+				Request = requestType,
+				Payload = payload
+			};
+
+			responseCallbacks.TryAdd(req.Id, onResponse);
+
+			String message = req.Serialize();
+
 			lock (cliLock)
 			{
 				if (client != null)

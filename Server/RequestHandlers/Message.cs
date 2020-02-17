@@ -45,16 +45,23 @@ namespace CollarControl
 				return;
 			}
 
-			var messages = Program.conversationAPI.GetMessages(request.conversationId, request.offset, request.nMessages);
-
-			Response serv = new Response()
-			{
-				code = ResponseCode.OK,
-				type = ResponseDataType.MESSAGE_LIST,
-				requestId = requestId,
-				payload = JsonConvert.SerializeObject(messages),
-			};
-			client.SendMessage(serv.Serialize());
+			Program.conversationAPI.GetMessages(request.conversationId, request.offset, request.nMessages,
+				(messages)=>
+				{
+					Response serv = new Response()
+					{
+						code = ResponseCode.OK,
+						type = ResponseType.MESSAGE_LIST,
+						requestId = requestId,
+						payload = JsonConvert.SerializeObject(messages),
+					};
+					client.SendMessage(serv.Serialize());
+				},
+				()=>
+				{
+					// TODO implement me
+				});
+;
 		}
 		static void Set(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
@@ -74,32 +81,37 @@ namespace CollarControl
 				return;
 			}
 
-			ConvMessage? message = Program.conversationAPI.AddMessage(request.conversationId, thisUser.Id, request.content);
-
-			if (message == null)
+			Program.conversationAPI.AddMessage(request.conversationId, thisUser.Id, request.content, (message) =>
 			{
-				Program.SimpleClientResponse(client, requestId, ResponseCode.UNAUTHORIZED, "Not part of conversation");
-				return;
-			}
+				Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Message sent!");
 
-			List<Guid> members = Program.conversationAPI.MemberList(request.conversationId);
+				Program.conversationAPI.MemberList(request.conversationId, (memberIds) =>
+				{
+					Response resp = new Response()
+					{
+						code = ResponseCode.UPDATE_DATA,
+						type = ResponseType.MESSAGE,
+						requestId = Guid.Empty,
+						payload = message.Serialize(),
+					};
 
-			Response serv = new Response()
+					foreach (Guid id in memberIds)
+					{
+						if (Program.initializedUsers.TryGetValue(id, out var user))
+						{
+							user.SendMessage(resp.Serialize());
+						}
+					}
+				},
+				() =>
+				{
+					Program.SimpleClientResponse(client, requestId, ResponseCode.UNAUTHORIZED, "Conversation doesnt exist");
+				});
+			},
+			(err) =>
 			{
-				code = ResponseCode.OK,
-				type = ResponseDataType.MESSAGE,
-				requestId = requestId,
-				payload = message?.Serialize(),
-			};
-			client.SendMessage(serv.Serialize());
-			serv.code = ResponseCode.UPDATE_DATA;
-			serv.requestId = Guid.Empty;
-
-			foreach (Guid id in members)
-			{
-				if (id != thisUser.Id)
-					Program.userAPI.GetById(id)?.SendMessage(message?.Serialize());
-			}
+				Program.SimpleClientResponse(client, requestId, ResponseCode.UNAUTHORIZED, err);
+			});
 		}
 		static void Delete(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{

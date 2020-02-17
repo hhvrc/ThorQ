@@ -11,7 +11,7 @@ namespace CollarLib
 	public struct Response
 	{
 		public ResponseCode code;
-		public ResponseDataType type;
+		public ResponseType type;
 		public Guid requestId; // Will be id of request if message is a response
 		public String payload;
 

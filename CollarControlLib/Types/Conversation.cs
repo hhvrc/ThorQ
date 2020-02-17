@@ -4,11 +4,16 @@ using System.Text;
 
 namespace CollarLib
 {
-	public class Conversation
+	public struct Conversation
 	{
-		public Guid id = Guid.NewGuid();
-		public String name = "";
-		public List<Guid> members = new List<Guid>();
-		public List<ConvMessage> messages = new List<ConvMessage>();
+		public Conversation(Guid id, String name, List<Guid> members)
+		{
+			Id = id;
+			Name = name;
+			Members = members;
+		}
+		public Guid Id { get; set; }
+		public String Name { get; set; }
+		public List<Guid> Members { get; set; }
 	}
 }

@@ -24,7 +24,15 @@ namespace CollarControl
 		}
 		static void Get(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
-			Program.SimpleClientResponse(client, requestId, ResponseCode.OK, thisUser.Email);
+			Program.userAPI.GetById(thisUser.Id, (dbUser)=>
+			{
+				Program.SimpleClientResponse(client, requestId, ResponseCode.OK, dbUser.Email);
+			},
+			(err)=>
+			{
+				Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, "Server error!");
+			});
+
 		}
 		static void Set(RuntimeUser thisUser, HostConnection client, Guid requestId, string payload)
 		{
@@ -38,15 +46,33 @@ namespace CollarControl
 				Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, "Invalid payload");
 				return;
 			}
-			if (thisUser.VerifyPassword(recovery.password))
+			
+			Program.userAPI.GetById(thisUser.Id, (dbUser) =>
 			{
-				Console.WriteLine("Got: " + recovery.newEmail); // DEBUG
-				thisUser.Email = recovery.newEmail;
-				Program.userAPI.TryUpdate(thisUser);
-				Program.SimpleClientResponse(client, requestId, ResponseCode.OK, thisUser.Email);
-			}
-			else
-				Program.SimpleClientResponse(client, requestId, ResponseCode.UNAUTHORIZED, "Invalid password");
+				if (dbUser.VerifyPassword(recovery.password))
+				{
+					Console.WriteLine("Got: " + recovery.newEmail); // DEBUG
+					dbUser.Email = recovery.newEmail;
+					Program.userAPI.SetEmail(thisUser.Id, recovery.newEmail, () =>
+					{
+						Program.SimpleClientResponse(client, requestId, ResponseCode.OK, "Email changed!");
+					},
+					(err) =>
+					{
+						Program.SimpleClientResponse(client, requestId, ResponseCode.ERROR, "Server error!");
+					});
+				}
+				else
+				{
+					Program.SimpleClientResponse(client, requestId, ResponseCode.UNAUTHORIZED, "Invalid password");
+				}
+			},
+			(err) =>
+			{
+
+			});
+
+			
 		}
 	}
 }

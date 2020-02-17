@@ -9,6 +9,7 @@ namespace HeavenLib.Security
 	/// </summary>
 	public class Crypto : IDisposable
 	{
+		private object l = new object();
 		private bool _ready = false;
 		private byte[] _publicKey = null;
 		private byte[] _sharedKey = null;
@@ -29,8 +30,9 @@ namespace HeavenLib.Security
 
 		public void Dispose()
 		{
-			if (_keyPair != null)
-				_keyPair.Dispose();
+			lock (l)
+				if (_keyPair != null)
+					_keyPair.Dispose();
 		}
 
 		/// <summary>
@@ -45,23 +47,26 @@ namespace HeavenLib.Security
 		/// <exception cref="CryptographicException"></exception>
 		public void EstablishSecretKey(byte[] key)
 		{
-			_ready = false;
-			if (key == null)
+			lock (l)
 			{
-				throw new ArgumentNullException();
-			}
+				_ready = false;
+				if (key == null)
+				{
+					throw new ArgumentNullException();
+				}
 
-			try // DEBUG
-			{
-				_sharedKey = _keyPair.DeriveKeyMaterial(CngKey.Import(key, CngKeyBlobFormat.EccPublicBlob));
-			}
-			catch (Exception ex) // DEBUG
-			{
-				Console.WriteLine("Exception caught: {0}", ex.Message);
-				return;
-			}
+				try // DEBUG
+				{
+					_sharedKey = _keyPair.DeriveKeyMaterial(CngKey.Import(key, CngKeyBlobFormat.EccPublicBlob));
+				}
+				catch (Exception ex) // DEBUG
+				{
+					Console.WriteLine("Exception caught: {0}", ex.Message);
+					return;
+				}
 
-			_ready = true;
+				_ready = true;
+			}
 		}
 
 		/// <summary>
@@ -72,7 +77,8 @@ namespace HeavenLib.Security
 		/// </returns>
 		public byte[] GetPublicKey()
 		{
-			return _publicKey;
+			lock (l)
+				return _publicKey;
 		}
 
 		/// <summary>
@@ -90,39 +96,42 @@ namespace HeavenLib.Security
 		/// </returns>
 		public byte[] Encrypt(byte[] unencryptedData)
 		{
-			if (!_ready || unencryptedData == null || unencryptedData.Length == 0)
-				return null;
-
-			try // DEBUG
+			lock (l)
 			{
-				using (Aes aes = new AesCryptoServiceProvider())
+				if (!_ready || unencryptedData == null || unencryptedData.Length == 0)
+					return null;
+
+				try // DEBUG
 				{
-					aes.Key = _sharedKey;
-					byte[] iv = aes.IV;
-
-					// Encrypt the data
-					using (MemoryStream ms = new MemoryStream())
+					using (Aes aes = new AesCryptoServiceProvider())
 					{
-						using (CryptoStream cs = new CryptoStream(ms, aes.CreateEncryptor(), CryptoStreamMode.Write))
-							cs.Write(unencryptedData, 0, unencryptedData.Length);
+						aes.Key = _sharedKey;
+						byte[] iv = aes.IV;
 
-						byte[] encryptedContent = ms.ToArray();
+						// Encrypt the data
+						using (MemoryStream ms = new MemoryStream())
+						{
+							using (CryptoStream cs = new CryptoStream(ms, aes.CreateEncryptor(), CryptoStreamMode.Write))
+								cs.Write(unencryptedData, 0, unencryptedData.Length);
 
-						byte[] result = new byte[iv.Length + encryptedContent.Length];
+							byte[] encryptedContent = ms.ToArray();
 
-						//copy our 2 array into one
-						System.Buffer.BlockCopy(iv, 0, result, 0, iv.Length);
-						System.Buffer.BlockCopy(encryptedContent, 0, result, iv.Length, encryptedContent.Length);
+							byte[] result = new byte[iv.Length + encryptedContent.Length];
 
-						return result;
+							//copy our 2 array into one
+							System.Buffer.BlockCopy(iv, 0, result, 0, iv.Length);
+							System.Buffer.BlockCopy(encryptedContent, 0, result, iv.Length, encryptedContent.Length);
+
+							return result;
+						}
 					}
 				}
+				catch (Exception ex) // DEBUG
+				{
+					Console.WriteLine("Exception caught: {0}", ex.Message);
+				}
+				return null;
 			}
-			catch (Exception ex) // DEBUG
-			{
-				Console.WriteLine("Exception caught: {0}", ex.Message);
-			}
-			return null;
 		}
 
 		/// <summary>
@@ -139,37 +148,40 @@ namespace HeavenLib.Security
 		/// </returns>
 		public byte[] Decrypt(byte[] encryptedData)
 		{
-			if (!_ready || encryptedData == null || encryptedData.Length <= 16)
-				return null;
-
-			byte[] iv = new byte[16];
-			byte[] dat = new byte[encryptedData.Length - iv.Length];
-
-			System.Buffer.BlockCopy(encryptedData, 0, iv, 0, iv.Length);
-			System.Buffer.BlockCopy(encryptedData, iv.Length, dat, 0, dat.Length);
-
-			try // DEBUG
+			lock (l)
 			{
-				using (Aes aes = new AesCryptoServiceProvider())
+				if (!_ready || encryptedData == null || encryptedData.Length <= 16)
+					return null;
+
+				byte[] iv = new byte[16];
+				byte[] dat = new byte[encryptedData.Length - iv.Length];
+
+				System.Buffer.BlockCopy(encryptedData, 0, iv, 0, iv.Length);
+				System.Buffer.BlockCopy(encryptedData, iv.Length, dat, 0, dat.Length);
+
+				try // DEBUG
 				{
-					aes.Key = _sharedKey;
-					aes.IV = iv;
-
-					// Decrypt the data
-					using (MemoryStream ms = new MemoryStream())
+					using (Aes aes = new AesCryptoServiceProvider())
 					{
-						using (CryptoStream cs = new CryptoStream(ms, aes.CreateDecryptor(), CryptoStreamMode.Write))
-							cs.Write(dat, 0, dat.Length);
+						aes.Key = _sharedKey;
+						aes.IV = iv;
 
-						return ms.ToArray();
+						// Decrypt the data
+						using (MemoryStream ms = new MemoryStream())
+						{
+							using (CryptoStream cs = new CryptoStream(ms, aes.CreateDecryptor(), CryptoStreamMode.Write))
+								cs.Write(dat, 0, dat.Length);
+
+							return ms.ToArray();
+						}
 					}
 				}
+				catch (Exception ex) // DEBUG
+				{
+					Console.WriteLine("Exception caught: {0}", ex.Message);
+				}
+				return null;
 			}
-			catch (Exception ex) // DEBUG
-			{
-				Console.WriteLine("Exception caught: {0}", ex.Message);
-			}
-			return null;
 		}
 	}
 }
