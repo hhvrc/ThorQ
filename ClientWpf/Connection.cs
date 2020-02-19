@@ -2,6 +2,7 @@
 using HeavenLib.Connectivity;
 using System;
 using System.Collections.Concurrent;
+using System.Text;
 
 namespace CollarControl
 {
@@ -10,9 +11,9 @@ namespace CollarControl
 		static object cliLock = new object();
 		static Client client = null;
 		static ConcurrentDictionary<Guid, Action<CollarLib.Response>> responseCallbacks = new ConcurrentDictionary<Guid, Action<CollarLib.Response>>();
-		static void MessageHandler(Client client, string payload)
+		static void MessageHandler(Client client, byte[] payload)
 		{
-			var resp = JsonConvert.DeserializeObject<CollarLib.Response>(payload);
+			var resp = JsonConvert.DeserializeObject<CollarLib.Response>(Encoding.UTF8.GetString(payload));
 
 			if (responseCallbacks.TryGetValue(resp.requestId, out var action))
 			{
@@ -124,7 +125,7 @@ namespace CollarControl
 			{
 				if (client != null)
 				{
-					client.SendMessage(message);
+					client.SendEncrypted(Encoding.UTF8.GetBytes(message));
 				}
 			}
 		}

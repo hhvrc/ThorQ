@@ -34,7 +34,7 @@ namespace HeavenLib.Connectivity
 		/// <summary>
 		/// Gets invoked on connection lost
 		/// </summary>
-		public event Action<HostConnection, string> OnMessageReceived;
+		public event Action<HostConnection, byte[]> OnMessageReceived;
 
 
 		private ManualResetEvent _receiveDone = new ManualResetEvent(false);
@@ -69,7 +69,7 @@ namespace HeavenLib.Connectivity
 			byte[] clientKey = null;
 			try
 			{
-				clientKey = ReceiveBytes();
+				clientKey = ReceiveRaw();
 			}
 			catch (Exception ex)
 			{
@@ -94,7 +94,7 @@ namespace HeavenLib.Connectivity
 			// Send public key
 			try
 			{
-				SendBytes(serverKey);
+				SendRaw(serverKey);
 			}
 			catch (Exception ex)
 			{
@@ -111,13 +111,14 @@ namespace HeavenLib.Connectivity
 				throw new Exception("Couldn't generate private key: " + ex.Message);
 			}
 
-			string message = ReceiveMessage(); // TODO Fix: Possible freezing of application
+			string message = Encoding.UTF8.GetString(ReceiveEncrypted()); // TODO Fix: Possible freezing of application
 
-			if (string.IsNullOrEmpty(message))
+			if (String.IsNullOrEmpty(message))
 			{
 				message = "Error";
 			}
-			SendMessage(message);
+
+			SendEncrypted(Encoding.UTF8.GetBytes(message));
 
 			Console.WriteLine("[AUTH] Received: {0}", message);
 
@@ -137,12 +138,12 @@ namespace HeavenLib.Connectivity
 			}
 		}
 
-		public string ReceiveMessage()
+		public byte[] ReceiveEncrypted()
 		{
 			byte[] encMessage = null;
 			try
 			{
-				encMessage = ReceiveBytes();
+				encMessage = ReceiveRaw();
 			}
 			catch (Exception ex)
 			{
@@ -156,36 +157,31 @@ namespace HeavenLib.Connectivity
 				throw new Exception("Could not decrypt received data!");
 			}
 
-			try
-			{
-				return Encoding.UTF8.GetString(messageBytes);
-			}
-			catch (Exception ex)
-			{
-				throw new Exception("Couldn't not convert message to string: " + ex.Message);
-			}
+			return messageBytes;
 		}
 
-		public void SendMessage(string message)
+		public bool SendEncrypted(byte[] message)
 		{
-			byte[] data = _crypto.Encrypt(Encoding.UTF8.GetBytes(message));
+			byte[] data = _crypto.Encrypt(message);
 
 			if (data == null)
 			{
-				return;
+				return false;
 			}
 
 			try
 			{
-				SendBytes(data);
+				SendRaw(data);
 			}
-			catch (Exception ex)
+			catch (Exception)
 			{
-				throw new Exception("Could not send message: " + ex.Message);
+				return false;
 			}
+
+			return true;
 		}
 
-		private byte[] ReceiveBytes()
+		private byte[] ReceiveRaw()
 		{
 			byte[] messageLength = new byte[2];
 
@@ -199,11 +195,10 @@ namespace HeavenLib.Connectivity
 			return messageBytes;
 		}
 
-		private void SendBytes(byte[] messageBytes)
+		private void SendRaw(byte[] messageBytes)
 		{
 			// Message should never exceed 64KiB
 			if (messageBytes.Length > ushort.MaxValue) { return; }
-			// Convert the string data to byte data using UTF8 encoding.
 
 			byte[] messageLength = BitConverter.GetBytes((ushort)messageBytes.Length);
 
@@ -311,7 +306,7 @@ namespace HeavenLib.Connectivity
 					}
 
 					_receiveDone.Set();
-					OnMessageReceived.Invoke(this, Encoding.UTF8.GetString(messageBytes));
+					OnMessageReceived.Invoke(this, messageBytes);
 				}
 			}
 			catch (SocketException)

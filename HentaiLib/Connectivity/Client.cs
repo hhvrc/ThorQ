@@ -42,7 +42,7 @@ namespace HeavenLib.Connectivity
 		/// <summary>
 		/// Gets invoked when client sends a message
 		/// </summary>
-		public event Action<Client, string> OnMessageReceived;
+		public event Action<Client, byte[]> OnMessageReceived;
 
 		/// <summary>
 		/// Closes the connection and stops the thread
@@ -137,7 +137,7 @@ namespace HeavenLib.Connectivity
 			// Send public key
 			try
 			{
-				SendBytes(clientKey);
+				SendRaw(clientKey);
 			}
 			catch (SocketException ex)
 			{
@@ -151,7 +151,7 @@ namespace HeavenLib.Connectivity
 			byte[] serverKey = null;
 			try
 			{
-				serverKey = ReceiveBytes();
+				serverKey = ReceiveRaw();
 			}
 			catch (SecurityException ex)
 			{
@@ -187,9 +187,9 @@ namespace HeavenLib.Connectivity
 				return false;
 			}
 
-			SendMessage("ACK");
+			SendEncrypted(Encoding.UTF8.GetBytes("ACK"));
 
-			return ReceiveMessage() == "ACK";
+			return Encoding.UTF8.GetString(ReceiveEncrypted()) == "ACK";
 		}
 
 		/// <summary>
@@ -209,7 +209,7 @@ namespace HeavenLib.Connectivity
 		/// <returns>
 		/// Returns the read message, or null if it could not be decrypted
 		/// </returns>
-		public string ReceiveMessage()
+		public byte[] ReceiveEncrypted()
 		{
 			if (_crypto == null) // DEBUG
 			{
@@ -220,7 +220,7 @@ namespace HeavenLib.Connectivity
 			byte[] encMessage = null;
 			try
 			{
-				encMessage = ReceiveBytes();
+				encMessage = ReceiveRaw();
 			}
 			catch (Exception ex)
 			{
@@ -238,20 +238,7 @@ namespace HeavenLib.Connectivity
 				return null;
 			}
 
-			if (messageBytes == null)
-			{
-				return null;
-			}
-
-			try
-			{
-				return Encoding.UTF8.GetString(messageBytes);
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine("ReceiveMessage -> final: " + ex.Message); // DEBUG
-				return null;
-			}
+			return messageBytes;
 		}
 
 		/// <summary>
@@ -260,7 +247,7 @@ namespace HeavenLib.Connectivity
 		/// <param name="message">
 		/// Message to send to client
 		/// </param>
-		public void SendMessage(string message)
+		public void SendEncrypted(byte[] message)
 		{
 			if (_crypto == null) // DEBUG
 			{
@@ -268,16 +255,10 @@ namespace HeavenLib.Connectivity
 				return; // DEBUG
 			}
 
-			if (string.IsNullOrWhiteSpace(message)) // DEBUG
-			{
-				Console.WriteLine("Cannot send message, input string cant be null/whitespace"); // DEBUG
-				return; // DEBUG
-			}
-
 			byte[] data;
 			try
 			{
-				data = _crypto?.Encrypt(Encoding.UTF8.GetBytes(message));
+				data = _crypto?.Encrypt(message);
 			}
 			catch (EncoderFallbackException ex)
 			{
@@ -294,7 +275,7 @@ namespace HeavenLib.Connectivity
 
 			try
 			{
-				SendBytes(data);
+				SendRaw(data);
 			}
 			catch (SocketException ex)
 			{
@@ -311,7 +292,7 @@ namespace HeavenLib.Connectivity
 		/// </returns>
 		/// <exception cref="SocketException"></exception>
 		/// <exception cref="SecurityException"></exception>
-		private byte[] ReceiveBytes()
+		private byte[] ReceiveRaw()
 		{
 			byte[] data = new byte[2];
 
@@ -346,7 +327,7 @@ namespace HeavenLib.Connectivity
 		/// <exception cref="ArgumentNullException"></exception>
 		/// <exception cref="ArgumentOutOfRangeException"></exception>
 		/// <exception cref="SocketException"></exception>
-		private void SendBytes(byte[] messageBytes)
+		private void SendRaw(byte[] messageBytes)
 		{
 			if (messageBytes == null)
 			{
@@ -488,7 +469,7 @@ namespace HeavenLib.Connectivity
 				}
 
 				try { state.signal.Set(); } catch (Exception) { }
-				Task.Run(() => OnMessageReceived.Invoke(this, Encoding.UTF8.GetString(messageBytes)));
+				Task.Run(() => OnMessageReceived.Invoke(this, messageBytes));
 				return;
 			}
 			else

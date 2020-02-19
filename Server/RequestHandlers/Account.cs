@@ -2,6 +2,7 @@
 using HeavenLib;
 using HeavenLib.Connectivity;
 using System;
+using System.Text;
 
 namespace CollarControl
 {
@@ -112,7 +113,7 @@ namespace CollarControl
 							payload = request.Serialize(),
 						};
 
-						client.SendMessage(message.Serialize());
+						client.SendEncrypted(Encoding.UTF8.GetBytes(message.Serialize()));
 
 						Console.WriteLine("[Client] Logged in"); // DEBUG
 					});

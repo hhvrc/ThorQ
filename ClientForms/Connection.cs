@@ -1,5 +1,6 @@
 ﻿using HeavenLib.Connectivity;
 using System;
+using System.Text;
 
 namespace CollarControl
 {
@@ -7,9 +8,9 @@ namespace CollarControl
 	{
 		static object cliLock = new object();
 		static Client client = null;
-		static void MessageHandler(Client client, string payload)
+		static void MessageHandler(Client client, byte[] payload)
 		{
-			MessageReceived?.Invoke(payload);
+			MessageReceived?.Invoke(Encoding.UTF8.GetString(payload));
 		}
 		static void DisconnectHandler(Client client)
 		{

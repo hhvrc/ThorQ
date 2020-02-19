@@ -45,7 +45,7 @@ namespace CollarControl
 					payload = JsonConvert.SerializeObject(dbUser.FriendRequests)
 				};
 
-				client.SendMessage(JsonConvert.SerializeObject(messageObject));
+				client.SendEncrypted(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(messageObject)));
 			},
 			(err) =>
 			{

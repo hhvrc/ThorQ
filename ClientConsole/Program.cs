@@ -5,6 +5,7 @@ using System.Threading;
 using HeavenLib.Connectivity;
 using CollarLib;
 using CollarLib.ClientPayloads;
+using System.Text;
 
 namespace CollarControl
 {
@@ -45,8 +46,10 @@ namespace CollarControl
 			Console.ReadLine();
 		}
 
-		static void MessageReceivedHandler(Client client, string str)
+		static void MessageReceivedHandler(Client client, byte[] data)
 		{
+			String str = Encoding.UTF8.GetString(data);
+
 			Console.WriteLine(str);
 
 			Thread.Sleep(5000);
@@ -67,7 +70,7 @@ namespace CollarControl
 
 			if (client != null && !string.IsNullOrEmpty(msg))
 			{
-				client.SendMessage(msg);
+				client.SendEncrypted(Encoding.UTF8.GetBytes(msg));
 			}
 		}
 

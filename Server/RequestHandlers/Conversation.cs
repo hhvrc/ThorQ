@@ -53,7 +53,7 @@ namespace CollarControl
 						requestId = requestId,
 						payload = JsonConvert.SerializeObject(convos),
 					};
-					client.SendMessage(messageObject.Serialize());
+					client.SendEncrypted(Encoding.UTF8.GetBytes(messageObject.Serialize()));
 				});
 			},
 			(err) =>

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using HeavenLib;
 using HeavenLib.Connectivity;
 using CollarLib;
+using System.Text;
 
 namespace CollarControl
 {
@@ -120,15 +121,15 @@ namespace CollarControl
 			{
 				foreach (HostConnection connection in _connections)
 				{
-					connection.SendMessage(message);
+					connection.SendEncrypted(Encoding.UTF8.GetBytes(message));
 				}
 			}
 		}
 
 		// Handlers TODO: (Relays signals to Program.cs)
-		private void ConnectionMessageHandler(HostConnection con, string msg)
+		private void ConnectionMessageHandler(HostConnection con, byte[] msg)
 		{
-			MessageReceived.Invoke(this, con, msg);
+			MessageReceived.Invoke(this, con, Encoding.UTF8.GetString(msg));
 		}
 		public void SendPasswordResetToken(Action onSuccess, Action<String> onFailure)
 		{

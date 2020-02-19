@@ -55,7 +55,7 @@ namespace CollarControl
 						requestId = requestId,
 						payload = JsonConvert.SerializeObject(messages),
 					};
-					client.SendMessage(serv.Serialize());
+					client.SendEncrypted(Encoding.UTF8.GetBytes(serv.Serialize()));
 				},
 				()=>
 				{

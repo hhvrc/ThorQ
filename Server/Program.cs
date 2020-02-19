@@ -126,7 +126,7 @@ namespace CollarControl
 				payload = message,
 			};
 
-			client.SendMessage(messageObject.Serialize());
+			client.SendEncrypted(Encoding.UTF8.GetBytes(messageObject.Serialize()));
 		}
 
 		// Client event handlers
@@ -169,11 +169,11 @@ namespace CollarControl
 			nonAuthedConnections.Remove(client);
 			client.Dispose();
 		}
-		public static void OnClientMessageReceived(HostConnection client, string str)
+		public static void OnClientMessageReceived(HostConnection client, byte[] str)
 		{
 			try
 			{
-				var msg = ClientRequest.Deserialize(str);
+				var msg = ClientRequest.Deserialize(Encoding.UTF8.GetString(str));
 
 				switch (msg.Request)
 				{
