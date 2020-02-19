@@ -58,7 +58,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="AppCache.cs" />
     <Compile Include="Connection.cs" />
     <Compile Include="Instance.cs" />
     <Compile Include="Main.xaml.cs">

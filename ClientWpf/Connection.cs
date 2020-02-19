@@ -48,27 +48,27 @@ namespace CollarControl
 		{
 			get
 			{
-				if (AppCache.TryGet("ServerHostname", out string str))
+				if (HeavenLib.AppConfig.TryGet("ServerHostname", out string str))
 					return str;
 				return null;
 			}
 			set
 			{
-				AppCache.Upsert("ServerHostname", ((value == null) ? "" : value));
+				HeavenLib.AppConfig.Upsert("ServerHostname", ((value == null) ? "" : value));
 			}
 		}
 		public static ushort ServerPort
 		{
 			get
 			{
-				if (AppCache.TryGet("ServerPort", out string str))
+				if (HeavenLib.AppConfig.TryGet("ServerPort", out string str))
 					if (ushort.TryParse(str, out ushort port))
 						return port;
 				return 0;
 			}
 			set
 			{
-				AppCache.Upsert("ServerPort", value.ToString());
+				HeavenLib.AppConfig.Upsert("ServerPort", value.ToString());
 			}
 		}
 
