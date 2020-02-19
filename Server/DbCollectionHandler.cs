@@ -13,12 +13,12 @@ namespace CollarControl
 		private WorkAwaiter workQueue = new WorkAwaiter();
 
 		private Thread _jobDispatcher;
-		private ILiteCollection<T> _dbConversations;
+		private ILiteCollection<T> _dbCollection;
 		private List<Action<ILiteCollection<T>>> _dbJobQueue = new List<Action<ILiteCollection<T>>>();
 
 		public DbCollectionHandler(LiteDatabase db, String name)
 		{
-			_dbConversations = db.GetCollection<T>(name);
+			_dbCollection = db.GetCollection<T>(name);
 			_jobDispatcher = new Thread(new ThreadStart(DbJobDispatcher));
 			_running = true;
 			_jobDispatcher.Start();
@@ -69,7 +69,7 @@ namespace CollarControl
 				}
 				try
 				{
-					action?.Invoke(_dbConversations);
+					action?.Invoke(_dbCollection);
 				}
 				catch (Exception ex)
 				{
