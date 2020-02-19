@@ -21,8 +21,37 @@ namespace CollarControl
 		public static ConcurrentDictionary<Guid, RuntimeUser> initializedUsers;
 		public static List<HostConnection> nonAuthedConnections = new List<HostConnection>();
 
+		public static EmailClient emailClient;
+
 		static void Main(string[] args)
 		{
+			if (!AppConfig.TryGet("smtp_host", out var smtpHost)         || String.IsNullOrWhiteSpace(smtpHost)    ||
+				!AppConfig.TryGet("smtp_port", out var smtpPortStr)      || String.IsNullOrWhiteSpace(smtpPortStr) ||
+				!AppConfig.TryGet("smtp_email", out var smtpEmail)       || String.IsNullOrWhiteSpace(smtpEmail)   ||
+				!AppConfig.TryGet("smtp_password", out var smtpPassword) || String.IsNullOrWhiteSpace(smtpPassword))
+			{
+				AppConfig.EnsureKey("smtp_host");
+				AppConfig.EnsureKey("smtp_port");
+				AppConfig.EnsureKey("smtp_email");
+				AppConfig.EnsureKey("smtp_password");
+				Console.WriteLine("please fill out smtp info in \"config.json\"");
+				Console.ReadLine();
+				return;
+			}
+			if (!ToolBox.IsValidEmail(smtpEmail))
+			{
+				Console.WriteLine("email in \"config.json\" is invalid");
+				Console.ReadLine();
+				return;
+			}
+			if (!int.TryParse(smtpPortStr, out int smtpPort))
+			{
+				Console.WriteLine("port in \"config.json\" is invalid");
+				Console.ReadLine();
+				return;
+			}
+			emailClient = new EmailClient(smtpHost, smtpPort, smtpEmail, smtpPassword);
+
 			string thisPath = ToolBox.GetExeDirectory();
 			Console.WriteLine(thisPath);
 #if DEBUG
