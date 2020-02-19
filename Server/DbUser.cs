@@ -6,6 +6,7 @@ namespace CollarControl
 {
 	public class DbUser
 	{
+		public DbUser() { }
 		public DbUser(string username, string email, string password)
 		{
 			Id = Guid.NewGuid();
