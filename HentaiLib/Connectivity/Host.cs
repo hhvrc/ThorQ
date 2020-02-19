@@ -11,11 +11,6 @@ namespace HeavenLib.Connectivity
 	/// </summary>
 	public class Host
 	{
-		struct StateObject
-		{
-			public Socket socket;
-		}
-
 		/// <summary>
 		/// Should it listen to client messages
 		/// </summary>
@@ -68,7 +63,7 @@ namespace HeavenLib.Connectivity
 				{
 					// Start an asynchronous socket to listen for connections.
 
-					listener.BeginAccept(new AsyncCallback(ClientInstance), new StateObject { socket = listener });
+					IAsyncResult s = listener.BeginAccept(new AsyncCallback(ClientInstance), listener);
 				}
 				catch (Exception ex)
 				{
@@ -97,8 +92,7 @@ namespace HeavenLib.Connectivity
 		private void ClientInstance(IAsyncResult ar)
 		{
 			// Get the socket that handles the client request
-			StateObject state = (StateObject)ar.AsyncState;
-			Socket listener = state.socket;
+			Socket listener = (Socket)ar.AsyncState;
 
 			Socket socket;
 			

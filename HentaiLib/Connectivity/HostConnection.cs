@@ -229,10 +229,12 @@ namespace HeavenLib.Connectivity
 				catch (SocketException)
 				{
 					Console.WriteLine("Connection lost!");
+					_receiveDone.Set();
 				}
 				catch (Exception ex)
 				{
 					Console.WriteLine("Client error: {0}", ex.Message);
+					_receiveDone.Set();
 				}
 				_receiveDone.WaitOne();
 			}
@@ -248,6 +250,13 @@ namespace HeavenLib.Connectivity
 				int bytesRead = 0;
 
 				bytesRead = _socket.EndReceive(asyncResult);
+
+				if (bytesRead == 0)
+				{
+					_socket.Close();
+					_receiveDone.Set();
+					return;
+				}
 
 				if (bytesRead == state.length)
 				{
@@ -284,6 +293,13 @@ namespace HeavenLib.Connectivity
 				int bytesRead = 0;
 
 				bytesRead = _socket.EndReceive(asyncResult);
+
+				if (bytesRead == 0)
+				{
+					_socket.Close();
+					_receiveDone.Set();
+					return;
+				}
 
 				if (bytesRead == state.length)
 				{
