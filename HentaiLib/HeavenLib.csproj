@@ -7,8 +7,8 @@
     <ProjectGuid>{6D584D1E-E19D-427B-9002-EE0952DD87B1}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>HentaiLib</RootNamespace>
-    <AssemblyName>HentaiLib</AssemblyName>
+    <RootNamespace>HeavenLib</RootNamespace>
+    <AssemblyName>HeavenLib</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
