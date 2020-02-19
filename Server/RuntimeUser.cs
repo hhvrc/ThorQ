@@ -67,7 +67,7 @@ namespace CollarControl
 				connection.OnMessageReceived += ConnectionMessageHandler;
 				connection.OnClientDisconnected += RemoveConnection;
 				if (_connections.Count == 1)
-					IsOnlineChanged.Invoke(this, true);
+					IsOnlineChanged?.Invoke(this, true);
 				return true;
 			}
 		}
