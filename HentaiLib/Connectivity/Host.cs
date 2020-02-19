@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Security;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace HeavenLib.Connectivity
 {
@@ -117,7 +118,7 @@ namespace HeavenLib.Connectivity
 			HostConnection client = new HostConnection(socket);
 
 			// Invoke event
-			OnClientConnected?.Invoke(client);
+			Task.Run(() => OnClientConnected?.Invoke(client));
 		}
 	}
 }

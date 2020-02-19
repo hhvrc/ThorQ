@@ -101,10 +101,7 @@ namespace CollarControl
 
 			initializedUsers = new ConcurrentDictionary<Guid, RuntimeUser>();
 
-			host.OnClientConnected += (HostConnection con) =>
-			{
-				Task.Run(() => OnClientConnected(con));
-			};
+			host.OnClientConnected += OnClientConnected;
 
 			try
 			{
