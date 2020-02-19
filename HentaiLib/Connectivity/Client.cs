@@ -429,10 +429,6 @@ namespace HeavenLib.Connectivity
 					Console.WriteLine("Could not receive client message: " + ex.Message);
 				}
 			}
-			else
-			{
-				Console.WriteLine("Message length mismatch!");
-			}
 			try { state.signal.Set(); } catch (Exception) { }
 		}
 
