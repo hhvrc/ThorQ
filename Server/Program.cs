@@ -138,6 +138,7 @@ namespace CollarControl
 			client.OnClientDisconnected -= OnClientDisconnected;
 			client.OnMessageReceived -= OnClientMessageReceived;
 			nonAuthedConnections.Remove(client);
+			client.Dispose();
 		}
 		public static void OnClientMessageReceived(HostConnection client, string str)
 		{
