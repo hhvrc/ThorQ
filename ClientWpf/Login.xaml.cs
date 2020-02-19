@@ -34,8 +34,8 @@ namespace CollarControl
 			mainWindow.IsVisibleChanged += MainWindow_IsVisibleChanged;
 
 			Closed += LoginWindow_Closed;
-			UsernameInput.TextChanged += UsernameInput_TextChanged;
-			PasswordInput.PasswordChanged += PasswordInput_PasswordChanged;
+			UsernameInput.TextChanged += ValidateLoginInputText;
+			PasswordInput.PasswordChanged += ValidateLoginInputPassw;
 			CollarConnectCheckbutton.Click += CollarConnectCheckbutton_Click;
 			ConnectionTestButton.Click += ConnectionTestButton_Click;
 			PopupOkButton.Click += PopupOkButton_Click;
@@ -169,16 +169,31 @@ namespace CollarControl
 			this.Close();
 		}
 
-		private void PasswordInput_PasswordChanged(object sender, RoutedEventArgs e)
+		private void ValidateLoginInputPassw(object sender, RoutedEventArgs e)
 		{
+			if (String.IsNullOrWhiteSpace(UsernameInput.Text))
+			{
+				LoginButton.IsEnabled = false;
+				loginErrorTextbox.Text = "Username cannot be empty!";
+				loginErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
+
+			if (String.IsNullOrWhiteSpace(PasswordInput.Password))
+			{
+				LoginButton.IsEnabled = false;
+				loginErrorTextbox.Text = "Password cannot be empty!";
+				loginErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
+
 			loginErrorTextbox.Visibility = Visibility.Hidden;
-			LoginButton.IsEnabled = (!String.IsNullOrWhiteSpace(UsernameInput.Text) && !String.IsNullOrWhiteSpace(PasswordInput.Password));
+			LoginButton.IsEnabled = true;
 		}
 
-		private void UsernameInput_TextChanged(object sender, TextChangedEventArgs e)
+		private void ValidateLoginInputText(object sender, TextChangedEventArgs e)
 		{
-			loginErrorTextbox.Visibility = Visibility.Hidden;
-			LoginButton.IsEnabled = (!String.IsNullOrWhiteSpace(UsernameInput.Text) && !String.IsNullOrWhiteSpace(PasswordInput.Password));
+			ValidateLoginInputPassw(sender, e);
 		}
 
 		private void LoginWindow_Closed(object sender, EventArgs e)
@@ -204,19 +219,8 @@ namespace CollarControl
 				return;
 			}
 
-			if (String.IsNullOrWhiteSpace(UsernameInput.Text))
-			{
-				loginErrorTextbox.Text = "Username cannot be empty!";
-				loginErrorTextbox.Visibility = Visibility.Visible;
+			if (String.IsNullOrWhiteSpace(UsernameInput.Text) || String.IsNullOrWhiteSpace(PasswordInput.Password))
 				return;
-			}
-
-			if (String.IsNullOrWhiteSpace(PasswordInput.Password))
-			{
-				loginErrorTextbox.Text = "Password cannot be empty!";
-				loginErrorTextbox.Visibility = Visibility.Visible;
-				return;
-			}
 
 			CollarLib.ClientPayloads.AccountGetRequest payload = new CollarLib.ClientPayloads.AccountGetRequest()
 			{
@@ -232,6 +236,8 @@ namespace CollarControl
 						ShowPopup("INVALID PARAMETERS: " + resp.payload);
 						return;
 					}
+
+					Console.WriteLine($"Got: {resp.payload}");
 
 					CollarLib.ServerPayloads.AccountInstance account = CollarLib.ServerPayloads.AccountInstance.Deserialize(resp.payload);
 
@@ -287,6 +293,132 @@ namespace CollarControl
 		{
 			if (ushort.TryParse(OptNetworkPort.Text, out ushort val))
 				Connection.ServerPort = val;
+		}
+
+		private void RegisterButton_Click(object sender, RoutedEventArgs e)
+		{
+			if (!Connection.Connect())
+			{
+				ShowPopup("Cant connect to server!");
+				return;
+			}
+
+			String username = RegUsernameInput.Text;
+			String email = RegEmailInput.Text;
+			String password = (RegPasswordInput.Password == RegPasswordVerifyInput.Password) ? RegPasswordInput.Password : null;
+
+			if (String.IsNullOrWhiteSpace(username) || String.IsNullOrWhiteSpace(email) || String.IsNullOrWhiteSpace(password))
+				return;
+
+			CollarLib.ClientPayloads.AccountPostRequest payload = new CollarLib.ClientPayloads.AccountPostRequest()
+			{
+				username = username,
+				email = email,
+				password = password
+			};
+
+			Connection.SendMessage(payload.Serialize(), CollarLib.RequestMethod.POST, CollarLib.RequestType.Account, (resp) =>
+			{
+				try
+				{
+					if (resp.code != CollarLib.ResponseCode.OK)
+					{
+						ShowPopup("INVALID PARAMETERS: " + resp.payload);
+						return;
+					}
+
+					Console.WriteLine($"Got: {resp.payload}");
+
+					CollarLib.ServerPayloads.AccountInstance account = CollarLib.ServerPayloads.AccountInstance.Deserialize(resp.payload);
+
+					Instance instance = new Instance();
+					instance.username = account.Username;
+					instance.status = account.Status;
+					instance.activity = account.Activity;
+					instance.friends = account.Friends;
+
+					foreach (var blockedUser in account.BlockedUsers)
+					{
+						instance.blockedUsers.Add(
+							new CollarLib.BlockedUser(
+								blockedUser.BlockId,
+								blockedUser.FrozenUsername
+								)
+							);
+					}
+
+					instance.friendRequests = account.FriendRequests;
+
+					foreach (var convo in account.Conversations)
+					{
+						instance.conversations.Add(
+							new CollarLib.Conversation(
+								convo.Id,
+								convo.Name,
+								convo.Members
+								)
+							);
+					}
+
+					mainWindow.ActiveInstance = instance;
+				}
+				catch (Exception ex)
+				{
+					Console.WriteLine(ex.Message);
+					return;
+				}
+			});
+		}
+
+		private void ValidateRegFormInputsPassw(object sender, RoutedEventArgs e)
+		{
+			if (String.IsNullOrWhiteSpace(RegUsernameInput.Text))
+			{
+				RegisterButton.IsEnabled = false;
+				registerErrorTextbox.Text = "Username cannot be empty!";
+				registerErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
+
+			if (String.IsNullOrWhiteSpace(RegEmailInput.Text))
+			{
+				RegisterButton.IsEnabled = false;
+				registerErrorTextbox.Text = "Email cannot be empty!";
+				registerErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
+
+			if (!HeavenLib.ToolBox.IsValidEmail(RegEmailInput.Text))
+			{
+				RegisterButton.IsEnabled = false;
+				registerErrorTextbox.Text = "Invalid email!";
+				registerErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
+
+			if (RegPasswordInput.Password != RegPasswordVerifyInput.Password)
+			{
+				RegisterButton.IsEnabled = false;
+				registerErrorTextbox.Text = "Passwords dont match!";
+				registerErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
+
+			if (String.IsNullOrWhiteSpace(RegPasswordInput.Password))
+			{
+				RegisterButton.IsEnabled = false;
+				registerErrorTextbox.Text = "Password cannot be empty!";
+				registerErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
+
+			registerErrorTextbox.Visibility = Visibility.Hidden;
+			RegisterButton.IsEnabled = true;
+		}
+
+		private void ValidateRegFormInputsText(object sender, TextChangedEventArgs e)
+		{
+			ValidateRegFormInputsPassw(sender, e);
 		}
 	}
 }

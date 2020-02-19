@@ -45,10 +45,10 @@
                     </Grid.RowDefinitions>
 
                     <Label Grid.Column="1" Grid.Row="1" Content="Username"/>
-                    <TextBox Grid.Column="2" Grid.Row="1" Margin="5" x:Name="UsernameInput" Width="200"/>
+                    <TextBox Grid.Column="2" Grid.Row="1" Margin="5" x:Name="UsernameInput" Width="200" TextChanged="ValidateLoginInputText"/>
 
                     <Label Grid.Column="1" Grid.Row="2" Content="Password"/>
-                    <PasswordBox Grid.Column="2" Grid.Row="2" Margin="5" x:Name="PasswordInput" Width="200"/>
+                    <PasswordBox Grid.Column="2" Grid.Row="2" Margin="5" x:Name="PasswordInput" Width="200" PasswordChanged="ValidateLoginInputPassw"/>
 
                     <Grid Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="2">
                     <Grid.ColumnDefinitions>
@@ -88,20 +88,20 @@
                     </Grid.RowDefinitions>
 
                     <Label Grid.Column="1" Grid.Row="1" Content="Username"/>
-                    <TextBox Grid.Column="2" Grid.Row="1" Margin="5" x:Name="RegUsernameInput" Width="200"/>
+                    <TextBox Grid.Column="2" Grid.Row="1" Margin="5" x:Name="RegUsernameInput" Width="200" TextChanged="ValidateRegFormInputsText"/>
                     
                     <Label Grid.Column="1" Grid.Row="2" Content="Email"/>
-                    <TextBox Grid.Column="2" Grid.Row="2" Margin="5" x:Name="RegEmailInput" Width="200"/>
+                    <TextBox Grid.Column="2" Grid.Row="2" Margin="5" x:Name="RegEmailInput" Width="200" TextChanged="ValidateRegFormInputsText"/>
 
                     <Label Grid.Column="1" Grid.Row="3" Content="Password"/>
-                    <PasswordBox Grid.Column="2" Grid.Row="3" Margin="5" x:Name="RegPasswordInput" Width="200"/>
+                    <PasswordBox Grid.Column="2" Grid.Row="3" Margin="5" x:Name="RegPasswordInput" Width="200" PasswordChanged="ValidateRegFormInputsPassw"/>
                     
                     <Label Grid.Column="1" Grid.Row="4" Content="Password"/>
-                    <PasswordBox Grid.Column="2" Grid.Row="4" Margin="5" x:Name="RegPassword2ndInput" Width="200"/>
+                    <PasswordBox Grid.Column="2" Grid.Row="4" Margin="5" x:Name="RegPasswordVerifyInput" Width="200" PasswordChanged="ValidateRegFormInputsPassw"/>
 
-                    <Button Grid.Column="1" Grid.Row="5" Grid.ColumnSpan="2" x:Name="RegisterButton" FontWeight="SemiBold" FontSize="12" Content="Register account" Margin="2"/>
+                        <Button Grid.Column="1" Grid.Row="5" Grid.ColumnSpan="2" x:Name="RegisterButton" FontWeight="SemiBold" IsEnabled="False" FontSize="12" Content="Register account" Margin="2" Click="RegisterButton_Click"/>
 
-                    <TextBlock Grid.Column="1" Grid.Row="7" Grid.ColumnSpan="2" HorizontalAlignment="Center" FontWeight="Light" FontSize="12" Foreground="Red"/>
+                    <TextBlock Grid.Column="1" Grid.Row="7" Grid.ColumnSpan="2" HorizontalAlignment="Center" x:Name="registerErrorTextbox" FontWeight="Light" FontSize="12" Foreground="Red"/>
                 </Grid>
             </TabItem>
             <TabItem>
