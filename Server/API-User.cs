@@ -135,7 +135,10 @@ namespace CollarControl
 			_dbUsers.AddJob((dbCollection) =>
 			{
 				if (dbCollection.Exists(u => (u.Username.ToLower() == lcName) || (u.Email == email)))
+				{
 					Task.Run(() => onError.Invoke("Username/Email already taken"));
+					return;
+				}
 
 				DbUser user = new DbUser(username, email, password);
 				dbCollection.Insert(user);
