@@ -144,7 +144,7 @@ namespace CollarControl
 			{
 				Program.userAPI.GetById(Id,(dbUser)=>
 				{
-					bool success = ToolBox.SendEmail(
+					bool success = Program.emailClient.SendEmail(
 					new string[] { dbUser.Email },
 					"Password Recovery",
 					"Here is your recovery code:\n" + token

@@ -50,6 +50,7 @@
     <Compile Include="Connectivity\Host.cs" />
     <Compile Include="Crypto\BouncyCrypto.cs" />
     <Compile Include="Crypto\Crypto.cs" />
+    <Compile Include="EmailSender.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ToolBox.cs" />
   </ItemGroup>

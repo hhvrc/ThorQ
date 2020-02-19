@@ -130,29 +130,6 @@ namespace HeavenLib
 			}
 		}
 
-		public static bool SendEmail(string[] recepients, string subject, string body)
-		{
-			if (recepients == null || string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(subject))
-				return false;
-
-			MailMessage mail = new MailMessage();
-			SmtpClient SmtpServer = new SmtpClient("smtp.gmail.com");
-
-			mail.From = new MailAddress("user@example.com");
-			foreach (string recepient in recepients)
-				if (IsValidEmail(recepient))
-					mail.Bcc.Add(recepient);
-			mail.Subject = subject;
-			mail.Body = body;
-
-			SmtpServer.Port = 587;
-			SmtpServer.Credentials = new System.Net.NetworkCredential("user@example.com", "CollarControlPassword");
-			SmtpServer.EnableSsl = true;
-
-			SmtpServer.Send(mail);
-			return true;
-		}
-
 		public static string GetExeDirectory()
 		{
 			string path = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase);

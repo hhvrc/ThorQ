@@ -32,7 +32,7 @@ namespace CollarControl
 						i++;
 					}
 
-					ToolBox.SendEmail(emails, subject, body);
+					Program.emailClient.SendEmail(emails, subject, body);
 					Task.Run(() => onSuccess.Invoke());
 				}
 				catch (Exception ex)
