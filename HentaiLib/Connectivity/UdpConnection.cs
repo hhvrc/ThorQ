@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Security;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace HeavenLib.Connectivity
@@ -11,10 +10,15 @@ namespace HeavenLib.Connectivity
 	/// <summary>
 	/// Listen for incoming connections, and create a new <c>Connection</c> object when when a client connects
 	/// </summary>
-	public class UdpConnection
+	public class UdpConnection : IDisposable
 	{
+		private readonly IPAddress anyIP;
+		private readonly AddressFamily family;
+
 		private Socket socket = null;
+
 		private byte[] buffer = new byte[1024];
+
 		private List<EndPoint> clientList = new List<EndPoint>();
 
 		/// <summary>
@@ -22,7 +26,21 @@ namespace HeavenLib.Connectivity
 		/// You need to start listening for this event to fire.
 		/// </summary>
 		public event Action<EndPoint, byte[]> OnMessageReceived;
-		
+
+		public UdpConnection(bool useIPv6)
+		{
+			if (useIPv6)
+			{
+				anyIP = IPAddress.IPv6Any;
+				family = AddressFamily.InterNetworkV6;
+			}
+			else
+			{
+				anyIP = IPAddress.Any;
+				family = AddressFamily.InterNetwork;
+			}
+		}
+
 		/// <summary>
 		/// Starts listening for connecting clients, will invoke <c>OnClientConnected</c> when a client connects. (blocking call)
 		/// </summary>
@@ -30,10 +48,10 @@ namespace HeavenLib.Connectivity
 		/// <exception cref="SocketException"></exception>
 		/// <exception cref="SecurityException"></exception>
 		/// <exception cref="NotSupportedException"></exception>
-		public void Listen(ushort port, bool useIPv6)
+		public void Listen(ushort port)
 		{
 			socket = new Socket(
-				(useIPv6 ? AddressFamily.InterNetworkV6 : AddressFamily.InterNetwork),
+				family,
 				SocketType.Dgram,
 				ProtocolType.Udp
 				);
@@ -45,7 +63,7 @@ namespace HeavenLib.Connectivity
 				);
 
 			socket.Bind(new IPEndPoint(
-				(useIPv6 ? IPAddress.IPv6Any : IPAddress.Any),
+				anyIP,
 				port
 				));
 
@@ -54,7 +72,7 @@ namespace HeavenLib.Connectivity
 
 		private void StartListening()
 		{
-			EndPoint newClientEP = new IPEndPoint(IPAddress.Any, 0);
+			EndPoint newClientEP = new IPEndPoint(anyIP, 0);
 			socket.BeginReceiveFrom(buffer, 0, buffer.Length, SocketFlags.None, ref newClientEP, HandleMessage, newClientEP);
 		}
 
@@ -62,7 +80,7 @@ namespace HeavenLib.Connectivity
 		{
 			try
 			{
-				EndPoint clientEP = new IPEndPoint(IPAddress.Any, 0);
+				EndPoint clientEP = (IPEndPoint)iar.AsyncState;//new IPEndPoint(anyIP, 0);
 				int dataLen = socket.EndReceiveFrom(iar, ref clientEP);
 
 				if (!clientList.Exists(client => client.Equals(clientEP)))
@@ -71,17 +89,11 @@ namespace HeavenLib.Connectivity
 				byte[] data = new byte[dataLen];
 				Array.Copy(buffer, data, dataLen);
 
-				try
-				{
-					Task.Run(() => OnMessageReceived.Invoke(clientEP, data));
-				}
-				catch (Exception)
-				{
-				}
-
 				StartListening();
+
+				OnMessageReceived.Invoke(clientEP, data);
 			}
-			catch (ObjectDisposedException)
+			catch (Exception)
 			{
 			}
 		}
@@ -100,9 +112,17 @@ namespace HeavenLib.Connectivity
 
 		public void SendToAll(byte[] data)
 		{
-			foreach (var client in this.clientList)
+			for (int i = 0; i < clientList.Count; ++i)
 			{
-				this.SendTo(data, client);
+				try
+				{
+					socket.SendTo(data, clientList[i]);
+				}
+				catch (SocketException)
+				{
+					this.clientList.Remove(clientList[i]);
+					--i;
+				}
 			}
 		}
 
@@ -111,8 +131,14 @@ namespace HeavenLib.Connectivity
 		/// </summary>
 		public void StopListening()
 		{
-			socket.Close();
+			socket?.Close();
 			socket = null;
+		}
+
+		public void Dispose()
+		{
+			try { StopListening(); } catch (Exception) { }
+			try { clientList.Clear(); } catch (Exception) { }
 		}
 	}
 }
