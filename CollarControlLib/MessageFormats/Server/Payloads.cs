@@ -11,6 +11,16 @@ namespace CollarLib.ServerPayloads
 	[Serializable]
 	public struct AccountInstance
 	{
+		public AccountInstance(String username, String status, UserActivity activity)
+		{
+			Username = username;
+			Status = status;
+			Activity = activity;
+			Friends = new List<Friend>();
+			BlockedUsers = new List<BlockedUser>();
+			FriendRequests = new List<FriendRequest>();
+			Conversations = new List<Conversation>();
+		}
 		public string Username { get; set; }
 		public string Status { get; set; }
 		public UserActivity Activity { get; set; }
