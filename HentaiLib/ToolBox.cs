@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Net.Mail;
 using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Serialization;
@@ -78,19 +77,37 @@ namespace HeavenLib
 			return BitConverter.ToInt32(bytes, 0);
 		}
 
+		/// <summary>
+		/// Returns if the input string is a valid email format
+		/// </summary>
+		/// <param name="email">The email to be evaluated</param>
+		/// <returns>
+		/// Is format valid?
+		/// </returns>
 		public static bool IsValidEmail(string email)
 		{
-			try
+			if (!String.IsNullOrWhiteSpace(email))
 			{
-				var addr = new System.Net.Mail.MailAddress(email);
-				return addr.Address == email;
+				try
+				{
+					var addr = new System.Net.Mail.MailAddress(email);
+					return addr.Address == email;
+				}
+				catch (FormatException) { }
 			}
-			catch (Exception ex)
-			{
-				return false;
-			}
+			return false;
 		}
 
+		/// <summary>
+		/// Generates a unique token of specified length using cryptographic functions
+		/// </summary>
+		/// <param name="length">
+		/// Length of output token
+		/// </param>
+		/// <returns>
+		/// The generated token
+		/// </returns>
+		/// <exception cref="CryptographicException"></exception>
 		public static string GetUniqueToken(int length)
 		{
 			using (RNGCryptoServiceProvider crypto = new RNGCryptoServiceProvider())
@@ -130,6 +147,12 @@ namespace HeavenLib
 			}
 		}
 
+		/// <summary>
+		/// Gets folder containing the compiled executable
+		/// </summary>
+		/// <returns>
+		/// The path to the executable
+		/// </returns>
 		public static string GetExeDirectory()
 		{
 			string path = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().CodeBase);
