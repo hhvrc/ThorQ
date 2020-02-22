@@ -25,15 +25,14 @@ namespace CollarControl
 	public partial class LoginWindow : Window
 	{
 		MainWindow mainWindow = new MainWindow();
-		bool connectionOk = false;
-
+		
 		public LoginWindow()
 		{
 			InitializeComponent();
 			mainWindow.Closing += MainWindow_Closing;
 			mainWindow.IsVisibleChanged += MainWindow_IsVisibleChanged;
 
-			Closed += LoginWindow_Closed;
+			this.Closing += LoginWindow_Closing;
 			UsernameInput.TextChanged += ValidateLoginInputText;
 			PasswordInput.PasswordChanged += ValidateLoginInputPassw;
 			CollarConnectCheckbutton.Click += CollarConnectCheckbutton_Click;
@@ -45,17 +44,32 @@ namespace CollarControl
 			OptHostname.Text = Connection.ServerHostname;
 			OptNetworkPort.Text = Connection.ServerPort.ToString();
 		}
-
-		private void ShowPopup(String popupMsg)
+		public void RemoveEvents()
 		{
-			DispatcherOperation op = Dispatcher.BeginInvoke((Action)(() =>
-			{
-				PopupText.Text = popupMsg;
-				Popup1.Width = PopupText.Width;
-				Popup1.IsOpen = true;
-			}));
+			this.Closing -= LoginWindow_Closing;
+			mainWindow.Closing -= MainWindow_Closing;
 		}
-
+		#region WindowHandling
+		private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+		{
+			RemoveEvents();
+			this.Close();
+		}
+		private void LoginWindow_Closing(object sender, EventArgs e)
+		{
+			Connection.Disconnect();
+			RemoveEvents();
+			mainWindow.Close();
+		}
+		private void MainWindow_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+		{
+			if (mainWindow.IsVisible)
+				this.Hide();
+			else
+				this.Show();
+		}
+		#endregion
+		#region MessageHandlers
 		private void OnNonRequestedResponse(CollarLib.Response resp)
 		{
 			try
@@ -91,7 +105,6 @@ namespace CollarControl
 				return;
 			}
 		}
-
 		private void HandleAdminMsg(CollarLib.Response resp)
 		{
 			if (resp.type == CollarLib.ResponseType.STRING)
@@ -99,7 +112,6 @@ namespace CollarControl
 				ShowPopup($"SERVER: {resp.payload}");
 			}
 		}
-
 		private void HandleUpdateData(CollarLib.Response resp)
 		{
 			switch (resp.type)
@@ -138,79 +150,24 @@ namespace CollarControl
 					break;
 			}
 		}
-
+		#endregion
+		#region PopupWindow
+		private void ShowPopup(String popupMsg)
+		{
+			DispatcherOperation op = Dispatcher.BeginInvoke((Action)(() =>
+			{
+				PopupText.Text = popupMsg;
+				Popup1.Width = PopupText.Width;
+				Popup1.IsOpen = true;
+			}));
+		}
 		private void PopupOkButton_Click(object sender, RoutedEventArgs e)
 		{
 			this.IsEnabled = true;
 			Popup1.IsOpen = false;
 		}
-
-		private void ConnectionTestButton_Click(object sender, RoutedEventArgs e)
-		{
-			PopupText.Text = Connection.TestAddress(OptHostname.Text, ushort.Parse(OptNetworkPort.Text)) ? "Looks ok!" : "Wrong hostname/port";
-			this.IsEnabled = false;
-			Popup1.IsOpen = true;
-		}
-
-		private void CollarConnectCheckbutton_Click(object sender, RoutedEventArgs e)
-		{
-			SerialBox.IsEnabled = CollarConnectCheckbutton.IsChecked??false;
-		}
-
-		public void RemoveEvents()
-		{
-			Closed -= LoginWindow_Closed;
-			mainWindow.Closing -= MainWindow_Closing;
-		}
-
-		private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-		{
-			RemoveEvents();
-			this.Close();
-		}
-
-		private void ValidateLoginInputPassw(object sender, RoutedEventArgs e)
-		{
-			if (String.IsNullOrWhiteSpace(UsernameInput.Text))
-			{
-				LoginButton.IsEnabled = false;
-				loginErrorTextbox.Text = "Username cannot be empty!";
-				loginErrorTextbox.Visibility = Visibility.Visible;
-				return;
-			}
-
-			if (String.IsNullOrWhiteSpace(PasswordInput.Password))
-			{
-				LoginButton.IsEnabled = false;
-				loginErrorTextbox.Text = "Password cannot be empty!";
-				loginErrorTextbox.Visibility = Visibility.Visible;
-				return;
-			}
-
-			loginErrorTextbox.Visibility = Visibility.Hidden;
-			LoginButton.IsEnabled = true;
-		}
-
-		private void ValidateLoginInputText(object sender, TextChangedEventArgs e)
-		{
-			ValidateLoginInputPassw(sender, e);
-		}
-
-		private void LoginWindow_Closed(object sender, EventArgs e)
-		{
-			Connection.Disconnect();
-			RemoveEvents();
-			mainWindow.Close();
-		}
-
-		private void MainWindow_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
-		{
-			if (mainWindow.IsVisible)
-				this.Hide();
-			else
-				this.Show();
-		}
-
+		#endregion
+		#region LoginWindow
 		private void OnLoginButtonClicked(object sender, RoutedEventArgs e)
 		{
 			if (!Connection.Connect())
@@ -228,11 +185,12 @@ namespace CollarControl
 				password = PasswordInput.Password,
 			};
 
-			Connection.SendMessage(payload.Serialize(), CollarLib.RequestMethod.GET, CollarLib.RequestType.Account, (resp)=>
+			Connection.SendMessage(payload.Serialize(), CollarLib.RequestMethod.GET, CollarLib.RequestType.Account, (resp) =>
 			{
 				try
 				{
-					if (resp.code != CollarLib.ResponseCode.OK) {
+					if (resp.code != CollarLib.ResponseCode.OK)
+					{
 						ShowPopup("INVALID PARAMETERS: " + resp.payload);
 						return;
 					}
@@ -247,7 +205,8 @@ namespace CollarControl
 					instance.activity = account.Activity;
 					instance.friends = account.Friends;
 
-					foreach (var blockedUser in account.BlockedUsers) {
+					foreach (var blockedUser in account.BlockedUsers)
+					{
 						instance.blockedUsers.Add(
 							new CollarLib.BlockedUser(
 								blockedUser.BlockId,
@@ -278,7 +237,33 @@ namespace CollarControl
 				}
 			});
 		}
+		private void ValidateLoginInputText(object sender, TextChangedEventArgs e)
+		{
+			ValidateLoginInputPassw(sender, e);
+		}
+		private void ValidateLoginInputPassw(object sender, RoutedEventArgs e)
+		{
+			if (String.IsNullOrWhiteSpace(UsernameInput.Text))
+			{
+				LoginButton.IsEnabled = false;
+				loginErrorTextbox.Text = "Username cannot be empty!";
+				loginErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
 
+			if (String.IsNullOrWhiteSpace(PasswordInput.Password))
+			{
+				LoginButton.IsEnabled = false;
+				loginErrorTextbox.Text = "Password cannot be empty!";
+				loginErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
+
+			loginErrorTextbox.Visibility = Visibility.Hidden;
+			LoginButton.IsEnabled = true;
+		}
+		#endregion
+		#region OptionsWindow
 		private void IsInputUInt16(object sender, TextCompositionEventArgs e)
 		{
 			e.Handled = !UInt16.TryParse(OptNetworkPort.Text + e.Text, out _);
@@ -294,7 +279,19 @@ namespace CollarControl
 			if (ushort.TryParse(OptNetworkPort.Text, out ushort val))
 				Connection.ServerPort = val;
 		}
+		private void ConnectionTestButton_Click(object sender, RoutedEventArgs e)
+		{
+			PopupText.Text = Connection.TestAddress(OptHostname.Text, ushort.Parse(OptNetworkPort.Text)) ? "Looks ok!" : "Wrong hostname/port";
+			this.IsEnabled = false;
+			Popup1.IsOpen = true;
+		}
 
+		private void CollarConnectCheckbutton_Click(object sender, RoutedEventArgs e)
+		{
+			SerialBox.IsEnabled = CollarConnectCheckbutton.IsChecked ?? false;
+		}
+		#endregion
+		#region RegistrationWindow
 		private void RegisterButton_Click(object sender, RoutedEventArgs e)
 		{
 			if (!Connection.Connect())
@@ -369,7 +366,6 @@ namespace CollarControl
 				}
 			});
 		}
-
 		private void ValidateRegFormInputsPassw(object sender, RoutedEventArgs e)
 		{
 			if (String.IsNullOrWhiteSpace(RegUsernameInput.Text))
@@ -415,10 +411,10 @@ namespace CollarControl
 			registerErrorTextbox.Visibility = Visibility.Hidden;
 			RegisterButton.IsEnabled = true;
 		}
-
 		private void ValidateRegFormInputsText(object sender, TextChangedEventArgs e)
 		{
 			ValidateRegFormInputsPassw(sender, e);
 		}
+		#endregion
 	}
 }
