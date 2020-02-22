@@ -72,11 +72,7 @@ namespace CollarControl
 				Program.userAPI.GetMultipleById(dbUser.Friends, (users) => {
 					Program.conversationAPI.GetMultipleNameAndMembers(dbUser.Conversations, (convos) => {
 
-						var response = new CollarLib.ServerPayloads.AccountInstance();
-
-						response.Username = dbUser.Username;
-						response.Status = dbUser.Status;
-						response.Activity = dbUser.Activity;
+						var response = new CollarLib.ServerPayloads.AccountInstance(dbUser.Username, dbUser.Status, dbUser.Activity);
 
 						foreach (var user in users) {
 							var friend = new CollarLib.ServerPayloads.Friend();
@@ -116,7 +112,7 @@ namespace CollarControl
 							code = ResponseCode.OK,
 							type = ResponseType.ACCOUNT,
 							requestId = requestId,
-							payload = request.Serialize(),
+							payload = response.Serialize(),
 						};
 
 						client.SendEncrypted(Encoding.UTF8.GetBytes(message.Serialize()));
