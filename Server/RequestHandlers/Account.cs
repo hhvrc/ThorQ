@@ -56,6 +56,12 @@ namespace CollarControl
 					return;
 				}
 
+				if (!Program.initializedUsers.TryGetValue(dbUser.Id, out thisUser))
+				{
+					thisUser = new RuntimeUser(dbUser.Id);
+					Program.initializedUsers.TryAdd(dbUser.Id, thisUser);
+				}
+
 				if (thisUser.TryAddConnection(client))
 				{
 					client.OnClientDisconnected -= Program.OnClientDisconnected;
