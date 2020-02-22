@@ -25,7 +25,8 @@ namespace CollarControl
 	public partial class LoginWindow : Window
 	{
 		MainWindow mainWindow = new MainWindow();
-		
+		bool connectionOk = false;
+
 		public LoginWindow()
 		{
 			InitializeComponent();
@@ -228,7 +229,11 @@ namespace CollarControl
 							);
 					}
 
-					mainWindow.ActiveInstance = instance;
+					DispatcherOperation op = Dispatcher.BeginInvoke((Action)(() =>
+					{
+						mainWindow.ActiveInstance = instance;
+						mainWindow.Show();
+					}));
 				}
 				catch (Exception ex)
 				{

@@ -24,17 +24,18 @@ namespace CollarControl
 			InitializeComponent();
 		}
 
+		private object l_instance = new object();
 		private Instance m_instance;
 		public Instance ActiveInstance
 		{
 			get
 			{
-				lock (m_instance)
+				lock (l_instance)
 					return m_instance;
 			}
 			set
 			{
-				lock (m_instance)
+				lock (l_instance)
 					m_instance = value;
 			}
 		}
