@@ -62,6 +62,13 @@ namespace CollarControl
 
 			// Collar region
 			CollarConnectMenuToggleCheckBox.Click += CollarConnectCheckbutton_Click;
+			var portName = SerialConnection.PortName;
+			if (!String.IsNullOrWhiteSpace(portName))
+			{
+				CollarConnectPortSelector.ItemsSource = new String[] { portName };
+				CollarConnectPortSelector.SelectedIndex = 0;
+				CollarConnectTestButton.IsEnabled = true;
+			}
 			CollarConnectPortSelector.DropDownOpened += CollarConnectPortSelector_DropDownOpened;
 			CollarConnectPortSelector.DropDownClosed += CollarConnectPortSelector_DropDownClosed;
 			CollarConnectPortSelector.SelectionChanged += CollarConnectPortSelector_SelectionChanged;
