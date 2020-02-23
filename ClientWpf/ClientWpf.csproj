@@ -58,6 +58,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="SerialConnection.cs" />
     <Compile Include="Connection.cs" />
     <Compile Include="Instance.cs" />
     <Compile Include="Main.xaml.cs">
