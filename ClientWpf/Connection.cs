@@ -45,7 +45,7 @@ namespace CollarControl
 					return client?.IsConnected ?? false;
 			}
 		}
-		public static string ServerHostname
+		public static string Hostname
 		{
 			get
 			{
@@ -58,7 +58,7 @@ namespace CollarControl
 				HeavenLib.AppConfig.Upsert("ServerHostname", ((value == null) ? "" : value));
 			}
 		}
-		public static ushort ServerPort
+		public static ushort Port
 		{
 			get
 			{
@@ -85,7 +85,7 @@ namespace CollarControl
 				try
 				{
 					client = new Client();
-					if (client.Connect(ServerHostname, ServerPort) && client.Authenticate())
+					if (client.Connect(Hostname, Port) && client.Authenticate())
 					{
 						client.OnMessageReceived += MessageHandler;
 						client.OnDisconnected += DisconnectHandler;
@@ -123,10 +123,7 @@ namespace CollarControl
 
 			lock (cliLock)
 			{
-				if (client != null)
-				{
-					client.SendEncrypted(Encoding.UTF8.GetBytes(message));
-				}
+				client?.SendEncrypted(Encoding.UTF8.GetBytes(message));
 			}
 		}
 		public static bool TestAddress(string hostname, ushort port)
