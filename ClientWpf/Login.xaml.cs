@@ -2,9 +2,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO.Ports;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -30,21 +32,48 @@ namespace CollarControl
 		public LoginWindow()
 		{
 			InitializeComponent();
+
+			this.Closing += LoginWindow_Closing;
+
+			// MainWindow
 			mainWindow.Closing += MainWindow_Closing;
 			mainWindow.IsVisibleChanged += MainWindow_IsVisibleChanged;
 
-			this.Closing += LoginWindow_Closing;
-			UsernameInput.TextChanged += ValidateLoginInputText;
-			PasswordInput.PasswordChanged += ValidateLoginInputPassw;
-			CollarConnectCheckbutton.Click += CollarConnectCheckbutton_Click;
-			ConnectionTestButton.Click += ConnectionTestButton_Click;
+			// Popup
 			PopupOkButton.Click += PopupOkButton_Click;
 
-			Connection.ServerMessageReceived += OnNonRequestedResponse;
+			// Login tab
+			LoginButton.Click += LoginButton_Click;
+			LoginUsernameInput.TextChanged += LoginInputsValidator;
+			LoginPasswordInput.PasswordChanged += LoginInputsValidator;
+
+			// Register tab
+			RegisterButton.Click += RegisterButton_Click;
+			RegisterUsernameInput.TextChanged += RegisterInputsValidator;
+			RegisterEmailInput.TextChanged += RegisterInputsValidator;
+			RegisterPasswordInput.PasswordChanged += RegisterInputsValidator;
+			RegisterPasswordVerifyInput.PasswordChanged += RegisterInputsValidator;
+
+			// Network region
+			NetworkHostInput.TextChanged += NetworkHostInput_Changed;
+			NetworkPortInput.TextChanged += NetworkPortInput_Changed;
+			NetworkPortInput.PreviewTextInput += NetworkPortInputFormatter;
+			NetworkTestButton.Click += NetworkTestButton_Click;
+
+			// Collar region
+			CollarConnectMenuToggleCheckBox.Click += CollarConnectCheckbutton_Click;
+			CollarConnectPortSelector.DropDownOpened += CollarConnectPortSelector_DropDownOpened;
+			CollarConnectPortSelector.DropDownClosed += CollarConnectPortSelector_DropDownClosed;
+			CollarConnectPortSelector.SelectionChanged += CollarConnectPortSelector_SelectionChanged;
+			CollarConnectTestButton.Click += CollarConnectTestButton_MouseDown;
+
+			// Connection setup
+			NetworkHostInput.Text = Connection.Hostname;
+			NetworkPortInput.Text = Connection.Port.ToString();
+			Connection.ServerMessageReceived += Connection_ServerMessageReceived;
 			connectionOk = Connection.Connect();
-			OptHostname.Text = Connection.ServerHostname;
-			OptNetworkPort.Text = Connection.ServerPort.ToString();
 		}
+
 		public void RemoveEvents()
 		{
 			this.Closing -= LoginWindow_Closing;
@@ -71,7 +100,7 @@ namespace CollarControl
 		}
 		#endregion
 		#region MessageHandlers
-		private void OnNonRequestedResponse(CollarLib.Response resp)
+		private void Connection_ServerMessageReceived(CollarLib.Response resp)
 		{
 			try
 			{
@@ -169,7 +198,7 @@ namespace CollarControl
 		}
 		#endregion
 		#region LoginWindow
-		private void OnLoginButtonClicked(object sender, RoutedEventArgs e)
+		private void LoginButton_Click(object sender, RoutedEventArgs e)
 		{
 			if (!Connection.Connect())
 			{
@@ -177,13 +206,13 @@ namespace CollarControl
 				return;
 			}
 
-			if (String.IsNullOrWhiteSpace(UsernameInput.Text) || String.IsNullOrWhiteSpace(PasswordInput.Password))
+			if (String.IsNullOrWhiteSpace(LoginUsernameInput.Text) || String.IsNullOrWhiteSpace(LoginPasswordInput.Password))
 				return;
 
 			CollarLib.ClientPayloads.AccountGetRequest payload = new CollarLib.ClientPayloads.AccountGetRequest()
 			{
-				username = UsernameInput.Text,
-				password = PasswordInput.Password,
+				username = LoginUsernameInput.Text,
+				password = LoginPasswordInput.Password,
 			};
 
 			Connection.SendMessage(payload.Serialize(), CollarLib.RequestMethod.GET, CollarLib.RequestType.Account, (resp) =>
@@ -242,61 +271,67 @@ namespace CollarControl
 				}
 			});
 		}
-		private void ValidateLoginInputText(object sender, TextChangedEventArgs e)
+		private void LoginInputsValidator(object sender, RoutedEventArgs e)
 		{
-			ValidateLoginInputPassw(sender, e);
-		}
-		private void ValidateLoginInputPassw(object sender, RoutedEventArgs e)
-		{
-			if (String.IsNullOrWhiteSpace(UsernameInput.Text))
+			if (String.IsNullOrWhiteSpace(LoginUsernameInput.Text))
 			{
 				LoginButton.IsEnabled = false;
 				loginErrorTextbox.Text = "Username cannot be empty!";
 				loginErrorTextbox.Visibility = Visibility.Visible;
 				return;
 			}
-
-			if (String.IsNullOrWhiteSpace(PasswordInput.Password))
+			if (String.IsNullOrWhiteSpace(LoginPasswordInput.Password))
 			{
 				LoginButton.IsEnabled = false;
 				loginErrorTextbox.Text = "Password cannot be empty!";
 				loginErrorTextbox.Visibility = Visibility.Visible;
 				return;
 			}
-
 			loginErrorTextbox.Visibility = Visibility.Hidden;
 			LoginButton.IsEnabled = true;
 		}
 		#endregion
-		#region OptionsWindow
-		private void IsInputUInt16(object sender, TextCompositionEventArgs e)
-		{
-			e.Handled = !UInt16.TryParse(OptNetworkPort.Text + e.Text, out _);
-		}
-
-		private void OptHostname_TextChanged(object sender, TextChangedEventArgs e)
-		{
-			Connection.ServerHostname = OptHostname.Text;
-		}
-
-		private void OptNetworkPort_TextChanged(object sender, TextChangedEventArgs e)
-		{
-			if (ushort.TryParse(OptNetworkPort.Text, out ushort val))
-				Connection.ServerPort = val;
-		}
-		private void ConnectionTestButton_Click(object sender, RoutedEventArgs e)
-		{
-			PopupText.Text = Connection.TestAddress(OptHostname.Text, ushort.Parse(OptNetworkPort.Text)) ? "Looks ok!" : "Wrong hostname/port";
-			this.IsEnabled = false;
-			Popup1.IsOpen = true;
-		}
-
-		private void CollarConnectCheckbutton_Click(object sender, RoutedEventArgs e)
-		{
-			SerialBox.IsEnabled = CollarConnectCheckbutton.IsChecked ?? false;
-		}
-		#endregion
 		#region RegistrationWindow
+		private void RegisterInputsValidator(object sender, RoutedEventArgs e)
+		{
+			if (String.IsNullOrWhiteSpace(RegisterUsernameInput.Text))
+			{
+				RegisterButton.IsEnabled = false;
+				registerErrorTextbox.Text = "Username cannot be empty!";
+				registerErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
+			if (String.IsNullOrWhiteSpace(RegisterEmailInput.Text))
+			{
+				RegisterButton.IsEnabled = false;
+				registerErrorTextbox.Text = "Email cannot be empty!";
+				registerErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
+			if (!HeavenLib.ToolBox.IsValidEmail(RegisterEmailInput.Text))
+			{
+				RegisterButton.IsEnabled = false;
+				registerErrorTextbox.Text = "Invalid email!";
+				registerErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
+			if (RegisterPasswordInput.Password != RegisterPasswordVerifyInput.Password)
+			{
+				RegisterButton.IsEnabled = false;
+				registerErrorTextbox.Text = "Passwords dont match!";
+				registerErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
+			if (String.IsNullOrWhiteSpace(RegisterPasswordInput.Password))
+			{
+				RegisterButton.IsEnabled = false;
+				registerErrorTextbox.Text = "Password cannot be empty!";
+				registerErrorTextbox.Visibility = Visibility.Visible;
+				return;
+			}
+			registerErrorTextbox.Visibility = Visibility.Hidden;
+			RegisterButton.IsEnabled = true;
+		}
 		private void RegisterButton_Click(object sender, RoutedEventArgs e)
 		{
 			if (!Connection.Connect())
@@ -305,9 +340,9 @@ namespace CollarControl
 				return;
 			}
 
-			String username = RegUsernameInput.Text;
-			String email = RegEmailInput.Text;
-			String password = (RegPasswordInput.Password == RegPasswordVerifyInput.Password) ? RegPasswordInput.Password : null;
+			String username = RegisterUsernameInput.Text;
+			String email = RegisterEmailInput.Text;
+			String password = (RegisterPasswordInput.Password == RegisterPasswordVerifyInput.Password) ? RegisterPasswordInput.Password : null;
 
 			if (String.IsNullOrWhiteSpace(username) || String.IsNullOrWhiteSpace(email) || String.IsNullOrWhiteSpace(password))
 				return;
@@ -371,54 +406,55 @@ namespace CollarControl
 				}
 			});
 		}
-		private void ValidateRegFormInputsPassw(object sender, RoutedEventArgs e)
+		#endregion
+		#region NetworkRegion
+		private void NetworkPortInputFormatter(object sender, TextCompositionEventArgs e)
 		{
-			if (String.IsNullOrWhiteSpace(RegUsernameInput.Text))
-			{
-				RegisterButton.IsEnabled = false;
-				registerErrorTextbox.Text = "Username cannot be empty!";
-				registerErrorTextbox.Visibility = Visibility.Visible;
-				return;
-			}
-
-			if (String.IsNullOrWhiteSpace(RegEmailInput.Text))
-			{
-				RegisterButton.IsEnabled = false;
-				registerErrorTextbox.Text = "Email cannot be empty!";
-				registerErrorTextbox.Visibility = Visibility.Visible;
-				return;
-			}
-
-			if (!HeavenLib.ToolBox.IsValidEmail(RegEmailInput.Text))
-			{
-				RegisterButton.IsEnabled = false;
-				registerErrorTextbox.Text = "Invalid email!";
-				registerErrorTextbox.Visibility = Visibility.Visible;
-				return;
-			}
-
-			if (RegPasswordInput.Password != RegPasswordVerifyInput.Password)
-			{
-				RegisterButton.IsEnabled = false;
-				registerErrorTextbox.Text = "Passwords dont match!";
-				registerErrorTextbox.Visibility = Visibility.Visible;
-				return;
-			}
-
-			if (String.IsNullOrWhiteSpace(RegPasswordInput.Password))
-			{
-				RegisterButton.IsEnabled = false;
-				registerErrorTextbox.Text = "Password cannot be empty!";
-				registerErrorTextbox.Visibility = Visibility.Visible;
-				return;
-			}
-
-			registerErrorTextbox.Visibility = Visibility.Hidden;
-			RegisterButton.IsEnabled = true;
+			e.Handled = !UInt16.TryParse(NetworkPortInput.Text + e.Text, out _);
 		}
-		private void ValidateRegFormInputsText(object sender, TextChangedEventArgs e)
+		private void NetworkHostInput_Changed(object sender, TextChangedEventArgs e)
 		{
-			ValidateRegFormInputsPassw(sender, e);
+			Connection.Hostname = NetworkHostInput.Text;
+		}
+		private void NetworkPortInput_Changed(object sender, TextChangedEventArgs e)
+		{
+			if (ushort.TryParse(NetworkPortInput.Text, out ushort val))
+				Connection.Port = val;
+		}
+		private void NetworkTestButton_Click(object sender, RoutedEventArgs e)
+		{
+			PopupText.Text = Connection.TestAddress(NetworkHostInput.Text, UInt16.Parse(NetworkPortInput.Text)) ? "Looks ok!" : "Wrong hostname/port";
+			this.IsEnabled = false;
+			Popup1.IsOpen = true;
+		}
+		#endregion
+		#region CollarConnectRegion
+		private void CollarConnectCheckbutton_Click(object sender, RoutedEventArgs e)
+		{
+			SerialBox.IsEnabled = CollarConnectMenuToggleCheckBox.IsChecked ?? false;
+		}
+		private void CollarConnectPortSelector_DropDownOpened(object sender, EventArgs e)
+		{
+			CollarConnectPortSelector.ItemsSource = SerialPort.GetPortNames();
+		}
+		private void CollarConnectPortSelector_DropDownClosed(object sender, EventArgs e)
+		{
+			CollarConnectTestButton.IsEnabled = !String.IsNullOrWhiteSpace((String)CollarConnectPortSelector.SelectedItem);
+		}
+		private void CollarConnectPortSelector_SelectionChanged(object sender, SelectionChangedEventArgs e)
+		{
+			Console.WriteLine();
+			SerialConnection.PortName = (String)CollarConnectPortSelector.SelectedItem;
+		}
+		private void CollarConnectTestButton_MouseDown(object sender, RoutedEventArgs e)
+		{
+			SerialConnection.Open();
+			SerialConnection.SendCommand('+');
+			Thread.Sleep(500);
+			SerialConnection.SendCommand('#');
+			SerialConnection.SendCommand('#');
+			SerialConnection.SendCommand('#');
+			SerialConnection.Close();
 		}
 		#endregion
 	}

@@ -20,153 +20,147 @@
                     <Button x:Name="PopupOkButton" Grid.Row="1" Content="Ok"/>
                 </Grid>
             </Popup>
-        <TabControl Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="2" Height="auto" Background="#323232">
-            <TabItem>
-                <TabItem.Header>
-                    Login
-                </TabItem.Header>
-                
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="20"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="20"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="10"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="20"/>
-                    </Grid.RowDefinitions>
+            <TabControl Grid.Column="1" Grid.Row="1" Grid.ColumnSpan="2" Height="auto" Background="#323232">
+                <TabItem>
+                    <TabItem.Header>
+                        Login
+                    </TabItem.Header>
 
-                    <Label Grid.Column="1" Grid.Row="1" Content="Username"/>
-                    <TextBox Grid.Column="2" Grid.Row="1" Margin="5" x:Name="UsernameInput" Width="200" TextChanged="ValidateLoginInputText"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="20"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="10"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="20"/>
+                        </Grid.RowDefinitions>
 
-                    <Label Grid.Column="1" Grid.Row="2" Content="Password"/>
-                    <PasswordBox Grid.Column="2" Grid.Row="2" Margin="5" x:Name="PasswordInput" Width="200" PasswordChanged="ValidateLoginInputPassw"/>
+                        <Label Grid.Column="1" Grid.Row="1" Content="Username"/>
+                        <TextBox Grid.Column="2" Grid.Row="1" Margin="5" x:Name="LoginUsernameInput" Width="200"/>
 
-                    <Grid Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="2">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                        <Button Grid.Column="0" x:Name="RecoveryButton" FontWeight="SemiBold" FontSize="12" Content="I forgot my password" Margin="2"/>
-                        <Button Grid.Column="1" x:Name="LoginButton" FontWeight="SemiBold" IsEnabled="False" FontSize="12" Content="Login" Margin="2" Click="OnLoginButtonClicked"/>
-                    </Grid>
+                        <Label Grid.Column="1" Grid.Row="2" Content="Password"/>
+                        <PasswordBox Grid.Column="2" Grid.Row="2" Margin="5" x:Name="LoginPasswordInput" Width="200"/>
 
-                    <TextBlock Grid.Column="1" Grid.Row="5" Grid.ColumnSpan="2" HorizontalAlignment="Center" x:Name="loginErrorTextbox" FontSize="10" Foreground="Red" Visibility="Hidden" FontWeight="Light"/>
-                </Grid>
-            </TabItem>
-            <TabItem>
-                <TabItem.Header>
-                    Register
-                </TabItem.Header>
-
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="auto"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="20"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="20"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="10"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="3*"/>
-                        <RowDefinition Height="20"/>
-                    </Grid.RowDefinitions>
-
-                    <Label Grid.Column="1" Grid.Row="1" Content="Username"/>
-                    <TextBox Grid.Column="2" Grid.Row="1" Margin="5" x:Name="RegUsernameInput" Width="200" TextChanged="ValidateRegFormInputsText"/>
-                    
-                    <Label Grid.Column="1" Grid.Row="2" Content="Email"/>
-                    <TextBox Grid.Column="2" Grid.Row="2" Margin="5" x:Name="RegEmailInput" Width="200" TextChanged="ValidateRegFormInputsText"/>
-
-                    <Label Grid.Column="1" Grid.Row="3" Content="Password"/>
-                    <PasswordBox Grid.Column="2" Grid.Row="3" Margin="5" x:Name="RegPasswordInput" Width="200" PasswordChanged="ValidateRegFormInputsPassw"/>
-                    
-                    <Label Grid.Column="1" Grid.Row="4" Content="Password"/>
-                    <PasswordBox Grid.Column="2" Grid.Row="4" Margin="5" x:Name="RegPasswordVerifyInput" Width="200" PasswordChanged="ValidateRegFormInputsPassw"/>
-
-                        <Button Grid.Column="1" Grid.Row="5" Grid.ColumnSpan="2" x:Name="RegisterButton" FontWeight="SemiBold" IsEnabled="False" FontSize="12" Content="Register account" Margin="2" Click="RegisterButton_Click"/>
-
-                    <TextBlock Grid.Column="1" Grid.Row="7" Grid.ColumnSpan="2" HorizontalAlignment="Center" x:Name="registerErrorTextbox" FontWeight="Light" FontSize="12" Foreground="Red"/>
-                </Grid>
-            </TabItem>
-            <TabItem>
-                <TabItem.Header>
-                    Options
-                </TabItem.Header>
-
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="2*"/>
-                        <ColumnDefinition Width="20"/>
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="20"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="auto"/>
-                        <RowDefinition Height="3*"/>
-                        <RowDefinition Height="20"/>
-                    </Grid.RowDefinitions>
-
-                    <Label Grid.Column="1" Grid.Row="1" Content="Hostname"/>
-                    <TextBox Grid.Column="2" Grid.Row="1" Margin="5" x:Name="OptHostname" Width="200" TextChanged="OptHostname_TextChanged"/>
-
-                    <Label Grid.Column="1" Grid.Row="2" Content="Port"/>
-                    <TextBox Grid.Column="2" Grid.Row="2" Margin="5" x:Name="OptNetworkPort" Width="200" PreviewTextInput="IsInputUInt16" TextChanged="OptNetworkPort_TextChanged"/>
-
-                    <Button Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="2" Margin="5"
-                            x:Name="ConnectionTestButton" Content="Test Connection"/>
-
-                    <CheckBox x:Name="CollarConnectCheckbutton" Grid.Column="1" Grid.Row="4" Grid.ColumnSpan="2" Margin="0, 5, 0, 0" Content="CollarConnect"/>
-
-                    <Border Grid.Column="1" Grid.Row="5" Grid.ColumnSpan="2" Height="115" Width="auto"
-                            x:Name="SerialBox" BorderThickness="3" BorderBrush="LightGray" CornerRadius="5"
-                            IsEnabled="False">
-                        <Grid>
+                        <Grid Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="2">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="10"/>
-                                <ColumnDefinition Width="auto"/>
                                 <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="10"/>
+                                <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="auto"/>
-                                <RowDefinition Height="auto"/>
-                                <RowDefinition Height="auto"/>
-                            </Grid.RowDefinitions>
-
-
-                            <Label Grid.Column="1" Grid.Row="0" Content="Port"/>
-                            <TextBox Grid.Column="2" Grid.Row="0" Margin="5" x:Name="OptSerialPort"/>
-
-                            <Label Grid.Column="1" Grid.Row="1" Content="Baudrate"/>
-                            <TextBox Grid.Column="2" Grid.Row="1" Margin="5" x:Name="OptSerialBaud"/>
-
-                            <Button Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="2"
-                            x:Name="CollarConnectionTestButton" Content="Test Connection"/>
+                            <Button Grid.Column="0" x:Name="RecoveryButton" FontWeight="SemiBold" FontSize="12" Content="I forgot my password" Margin="2"/>
+                            <Button Grid.Column="1" x:Name="LoginButton" FontWeight="SemiBold" IsEnabled="False" FontSize="12" Content="Login" Margin="2"/>
                         </Grid>
-                    </Border>
-                </Grid>
-            </TabItem>
+
+                        <TextBlock Grid.Column="1" Grid.Row="5" Grid.ColumnSpan="2" HorizontalAlignment="Center" x:Name="loginErrorTextbox" FontSize="10" Foreground="Red" Visibility="Hidden" FontWeight="Light"/>
+                    </Grid>
+                </TabItem>
+                <TabItem>
+                    <TabItem.Header>
+                        Register
+                    </TabItem.Header>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="20"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="10"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="3*"/>
+                            <RowDefinition Height="20"/>
+                        </Grid.RowDefinitions>
+
+                        <Label Grid.Column="1" Grid.Row="1" Content="Username"/>
+                        <TextBox Grid.Column="2" Grid.Row="1" Margin="5" x:Name="RegisterUsernameInput" Width="200"/>
+
+                        <Label Grid.Column="1" Grid.Row="2" Content="Email"/>
+                        <TextBox Grid.Column="2" Grid.Row="2" Margin="5" x:Name="RegisterEmailInput" Width="200"/>
+
+                        <Label Grid.Column="1" Grid.Row="3" Content="Password"/>
+                        <PasswordBox Grid.Column="2" Grid.Row="3" Margin="5" x:Name="RegisterPasswordInput" Width="200"/>
+
+                        <Label Grid.Column="1" Grid.Row="4" Content="Password"/>
+                        <PasswordBox Grid.Column="2" Grid.Row="4" Margin="5" x:Name="RegisterPasswordVerifyInput" Width="200"/>
+
+                        <Button Grid.Column="1" Grid.Row="5" Grid.ColumnSpan="2" x:Name="RegisterButton" FontWeight="SemiBold" IsEnabled="False" FontSize="12" Content="Register account" Margin="2"/>
+
+                        <TextBlock Grid.Column="1" Grid.Row="7" Grid.ColumnSpan="2" HorizontalAlignment="Center" x:Name="registerErrorTextbox" FontWeight="Light" FontSize="12" Foreground="Red"/>
+                    </Grid>
+                </TabItem>
+                <TabItem>
+                    <TabItem.Header>
+                        Options
+                    </TabItem.Header>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="20"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="2*"/>
+                            <ColumnDefinition Width="20"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="20"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="auto"/>
+                            <RowDefinition Height="3*"/>
+                            <RowDefinition Height="20"/>
+                        </Grid.RowDefinitions>
+
+                        <Label Grid.Column="1" Grid.Row="1" Content="Hostname"/>
+                        <TextBox Grid.Column="2" Grid.Row="1" Margin="5" x:Name="NetworkHostInput" Width="200"/>
+
+                        <Label Grid.Column="1" Grid.Row="2" Content="Port"/>
+                        <TextBox Grid.Column="2" Grid.Row="2" Margin="5" x:Name="NetworkPortInput" Width="200"/>
+
+                        <Button Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="2" Margin="5"
+                            x:Name="NetworkTestButton" Content="Test Connection"/>
+
+                        <CheckBox x:Name="CollarConnectMenuToggleCheckBox" Grid.Column="1" Grid.Row="4" Grid.ColumnSpan="2" Margin="0, 5, 0, 0" Content="CollarConnect"/>
+
+                        <Border Grid.Column="1" Grid.Row="5" Grid.ColumnSpan="2" Width="auto"
+                            x:Name="SerialBox" BorderThickness="3" BorderBrush="LightGray" CornerRadius="5"
+                            IsEnabled="False" Margin="0,0,0,38" Grid.RowSpan="2">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="10"/>
+                                    <ColumnDefinition Width="auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="10"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="auto"/>
+                                    <RowDefinition Height="auto"/>
+                                </Grid.RowDefinitions>
+
+                                <Label Grid.Column="1" Grid.Row="0" Content="Port"/>
+                                <ComboBox Grid.Column="2" Grid.Row="0" Margin="5" Height="25" x:Name="CollarConnectPortSelector"/>
+
+                                <Button Grid.Column="1" Grid.Row="3" Grid.ColumnSpan="2" x:Name="CollarConnectTestButton" Content="Test Connection" IsEnabled="False"/>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </TabItem>
             </TabControl>
         </Grid>
     </Border>
