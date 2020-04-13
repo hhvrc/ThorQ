@@ -49,6 +49,7 @@
     <Compile Include="Connectivity\UdpConnection.cs" />
     <Compile Include="Connectivity\HostConnection.cs" />
     <Compile Include="Connectivity\Host.cs" />
+    <Compile Include="Connectivity\Utils.cs" />
     <Compile Include="Crypto\BouncyCrypto.cs" />
     <Compile Include="Crypto\Crypto.cs" />
     <Compile Include="EmailSender.cs" />

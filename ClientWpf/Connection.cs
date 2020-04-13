@@ -10,16 +10,9 @@ namespace CollarControl
 	{
 		static object cliLock = new object();
 		static Client client = null;
-		static ConcurrentDictionary<Guid, Action<CollarLib.Response>> responseCallbacks = new ConcurrentDictionary<Guid, Action<CollarLib.Response>>();
 		static void MessageHandler(Client client, byte[] payload)
 		{
 			var resp = JsonConvert.DeserializeObject<CollarLib.Response>(Encoding.UTF8.GetString(payload));
-
-			if (responseCallbacks.TryGetValue(resp.requestId, out var action))
-			{
-				action(resp);
-				return;
-			}
 
 			ServerMessageReceived?.Invoke(resp);
 		}
@@ -107,17 +100,13 @@ namespace CollarControl
 				client = null;
 			}
 		}
-		public static void SendMessage(String payload, CollarLib.RequestMethod requestMethod, CollarLib.RequestType requestType, Action<CollarLib.Response> onResponse)
+		public static void SendMessage(String payload, CollarLib.RequestType requestType)
 		{
-			CollarLib.ClientRequest req = new CollarLib.ClientRequest
+			CollarLib.Request req = new CollarLib.Request
 			{
-				Id = Guid.NewGuid(),
-				Method = requestMethod,
-				Request = requestType,
+				type = requestType,
 				Payload = payload
 			};
-
-			responseCallbacks.TryAdd(req.Id, onResponse);
 
 			String message = req.Serialize();
 

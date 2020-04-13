@@ -8,6 +8,20 @@ namespace HeavenLib
 {
 	public static class ToolBox
 	{
+		/// <summary>
+		/// Compresses a Guid to a 22 char string
+		/// </summary>
+		public static String CompressGuid(Guid input)
+		{
+			return Convert.ToBase64String(input.ToByteArray()).Substring(0, 22);
+		}
+		/// <summary>
+		/// UnCompresses a 22 char string to a Guid 
+		/// </summary>
+		public static Guid UnCompressGuid(String input)
+		{
+			return new Guid(Convert.FromBase64String(input + "=="));
+		}
 		private const String charList = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/-_=?!#&%()@${[]}*.:,;<>";
 
 		public static T Deserialize<T>(byte[] xmlData)

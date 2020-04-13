@@ -6,6 +6,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -13,45 +14,27 @@ namespace CollarControl
 {
 	class Program
 	{
-		public static Host host = null;
-		public static UserAPI userAPI = null;
-		public static ConversationAPI conversationAPI = null;
-		public static Random random = new Random();
+		class Instance
+		{
+			public Instance(HostConnection connection, String displayname)
+			{
+				this.connection = connection;
+				this.displayname = displayname;
+			}
+			public String instanceId { get; } = ToolBox.CompressGuid(Guid.NewGuid());
+			public String displayname { get; set; }
+			public HostConnection connection { get; set; }
+			public String incomingRequest { get; set; } = null;
+		}
 
-		public static ConcurrentDictionary<Guid, RuntimeUser> initializedUsers;
-		public static List<HostConnection> nonAuthedConnections = new List<HostConnection>();
+		static Host host = null;
+		static Random random = new Random();
 
-		public static EmailClient emailClient;
+		static List<Instance> instances = new List<Instance>();
+		static List<HostConnection> newConnections = new List<HostConnection>();
 
 		static void Main(string[] args)
 		{
-			if (!AppConfig.TryGet("smtp_host", out var smtpHost)         || String.IsNullOrWhiteSpace(smtpHost)    ||
-				!AppConfig.TryGet("smtp_port", out var smtpPortStr)      || String.IsNullOrWhiteSpace(smtpPortStr) ||
-				!AppConfig.TryGet("smtp_email", out var smtpEmail)       || String.IsNullOrWhiteSpace(smtpEmail)   ||
-				!AppConfig.TryGet("smtp_password", out var smtpPassword) || String.IsNullOrWhiteSpace(smtpPassword))
-			{
-				AppConfig.EnsureKey("smtp_host");
-				AppConfig.EnsureKey("smtp_port");
-				AppConfig.EnsureKey("smtp_email");
-				AppConfig.EnsureKey("smtp_password");
-				Console.WriteLine("please fill out smtp info in \"config.json\"");
-				Console.ReadLine();
-				return;
-			}
-			if (!ToolBox.IsValidEmail(smtpEmail))
-			{
-				Console.WriteLine("email in \"config.json\" is invalid");
-				Console.ReadLine();
-				return;
-			}
-			if (!int.TryParse(smtpPortStr, out int smtpPort))
-			{
-				Console.WriteLine("port in \"config.json\" is invalid");
-				Console.ReadLine();
-				return;
-			}
-			emailClient = new EmailClient(smtpHost, smtpPort, smtpEmail, smtpPassword);
-
 			string thisPath = ToolBox.GetExeDirectory();
 			Console.WriteLine(thisPath);
 #if DEBUG
@@ -82,24 +65,7 @@ namespace CollarControl
 			}
 
 			host = new Host();
-
-			var db = new LiteDB.LiteDatabase(Path.Combine(thisPath, "MyData.db"));
-
-			userAPI = new UserAPI(db);
-			conversationAPI = new ConversationAPI(db);
-
-			userAPI.GetAllUsers((IEnumerable<DbUser> users) =>
-			{
-				foreach (var usr in users)
-				{
-					var user = new RuntimeUser(usr.Id);
-					user.IsOnlineChanged += OnUserOnlineChanged;
-					user.MessageReceived += OnUserMessageReceived;
-					initializedUsers.TryAdd(usr.Id, user);
-				}
-			});
-
-			initializedUsers = new ConcurrentDictionary<Guid, RuntimeUser>();
+			
 
 			host.OnClientConnected += OnClientConnected;
 
@@ -112,24 +78,11 @@ namespace CollarControl
 				Console.WriteLine($"Server crashed: {ex.Message}");
 			}
 		}
-
-		public static void SimpleClientResponse(HostConnection client, Guid requestId, ResponseCode code, string message)
-		{
-			var messageObject = new Response()
-			{
-				code = code,
-				type = ((message == null) ? ResponseType.NULL : ResponseType.STRING),
-				requestId = requestId,
-				payload = message,
-			};
-
-			client.SendEncrypted(Encoding.UTF8.GetBytes(messageObject.Serialize()));
-		}
-
+		
 		// Client event handlers
 		public static void OnClientConnected(HostConnection client)
 		{
-			Console.WriteLine("[Client] New client");
+			Console.WriteLine("\n[Client] Connected");
 
 			try
 			{
@@ -151,8 +104,8 @@ namespace CollarControl
 				return;
 			}
 
-			lock (nonAuthedConnections)
-				nonAuthedConnections.Add(client);
+			lock (newConnections)
+				newConnections.Add(client);
 
 			client.OnClientDisconnected += OnClientDisconnected;
 			client.OnMessageReceived += OnClientMessageReceived;
@@ -161,175 +114,126 @@ namespace CollarControl
 		}
 		public static void OnClientDisconnected(HostConnection client)
 		{
+			Console.WriteLine("[Client] Disconnected");
 			client.OnClientDisconnected -= OnClientDisconnected;
 			client.OnMessageReceived -= OnClientMessageReceived;
-			nonAuthedConnections.Remove(client);
+			lock (newConnections)
+				newConnections.RemoveAll(c => c == client);
+			lock (instances)
+				instances.RemoveAll(i => i.connection == client);
 			client.Dispose();
+		}
+		public static void SimpleClientResponse(HostConnection client, ResponseType type, string payload)
+		{
+			var messageObject = new Response()
+			{
+				type = type,
+				payload = payload,
+			};
+
+			client.SendEncrypted(Encoding.UTF8.GetBytes(messageObject.Serialize()));
 		}
 		public static void OnClientMessageReceived(HostConnection client, byte[] str)
 		{
 			try
 			{
-				var msg = ClientRequest.Deserialize(Encoding.UTF8.GetString(str));
+				var msg = Request.Deserialize(Encoding.UTF8.GetString(str));
 
-				switch (msg.Request)
+				switch (msg.type)
 				{
-					case RequestType.Account:
-						Account_RequestHandler.Dispatch(null, client, msg.Method, msg.Id, msg.Payload);
+					case RequestType.Ping:
+						SimpleClientResponse(client, ResponseType.Ping, "");
 						break;
-					case RequestType.Recovery:
-						Recovery_RequestHandler.Dispatch(null, client, msg.Method, msg.Id, msg.Payload);
-						break;
-					case RequestType.Username:
-					case RequestType.Email:
-					case RequestType.Password:
-					case RequestType.BlockedUsers:
-					case RequestType.FriendRequest:
-					case RequestType.Friends:
-					case RequestType.Conversation:
-					case RequestType.Message:
-					case RequestType.P2PRequest:
-					case RequestType.RPC:
-						SimpleClientResponse(client, msg.Id, ResponseCode.UNAUTHORIZED, "Not logged in");
-						break;
-					default:
-						SimpleClientResponse(client, msg.Id, ResponseCode.INVALID_REQUEST, "Not a valid request");
-						break;
-				}
-			}
-			catch (Exception ex)
-			{
-				SimpleClientResponse(client, Guid.Empty, ResponseCode.NOPE, "Invalid message");
-				Console.WriteLine($"[Client] Could not receive message: {ex.Message}");
-			}
-		}
-
-		// User event handlers
-		public static void OnUserMessageReceived(RuntimeUser thisUser, HostConnection client, string str)
-		{
-			try
-			{
-				var msg = ClientRequest.Deserialize(str);
-
-				switch (msg.Request)
-				{
-					case RequestType.Account:
-						Account_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
-						break;
-					case RequestType.Recovery:
-						Recovery_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
-						break;
-					case RequestType.Username:
-						Username_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
-						break;
-					case RequestType.Email:
-						Email_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
-						break;
-					case RequestType.Password:
-						Password_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
-						break;
-					case RequestType.BlockedUsers:
-						BlockedUser_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
-						break;
-					case RequestType.FriendRequest:
-						FriendRequest_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
-						break;
-					case RequestType.Friends:
-						Friend_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
-						break;
-					case RequestType.Conversation:
-						Conversation_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
-						break;
-					case RequestType.Message:
-						Message_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
-						break;
-					case RequestType.P2PRequest:
-						P2PRequest_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
-						break;
-					case RequestType.RPC:
-						RPC_RequestHandler.Dispatch(thisUser, client, msg.Method, msg.Id, msg.Payload);
-						break;
-					default:
-						SimpleClientResponse(client, msg.Id, ResponseCode.INVALID_REQUEST, "Not a valid request");
-						break;
-				}
-			}
-			catch (Exception ex)
-			{
-				SimpleClientResponse(client, Guid.Empty, ResponseCode.ERROR, "Invalid payload");
-				Console.WriteLine($"[Client] Could not receive message: {ex.Message}");
-			}
-		}
-		public static void OnUserOnlineChanged(RuntimeUser user, bool online)
-		{
-			userAPI.GetById(user.Id,
-				(dbUser)=>
-				{
-					var friendMsg = new CollarLib.ServerPayloads.Friend()
-					{
-						UserId = dbUser.Id,
-						Username = dbUser.Username,
-						Activity = (online ? dbUser.Activity : UserActivity.Offline),
-						Status = dbUser.Status
-					};
-					var message = new Response()
-					{
-						code = ResponseCode.UPDATE_DATA,
-						type = ResponseType.FRIEND,
-						requestId = Guid.Empty,
-						payload = friendMsg.Serialize(),
-					};
-					var jsonMessage = message.Serialize();
-
-					foreach (Guid id in dbUser.Friends)
-						if (initializedUsers.TryGetValue(id, out RuntimeUser friend))
-							friend.SendMessage(jsonMessage);
-				},
-				(err)=>
-				{
-					Console.WriteLine($"OnUserOnlineChanged(): {err}");
-				});
-
-		}
-
-		public void BroadcastNotification(string subject, string body)
-		{
-			try
-			{
-				var message = new Response()
-				{
-					code = ResponseCode.ADMIN_MSG,
-					type = ResponseType.STRING,
-					requestId = Guid.Empty,
-					payload = $"{Convert.ToBase64String(Encoding.Unicode.GetBytes(subject))}_{Convert.ToBase64String(Encoding.Unicode.GetBytes(body))}"
-				};
-
-				var jsonMessage = JsonConvert.SerializeObject(message);
-
-				var users = initializedUsers.Values;
-
-				foreach (var user in users)
-				{
-					try
-					{
-						user.SendMessage(jsonMessage);
-					}
-					catch (Exception ex)
-					{
-						userAPI.GetById(user.Id,
-						(dbUser)=>
+					case RequestType.Register:
+						lock (newConnections)
+							newConnections.RemoveAll(c => c == client);
+						lock (instances)
 						{
-							Console.WriteLine($"Error broadcasting notification to { dbUser.Username }: {ex.Message}");
-						},
-						(err)=>{});
-					}
+							var instance = instances.FirstOrDefault(i => i.connection == client);
+							if (instance == null)
+							{
+								instance = new Instance(client, msg.Payload);
+								instances.Add(instance);
+							}
+							SimpleClientResponse(client, ResponseType.Key, instance.instanceId);
+						}
+						break;
+					case RequestType.Request:
+						lock (instances)
+						{
+							var sender = instances.FirstOrDefault(i => i.connection == client);
+							var receiver = instances.FirstOrDefault(i => i.instanceId == msg.Payload);
+							if (receiver == null)
+							{
+								SimpleClientResponse(client, ResponseType.Error, "Invalid requestkey!");
+								break;
+							}
+							if (receiver.connection == sender.connection)
+							{
+								SimpleClientResponse(client, ResponseType.Error, "Cannot request on self!");
+								break;
+							}
+
+							receiver.incomingRequest = msg.Payload;
+
+							SimpleClientResponse(client, ResponseType.Ok, "");
+							SimpleClientResponse(receiver.connection, ResponseType.Request, sender.displayname);
+						}
+						break;
+					case RequestType.Accept:
+						lock (instances)
+						{
+							var accepter = instances.FirstOrDefault(i => i.connection == client);
+							if (accepter.incomingRequest == null)
+							{
+								SimpleClientResponse(client, ResponseType.Error, "No request received yet!");
+								break;
+							}
+
+							var requester = instances.FirstOrDefault(i => i.instanceId == accepter.incomingRequest);
+							if (requester == null)
+							{
+								SimpleClientResponse(client, ResponseType.Error, "Requesting person went offline!");
+								break;
+							}
+
+							accepter.incomingRequest = null;
+							SimpleClientResponse(accepter.connection,  ResponseType.P2PInfo, requester.connection.address());
+							SimpleClientResponse(requester.connection, ResponseType.P2PInfo,  accepter.connection.address());
+						}
+						break;
+					case RequestType.Deny:
+						lock (instances)
+						{
+							var denyer = instances.FirstOrDefault(i => i.connection == client);
+							if (denyer.incomingRequest == null)
+							{
+								SimpleClientResponse(client, ResponseType.Error, "No request received yet!");
+								break;
+							}
+
+							var requester = instances.FirstOrDefault(i => i.instanceId == denyer.incomingRequest);
+							if (requester == null)
+							{
+								SimpleClientResponse(client, ResponseType.Error, "Requesting person went offline!");
+								break;
+							}
+
+							denyer.incomingRequest = null;
+							SimpleClientResponse(client, ResponseType.Ok, "");
+							SimpleClientResponse(requester.connection, ResponseType.Denied, "");
+						}
+						break;
+					default:
+						SimpleClientResponse(client, ResponseType.Error, "Invalid request!");
+						break;
 				}
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error starting notification broadcast: {ex.Message}");
+				SimpleClientResponse(client, ResponseType.Error, "Oops, something happened!");
+				Console.WriteLine($"[Client] Could not receive message: {ex.Message}");
 			}
 		}
-
 	}
 }

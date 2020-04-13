@@ -5,27 +5,72 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CollarControl"
         mc:Ignorable="d"
-        Title="Window1" Height="450" Width="800">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="40"/>
-            <ColumnDefinition Width="auto"/>
-            <ColumnDefinition Width="auto"/>
-            <ColumnDefinition Width="auto"/>
-            <ColumnDefinition Width="auto"/>
-            <ColumnDefinition Width="auto"/>
-            <ColumnDefinition Width="20"/>
-        </Grid.ColumnDefinitions>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="20"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="auto"/>
-            <RowDefinition Height="20"/>
-        </Grid.RowDefinitions>
+        Title="Window1" Height="450" Width="800" Background="#323232">
+    <Border BorderThickness="5">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="20"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="30"/>
+                <ColumnDefinition Width="30"/>
+                <ColumnDefinition Width="30"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="20"/>
+                <RowDefinition Height="auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="20"/>
+            </Grid.RowDefinitions>
+            
+            <Popup Name="InfoPopup" Width="200" Height="75" IsOpen="False" Placement="Mouse">
+                <Grid Background="LightGray">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="2*"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-        <Button x:Name="logoutButton" Content="Logout" Click="OnLogoutButtonClicked"/>
-    </Grid>
+                    <TextBlock x:Name="InfoPopupText" Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+                    <Button x:Name="InfoPopupOkButton" Grid.Row="1" Content="Ok"/>
+                </Grid>
+            </Popup>
+            <Popup Name="RequestPopup" Width="200" Height="75" IsOpen="False" Placement="Mouse">
+                <Grid Background="LightGray">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="2*"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock x:Name="RequestPopupText" Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+
+                    <Button x:Name="RequestPopupAcceptButton" Grid.Row="1" Grid.Column="0" Content="Accept"/>
+                    <Button x:Name="RequestPopupDenyButton" Grid.Row="1" Grid.Column="1" Content="Deny"/>
+                </Grid>
+            </Popup>
+            
+            <Grid Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="4*"/>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button x:Name="CopyIdButton" Grid.Column="0" Content="Copy my ID" Margin="5"/>
+                <TextBox x:Name="IdInputBox" Grid.Column="1" Margin="5"/>
+                <Button x:Name="RequestControlButton" Grid.Column="2" Content="Request control" Margin="5" IsEnabled="False"/>
+                <Button x:Name="EndControlButton" Grid.Column="3" Content="End control"  Margin="5" IsEnabled="False"/>
+            </Grid>
+            
+
+            <Button x:Name="WarnButton" Content="Warn" Grid.Row="2" Grid.Column="1" Margin="5" IsEnabled="False"/>
+            <Button x:Name="PunishButton" Content="Punish" Grid.Row="2" Grid.Column="2" Margin="5" IsEnabled="False"/>
+            <Slider x:Name="PunishStrengthSelector" Grid.Row="2" Grid.Column="4" Minimum="1" Maximum="8" Value="1" TickPlacement="Both" TickFrequency="1" IsSnapToTickEnabled="True" Margin="5" Orientation="Vertical" IsEnabled="False"/>
+        </Grid>
+    </Border>
 </Window>

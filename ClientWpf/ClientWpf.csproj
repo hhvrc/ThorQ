@@ -60,7 +60,6 @@
     </ApplicationDefinition>
     <Compile Include="SerialConnection.cs" />
     <Compile Include="Connection.cs" />
-    <Compile Include="Instance.cs" />
     <Compile Include="Main.xaml.cs">
       <DependentUpon>Main.xaml</DependentUpon>
     </Compile>
@@ -118,6 +117,5 @@
       <Name>HeavenLib</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

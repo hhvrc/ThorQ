@@ -48,7 +48,7 @@ namespace HeavenLib.Connectivity
 		/// <exception cref="SocketException"></exception>
 		/// <exception cref="SecurityException"></exception>
 		/// <exception cref="NotSupportedException"></exception>
-		public void Listen(ushort port)
+		public void Listen(int port)
 		{
 			socket = new Socket(
 				family,

@@ -3,10 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29209.62
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientForms", "ClientForms\ClientForms.csproj", "{20ACA1F7-50EA-40B7-AC8E-6BBBC9530BAD}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientConsole", "ClientConsole\ClientConsole.csproj", "{0898FFED-B1BF-426D-87F3-3E6DF75E3589}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LegacyClient", "LegacyClient\LegacyClient.csproj", "{9BA93ECA-4A5A-4312-A6D6-493F57FBD21F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CryptoTest", "CryptoTest\CryptoTest.csproj", "{6A85CA5D-56DA-4697-9C9E-DDC19BD22EC1}"
@@ -27,14 +23,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{20ACA1F7-50EA-40B7-AC8E-6BBBC9530BAD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{20ACA1F7-50EA-40B7-AC8E-6BBBC9530BAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{20ACA1F7-50EA-40B7-AC8E-6BBBC9530BAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{20ACA1F7-50EA-40B7-AC8E-6BBBC9530BAD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0898FFED-B1BF-426D-87F3-3E6DF75E3589}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0898FFED-B1BF-426D-87F3-3E6DF75E3589}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0898FFED-B1BF-426D-87F3-3E6DF75E3589}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0898FFED-B1BF-426D-87F3-3E6DF75E3589}.Release|Any CPU.Build.0 = Release|Any CPU
 		{9BA93ECA-4A5A-4312-A6D6-493F57FBD21F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9BA93ECA-4A5A-4312-A6D6-493F57FBD21F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9BA93ECA-4A5A-4312-A6D6-493F57FBD21F}.Release|Any CPU.ActiveCfg = Release|Any CPU

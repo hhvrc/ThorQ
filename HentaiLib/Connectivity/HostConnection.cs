@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -331,6 +332,13 @@ namespace HeavenLib.Connectivity
 				this.length = length;
 				bytes = new byte[length];
 			}
+		}
+
+		public String address()
+		{
+			var ep = _socket.RemoteEndPoint as IPEndPoint;
+
+			return $"{ep.Address}:{ep.Port}";
 		}
 	}
 }

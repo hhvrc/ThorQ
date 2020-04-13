@@ -168,7 +168,7 @@ namespace CollarControl
 
             ActiveMasterSessionId = "";
 
-            SerialPort arduino = new SerialPort("COM5", 9600);
+            SerialPort arduino = new SerialPort("COM3", 9600);
             arduino.Open();
             while (_isRunning)
             {
@@ -192,7 +192,7 @@ namespace CollarControl
                 }
 
                 string html = "";
-                string url = "http://hh.heavenvr.tech/api/inputs/" + lastDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fff").Replace(":", "i").Replace(".", "d");
+                string url = "https://collarcontrol.azurewebsites.net/api/Inputs/" + lastDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fff").Replace(":", "i").Replace(".", "d");
 
                 try
                 {
@@ -284,7 +284,7 @@ namespace CollarControl
             {
                 arduino.Dispose();
                 arduino = null;
-                arduino = new SerialPort("COM5", 9600);
+                arduino = new SerialPort("COM3", 9600);
                 arduino.Open();
             }
             arduino.Write(ALL_STOP_KEY, 0, ALL_STOP_KEY.Length);

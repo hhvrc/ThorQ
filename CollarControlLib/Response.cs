@@ -10,9 +10,7 @@ namespace CollarLib
 	[Serializable]
 	public struct Response
 	{
-		public ResponseCode code;
 		public ResponseType type;
-		public Guid requestId; // Will be id of request if message is a response
 		public String payload;
 
 		public String Serialize()
