@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace CollarControl.Properties
+namespace ThorQ.Properties
 {
 
 

@@ -1,7 +1,7 @@
-﻿<Application x:Class="CollarControl.App"
+﻿<Application x:Class="ThorQ.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:local="clr-namespace:CollarControl"
+             xmlns:local="clr-namespace:ThorQ"
              StartupUri="Login.xaml">
     <Application.Resources>
          

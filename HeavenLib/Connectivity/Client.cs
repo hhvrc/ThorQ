@@ -10,61 +10,96 @@ using HeavenLib.Security;
 namespace HeavenLib.Connectivity
 {
 	/// <summary>
-	/// Client instance
+	///     Client instance
 	/// </summary>
-	public class Client
+	public class Client : IDisposable
 	{
+		private Crypto _crypto;
+
+		private Socket _socket;
+		private Thread _thread;
+
 		/// <summary>
-		/// Returns if the socket is still connected
+		///     Returns if the socket is still connected
 		/// </summary>
-		public bool IsConnected
+		public bool IsConnected => _socket?.Connected ?? false;
+
+		public void Dispose()
 		{
-			get
-			{
-				return _socket?.Connected ?? false;
-			}
+			Cleanup();
 		}
 
-		private Socket _socket = null;
-		private Thread _thread = null;
-		private Crypto _crypto = null;
-
 		/// <summary>
-		/// Gets invoked on client connect
+		///     Gets invoked on client connect
 		/// </summary>
 		public event Action<Client> OnConnected;
 
 		/// <summary>
-		/// Gets invoked on client disconnect
+		///     Gets invoked on client disconnect
 		/// </summary>
 		public event Action<Client> OnDisconnected;
 
 		/// <summary>
-		/// Gets invoked when client sends a message
+		///     Gets invoked when client sends a message
 		/// </summary>
 		public event Action<Client, byte[]> OnMessageReceived;
 
 		/// <summary>
-		/// Closes the connection and stops the thread
+		///     Closes the connection and stops the thread
 		/// </summary>
 		public void Cleanup()
 		{
 			// We dont care if anything fails... just shut it down
-			try { _socket?.Shutdown(SocketShutdown.Both); } catch (Exception) { }
-			try { _socket?.Close(); } catch (Exception) { }
-			try { _socket?.Dispose(); } catch (Exception) { }
-			try { _thread?.Abort(); } catch (Exception) { }
-			try { _crypto?.Dispose(); } catch (Exception) { }
+			try
+			{
+				_socket?.Shutdown(SocketShutdown.Both);
+			}
+			catch (Exception)
+			{
+			}
+
+			try
+			{
+				_socket?.Close();
+			}
+			catch (Exception)
+			{
+			}
+
+			try
+			{
+				_socket?.Dispose();
+			}
+			catch (Exception)
+			{
+			}
+
+			try
+			{
+				_thread?.Abort();
+			}
+			catch (Exception)
+			{
+			}
+
+			try
+			{
+				_crypto?.Dispose();
+			}
+			catch (Exception)
+			{
+			}
+
 			_thread = null;
 			_socket = null;
 			_crypto = null;
 		}
 
 		/// <summary>
-		/// Connects to the specified uri and port
+		///     Connects to the specified uri and port
 		/// </summary>
 		/// <returns>
-		/// Return <see langword="true"/> if connection was successfull
+		///     Return <see langword="true" /> if connection was successfull
 		/// </returns>
 		/// <param name="hostUri"></param>
 		/// <param name="port"></param>
@@ -76,10 +111,7 @@ namespace HeavenLib.Connectivity
 		{
 			Cleanup();
 
-			if (hostUri == null)
-			{
-				throw new ArgumentNullException("HostURI is null.");
-			}
+			if (hostUri == null) throw new ArgumentNullException("HostURI is null.");
 
 			IPAddress[] addresses;
 
@@ -94,21 +126,18 @@ namespace HeavenLib.Connectivity
 			}
 			catch (SocketException ex)
 			{
-				Console.WriteLine("An error was encountered when resolving the hostUri: {0}", ex.Message);
+				System.Console.WriteLine("An error was encountered when resolving the hostUri: {0}", ex.Message);
 				return false;
 			}
 			catch (ArgumentException)
 			{
-				Console.WriteLine("hostUri is an invalid IP address");
+				System.Console.WriteLine("hostUri is an invalid IP address");
 				return false;
 			}
 
-			if (addresses.Length == 0 || addresses[0] == null)
-			{
-				return false;
-			}
+			if (addresses.Length == 0 || addresses[0] == null) return false;
 
-			IPEndPoint remoteEndPoint = new IPEndPoint(addresses[0], port);
+			var remoteEndPoint = new IPEndPoint(addresses[0], port);
 
 			// Create a TCP/IP socket
 			_socket = new Socket(addresses[0].AddressFamily, SocketType.Stream, ProtocolType.Tcp);
@@ -121,10 +150,10 @@ namespace HeavenLib.Connectivity
 		}
 
 		/// <summary>
-		/// Perfroms ECDH key-exhange
+		///     Perfroms ECDH key-exhange
 		/// </summary>
 		/// <returns>
-		/// Returns true if authentication succeeded
+		///     Returns true if authentication succeeded
 		/// </returns>
 		public bool Authenticate()
 		{
@@ -132,7 +161,7 @@ namespace HeavenLib.Connectivity
 			_crypto = new Crypto();
 
 			// Get public key
-			byte[] clientKey = _crypto.GetPublicKey();
+			var clientKey = _crypto.GetPublicKey();
 
 			// Send public key
 			try
@@ -141,36 +170,36 @@ namespace HeavenLib.Connectivity
 			}
 			catch (SocketException ex)
 			{
-				Console.WriteLine("SocketException Caught!");
-				Console.WriteLine("Could not send public key: " + ex.Message);
+				System.Console.WriteLine("SocketException Caught!");
+				System.Console.WriteLine("Could not send public key: " + ex.Message);
 				_crypto = null;
 				return false;
 			}
 
 			// Receive server public key
-			byte[] serverKey = null;
+			byte[] serverKey;
 			try
 			{
 				serverKey = ReceiveRaw();
 			}
 			catch (SecurityException ex)
 			{
-				Console.WriteLine("SecurityException Caught!");
-				Console.WriteLine("Could not send public key: " + ex.Message);
+				System.Console.WriteLine("SecurityException Caught!");
+				System.Console.WriteLine("Could not send public key: " + ex.Message);
 				_crypto = null;
 				return false;
 			}
 			catch (SocketException ex)
 			{
-				Console.WriteLine("SocketException Caught!");
-				Console.WriteLine("Could not send public key: " + ex.Message);
+				System.Console.WriteLine("SocketException Caught!");
+				System.Console.WriteLine("Could not send public key: " + ex.Message);
 				_crypto = null;
 				return false;
 			}
 
 			if (serverKey == null)
 			{
-				Console.WriteLine("Server sent null!");
+				System.Console.WriteLine("Server sent null!");
 				_crypto = null;
 				return false;
 			}
@@ -182,7 +211,7 @@ namespace HeavenLib.Connectivity
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine("Couldn't generate private key: " + ex.Message);
+				System.Console.WriteLine("Couldn't generate private key: " + ex.Message);
 				_crypto = null;
 				return false;
 			}
@@ -193,48 +222,48 @@ namespace HeavenLib.Connectivity
 		}
 
 		/// <summary>
-		/// Starts message listener thread
+		///     Starts message listener thread
 		/// </summary>
 		/// <exception cref="ThreadStateException"></exception>
 		/// <exception cref="OutOfMemoryException"></exception>
 		public void StartListening()
 		{
-			_thread = new Thread(new ThreadStart(ReceiveAsync));
+			_thread = new Thread(ReceiveAsync);
 			_thread.Start();
 		}
 
 		/// <summary>
-		/// Reads a incoming message from client (blocking call)
+		///     Reads a incoming message from client (blocking call)
 		/// </summary>
 		/// <returns>
-		/// Returns the read message, or null if it could not be decrypted
+		///     Returns the read message, or null if it could not be decrypted
 		/// </returns>
 		public byte[] ReceiveEncrypted()
 		{
 			if (_crypto == null) // DEBUG
 			{
-				Console.WriteLine("Cannot receive message, please authenticate first"); // DEBUG
+				System.Console.WriteLine("Cannot receive message, please authenticate first"); // DEBUG
 				return null; // DEBUG
 			}
 
-			byte[] encMessage = null;
+			byte[] encMessage;
 			try
 			{
 				encMessage = ReceiveRaw();
 			}
-			catch (Exception ex)
+			catch (Exception)
 			{
 				return null; // TODO should maybe do something else? (catch when ReceiveBytes() is finished)
 			}
 
-			byte[] messageBytes = null;
+			byte[] messageBytes;
 			try
 			{
 				messageBytes = _crypto.Decrypt(encMessage);
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine("ReceiveMessage -> splitting: " + ex.Message); // DEBUG
+				System.Console.WriteLine("ReceiveMessage -> splitting: " + ex.Message); // DEBUG
 				return null;
 			}
 
@@ -242,16 +271,16 @@ namespace HeavenLib.Connectivity
 		}
 
 		/// <summary>
-		/// Sends message to client
+		///     Sends message to client
 		/// </summary>
 		/// <param name="message">
-		/// Message to send to client
+		///     Message to send to client
 		/// </param>
 		public void SendEncrypted(byte[] message)
 		{
 			if (_crypto == null) // DEBUG
 			{
-				Console.WriteLine("Cannot send message, please authenticate first"); // DEBUG
+				System.Console.WriteLine("Cannot send message, please authenticate first"); // DEBUG
 				return; // DEBUG
 			}
 
@@ -262,14 +291,14 @@ namespace HeavenLib.Connectivity
 			}
 			catch (EncoderFallbackException ex)
 			{
-				Console.WriteLine("Could not get bytes: " + ex.Message); // DEBUG
-				Console.WriteLine(ex.HelpLink); // DEBUG
+				System.Console.WriteLine("Could not get bytes: " + ex.Message); // DEBUG
+				System.Console.WriteLine(ex.HelpLink); // DEBUG
 				return;
 			}
 
 			if (data == null)
 			{
-				Console.WriteLine("Encryption failed!"); // DEBUG
+				System.Console.WriteLine("Encryption failed!"); // DEBUG
 				return;
 			}
 
@@ -279,38 +308,38 @@ namespace HeavenLib.Connectivity
 			}
 			catch (SocketException ex)
 			{
-				Console.WriteLine(ex.HelpLink); // DEBUG
-				Console.WriteLine("Could not send message: " + ex.Message); // DEBUG
+				System.Console.WriteLine(ex.HelpLink); // DEBUG
+				System.Console.WriteLine("Could not send message: " + ex.Message); // DEBUG
 			}
 		}
 
 		/// <summary>
-		/// Recieves bytes from the client (blocking call)
+		///     Recieves bytes from the client (blocking call)
 		/// </summary>
 		/// <returns>
-		/// Returns bytes read, or null if it failed
+		///     Returns bytes read, or null if it failed
 		/// </returns>
 		/// <exception cref="SocketException"></exception>
 		/// <exception cref="SecurityException"></exception>
 		private byte[] ReceiveRaw()
 		{
-			byte[] data = new byte[2];
+			var data = new byte[2];
 
 			try
 			{
-				_socket.Receive(data, 0, 2, 0);
+				_ = _socket.Receive(data, 0, 2, 0);
 			}
 			catch (ObjectDisposedException)
 			{
 				return null;
 			}
 
-			ushort size = BitConverter.ToUInt16(data, 0);
+			var size = BitConverter.ToUInt16(data, 0);
 			data = new byte[size];
 
 			try
 			{
-				_socket.Receive(data, 0, size, 0);
+				_ = _socket.Receive(data, 0, size, 0);
 			}
 			catch (ObjectDisposedException)
 			{
@@ -321,7 +350,7 @@ namespace HeavenLib.Connectivity
 		}
 
 		/// <summary>
-		/// Sends bytes to the client
+		///     Sends bytes to the client
 		/// </summary>
 		/// <param name="messageBytes"></param>
 		/// <exception cref="ArgumentNullException"></exception>
@@ -329,25 +358,17 @@ namespace HeavenLib.Connectivity
 		/// <exception cref="SocketException"></exception>
 		private void SendRaw(byte[] messageBytes)
 		{
-			if (messageBytes == null)
-			{
-				throw new ArgumentNullException();
-			}
+			if (messageBytes == null) throw new ArgumentNullException();
 
 			if (messageBytes.Length + 2 > ushort.MaxValue)
-			{
 				throw new ArgumentOutOfRangeException("message length can not exceed 65535 bytes!");
-			}
 
-			if (messageBytes.Length == 0)
-			{
-				return;
-			}
+			if (messageBytes.Length == 0) return;
 
 			// Get message length to use as a header
-			byte[] messageLength = BitConverter.GetBytes((ushort)messageBytes.Length);
+			var messageLength = BitConverter.GetBytes((ushort) messageBytes.Length);
 
-			byte[] data = new byte[2 + messageBytes.Length];
+			var data = new byte[2 + messageBytes.Length];
 
 			// Combine the arrays
 			Array.Copy(messageLength, 0, data, 0, 2);
@@ -355,52 +376,55 @@ namespace HeavenLib.Connectivity
 
 			try
 			{
-				_socket.BeginSend(data, 0, data.Length, 0, new AsyncCallback(SendBytesCallback), null);
+				_ = _socket.BeginSend(data, 0, data.Length, 0, SendBytesCallback, null);
 			}
 			catch (ObjectDisposedException)
 			{
-				return;
 			}
 		}
 
 		private void SendBytesCallback(IAsyncResult asyncResult)
 		{
-			_socket.EndSend(asyncResult);
+			_ = _socket.EndSend(asyncResult);
 		}
 
 		/// <summary>
-		/// Listens to incoming messages, and starts async receivers (blocking call)
+		///     Listens to incoming messages, and starts async receivers (blocking call)
 		/// </summary>
 		private void ReceiveAsync()
 		{
-			using (ManualResetEvent receiveDone = new ManualResetEvent(false))
+			using (var receiveDone = new ManualResetEvent(false))
 			{
 				while (IsConnected)
 				{
-					receiveDone.Reset();
-					StateObject state = new StateObject();
-					state.length = 2;
-					state.bytes = new byte[2];
-					state.signal = receiveDone;
+					_ = receiveDone.Reset();
+					var state = new StateObject
+					{
+						length = 2,
+						bytes = new byte[2],
+						signal = receiveDone
+					};
 
 					try
 					{
-						_socket.BeginReceive(state.bytes, 0, state.length, 0, new AsyncCallback(MessageLengthReceivedCallback), state);
+						_ = _socket.BeginReceive(state.bytes, 0, state.length, 0, MessageLengthReceivedCallback, state);
 					}
 					catch (Exception ex)
 					{
-						Console.WriteLine("Exception caught: {0}", ex.Message);
+						System.Console.WriteLine("Exception caught: {0}", ex.Message);
 					}
-					receiveDone.WaitOne();
+
+					_ = receiveDone.WaitOne();
 				}
 			}
+
 			OnDisconnected.Invoke(this);
 		}
 
 		private void MessageLengthReceivedCallback(IAsyncResult asyncResult)
 		{
-			StateObject state = (StateObject)asyncResult.AsyncState;
-			int bytesRead = 0;
+			var state = (StateObject) asyncResult.AsyncState;
+			var bytesRead = 0;
 
 			try
 			{
@@ -408,8 +432,15 @@ namespace HeavenLib.Connectivity
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine("Could not receive client message: " + ex.Message);
-				try { state.signal.Set(); } catch (Exception) { }
+				System.Console.WriteLine("Could not receive client message: " + ex.Message);
+				try
+				{
+					_ = state.signal.Set();
+				}
+				catch (Exception)
+				{
+				}
+
 				return;
 			}
 
@@ -421,21 +452,28 @@ namespace HeavenLib.Connectivity
 
 				try
 				{
-					_socket.BeginReceive(state.bytes, 0, state.length, 0, new AsyncCallback(MessageReceivedCallback), state);
+					_ = _socket.BeginReceive(state.bytes, 0, state.length, 0, MessageReceivedCallback, state);
 					return;
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine("Could not receive client message: " + ex.Message);
+					System.Console.WriteLine("Could not receive client message: " + ex.Message);
 				}
 			}
-			try { state.signal.Set(); } catch (Exception) { }
+
+			try
+			{
+				_ = state.signal.Set();
+			}
+			catch (Exception)
+			{
+			}
 		}
 
 		private void MessageReceivedCallback(IAsyncResult asyncResult)
 		{
-			StateObject state = (StateObject)asyncResult.AsyncState;
-			int bytesRead = 0;
+			var state = (StateObject) asyncResult.AsyncState;
+			var bytesRead = 0;
 
 			try
 			{
@@ -443,14 +481,21 @@ namespace HeavenLib.Connectivity
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine("Could not receive client message: " + ex.Message);
-				try { state.signal.Set(); } catch (Exception) { }
+				System.Console.WriteLine("Could not receive client message: " + ex.Message);
+				try
+				{
+					_ = state.signal.Set();
+				}
+				catch (Exception)
+				{
+				}
+
 				return;
 			}
 
 			if (bytesRead == state.length)
 			{
-				byte[] encMessage = state.bytes;
+				var encMessage = state.bytes;
 				byte[] messageBytes = null;
 
 				try
@@ -459,26 +504,44 @@ namespace HeavenLib.Connectivity
 				}
 				catch (Exception ex)
 				{
-					Console.WriteLine("Received message format is invalid: " + ex.Message);
-					try { state.signal.Set(); } catch (Exception) { }
+					System.Console.WriteLine("Received message format is invalid: " + ex.Message);
+					try
+					{
+						_ = state.signal.Set();
+					}
+					catch (Exception)
+					{
+					}
+
 					return;
 				}
 
-				try { state.signal.Set(); } catch (Exception) { }
-				Task.Run(() => OnMessageReceived.Invoke(this, messageBytes));
+				try
+				{
+					_ = state.signal.Set();
+				}
+				catch (Exception)
+				{
+				}
+
+				_ = Task.Run(() => OnMessageReceived.Invoke(this, messageBytes));
 				return;
 			}
-			else
+
+			System.Console.WriteLine("Message length mismatch!");
+			try
 			{
-				Console.WriteLine("Message length mismatch!");
+				_ = state.signal.Set();
 			}
-			try { state.signal.Set(); } catch (Exception) { }
+			catch (Exception)
+			{
+			}
 		}
 
 		private class StateObject
 		{
-			public ushort length;
 			public byte[] bytes;
+			public ushort length;
 			public ManualResetEvent signal;
 		}
 	}

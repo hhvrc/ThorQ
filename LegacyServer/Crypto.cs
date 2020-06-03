@@ -5,7 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Web;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public static class Crypto
 	{

@@ -9,12 +9,12 @@ using System.Windows.Forms;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace CollarControl
+namespace ThorQ
 {
     public partial class MainForm : Form
     {
         [Serializable]
-        struct CollarMessage
+        struct ThorqMessage
         {
             public string Signature;
             public string SessionID;
@@ -22,7 +22,7 @@ namespace CollarControl
             public string Message;
             public DateTime TimeStamp;
         }
-        class CollarUser
+        class ThorqUser
         {
             public string Username;
             public string SessionID;
@@ -40,12 +40,12 @@ namespace CollarControl
         Thread netHandler = null;
         private volatile bool _isRunning = true;
         private Color _defaultColor;
-        private List<CollarUser> _activeUsers = null;
+        private List<ThorqUser> _activeUsers = null;
         private string _activeMasterSessionId = "";
         private DateTime lastDateTime = DateTime.UtcNow;
 
         private delegate void TextboxDelegate(string text);
-        private delegate void ComboboxDelegate(CollarUser user);
+        private delegate void ComboboxDelegate(ThorqUser user);
 
         public string ActiveMasterSessionId
         {
@@ -101,7 +101,7 @@ namespace CollarControl
             }
         }
 
-        private void AddToComboboxActiveUsers(CollarUser user)
+        private void AddToComboboxActiveUsers(ThorqUser user)
         {
             if (ComboboxActiveUsers.InvokeRequired)
             {
@@ -114,7 +114,7 @@ namespace CollarControl
             }
         }
 
-        private void RemoveFromComboboxActiveUsers(CollarUser user)
+        private void RemoveFromComboboxActiveUsers(ThorqUser user)
         {
             if (ComboboxActiveUsers.InvokeRequired)
             {
@@ -125,7 +125,7 @@ namespace CollarControl
             {
                 if (user != null)
 				{
-                    if (((CollarUser)ComboboxActiveUsers.SelectedItem) == user)
+                    if (((ThorqUser)ComboboxActiveUsers.SelectedItem) == user)
                     {
                         ComboboxActiveUsers.SelectedIndex = -1;
                         SetOutUsername("");
@@ -141,7 +141,7 @@ namespace CollarControl
         public MainForm()
         {
             InitializeComponent();
-            _activeUsers = new List<CollarUser>();
+            _activeUsers = new List<ThorqUser>();
             netHandler = new Thread(NetHandler);
             netHandler.Start();
 
@@ -174,8 +174,8 @@ namespace CollarControl
             {
                 lock (_activeUsers)
                 {
-                    List<CollarUser> users = _activeUsers.FindAll(u => u.LastSeenTime < (DateTime.UtcNow - TimeSpan.FromSeconds(20)));
-                    foreach (CollarUser user in users)
+                    List<ThorqUser> users = _activeUsers.FindAll(u => u.LastSeenTime < (DateTime.UtcNow - TimeSpan.FromSeconds(20)));
+                    foreach (ThorqUser user in users)
                     {
                         Console.WriteLine("[{0}] User {1} timed out!", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), user.Username);
                         RemoveFromComboboxActiveUsers(user);
@@ -192,7 +192,7 @@ namespace CollarControl
                 }
 
                 string html = "";
-                string url = "https://collarcontrol.azurewebsites.net/api/Inputs/" + lastDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fff").Replace(":", "i").Replace(".", "d");
+                string url = "https://ThorQ.azurewebsites.net/api/Inputs/" + lastDateTime.ToString("yyyy-MM-ddTHH:mm:ss.fff").Replace(":", "i").Replace(".", "d");
 
                 try
                 {
@@ -211,7 +211,7 @@ namespace CollarControl
                         continue;
                     }
 
-                    CollarMessage[] messages = JsonConvert.DeserializeObject<CollarMessage[]>(html);
+                    ThorqMessage[] messages = JsonConvert.DeserializeObject<ThorqMessage[]>(html);
 
                     if (messages == null || messages.Length == 0)
                     {
@@ -220,7 +220,7 @@ namespace CollarControl
                     
                     for (int i = messages.Length - 1; i >= 0; i--)
                     {
-                        CollarMessage message = messages[i];
+                        ThorqMessage message = messages[i];
 
                         lock (_activeUsers)
                         {
@@ -230,7 +230,7 @@ namespace CollarControl
                                 _activeUsers[index].LastSeenTime = message.TimeStamp;
                                 if (message.Message == "LoggedOut")
                                 {
-                                    CollarUser user = _activeUsers[index];
+                                    ThorqUser user = _activeUsers[index];
                                     RemoveFromComboboxActiveUsers(user);
                                     _activeUsers.Remove(user);
                                     Console.WriteLine("[{0}] User {1} logged off!", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), message.Username);
@@ -238,7 +238,7 @@ namespace CollarControl
                             }
                             else
                             {
-                                CollarUser inqUser = new CollarUser() { Username = message.Username, SessionID = message.SessionID, LastSeenTime = message.TimeStamp };
+                                ThorqUser inqUser = new ThorqUser() { Username = message.Username, SessionID = message.SessionID, LastSeenTime = message.TimeStamp };
                                 _activeUsers.Add(inqUser);
                                 Console.WriteLine("[{0}] User {1} is online!", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fff"), message.Username);
                                 AddToComboboxActiveUsers(inqUser);
@@ -292,7 +292,7 @@ namespace CollarControl
 
         private void BtnSetMaster_Click(object sender, EventArgs e)
         {
-            CollarUser user = (CollarUser)ComboboxActiveUsers.SelectedItem;
+            ThorqUser user = (ThorqUser)ComboboxActiveUsers.SelectedItem;
             ActiveMasterSessionId = user.SessionID;
             SetOutSessionID(user.SessionID);
             SetOutUsername(user.Username);

@@ -10,7 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CollarControl
+namespace ThorQ
 {
 	class Program
 	{
@@ -21,7 +21,7 @@ namespace CollarControl
 				this.connection = connection;
 				this.displayname = displayname;
 			}
-			public String instanceId { get; } = ToolBox.CompressGuid(Guid.NewGuid());
+			public String instanceId { get; } = Guid.NewGuid().ToString("N");
 			public String displayname { get; set; }
 			public HostConnection connection { get; set; }
 			public String incomingRequest { get; set; } = null;
@@ -35,8 +35,6 @@ namespace CollarControl
 
 		static void Main(string[] args)
 		{
-			string thisPath = ToolBox.GetExeDirectory();
-			Console.WriteLine(thisPath);
 #if DEBUG
 			args = new string[] { "5001", "1" };
 #endif
@@ -198,8 +196,8 @@ namespace CollarControl
 							}
 
 							accepter.incomingRequest = null;
-							SimpleClientResponse(accepter.connection,  ResponseType.P2PInfo, requester.connection.address());
-							SimpleClientResponse(requester.connection, ResponseType.P2PInfo,  accepter.connection.address());
+							SimpleClientResponse(accepter.connection,  ResponseType.P2PInfo, requester.connection.Address());
+							SimpleClientResponse(requester.connection, ResponseType.P2PInfo,  accepter.connection.Address());
 						}
 						break;
 					case RequestType.Deny:

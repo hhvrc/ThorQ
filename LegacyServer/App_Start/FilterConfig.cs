@@ -1,7 +1,7 @@
 ﻿using System.Web;
 using System.Web.Mvc;
 
-namespace CollarControl
+namespace ThorQ
 {
     public class FilterConfig
     {

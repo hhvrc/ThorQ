@@ -8,7 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 
-namespace CollarControl
+namespace ThorQ
 {
 	/// <summary>
 	/// Interaction logic for MainWindow.xaml

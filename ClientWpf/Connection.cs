@@ -4,7 +4,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Text;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public static class Connection
 	{

@@ -6,7 +6,7 @@ using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public partial class Control : System.Web.UI.Page
 	{

@@ -16,7 +16,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 
-namespace CollarControl
+namespace ThorQ
 {
 	/// <summary>
 	/// Interaction logic for Window1.xaml
