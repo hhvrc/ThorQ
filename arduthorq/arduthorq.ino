@@ -8,7 +8,7 @@
 // One pulse at this clock rate is 2222 cycles
 
 // Delay for exactly 69,444 microseconds
-__attribute__((naked)) void delayShort()
+__attribute__((naked, noinline)) void delayShort()
 {
     // 0,25 pulses ==  69,444 us == 556 cycles
 
@@ -21,7 +21,7 @@ __attribute__((naked)) void delayShort()
 #endif
 }
 // Delay for exactly 208,333 microseconds
-__attribute__((naked)) void delayLong()
+__attribute__((naked, noinline)) void delayLong()
 {
     // 0,75 pulses == 208,333 us == 1666 cycles
 
@@ -34,7 +34,7 @@ __attribute__((naked)) void delayLong()
 #endif
 }
 // Delay for exactly 416,666 microseconds
-__attribute__((naked)) void delaySync()
+__attribute__((naked, noinline)) void delaySync()
 {
     // 1,50 pulses == 416,667 us == 3333 cycles
 
@@ -50,7 +50,7 @@ __attribute__((naked)) void delaySync()
 // One pulse at this clock rate is 4444 cycles
 
 // Delay for exactly 69,444 microseconds
-__attribute__((naked)) void delayShort()
+__attribute__((naked, noinline)) void delayShort()
 {
     // 0,25 pulses ==  69,444 us == 1111 cycles
 
@@ -71,7 +71,7 @@ __attribute__((naked)) void delayShort()
 #endif
 }
 // Delay for exactly 208,333 microseconds
-__attribute__((naked)) void delayLong()
+__attribute__((naked, noinline)) void delayLong()
 {
     // 0,75 pulses == 208,333 us == 3333 cycles
 
@@ -94,7 +94,7 @@ __attribute__((naked)) void delayLong()
 #endif
 }
 // Delay for exactly 416,666 microseconds
-__attribute__((naked)) void delaySync()
+__attribute__((naked, noinline)) void delaySync()
 {
     // 1,50 pulses == 416,667 us == 6666 cycles
 
