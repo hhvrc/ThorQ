@@ -118,23 +118,23 @@ __attribute__((naked)) void delaySync()
 
 void writeLow()
 {
-    DDRB |= 0b00000100;
+    PORTB |= 0b00000100; // Inefficient!!!
     delayShort();
-    DDRB &= 0b11111011;
+    PORTB &= 0b11111011; // Inefficient!!!
     delayLong();
 }
 void writeHigh()
 {
-    DDRB |= 0b00000100;
+    PORTB |= 0b00000100; // Inefficient!!!
     delayLong();
-    DDRB &= 0b11111011;
+    PORTB &= 0b11111011; // Inefficient!!!
     delayShort();
 }
 void writeSync()
 {
-    DDRB |= 0b00000100;
+    PORTB |= 0b00000100; // Inefficient!!!
     delaySync();
-    DDRB &= 0b11111011;
+    PORTB &= 0b11111011; // Inefficient!!!
     delayLong();
 }
 
@@ -352,9 +352,9 @@ void writeMessageChannel2(int cmd, int v1, int v2, int v3, int v4)
 
 void setup()
 {
-    // Set pin mode and state
-    DDRB  &= 0b11111011;
-    PORTB |= 0b00000100;
+    // Set pin 11 (UNO) as OUTPUT and to HIGH
+    DDRB  |= 0b00000100;
+    PORTB &= 0b11111011;
 
     // assign function pointers
     commands[Command::Auto] = writeActionAuto;
