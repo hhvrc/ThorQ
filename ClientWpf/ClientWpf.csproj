@@ -109,11 +109,11 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CollarControlLib\CollarLib.csproj">
+    <ProjectReference Include="..\ThorqLib\ThorqLib.csproj">
       <Project>{bbec7cc7-ed29-4787-9e1d-4cb39153aa73}</Project>
       <Name>CollarLib</Name>
     </ProjectReference>
-    <ProjectReference Include="..\HentaiLib\HeavenLib.csproj">
+    <ProjectReference Include="..\HeavenLib\HeavenLib.csproj">
       <Project>{6d584d1e-e19d-427b-9002-ee0952dd87b1}</Project>
       <Name>HeavenLib</Name>
     </ProjectReference>

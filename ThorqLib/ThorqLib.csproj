@@ -7,8 +7,8 @@
     <ProjectGuid>{BBEC7CC7-ED29-4787-9E1D-4CB39153AA73}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CollarLib</RootNamespace>
-    <AssemblyName>CollarLib</AssemblyName>
+    <RootNamespace>ThorqLib</RootNamespace>
+    <AssemblyName>ThorqLib</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
