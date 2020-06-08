@@ -9,7 +9,7 @@ using System.Windows.Forms;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 
-namespace CollarControl
+namespace ThorQ
 {
     public partial class MainForm : Form
     {

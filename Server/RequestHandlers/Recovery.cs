@@ -4,7 +4,7 @@ using HeavenLib;
 using HeavenLib.Connectivity;
 using System;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public static class Recovery_RequestHandler
 	{

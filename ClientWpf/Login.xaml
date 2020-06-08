@@ -1,11 +1,11 @@
-﻿<Window x:Class="CollarControl.LoginWindow"
+﻿<Window x:Class="ThorQ.LoginWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:CollarControl"
+        xmlns:local="clr-namespace:ThorQ"
         mc:Ignorable="d"
-        Title="CollarControl Login" Height="370" Width="350" FontSize="18" Background="#323232">
+        Title="ThorQ Login" Height="370" Width="350" FontSize="18" Background="#323232">
     <Border BorderThickness="5">
         <Grid>
             <Popup Name="Popup1" Width="200" Height="75" IsOpen="False" Placement="Mouse">

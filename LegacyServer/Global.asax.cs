@@ -7,7 +7,7 @@ using System.Web.Security;
 using System.Web.SessionState;
 using System.Web.Http;
 
-namespace CollarControl
+namespace ThorQ
 {
     public class Global : HttpApplication
     {

@@ -1,141 +1,36 @@
-// the data rate is 3,6 kHz, so one pulse is 277,778 microseconds
-// On arduino UNO call/ret operations take 4 cycles each, we will take this into consideration
+#include <digitalWriteFast.h>
 
-#define CLOCK 16
-#define CALLRET_CYCLES 4 // UNO=4 MEGA=5
+#define RF_PIN 12
 
-#if   CLOCK == 8
-// One pulse at this clock rate is 2222 cycles
+// 281.69014 microseconds
+#define DelayShort  282
 
-// Delay for exactly 69,444 microseconds
-__attribute__((naked, noinline)) void delayShort()
-{
-    // 0,25 pulses ==  69,444 us == 556 cycles
+// 845.07042 microseconds
+#define DelayLong  845
 
-#if   CALLRET_CYCLES == 4
-    asm volatile (
-    );
-#elif CALLRET_CYCLES == 5
-    asm volatile (
-    );
-#endif
-}
-// Delay for exactly 208,333 microseconds
-__attribute__((naked, noinline)) void delayLong()
-{
-    // 0,75 pulses == 208,333 us == 1666 cycles
-
-#if   CALLRET_CYCLES == 4
-    asm volatile (
-    );
-#elif CALLRET_CYCLES == 5
-    asm volatile (
-    );
-#endif
-}
-// Delay for exactly 416,666 microseconds
-__attribute__((naked, noinline)) void delaySync()
-{
-    // 1,50 pulses == 416,667 us == 3333 cycles
-
-#if   CALLRET_CYCLES == 4
-    asm volatile (
-    );
-#elif CALLRET_CYCLES == 5
-    asm volatile (
-    );
-#endif
-}
-#elif CLOCK == 16
-// One pulse at this clock rate is 4444 cycles
-
-// Delay for exactly 69,444 microseconds
-__attribute__((naked, noinline)) void delayShort()
-{
-    // 0,25 pulses ==  69,444 us == 1111 cycles
-
-#if   CALLRET_CYCLES == 4
-    // Compensate for call/ret delay (1111 - (4 * 2) cycles)
-    // So wait for 1103 cycles
-    asm volatile (
-        "    ldi  r18, 2"	"\n"
-        "    ldi  r19, 110"	"\n"
-        "1:  dec  r19"	    "\n"
-        "    brne 1b"	    "\n"
-        "    dec  r18"	    "\n"
-        "    brne 1b"	    "\n"
-    );
-#elif CALLRET_CYCLES == 5
-    asm volatile (
-    );
-#endif
-}
-// Delay for exactly 208,333 microseconds
-__attribute__((naked, noinline)) void delayLong()
-{
-    // 0,75 pulses == 208,333 us == 3333 cycles
-
-#if   CALLRET_CYCLES == 4
-    // Compensate for call/ret delay (3333 - (4 * 2) cycles)
-    // So wait for 3325 cycles
-    asm volatile (
-        "    ldi  r18, 5"	"\n"
-        "    ldi  r19, 80"	"\n"
-        "1:  dec  r19"	    "\n"
-        "    brne 1b"	    "\n"
-        "    dec  r18"	    "\n"
-        "    brne 1b"	    "\n"
-        "    rjmp 1f"	    "\n"
-        "1:"	            "\n"
-    );
-#elif CALLRET_CYCLES == 5
-    asm volatile (
-    );
-#endif
-}
-// Delay for exactly 416,666 microseconds
-__attribute__((naked, noinline)) void delaySync()
-{
-    // 1,50 pulses == 416,667 us == 6666 cycles
-
-#if   CALLRET_CYCLES == 4
-    // Compensate for call/ret delay (6666 - (4 * 2) cycles)
-    // So wait for 6658 cycles
-    asm volatile (
-        "    ldi  r18, 9"	"\n"
-        "    ldi  r19, 165"	"\n"
-        "1:  dec  r19"	    "\n"
-        "    brne 1b"	    "\n"
-        "    dec  r18"	    "\n"
-        "    brne 1b"	    "\n"
-    );
-#elif CALLRET_CYCLES == 5
-    asm volatile (
-    );
-#endif
-}
-#endif
+// 1,690.14084 microseconds
+#define DelaySync 1690
 
 void writeLow()
 {
-    PORTB |= 0b00000100; // Inefficient!!!
-    delayShort();
-    PORTB &= 0b11111011; // Inefficient!!!
-    delayLong();
+    digitalWriteFast(RF_PIN, HIGH);
+    delayMicroseconds(DelayShort);
+    digitalWriteFast(RF_PIN, LOW);
+    delayMicroseconds(DelayLong);
 }
 void writeHigh()
 {
-    PORTB |= 0b00000100; // Inefficient!!!
-    delayLong();
-    PORTB &= 0b11111011; // Inefficient!!!
-    delayShort();
+    digitalWriteFast(RF_PIN, HIGH);
+    delayMicroseconds(DelayLong);
+    digitalWriteFast(RF_PIN, LOW);
+    delayMicroseconds(DelayShort);
 }
 void writeSync()
 {
-    PORTB |= 0b00000100; // Inefficient!!!
-    delaySync();
-    PORTB &= 0b11111011; // Inefficient!!!
-    delayLong();
+    digitalWriteFast(RF_PIN, HIGH);
+    delayMicroseconds(DelaySync);
+    digitalWriteFast(RF_PIN, LOW);
+    delayMicroseconds(DelayLong);
 }
 
 // Write [00000000]
@@ -267,6 +162,14 @@ void writeActionAuto()
     writeLow();
     writeHigh();
 }
+// Write [1111]
+void writeActionManual()
+{
+    writeHigh();
+    writeHigh();
+    writeHigh();
+    writeHigh();
+}
 
 // Write [1000]
 void writeChannel1()
@@ -308,10 +211,11 @@ void writeID()
 
 enum Command
 {
-    Auto,
-    Beep,
-    Vibrate,
-    Shock
+    Shock   = 0,
+    Vibrate = 1,
+    Beep    = 2,
+    Auto    = 3,
+    Manual  = 4
 };
 
 typedef void(*Func)();
@@ -326,6 +230,7 @@ void writeMessageChannel1(int cmd, int v1, int v2, int v3, int v4)
     writeSync();
     writeChannel1();
     (*action)();
+    writeID();
     (*values[v1])();
     (*values[v2])();
     (*values[v3])();
@@ -341,6 +246,7 @@ void writeMessageChannel2(int cmd, int v1, int v2, int v3, int v4)
     writeSync();
     writeChannel2();
     (*action)();
+    writeID();
     (*values[v1])();
     (*values[v2])();
     (*values[v3])();
@@ -352,15 +258,19 @@ void writeMessageChannel2(int cmd, int v1, int v2, int v3, int v4)
 
 void setup()
 {
-    // Set pin 11 (UNO) as OUTPUT and to HIGH
-    DDRB  |= 0b00000100;
-    PORTB &= 0b11111011;
+    Serial.begin(9600);
+    
+    pinMode(13, OUTPUT);
+    digitalWrite(13, HIGH);
+  
+    pinModeFast(RF_PIN, OUTPUT);
 
     // assign function pointers
-    commands[Command::Auto] = writeActionAuto;
-    commands[Command::Beep] = writeActionBeep;
+    commands[Command::Shock]   = writeActionShock;
     commands[Command::Vibrate] = writeActionVibrate;
-    commands[Command::Shock] = writeActionShock;
+    commands[Command::Beep]    = writeActionBeep;
+    commands[Command::Auto]    = writeActionAuto;
+    commands[Command::Manual]  = writeActionManual;
 
     values[0] = writeValue0;
     values[1] = writeValue1;
@@ -372,8 +282,98 @@ void setup()
     values[7] = writeValue7;
 }
 
+int pos = 0;
+int buf[3];
+
+int v_shock = 0;
+int v_vibrate = 0;
+int v_beep = 0;
+
 void loop()
 {
-    writeMessageChannel1(Command::Vibrate, 4, 0, 0, 0);
-    writeMessageChannel2(Command::Shock, 7, 0, 0, 0);
+    if (Serial.available() > 0)
+    {
+        char c = Serial.read();
+        if (c == 'c')
+        {
+            if (pos = 3)
+            {
+                int v0=buf[1], v1=buf[2], v2=0, v3=0, v4=0;
+
+                switch (v0)
+                {
+                case Command::Shock:
+                    v2 = v_shock = v1;
+                    break;
+                case Command::Vibrate:
+                    v3 = v_vibrate = v1;
+                    break;
+                case Command::Beep:
+                    v4 = v_beep = v1;
+                    break;
+                case Command::Auto:
+                    v2 = v_shock;
+                    v3 = v_vibrate;
+                    v4 = v_beep;
+                    break;
+                case Command::Manual:
+                    break;
+                }
+
+                if (v0 < 4)
+                {
+
+
+                    if (buf[0] == 1)
+                    {
+                        writeMessageChannel1(v0, v1, v2, v3, v4);
+                    }
+                    else if (buf[0] == 2)
+                    {
+                        writeMessageChannel2(v0, v1, v2, v3, v4);
+                    }
+                }
+            }
+            pos = 0;
+            memset(buf, 0, sizeof(buf));
+        }
+        else
+        {
+          switch (c)
+          {
+            case '0':
+              buf[pos] = 0;
+              pos++;
+              break;
+            case '1':
+              buf[pos] = 1;
+              pos++;
+              break;
+            case '2':
+              buf[pos] = 2;
+              pos++;
+              break;
+            case '3':
+              buf[pos] = 3;
+              pos++;
+              break;
+            case '4':
+              buf[pos] = 4;
+              pos++;
+              break;
+            case '5':
+              buf[pos] = 5;
+              pos++;
+              break;
+            case '6':
+              buf[pos] = 6;
+              pos++;
+              break;
+            case '7':
+              buf[pos] = 7;
+              pos++;
+              break;
+          }
+        }
+        }
 }

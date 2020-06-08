@@ -3,7 +3,7 @@ using System;
 using HeavenLib.Connectivity;
 using CollarLib;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public static class Email_RequestHandler
 	{

@@ -7,7 +7,7 @@ using HeavenLib.Connectivity;
 using CollarLib;
 using System.Text;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public class RuntimeUser : IDisposable
 	{

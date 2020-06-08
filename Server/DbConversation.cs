@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public class DbConversation
 	{

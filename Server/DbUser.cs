@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public class DbUser
 	{

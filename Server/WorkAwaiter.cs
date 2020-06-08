@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public class WorkAwaiter
 	{

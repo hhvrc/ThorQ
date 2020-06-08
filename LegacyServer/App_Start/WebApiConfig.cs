@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net.Http.Headers;
 using System.Web.Http;
 
-namespace CollarControl
+namespace ThorQ
 {
     public static class WebApiConfig
     {

@@ -4,7 +4,7 @@ using HeavenLib.Connectivity;
 using System;
 using System.Text;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public static class Account_RequestHandler
 	{

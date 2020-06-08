@@ -1,4 +1,4 @@
-﻿namespace CollarControl
+﻿namespace ThorQ
 {
     partial class LoginForm
     {

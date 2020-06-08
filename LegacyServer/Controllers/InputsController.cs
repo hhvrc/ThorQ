@@ -6,7 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 
-namespace CollarControl.Controllers
+namespace ThorQ.Controllers
 {
 	public class InputsController : ApiController
 	{

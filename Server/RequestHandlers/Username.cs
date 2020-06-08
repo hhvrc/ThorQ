@@ -2,7 +2,7 @@
 using HeavenLib.Connectivity;
 using CollarLib;
 
-namespace CollarControl
+namespace ThorQ
 {
 	class Username_RequestHandler
 	{

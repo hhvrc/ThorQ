@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public class Instance
 	{

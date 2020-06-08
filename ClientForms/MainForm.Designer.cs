@@ -1,4 +1,4 @@
-﻿namespace CollarControl
+﻿namespace ThorQ
 {
 	partial class MainForm
 	{
@@ -52,7 +52,7 @@
 			this.DoubleBuffered = true;
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
 			this.Name = "MainForm";
-			this.Text = "CollarControl";
+			this.Text = "ThorQ";
 			this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.OnClosing);
 			this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.OnClosed);
 			this.ResumeLayout(false);

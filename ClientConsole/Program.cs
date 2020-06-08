@@ -7,7 +7,7 @@ using CollarLib;
 using CollarLib.ClientPayloads;
 using System.Text;
 
-namespace CollarControl
+namespace ThorQ
 {
 	class Program
 	{

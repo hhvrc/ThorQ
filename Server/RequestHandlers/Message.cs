@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using HeavenLib.Connectivity;
 using CollarLib;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public static class Message_RequestHandler
 	{

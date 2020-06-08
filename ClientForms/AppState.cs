@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public static class AppState
 	{

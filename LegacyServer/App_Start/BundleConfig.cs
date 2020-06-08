@@ -1,7 +1,7 @@
 ﻿using System.Web;
 using System.Web.Optimization;
 
-namespace CollarControl
+namespace ThorQ
 {
     public class BundleConfig
     {

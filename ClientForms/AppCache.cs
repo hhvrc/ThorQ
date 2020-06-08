@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public static class AppCache
 	{

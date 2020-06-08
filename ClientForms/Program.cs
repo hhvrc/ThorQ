@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 
-namespace CollarControl
+namespace ThorQ
 {
 	static class Program
 	{

@@ -2,7 +2,7 @@
 using System;
 using System.Text;
 
-namespace CollarControl
+namespace ThorQ
 {
 	public static class Connection
 	{
