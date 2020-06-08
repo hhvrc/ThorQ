@@ -17,9 +17,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Server", "Server\Server.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientWpf", "ClientWpf\ClientWpf.csproj", "{BDFDF0D8-AB31-474F-A921-8196FA7DFC9D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeavenLib", "HentaiLib\HeavenLib.csproj", "{6D584D1E-E19D-427B-9002-EE0952DD87B1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeavenLib", "HeavenLib\HeavenLib.csproj", "{6D584D1E-E19D-427B-9002-EE0952DD87B1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CollarLib", "CollarControlLib\CollarLib.csproj", "{BBEC7CC7-ED29-4787-9E1D-4CB39153AA73}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ThorqLib", "ThorqLib\ThorqLib.csproj", "{BBEC7CC7-ED29-4787-9E1D-4CB39153AA73}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{ACB8C2F2-CDB4-4064-B375-76ABC71CAD48}"
 	ProjectSection(SolutionItems) = preProject
