@@ -11,7 +11,7 @@
 
 #define DISCONNECT_ERROR 0x00000001
 
-Crypto* crypto = nullptr;
+ThorQ::Crypto* crypto = nullptr;
 
 void handleMessage(ENetPeer* peer, ENetPacket* packet)
 {
@@ -29,7 +29,6 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 		else
 		{
 			std::cout << "Failed to establish cryptographic link, disconnecting..." << std::endl;
-			enet_packet_destroy(packet);
 			enet_peer_disconnect_now(peer, DISCONNECT_ERROR);
 			return;
 		}
@@ -70,7 +69,7 @@ void handleTimeout(ENetPeer* peer)
 
 int main()
 {
-	crypto = new Crypto();
+	crypto = new ThorQ::Crypto();
 
 	if (enet_initialize() < 0)
 	{
@@ -87,7 +86,7 @@ int main()
 	ENetHost* client;
 
 	// Setup client
-	client = enet_host_create(nullptr, 1, 4, 0, 0);
+	client = enet_host_create(nullptr, 1, 2, 0, 0);
 
 	// Connect client
 	ENetAddress address;
