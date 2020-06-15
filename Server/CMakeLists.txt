@@ -3,34 +3,71 @@ cmake_minimum_required(VERSION 3.5)
 set(project ThorqServer)
 
 project(${project} LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(UNIX AND NOT APPLE)
     set(LINUX TRUE)
+	message("Building for LINUX")
+elseif(WIN32)
+	set(WINDOWS TRUE)
+	message("Building for Windows")
 endif()
 
 if(LINUX)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -g")
-
-	if(NOT ${CMAKE_BUILD_TYPE} MATCHES "Release")
-		message("Building with no optimization (Debug build)")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 --verbose")
+	if(${CMAKE_BUILD_TYPE} MATCHES "Release")
+		message("With full optimization (Release build)")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g0")
 	else()
-		message("Building with full optimization (Release build)")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+		message("With no optimization (Debug build)")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g3")
 	endif()
+
+	# Very verbose!
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --verbose -Wall -Wno-long-long -pedantic")
 
 	link_directories(/usr/local/lib/)
 	include_directories(/usr/include/)
 	include_directories(/usr/local/include/botan-2/)
 
 	find_library(BOTAN2 NAMES botan2 botan-2 PATHS /usr/lib/ /usr/local/lib/)
-elseif(WIN32)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MD")
+elseif(WINDOWS)
+	if(${CMAKE_BUILD_TYPE} MATCHES "Release")
+		message("With full optimization (Release build)")
+		set(WIN_DEBUG_FLAG "/DEBUG:NONE")
+	else()
+		message("With no optimization (Debug build)")
+		set(WIN_DEBUG_FLAG "/DEBUG:FULL")
+	endif()
 
-	link_directories(${CMAKE_SOURCE_DIR}/external/windows)
-	include_directories(${CMAKE_SOURCE_DIR}/external/windows/include)
+	# Force to always compile with W4
+	if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
+		string(REGEX REPLACE "/W[0-4]" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	else()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+	endif()
+
+	# Force to always compile with MD
+	if(CMAKE_CXX_FLAGS MATCHES "/MD.?")
+		string(REGEX REPLACE "/MD.?" "/MD" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	else()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MD")
+	endif()
+	# Force to always compile with DEBUG:FULL
+	if(CMAKE_CXX_FLAGS MATCHES "/DEBUG\:[^\s]+")
+		string(REGEX REPLACE "/DEBUG\:[^\s]+" "${WIN_DEBUG_FLAG}" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	else()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WIN_DEBUG_FLAG}")
+	endif()
+
+	link_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/windows)
+	include_directories(${CMAKE_CURRENT_SOURCE_DIR}/external/windows/include)
+
 	find_library(BOTAN NAMES botan)
 endif()
+
 
 add_executable(${project}
 	enet.h
@@ -46,6 +83,6 @@ add_executable(${project}
 
 if(LINUX)
 	target_link_libraries(${project} botan-2)
-elseif(WIN32)
+elseif(WINDOWS)
 	target_link_libraries(${project} botan)
 endif()
