@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.5)
 
 set(project libs)
 
-project(${project} LANGUAGES CXX)
+project(${project})
 
 if(LINUX)
 	link_directories(/usr/local/lib/)
