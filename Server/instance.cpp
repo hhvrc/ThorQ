@@ -11,7 +11,7 @@
 #include <botan/system_rng.h>
 #include <botan/stream_cipher.h>
 
-#include "enet.h"
+#include <enet.h>
 #include "enums.h"
 #include "crypto.h"
 

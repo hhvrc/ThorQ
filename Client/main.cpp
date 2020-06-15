@@ -1,7 +1,7 @@
 #include <iostream>
 
 #define ENET_IMPLEMENTATION
-#include "enet.h"
+#include <enet.h>
 
 #include "enums.h"
 #include "crypto.h"

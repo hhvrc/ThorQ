@@ -1,37 +1,40 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(project libs)
-
+set(project Library)
 project(${project})
-
-if(LINUX)
-	link_directories(/usr/local/lib/)
-	include_directories(/usr/include/)
-	include_directories(/usr/local/include/botan-2/)
-
-	find_library(BOTAN2 NAMES botan2 botan-2 PATHS /usr/lib/ /usr/local/lib/)
-elseif(WINDOWS)
-	link_directories(${CMAKE_CURRENT_SOURCE_DIR}/botan/windows)
-	include_directories(${CMAKE_CURRENT_SOURCE_DIR}/botan/windows/include)
-
-	find_library(BOTAN NAMES botan)
-endif()
-
+message("Configuring ${project}...")
 
 add_library(${project} STATIC
-	${CMAKE_CURRENT_SOURCE_DIR}/imgui/imconfig.h
-	${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.h
 	${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_draw.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_internal.h
 	${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_widgets.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/imgui/imstb_rectpack.h
-	${CMAKE_CURRENT_SOURCE_DIR}/imgui/imstb_textedit.h
-	${CMAKE_CURRENT_SOURCE_DIR}/imgui/imstb_truetype.h
-	)
+)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/imgui)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/enet/include)
 
 if(LINUX)
-	target_link_libraries(${project} botan-2)
+	link_directories(${CMAKE_CURRENT_SOURCE_DIR}/botanc/linux)
+	include_directories(${CMAKE_CURRENT_SOURCE_DIR}/botanc/linux/include)
+	set(BOTAN_FLAGS "--os=linux --cc=gcc")
+	set(OS_BUILD_CMD "make -j4")
 elseif(WINDOWS)
-	target_link_libraries(${project} botan)
+	link_directories(${CMAKE_CURRENT_SOURCE_DIR}/botanc/windows)
+	include_directories(${CMAKE_CURRENT_SOURCE_DIR}/botanc/windows/include)
+	set(BOTAN_FLAGS "--os=windows --cc=msvc --msvc-runtime=MT")
+	set(OS_BUILD_CMD "nmake")
 endif()
+
+include_directories(${THORQ_INCLUDES})
+target_link_libraries(${project} PUBLIC botan)
+
+add_custom_command(
+	OUTPUT
+	    ${CMAKE_CURRENT_BINARY_DIR}
+		${CMAKE_CURRENT_BINARY_DIR}
+	DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/botan/src/
+	COMMAND BotanConfigure "python configure.py --minimized-build --without-documentation --enable-modules=hex,ecdh,chacha,pubkey,base64,bcrypt,system_rng,stream --disable-shared-library ${BOTAN_FLAGS}"
+	COMMAND BotanBuild ${OS_BUILD_CMD}
+)
+
+message("HOLY FUCK I WISH CMAKE WASNT AN ABSOLUTE FUCKING PIECE OF SHIT SCRIPTING LANGUAGE!")
