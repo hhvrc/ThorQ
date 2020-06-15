@@ -3,7 +3,7 @@ out/
 build/
 
 CMakeCache.txt
-CMakeLists.txt.user.*
+CMakeLists.txt.user*
 
 *.bin
 *.check_cache
