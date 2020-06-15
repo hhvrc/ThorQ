@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(project ClientTest)
+set(project ThorqClient)
 
 project(${project} LANGUAGES CXX)
 

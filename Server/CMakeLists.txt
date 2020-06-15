@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(project ServerTest)
+set(project ThorqServer)
 
 project(${project} LANGUAGES CXX)
 
