@@ -11,5 +11,4 @@ add_executable(${project}
 	main.cpp
 	)
 
-include_directories(${THORQ_INCLUDES})
-target_link_libraries(${project} botan ThorQLib)
+target_link_libraries(${project} ThorQLib)

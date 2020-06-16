@@ -58,6 +58,11 @@ elseif(WINDOWS)
 	endif()
 endif()
 
+set(BUILD_PATH ${CMAKE_BINARY_DIR} CACHE PATH "Path to main build directory")
+
 add_subdirectory(libs)
+
+include_directories(${LIBRARY_HEADERS})
+
 add_subdirectory(Client)
 add_subdirectory(Server)
