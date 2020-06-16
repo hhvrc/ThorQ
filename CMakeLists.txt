@@ -8,7 +8,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 enable_language(CXX)
 
-message("And here comes CANCEEEEEEEEEEEERRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR")
 if(UNIX AND NOT APPLE)
 	set(LINUX TRUE)
 	message("Building for LINUX")
@@ -32,9 +31,11 @@ elseif(WINDOWS)
 	if(${CMAKE_BUILD_TYPE} MATCHES "Release")
 		message("With full optimization (Release build)")
 		set(WIN_DEBUG_FLAG "/DEBUG:NONE")
+		set(WIN_OPTIMIZATION_FLAG "/O2")
 	else()
 		message("With no optimization (Debug build)")
 		set(WIN_DEBUG_FLAG "/DEBUG:FULL")
+		set(WIN_OPTIMIZATION_FLAG "/Od")
 	endif()
 
 	# Force to always compile with W4
@@ -44,15 +45,23 @@ elseif(WINDOWS)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 	endif()
 
-	# Force to always compile with MD
-	if(CMAKE_CXX_FLAGS MATCHES "/MD.?")
-		string(REGEX REPLACE "/MD.?" "/MD" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	# Force to always compile with MT
+	if(CMAKE_CXX_FLAGS MATCHES "/(?:(?:MD)|(?:MT)|(?:LD)).?")
+		string(REGEX REPLACE "/(?:(?:MD)|(?:MT)|(?:LD)).?" "/MT" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 	else()
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MD")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
 	endif()
-	# Force to always compile with DEBUG:FULL
+
+	# Force to always compile with /O2 or /Od
+	if(CMAKE_CXX_FLAGS MATCHES "/O.?")
+		string(REGEX REPLACE "/O.?" ${WIN_OPTIMIZATION_FLAG} CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	else()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WIN_OPTIMIZATION_FLAG}")
+	endif()
+
+	# Force to always compile with DEBUG:XXXX
 	if(CMAKE_CXX_FLAGS MATCHES "/DEBUG\:[^\s]+")
-		string(REGEX REPLACE "/DEBUG\:[^\s]+" "${WIN_DEBUG_FLAG}" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+		string(REGEX REPLACE "/DEBUG\:[^\s]+" ${WIN_DEBUG_FLAG} CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 	else()
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WIN_DEBUG_FLAG}")
 	endif()
@@ -61,8 +70,5 @@ endif()
 set(BUILD_PATH ${CMAKE_BINARY_DIR} CACHE PATH "Path to main build directory")
 
 add_subdirectory(libs)
-
-include_directories(${LIBRARY_HEADERS})
-
 add_subdirectory(Client)
 add_subdirectory(Server)

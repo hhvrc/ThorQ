@@ -54,8 +54,8 @@ if(NOT EXISTS ${BOTAN_CPP} OR NOT EXISTS ${BOTAN_H})
 endif()
 
 set(HEADERS
-	${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
 	${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.h
+	${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
 	${BOTAN_H}
 )
 add_library(${project} STATIC
@@ -66,4 +66,5 @@ add_library(${project} STATIC
 	${BOTAN_CPP}
 	${HEADERS}
 )
+
 set(LIBRARY_HEADERS ${HEADERS} CACHE PATH "List of library headers (*.h, *.hpp)")

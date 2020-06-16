@@ -4,6 +4,8 @@ set(project Server)
 project(${project})
 message("Configuring ${project}...")
 
+include_directories(${LIBRARY_HEADERS})
+
 add_executable(${project}
 	enums.h
 	crypto.h
@@ -13,6 +15,6 @@ add_executable(${project}
 	peermap.h
 	peermap.cpp
 	main.cpp
-	)
+)
 
 target_link_libraries(${project} ThorQLib)

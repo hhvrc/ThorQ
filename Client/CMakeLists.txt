@@ -4,11 +4,13 @@ set(project Client)
 project(${project})
 message("Configuring ${project}...")
 
+include_directories(${LIBRARY_HEADERS})
+
 add_executable(${project}
 	enums.h
 	crypto.h
 	crypto.cpp
 	main.cpp
-	)
+)
 
 target_link_libraries(${project} ThorQLib)
