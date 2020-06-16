@@ -37,11 +37,19 @@ if(NOT EXISTS ${BOTAN_CPP} OR NOT EXISTS ${BOTAN_H})
 		)
     endif()
 
+	# For some reason CMake fuck up on windows, so here is a stupid fix:
+	if(WINDOWS)
+		string (REPLACE ";" " " PYTHON_ARGS "${PYTHON_ARGS}")
+	endif()
+	
+	file(RELATIVE_PATH REL_PATH ${CMAKE_CURRENT_SOURCE_DIR} ${BUILD_PATH})
+	
+	message("cd ${REL_PATH}")
+	message("python ${PYTHON_ARGS}")
 
-	set(PYTHON_CMD "python")
 	execute_process(
-		COMMAND ${PYTHON_CMD} ${PYTHON_ARGS}
-		WORKING_DIRECTORY ${BUILD_PATH}
+		COMMAND "python" ${PYTHON_ARGS}
+		WORKING_DIRECTORY ${REL_PATH}
 		RESULT_VARIABLE py_result
 		OUTPUT_VARIABLE py_output
 	)

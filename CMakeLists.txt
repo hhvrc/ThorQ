@@ -46,8 +46,8 @@ elseif(WINDOWS)
 	endif()
 
 	# Force to always compile with MT
-	if(CMAKE_CXX_FLAGS MATCHES "/(?:(?:MD)|(?:MT)|(?:LD)).?")
-		string(REGEX REPLACE "/(?:(?:MD)|(?:MT)|(?:LD)).?" "/MT" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	if(CMAKE_CXX_FLAGS MATCHES "/MDd?|/MTd?|/LDd?")
+		string(REGEX REPLACE "/MDd?|/MTd?|/LDd?" "/MT" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 	else()
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
 	endif()
@@ -60,8 +60,8 @@ elseif(WINDOWS)
 	endif()
 
 	# Force to always compile with DEBUG:XXXX
-	if(CMAKE_CXX_FLAGS MATCHES "/DEBUG\:[^\s]+")
-		string(REGEX REPLACE "/DEBUG\:[^\s]+" ${WIN_DEBUG_FLAG} CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+	if(CMAKE_CXX_FLAGS MATCHES "/DEBUG\:[^\\s]+")
+		string(REGEX REPLACE "/DEBUG\:[^\\s]+" ${WIN_DEBUG_FLAG} CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 	else()
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WIN_DEBUG_FLAG}")
 	endif()
