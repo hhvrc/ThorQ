@@ -4,9 +4,6 @@ set(project ThorQLib)
 project(${project})
 message("Configuring ${project}...")
 
-## If the compiled source doesnt exist, then generate it
-#if(NOT EXISTS ${CMAKE_BINARY_DIR}/botan_all.cpp OR NOT EXISTS ${CMAKE_BINARY_DIR}/botan_all.h)
-# Set python initial arguments
 set(PYTHON_ARGS
 	"${CMAKE_CURRENT_SOURCE_DIR}/botan/configure.py"
 	"--minimized-build"
@@ -48,7 +45,6 @@ message("BUILD OUTPUT:\n${py_output}")
 if (NOT ${py_result} EQUAL 0)
 	message(FATAL_ERROR "Failed to build Botan")
 endif()
-#endif()
 
 add_library(${project} STATIC
 	${CMAKE_BINARY_DIR}/botan_all.cpp

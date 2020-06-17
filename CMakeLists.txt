@@ -10,26 +10,22 @@ enable_language(CXX)
 
 if(UNIX AND NOT APPLE)
 	set(LINUX TRUE)
-	message("Building for LINUX")
+	set(OS_STR "Linux")
 elseif(WIN32)
 	set(WINDOWS TRUE)
-	message("Building for Windows")
+	set(OS_STR "Windows")
 endif()
 
 if(LINUX)
-	# Flagsss
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -pthread")
+	# 64-bit, threading, and verbose
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -pthread -Wall -Wextra -pedantic")
 
 	if(${CMAKE_BUILD_TYPE} MATCHES "Release")
-		message("With full optimization (Release build)")
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector -O3 -g0")
+		set()
 	else()
-		message("With no optimization (Debug build)")
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g3")
 	endif()
-
-	# Verbose
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
 
 	# Very verbose!
 	if (VERBOSE)
@@ -37,14 +33,15 @@ if(LINUX)
 	endif()
 elseif(WINDOWS)
 	if(${CMAKE_BUILD_TYPE} MATCHES "Release")
-		message("With full optimization (Release build)")
 		set(WIN_DEBUG_FLAG "/DEBUG:NONE")
 		set(WIN_OPTIMIZATION_FLAG "/O2")
 	else()
-		message("With no optimization (Debug build)")
 		set(WIN_DEBUG_FLAG "/DEBUG:FULL")
 		set(WIN_OPTIMIZATION_FLAG "/Od")
 	endif()
+	
+	# Stop botan from fucking up
+	add_definitions(/DNOMINMAX /DBOTAN_IS_BEING_BUILT)
 
 	# Force to always compile with W4
 	if(CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
@@ -75,7 +72,15 @@ elseif(WINDOWS)
 	endif()
 endif()
 
+message(${CMAKE_CXX_FLAGS})
+
 add_subdirectory(libs)
 include_directories(${LIB_INC_DIRS})
 add_subdirectory(Client)
 add_subdirectory(Server)
+
+if(${CMAKE_BUILD_TYPE} MATCHES "Release")
+	message("Building for ${OS_STR}, with full optimization (Release build)")
+else()
+	message("Building for ${OS_STR}, with no optimization (Debug build)")
+endif()
