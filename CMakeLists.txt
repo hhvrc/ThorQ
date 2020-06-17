@@ -17,16 +17,24 @@ elseif(WIN32)
 endif()
 
 if(LINUX)
+	# Flagsss
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -pthread")
+
 	if(${CMAKE_BUILD_TYPE} MATCHES "Release")
 		message("With full optimization (Release build)")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -g0")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector -O3 -g0")
 	else()
 		message("With no optimization (Debug build)")
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g3")
 	endif()
 
+	# Verbose
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -pedantic")
+
 	# Very verbose!
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --verbose -Wall -Wno-long-long -pedantic")
+	if (VERBOSE)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --verbose")
+	endif()
 elseif(WINDOWS)
 	if(${CMAKE_BUILD_TYPE} MATCHES "Release")
 		message("With full optimization (Release build)")
