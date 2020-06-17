@@ -4,8 +4,6 @@ set(project Client)
 project(${project})
 message("Configuring ${project}...")
 
-include_directories(${LIBRARY_HEADERS})
-
 add_executable(${project}
 	enums.h
 	crypto.h

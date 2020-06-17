@@ -8,8 +8,7 @@
 #include "peermap.h"
 #include "instance.h"
 
-#include <botan/bcrypt.h>
-#include <botan/system_rng.h>
+#include <botan_all.h>
 
 #define SERVER_PORT 12345
 #define SERVER_MAX_CONNECTIONS 1024

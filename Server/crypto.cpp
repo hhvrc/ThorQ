@@ -1,13 +1,6 @@
 #include "crypto.h"
 
-#include <botan/hex.h>
-#include <botan/ecdh.h>
-#include <botan/chacha.h>
-#include <botan/pubkey.h>
-#include <botan/base64.h>
-#include <botan/bcrypt.h>
-#include <botan/system_rng.h>
-#include <botan/stream_cipher.h>
+#include <botan_all.h>
 
 using namespace ThorQ;
 
