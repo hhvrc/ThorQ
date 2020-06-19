@@ -27,9 +27,8 @@ set(PYTHON_ARGS
 	"--cpu=${BUILD_ARCH}"
 	"--amalgamation"
 	"--disable-shared"
-	"--minimized-build" # Remove this and replace with "--disable-modules=pkcs11" if it errors
+	"--disable-modules=pkcs11"
 	"--without-documentation"
-	"--enable-modules=hex,ecdh,chacha,pubkey,base64,bcrypt,system_rng,stream,kdf2"
 )
 
 # Crossing fingers....

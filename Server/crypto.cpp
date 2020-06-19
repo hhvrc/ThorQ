@@ -58,7 +58,7 @@ bool Crypto::Agree(uint8_t* data, std::size_t len)
 			m_ready = true;
 			return true;
 		}
-		catch (std::exception ex)
+		catch (Botan::Exception ex)
 		{
 			fprintf(stderr, "Error while doing key agreement: %s\n", ex.what());
 			fflush(stderr);
@@ -85,7 +85,7 @@ std::vector<uint8_t> Crypto::Encrypt(std::vector<uint8_t> data)
 
 			return output;
 		}
-		catch (std::exception ex)
+		catch (Botan::Exception ex)
 		{
 			fprintf(stderr, "Error while doing encryption: %s\n", ex.what());
 			fflush(stderr);
@@ -114,7 +114,7 @@ std::vector<uint8_t> Crypto::Encrypt(const uint8_t* data, std::size_t len)
 
 			return output;
 		}
-		catch (std::exception ex)
+		catch (Botan::Exception ex)
 		{
 			fprintf(stderr, "Error while doing encryption: %s\n", ex.what());
 			fflush(stderr);
@@ -137,7 +137,7 @@ std::vector<uint8_t> Crypto::Decrypt(std::vector<uint8_t> data)
 
 			return dataWithoutIv;
 		}
-		catch (std::exception ex)
+		catch (Botan::Exception ex)
 		{
 			fprintf(stderr, "Error while doing decryption: %s\n", ex.what());
 			fflush(stderr);
@@ -161,7 +161,7 @@ std::vector<uint8_t> Crypto::Decrypt(const uint8_t* data, std::size_t len)
 
 			return dataWithoutIv;
 		}
-		catch (std::exception ex)
+		catch (Botan::Exception ex)
 		{
 			fprintf(stderr, "Error while doing decryption: %s\n", ex.what());
 			fflush(stderr);
