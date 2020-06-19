@@ -11,6 +11,7 @@ Server and Client to control a shock-collar remotely from anywhere in the world.
 ```console
 $ git clone https://github.com/hhvrc/CollarControl.git
 $ cd TestingRep
+$ git checkout ThorQ++
 $ git submodule init
 $ git submodule update
 $ mkdir build
@@ -22,6 +23,7 @@ $ make -4
 ```powershell
 > git clone https://github.com/hhvrc/CollarControl.git
 > cd TestingRep
+> git checkout ThorQ++
 > git submodule init
 > git submodule update
 ```
