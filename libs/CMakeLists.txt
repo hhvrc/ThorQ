@@ -4,31 +4,33 @@ set(project ThorQLib)
 project(${project})
 message("Configuring ${project}...")
 
-set(PYTHON_ARGS
-	"${CMAKE_CURRENT_SOURCE_DIR}/botan/configure.py"
-	"--minimized-build"
-	"--without-documentation"
-	"--amalgamation"
-	"--enable-modules=hex,ecdh,chacha,pubkey,base64,bcrypt,system_rng,stream,kdf2"
-)
-
 # Set OS specific arguments
 if(LINUX)
-	set(PYTHON_ARGS
-		${PYTHON_ARGS}
-		"--os=linux"
-		"--cc=gcc"
-		"--cpu=x86_64"
-	)
+	set(BUILD_OS "linux")
+	set(BUILD_COMPILER "gcc")
 elseif(WINDOWS)
-	set(PYTHON_ARGS
-		${PYTHON_ARGS}
-		"--os=windows"
-		"--cc=msvc"
-		"--cpu=x86_64"
-		"--msvc-runtime=MT"
-	)
+	set(BUILD_OS "windows")
+	set(BUILD_COMPILER "msvc")
 endif()
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+	set(BUILD_ARCH "x86_64")
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+	set(BUILD_ARCH "i386")
+endif()
+
+# Set python initial arguments
+set(PYTHON_ARGS
+	"${CMAKE_CURRENT_SOURCE_DIR}/botan/configure.py"
+	"--os=${BUILD_OS}"
+	"--cc=${BUILD_COMPILER}"
+	"--cpu=${BUILD_ARCH}"
+	"--amalgamation"
+	"--disable-shared"
+	"--minimized-build" # Remove this and replace with "--disable-modules=pkcs11" if it errors
+	"--without-documentation"
+	"--enable-modules=hex,ecdh,chacha,pubkey,base64,bcrypt,system_rng,stream,kdf2"
+)
 
 # Crossing fingers....
 execute_process(
