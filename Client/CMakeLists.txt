@@ -5,6 +5,8 @@ project(${project})
 message("Configuring ${project}...")
 
 add_executable(${project}
+	gui.h
+	gui.cpp
 	enums.h
 	crypto.h
 	crypto.cpp
