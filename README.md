@@ -9,7 +9,7 @@ Server and Client to control a shock-collar remotely from anywhere in the world.
 ## Setup
 ### Linux
 ```console
-$ git clone https://github.com/hhvrc/TestingRep.git
+$ git clone https://github.com/hhvrc/CollarControl.git
 $ cd TestingRep
 $ git submodule init
 $ git submodule update
@@ -20,7 +20,7 @@ $ make -4
 ```
 ### Windows
 ```powershell
-> git clone https://github.com/hhvrc/TestingRep.git
+> git clone https://github.com/hhvrc/CollarControl.git
 > cd TestingRep
 > git submodule init
 > git submodule update
