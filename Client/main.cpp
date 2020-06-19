@@ -3,25 +3,35 @@
 #define ENET_IMPLEMENTATION
 #include <enet.h>
 
-#include "enums.h"
-#include "crypto.h"
+#include <enums.h>
+#include <crypto.h>
 
 #define SERVER_HOSTNAME "::1"
 #define SERVER_PORT     12345
 
 #define DISCONNECT_ERROR 0x00000001
 
-ThorQ::Crypto* crypto = nullptr;
+#include "instance.h"
+
+#include <chrono>
+ThorQ::Instance* currentInstance = nullptr;
+
+std::chrono::high_resolution_clock::time_point pingSentTime;
+
+std::string ExtractString(const std::uint8_t* data, std::size_t dataSize, std::size_t startOffset = 0, std::size_t endOffset = 0)
+{
+	return std::string(data + startOffset, data + dataSize - endOffset);
+}
 
 void handleMessage(ENetPeer* peer, ENetPacket* packet)
 {
-	if (!crypto->IsCryptoReady())
-	{
-		if (crypto->Agree(packet->data, packet->dataLength))
-		{
-			std::cout << "Success!" << std::endl;
+	ThorQ::Instance* instance = (ThorQ::Instance*)peer->data;
 
-			std::vector<std::uint8_t> data = crypto->PublicKey();
+	if (!instance->GetCrypto()->IsCryptoReady())
+	{
+		if (instance->GetCrypto()->Agree(packet->data, packet->dataLength))
+		{
+			std::vector<std::uint8_t> data = instance->GetCrypto()->PublicKey();
 
 			enet_peer_send(peer, 0, enet_packet_create(data.data(), data.size(), ENET_PACKET_FLAG_RELIABLE));
 			return;
@@ -34,7 +44,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 		}
 	}
 
-	std::vector<std::uint8_t> data = crypto->Decrypt(packet->data, packet->dataLength);
+	std::vector<std::uint8_t> data = instance->GetCrypto()->Decrypt(packet->data, packet->dataLength);
 
 	if (data.empty())
 	{
@@ -44,13 +54,18 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 
 	std::uint32_t meta = ntohl(*(std::int32_t*)data.data());
 
-
+	if ((meta & 0xFF) == ThorQ::ThorqEnums::HEARTBEAT)
+	{
+		std::cout << "Latency: " << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - pingSentTime).count() / 100.f << "ms" << std::endl;
+	}
 }
 
 void handleNewConnection(ENetPeer* peer)
 {
 	printf("Connected to server:\n\tIPV6: %llx\n\tPORT: %u\n", peer->address.host, peer->address.port);
 	fflush(stdout);
+
+	currentInstance = new ThorQ::Instance(peer);
 }
 
 void handleDisconnect(ENetPeer* peer)
@@ -71,13 +86,14 @@ void handleTimeout(ENetPeer* peer)
 
 int main()
 {
-	Gui* gui;
+	// TODO: make GUI the main thread, and Networking a seperate thread
+	// TODO: customize GUI
+	// TODO: enable support for SteamVR
+	// TODO: Add pre-encryption flag that signalises if connection is encrypted or not so clients can re-authenticate
 
-	gui = Gui::CreateGui("woooooooo", 1000, 500);
+	Gui* gui = Gui::CreateGui("woooooooo", 1000, 500);
 	gui->Run();
 	delete gui;
-
-	crypto = new ThorQ::Crypto();
 
 	if (enet_initialize() < 0)
 	{
@@ -109,7 +125,7 @@ int main()
 	}
 
 	while (true) {
-		while (enet_host_service(client, &event, 0) > 0)
+		while (enet_host_service(client, &event, 500) > 0)
 		{
 			switch (event.type)
 			{
@@ -130,6 +146,9 @@ int main()
 				break;
 			}
 		}
+
+		pingSentTime = std::chrono::high_resolution_clock::now();
+		currentInstance->SendEncMessage(ThorQ::ThorqEnums::HEARTBEAT);
 	}
 
 	enet_host_destroy(client);

@@ -3,8 +3,8 @@
 #include <iostream>
 
 #include <enet.h>
-#include "enums.h"
-#include "crypto.h"
+#include <enums.h>
+#include <crypto.h>
 
 using namespace ThorQ;
 
@@ -160,8 +160,15 @@ void Instance::SendEncrypted(const uint8_t* data, std::size_t len, bool unreliab
 	SendRaw(m_crypto->Encrypt(data, len), unreliable);
 }
 
+void Instance::SendEncMessage(uint32_t meta)
+{
+	meta = htonl(meta);
+	SendEncrypted(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t));
+}
+
 void Instance::SendEncMessage(uint32_t meta, const std::string& message)
 {
+	meta = htonl(meta);
 	std::size_t len = sizeof(std::uint32_t) + message.length();
 	std::uint8_t* data = new std::uint8_t[len];
 	memcpy(data, &meta, sizeof(std::uint32_t));

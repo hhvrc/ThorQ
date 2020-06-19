@@ -5,9 +5,6 @@ project(${project})
 message("Configuring ${project}...")
 
 add_executable(${project}
-	enums.h
-	crypto.h
-	crypto.cpp
 	instance.h
 	instance.cpp
 	peermap.h

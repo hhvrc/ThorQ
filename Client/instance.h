@@ -6,34 +6,37 @@
 #include <vector>
 #include <cstdint>
 
-namespace Botan {
-class StreamCipher;
+typedef struct _ENetPeer ENetPeer;
+
+namespace ThorQ {
+
+	class Crypto;
+
+	class Instance
+	{
+		ENetPeer* m_peer;
+
+		Crypto* m_crypto;
+
+		Instance(const Instance&) = delete;
+		Instance& operator=(const Instance&) = delete;
+	public:
+		Instance(ENetPeer* peer);
+		Instance(ENetPeer* peer, const std::string& name);
+		~Instance();
+
+		void SetPeer(ENetPeer* peer);
+		ENetPeer* Peer() const;
+
+		void SendRaw(const std::vector<std::uint8_t>& data, bool unreliable = false);
+		void SendRaw(const std::uint8_t* data, std::size_t len, bool unreliable = false);
+		void SendEncrypted(const std::vector<std::uint8_t>& data, bool unreliable = false);
+		void SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable = false);
+		void SendEncMessage(std::uint32_t meta);
+		void SendEncMessage(std::uint32_t meta, const std::string& message);
+
+		Crypto* GetCrypto();
+	};
 }
-
-#include <botan/ecdh.h>
-
-class Instance
-{
-	std::string m_name;
-	bool m_ready;
-	Botan::ECDH_PrivateKey m_key;
-	std::unique_ptr<Botan::StreamCipher> m_streamCipher;
-
-	Instance(const Instance&) = delete;
-	Instance& operator=(const Instance&) = delete;
-public:
-	Instance();
-	Instance(std::string name);
-	~Instance();
-	void SetName(const std::string& newName);
-	const std::string& Name() const;
-	std::vector<std::uint8_t> PublicKey() const;
-	bool IsCryptoReady();
-	bool Agree(std::uint8_t* data, std::size_t len);
-	std::vector<std::uint8_t> Encrypt(std::vector<std::uint8_t> data);
-	std::vector<std::uint8_t> Encrypt(const std::uint8_t* data, std::size_t len);
-	std::vector<std::uint8_t> Decrypt(std::vector<std::uint8_t> data);
-	std::vector<std::uint8_t> Decrypt(const std::uint8_t* data, std::size_t len);
-};
 
 #endif // INSTANCE_H

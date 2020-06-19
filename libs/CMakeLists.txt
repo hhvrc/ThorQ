@@ -59,6 +59,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/imgui)
 
 add_library(${project} STATIC
 	${CMAKE_BINARY_DIR}/botan_all.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/glew/glew.c
 	${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_draw.cpp
@@ -75,6 +76,7 @@ find_package(OpenGL REQUIRED)
 target_link_libraries(${project} glfw ${GLFW_LIBRARIES} ${OPENGL_gl_LIBRARY})
 
 set(LIB_INC_DIRS
+	${CMAKE_CURRENT_SOURCE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/imgui
 	${CMAKE_CURRENT_SOURCE_DIR}/imgui/examples
 	${CMAKE_CURRENT_SOURCE_DIR}/enet/include
@@ -84,3 +86,5 @@ set(LIB_INC_DIRS
 
 	CACHE PATH "List of library directories for header includes"
 )
+
+include_directories(${LIB_INC_DIRS})

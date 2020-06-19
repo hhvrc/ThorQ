@@ -26,25 +26,10 @@ bool Crypto::IsCryptoReady()
 	return m_ready;
 }
 
+#include <iostream>
 bool Crypto::Agree(std::vector<std::uint8_t> data)
 {
-	if (data.size() == m_key->public_value().size())
-	{
-		try
-		{
-			Botan::PK_Key_Agreement ecdh(*m_key, Botan::system_rng(), "KDF2(SHA-256)");
-			m_streamCipher->set_key(ecdh.derive_key(32, data.data(), data.size()));
-			m_ready = true;
-			return true;
-		}
-		catch (std::exception ex)
-		{
-			fprintf(stderr, "Error while doing key agreement: %s\n", ex.what());
-			fflush(stderr);
-		}
-	}
-
-	return false;
+	return Agree(data.data(), data.size());
 }
 
 bool Crypto::Agree(uint8_t* data, std::size_t len)

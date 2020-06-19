@@ -51,6 +51,7 @@ namespace ThorQ {
 		void SendRaw(const std::uint8_t* data, std::size_t len, bool unreliable = false);
 		void SendEncrypted(const std::vector<std::uint8_t>& data, bool unreliable = false);
 		void SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable = false);
+		void SendEncMessage(std::uint32_t meta);
 		void SendEncMessage(std::uint32_t meta, const std::string& message);
 
 		Crypto* GetCrypto();

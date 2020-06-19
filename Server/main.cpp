@@ -3,8 +3,9 @@
 #define ENET_IMPLEMENTATION
 #include <enet.h>
 
-#include "enums.h"
-#include "crypto.h"
+#include <enums.h>
+#include <crypto.h>
+
 #include "peermap.h"
 #include "instance.h"
 
@@ -50,18 +51,13 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 
 	if (!instance->GetCrypto()->IsCryptoReady())
 	{
-		if (instance->GetCrypto()->Agree(packet->data, packet->dataLength))
-		{
-			std::cout << "Success!" << std::endl;
-			return;
-		}
-		else
+		if (!instance->GetCrypto()->Agree(packet->data, packet->dataLength))
 		{
 			std::cout << "Failed to establish cryptographic link, disconnecting..." << std::endl;
 			enet_packet_destroy(packet);
 			enet_peer_disconnect_now(peer, DISCONNECT_ERROR);
-			return;
 		}
+		return;
 	}
 
 	std::vector<std::uint8_t> data = instance->GetCrypto()->Decrypt(packet->data, packet->dataLength);
@@ -77,6 +73,12 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	instance->SetHasCollar((meta & FLAG_CollarConnected) != 0);
 
 	meta &= 0xFF; // Remove flags from meta
+
+	if (meta == HEARTBEAT)
+	{
+		instance->SendEncMessage(HEARTBEAT);
+		return;
+	}
 
 	if (!instance->HasName())
 	{

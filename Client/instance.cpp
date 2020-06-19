@@ -2,169 +2,72 @@
 
 #include <iostream>
 
-#include <botan/hex.h>
-#include <botan/chacha.h>
-#include <botan/pubkey.h>
-#include <botan/base64.h>
-#include <botan/bcrypt.h>
-#include <botan/system_rng.h>
-#include <botan/stream_cipher.h>
+#include <enet.h>
+#include <enums.h>
+#include <crypto.h>
 
-Instance::Instance() :
-	m_name(""),
-	m_ready(false),
-	m_key(Botan::system_rng(), Botan::EC_Group("secp256r1")),
-	m_streamCipher(Botan::StreamCipher::create("ChaCha(20)"))
-{
-}
+using namespace ThorQ;
 
-Instance::Instance(std::string name) :
-	m_name(name),
-	m_ready(false),
-	m_key(Botan::system_rng(), Botan::EC_Group("secp256r1")),
-	m_streamCipher(Botan::StreamCipher::create("ChaCha(20)"))
+Instance::Instance(ENetPeer* peer) : m_peer(peer)
 {
+	peer->data = this;
+	m_crypto = new Crypto();
 }
 
 Instance::~Instance()
 {
+	delete m_crypto;
 }
 
-void Instance::SetName(const std::string& newName)
+void Instance::SetPeer(ENetPeer* peer)
 {
-	m_name = newName;
+	m_peer->data = nullptr;
+	m_peer = peer;
+	peer->data = this;
 }
 
-const std::string& Instance::Name() const
+ENetPeer* Instance::Peer() const
 {
-	return m_name;
+	return m_peer;
 }
 
-std::vector<std::uint8_t> Instance::PublicKey() const
+void Instance::SendRaw(const std::vector<uint8_t>& data, bool unreliable)
 {
-	return m_key.public_value();
+	enet_peer_send(m_peer, unreliable ? 1 : 0, enet_packet_create(data.data(), data.size(), unreliable ? ENET_PACKET_FLAG_UNSEQUENCED : ENET_PACKET_FLAG_RELIABLE));
 }
 
-bool Instance::IsCryptoReady()
+void Instance::SendRaw(const uint8_t* data, std::size_t len, bool unreliable)
 {
-	return m_ready;
+	enet_peer_send(m_peer, unreliable ? 1 : 0, enet_packet_create(data, len, unreliable ? ENET_PACKET_FLAG_UNSEQUENCED : ENET_PACKET_FLAG_RELIABLE));
 }
 
-bool Instance::Agree(std::uint8_t* data, std::size_t len)
+void Instance::SendEncrypted(const std::vector<uint8_t>& data, bool unreliable)
 {
-	if (len == m_key.public_value().size())
-	{
-		try
-		{
-			Botan::PK_Key_Agreement ecdh(m_key, Botan::system_rng(), "KDF2(SHA-256)");
-			m_streamCipher->set_key(ecdh.derive_key(32, data, len));
-			m_ready = true;
-			return true;
-		}
-		catch (std::exception ex)
-		{
-			std::cerr << ex.what() << std::endl;
-		}
-	}
-
-	return false;
+	SendRaw(m_crypto->Encrypt(data), unreliable);
 }
 
-std::vector<std::uint8_t> Instance::Encrypt(std::vector<std::uint8_t> data)
+void Instance::SendEncrypted(const uint8_t* data, std::size_t len, bool unreliable)
 {
-	if (!data.empty())
-	{
-		try
-		{
-			std::vector<std::uint8_t> output(24 + data.size());
-
-			Botan::system_rng().randomize(output.data(), 24);
-			m_streamCipher->set_iv(output.data(), 24);
-
-			m_streamCipher->encrypt(data);
-
-			memcpy(output.data() + 24, data.data(), data.size());
-
-			return output;
-		}
-		catch (std::exception ex)
-		{
-			std::cerr << ex.what() << std::endl;
-		}
-	}
-
-	return std::vector<std::uint8_t>();
+	SendRaw(m_crypto->Encrypt(data, len), unreliable);
 }
 
-std::vector<std::uint8_t> Instance::Encrypt(const std::uint8_t* data, std::size_t len)
+void Instance::SendEncMessage(uint32_t meta)
 {
-	if (data != nullptr && len != 0)
-	{
-		try
-		{
-			std::vector<std::uint8_t> output(24 + len);
-
-			Botan::system_rng().randomize(output.data(), 24);
-			m_streamCipher->set_iv(output.data(), 24);
-
-			std::vector<std::uint8_t> vec(data, data + len);
-
-			m_streamCipher->encrypt(vec);
-
-			memcpy(output.data() + 24, vec.data(), vec.size());
-
-			return output;
-		}
-		catch (std::exception ex)
-		{
-			std::cerr << ex.what() << std::endl;
-		}
-	}
-
-	return std::vector<std::uint8_t>();
+	meta = htonl(meta);
+	SendEncrypted(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t));
 }
 
-std::vector<std::uint8_t> Instance::Decrypt(std::vector<std::uint8_t> data)
+void Instance::SendEncMessage(uint32_t meta, const std::string& message)
 {
-	if (data.size() > 24)
-	{
-		try
-		{
-			m_streamCipher->set_iv(data.data(), 24);
-
-			std::vector<std::uint8_t> dataWithoutIv(data.begin() + 24, data.end());
-			m_streamCipher->decrypt(dataWithoutIv);
-
-			return dataWithoutIv;
-		}
-		catch (std::exception ex)
-		{
-			std::cerr << ex.what() << std::endl;
-		}
-	}
-
-	return std::vector<std::uint8_t>();
+	meta = htonl(meta);
+	std::size_t len = sizeof(std::uint32_t) + message.length();
+	std::uint8_t* data = new std::uint8_t[len];
+	memcpy(data, &meta, sizeof(std::uint32_t));
+	memcpy(data + sizeof(std::uint32_t), message.data(), message.length());
+	SendEncrypted(data, len);
 }
 
-std::vector<std::uint8_t> Instance::Decrypt(const std::uint8_t* data, std::size_t len)
+Crypto* Instance::GetCrypto()
 {
-	if (data != nullptr && len > 24)
-	{
-		try
-		{
-			m_streamCipher->set_iv(data, 24);
-
-			std::vector<std::uint8_t> dataWithoutIv(data + 24, data + len);
-
-			m_streamCipher->decrypt(dataWithoutIv);
-
-			return dataWithoutIv;
-		}
-		catch (std::exception ex)
-		{
-			std::cerr << ex.what() << std::endl;
-		}
-	}
-
-	return std::vector<std::uint8_t>();
+	return m_crypto;
 }
