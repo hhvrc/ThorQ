@@ -67,10 +67,12 @@ void handleTimeout(ENetPeer* peer)
 	peer->data = nullptr;
 }
 
-#include <imgui.h>
+#include "gui.h"
 
 int main()
 {
+	Gui gui;
+
 	crypto = new ThorQ::Crypto();
 
 	if (enet_initialize() < 0)
