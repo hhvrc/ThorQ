@@ -71,7 +71,11 @@ void handleTimeout(ENetPeer* peer)
 
 int main()
 {
-	Gui gui;
+	Gui* gui;
+
+	gui = Gui::CreateGui("woooooooo", 1000, 500);
+	gui->Run();
+	delete gui;
 
 	crypto = new ThorQ::Crypto();
 
