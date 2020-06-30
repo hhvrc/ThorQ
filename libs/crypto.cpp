@@ -53,6 +53,23 @@ bool Crypto::Agree(uint8_t* data, std::size_t len)
 	return false;
 }
 
+void Crypto::Reset()
+{
+	try
+	{
+		m_ready = false;
+		Botan::ECDH_PrivateKey* oldKey = m_key;
+		m_key = new Botan::ECDH_PrivateKey(Botan::system_rng(), Botan::EC_Group("secp256r1"));
+		delete oldKey;
+		m_streamCipher->clear();
+	}
+	catch (Botan::Exception ex)
+	{
+		fprintf(stderr, "Error while resetting encryption: %s\n", ex.what());
+		fflush(stderr);
+	}
+}
+
 std::vector<uint8_t> Crypto::Encrypt(std::vector<uint8_t> data)
 {
 	if (!data.empty())

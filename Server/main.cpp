@@ -96,6 +96,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 			instance->ClearPartner();
 
 			BroadcastMessage(NOTIFY_UserOnline, name);
+			instance->SendEncMessage(ACKNOWLEDGE_OK, "Logged in");
 			return;
 		}
 		else
