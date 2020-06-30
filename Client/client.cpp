@@ -145,8 +145,8 @@ void Client::Login(const QString& username)
 
 	m_requestedUsername = username;
 
+	// TODO: make this code invoke from the thread of the object
 	SendEncrypted(ThorQ::ThorqEnums::USER_Login, username.toStdString());
-
 }
 
 void Client::Logout()
@@ -154,26 +154,31 @@ void Client::Logout()
 	if (!connected() || !authenticated() || m_username.isEmpty())
 		return;
 
+	// TODO: make this code invoke from the thread of the object
 	SendEncrypted(ThorQ::ThorqEnums::USER_Logout);
 }
 
 void Client::SetAuto(int a, int b, int c)
 {
+	// TODO: make this code invoke from the thread of the object
 
 }
 
 void Client::SendA(int i)
 {
+	// TODO: make this code invoke from the thread of the object
 
 }
 
 void Client::SendB(int i)
 {
+	// TODO: make this code invoke from the thread of the object
 
 }
 
 void Client::SendC(int i)
 {
+	// TODO: make this code invoke from the thread of the object
 
 }
 
@@ -226,17 +231,8 @@ void Client::setConnected(bool connected)
 {
 	if (connected != m_connected)
 	{
-		if (connected)
-		{
-
-		}
-		else
-		{
-
-		}
-
-		if (connected != m_connected)
-			emit connectedChanged(connected);
+		m_connected = connected;
+		emit connectedChanged(connected);
 	}
 }
 
@@ -245,6 +241,7 @@ void Client::Connect()
 	if (connected())
 		return;
 
+	// TODO: make this code invoke from the thread of the object
 	ENetAddress address;
 	enet_address_set_host(&address, m_address.toStdString().c_str());
 	address.port = m_port;
@@ -271,6 +268,7 @@ void Client::Disconnect()
 		return;
 	}
 
+	// TODO: make this code invoke from the thread of the object
 	enet_peer_disconnect(m_peer, 0);
 
 }
