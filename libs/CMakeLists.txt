@@ -37,6 +37,7 @@ set(PYTHON_ARGS
 	"--cpu=${BUILD_ARCH}"
 	"--amalgamation"
 	"--disable-shared"
+	"--link-method=copy"
 	"--disable-modules=pkcs11"
 	"--without-documentation"
 )
