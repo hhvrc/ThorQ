@@ -1,5 +1,7 @@
 #include "client.h"
-#include "enet.h"
+
+#define ENET_IMPLEMENTATION
+#include <enet.h>
 
 #include <QDebug>
 #include <QThread>

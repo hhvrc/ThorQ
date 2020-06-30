@@ -13,6 +13,12 @@ elseif(WIN32)
 	set(OS_STR "Windows")
 endif()
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 if(LINUX)
         # 64-bit, threading, and verbose
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -pthread -Wall -Wextra -pedantic")

@@ -7,11 +7,6 @@ project(
 	LANGUAGES CXX
 )
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
 message("Configuring ${project}...")
 
 # Set OS specific arguments
@@ -75,3 +70,7 @@ set(LIB_INC_DIRS
 )
 
 include_directories(${LIB_INC_DIRS})
+
+if(WINDOWS)
+    target_link_libraries(${project} Crypt32)
+endif()

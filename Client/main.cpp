@@ -1,56 +1,39 @@
-#include <iostream>
-
-#define ENET_IMPLEMENTATION
-#include <enet.h>
-
 #include <QDebug>
+#include <QGuiApplication>
+#include <QQmlApplicationEngine>
 
-#include <enums.h>
-#include <crypto.h>
-
-#define SERVER_HOSTNAME "::1"
-#define SERVER_PORT     12345
-
-#define DISCONNECT_ERROR 0x00000001
+#include <enet.h>
 
 #include "client.h"
 
-#include <chrono>
-
-
-
-#include <QApplication>
-
 int main(int argc, char** argv)
 {
-	QApplication application(argc, argv);
-	application.setApplicationName("ThorQ Client");
+    // TODO: make GUI the main thread, and Networking a seperate thread
+    // TODO: customize GUI
+    // TODO: enable support for SteamVR
+    // TODO: Add pre-encryption flag that signalises if connection is encrypted or not so clients can re-authenticate
 
-	// TODO: make GUI the main thread, and Networking a seperate thread
-	// TODO: customize GUI
-	// TODO: enable support for SteamVR
-	// TODO: Add pre-encryption flag that signalises if connection is encrypted or not so clients can re-authenticate
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
-	if (enet_initialize() < 0)
-	{
-		printf("Failed to initialize ENet");
-		exit(EXIT_FAILURE);
-	}
-	atexit(enet_deinitialize);
+    QGuiApplication app(argc, argv);
 
-	qDebug().noquote() << "Using" << Client::Version();
+    // Initialize ENet
+    if (enet_initialize() < 0)
+    {
+        printf("Failed to initialize ENet");
+        exit(EXIT_FAILURE);
+    }
+    atexit(enet_deinitialize);
+    qDebug().noquote() << "Using" << Client::Version();
 
-	Client* cli = Client::NewClient("localhost", 12345);
+    QQmlApplicationEngine engine;
+    const QUrl url(QStringLiteral("qrc:/main.qml"));
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
+                     &app, [url](QObject *obj, const QUrl &objUrl) {
+        if (!obj && url == objUrl)
+            QCoreApplication::exit(-1);
+    }, Qt::QueuedConnection);
+    engine.load(url);
 
-	if (cli == nullptr)
-	{
-		qDebug() << "Failed!";
-		return EXIT_FAILURE;
-	}
-
-	delete cli;
-
-	application.exec();
-
-	return EXIT_SUCCESS;
+    return app.exec();
 }
