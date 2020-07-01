@@ -46,26 +46,43 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 list(APPEND INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
 
+
+# ---OpenVR---
+if(LINUX)
+    set(OVR_LIB linux)
+elseif(WINDOWS)
+    set(OVR_LIB win)
+endif()
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(OVR_LIB ${OVR_LIB}64)
+elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
+    set(OVR_LIB ${OVR_LIB}32)
+endif()
+list(APPEND LIBRARIES openvr_api)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/headers)
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/lib/${OVR_LIB})
+
+
+# ---Build---
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/client.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/overlaywidget.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/overlaywidget.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.cpp
 )
 set(${project}_MOC
-	${CMAKE_CURRENT_SOURCE_DIR}/client.h
-	${CMAKE_CURRENT_SOURCE_DIR}/overlaywidget.h
-	${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/client.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/overlaywidget.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.h
 )
 
 include_directories(${INCLUDE_DIRS})
-link_directories(${LIBRARY_DIRS})
+
 add_executable(${project}
     main.cpp
     qml.qrc
     ${${project}_SOURCES}
     ${${project}_MOC}
 )
-set_target_properties(${project} PROPERTIES COMPILE_FLAGS -DBUILDER_STATIC_DEFINE)
 
-add_subdirectory(openvr)
-target_link_libraries(${project} ThorQLib openvr_api ${LIBRARIES})
+set_target_properties(${project} PROPERTIES COMPILE_FLAGS -DBUILDER_STATIC_DEFINE)
+target_link_libraries(${project} ThorQLib ${LIBRARIES})
