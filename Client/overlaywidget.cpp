@@ -1,6 +1,11 @@
 #include "overlaywidget.h"
 
-overlaywidget::overlaywidget()
+OverlayWidget::OverlayWidget(QWidget *parent) :
+	QWidget(parent)
 {
 
+}
+
+OverlayWidget::~OverlayWidget()
+{
 }

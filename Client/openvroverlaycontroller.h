@@ -21,32 +21,40 @@
 #include <QtWidgets/QGraphicsScene>
 #include <QtGui/QOffscreenSurface>
 
-class COpenVROverlayController : public QObject
+class OpenVROverlayController : public QObject
 {
 	Q_OBJECT
-	typedef QObject BaseClass;
 
 public:
-	static COpenVROverlayController *SharedInstance();
+	static OpenVROverlayController *SharedInstance();
 
 public:
-	COpenVROverlayController();
-	virtual ~COpenVROverlayController();
+	OpenVROverlayController();
+	virtual ~OpenVROverlayController();
 
-	bool Init();
+	bool Init(const QString& name);
 	void Shutdown();
 	void EnableRestart();
 
 	bool BHMDAvailable();
-	vr::IVRSystem *GetVRSystem();
+	vr::IVRSystem* GetVRSystem();
 	vr::HmdError GetLastHmdError();
 
 	QString GetVRDriverString();
 	QString GetVRDisplayString();
 	QString GetName() { return m_strName; }
 
-	void SetWidget( QWidget *pWidget );
+	void SetWidget( QWidget* pWidget );
+	QWidget* GetWidget() const;
 
+	void SetTint(const QColor& color);
+	QColor GetTint() const;
+
+	void SetAlpha(float alpha);
+	float GetAlpha() const;
+
+	void SetWidth(float meters);
+	float GetWidth() const;
 public slots:
 	void OnSceneChanged( const QList<QRectF>& );
 	void OnTimeoutPumpEvents();
@@ -62,25 +70,26 @@ private:
 	QString m_strVRDisplay;
 	QString m_strName;
 
-	vr::HmdError m_eLastHmdError;
 
 private:
-	vr::HmdError m_eCompositorError;
-	vr::HmdError m_eOverlayError;
-	vr::VROverlayHandle_t m_ulOverlayHandle;
-	vr::VROverlayHandle_t m_ulOverlayThumbnailHandle;
+	vr::HmdError m_hmdError;
+	vr::HmdError m_compositorError;
+	vr::HmdError m_overlayError;
+	vr::VROverlayHandle_t m_overlayHandle;
 
-	QOpenGLContext *m_pOpenGLContext;
-	QGraphicsScene *m_pScene;
-	QOpenGLFramebufferObject *m_pFbo;
-	QOffscreenSurface *m_pOffscreenSurface;
+	vr::IVRSystem* m_VRSystem;
 
-	QTimer *m_pPumpEventsTimer;
+	QOpenGLContext *m_openGLContext;
+	QGraphicsScene *m_scene;
+	QOpenGLFramebufferObject *m_frameBuffer;
+	QOffscreenSurface *m_vrSurface;
+
+	QTimer *m_pumpEventsTimer;
 
 	// the widget we're drawing into the texture
-	QWidget *m_pWidget;
+	QWidget *m_widget;
 
-	QPointF m_ptLastMouse;
+	QPointF m_lastMousePoint;
 	Qt::MouseButtons m_lastMouseButtons;
 };
 
