@@ -4,3 +4,6 @@
 [submodule "libs/botan"]
 	path = libs/botan
 	url = https://github.com/randombit/botan.git
+[submodule "Client/openvr"]
+	path = Client/openvr
+	url = https://github.com/ValveSoftware/openvr

@@ -15,7 +15,7 @@ find_package(
     COMPONENTS
         Core
         Gui
-        Quick
+		OpenGL
         Widgets
         Concurrent
     REQUIRED
@@ -24,8 +24,8 @@ if (NOT Qt5Core_FOUND)
     message(FATAL_ERROR "No Qt installation found, aborting")
 endif()
 set(Qt5_VERSION ${Qt5Core_VERSION})
-set(Qt5_LIBS ${Qt5Core_LIBRARIES} ${Qt5Gui_LIBRARIES} ${Qt5Quick_LIBRARIES} ${Qt5Widgets_LIBRARIES} ${Qt5Concurrent_LIBRARIES})
-set(Qt5_DIRS ${Qt5Core_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS} ${Qt5Quick_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Concurrent_INCLUDE_DIRS})
+set(Qt5_LIBS ${Qt5Core_LIBRARIES} ${Qt5Gui_LIBRARIES} ${Qt5OpenGL_LIBRARIES} ${Qt5Widgets_LIBRARIES} ${Qt5Concurrent_LIBRARIES})
+set(Qt5_DIRS ${Qt5Core_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS} ${Qt5OpenGL_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Concurrent_INCLUDE_DIRS})
 message("Found Qt ${Qt5_VERSION}")
 message("Includes:\t\t${Qt5_DIRS}")
 message("Libraries:\t\t${Qt5_LIBS}\n")
@@ -48,9 +48,13 @@ list(APPEND INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}
 
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/client.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/overlaywidget.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.cpp
 )
 set(${project}_MOC
-    ${CMAKE_CURRENT_SOURCE_DIR}/client.h
+	${CMAKE_CURRENT_SOURCE_DIR}/client.h
+	${CMAKE_CURRENT_SOURCE_DIR}/overlaywidget.h
+	${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.h
 )
 
 include_directories(${INCLUDE_DIRS})
@@ -62,5 +66,6 @@ add_executable(${project}
     ${${project}_MOC}
 )
 set_target_properties(${project} PROPERTIES COMPILE_FLAGS -DBUILDER_STATIC_DEFINE)
-target_link_libraries(${project} ThorQLib ${LIBRARIES})
-target_compile_definitions(${project} PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
+
+add_subdirectory(openvr)
+target_link_libraries(${project} ThorQLib openvr_api ${LIBRARIES})
