@@ -1,9 +1,10 @@
 #include <QDebug>
-#include <QGuiApplication>
+#include <QtWidgets/QApplication>
 
 #include <enet.h>
-
 #include "client.h"
+#include "overlaywidget.h"
+#include "openvroverlaycontroller.h"
 
 int main(int argc, char** argv)
 {
@@ -13,7 +14,7 @@ int main(int argc, char** argv)
     // TODO: Add pre-encryption flag that signalises if connection is encrypted or not so clients can re-authenticate
 
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    QGuiApplication app(argc, argv);
+	QApplication app(argc, argv);
 
     // Initialize ENet
     if (enet_initialize() < 0)
@@ -25,6 +26,7 @@ int main(int argc, char** argv)
     qDebug().noquote() << "Using" << Client::Version();
 
 
+	COpenVROverlayController::SharedInstance()->Init();
 
     return app.exec();
 }
