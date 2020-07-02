@@ -23,74 +23,74 @@
 
 class OpenVROverlayController : public QObject
 {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	static OpenVROverlayController *SharedInstance();
+    static bool IsSteamVRRunning();
+    static bool IsHmdPresent();
+    static OpenVROverlayController *SharedInstance();
 
-public:
-	OpenVROverlayController();
-	virtual ~OpenVROverlayController();
+    OpenVROverlayController();
+    ~OpenVROverlayController() override;
 
-	bool Init(const QString& name);
-	void Shutdown();
-	void EnableRestart();
+    bool Init();
+    void Shutdown();
 
-	bool BHMDAvailable();
-	vr::IVRSystem* GetVRSystem();
-	vr::HmdError GetLastHmdError();
+    void SetWidget( QWidget* pWidget );
+    QWidget* GetWidget() const;
 
-	QString GetVRDriverString();
-	QString GetVRDisplayString();
-	QString GetName() { return m_strName; }
+    void SetTint(const QColor& color);
+    QColor GetTint() const;
 
-	void SetWidget( QWidget* pWidget );
-	QWidget* GetWidget() const;
+    void SetAlpha(float alpha);
+    float GetAlpha() const;
 
-	void SetTint(const QColor& color);
-	QColor GetTint() const;
-
-	void SetAlpha(float alpha);
-	float GetAlpha() const;
-
-	void SetWidth(float meters);
-	float GetWidth() const;
+    void SetWidth(float meters);
+    float GetWidth() const;
+signals:
+    void VrExited();
 public slots:
-	void OnSceneChanged( const QList<QRectF>& );
-	void OnTimeoutPumpEvents();
+    vr::EVRInitError ConnectToVRRuntime();
+    void DisconnectFromVRRuntime();
+
+    void PollEvents();
+    vr::EVROverlayError DrawOverlay(bool show = true, float size = 1.f, float alpha = 0.9f);
 
 protected:
 
 private:
-	bool ConnectToVRRuntime();
-	void DisconnectFromVRRuntime();
 
-	vr::TrackedDevicePose_t m_rTrackedDevicePose[ vr::k_unMaxTrackedDeviceCount ];
-	QString m_strVRDriver;
-	QString m_strVRDisplay;
-	QString m_strName;
+    // OPENVR VARIABLES
+    vr::IVRSystem* m_system;
 
+    // Overlay stuff
+    vr::VROverlayHandle_t m_handle;
+    vr::HmdMatrix34_t m_deviceOffset;
+    vr::TrackedDeviceIndex_t m_deviceIndex;
 
-private:
-	vr::HmdError m_hmdError;
-	vr::HmdError m_compositorError;
-	vr::HmdError m_overlayError;
-	vr::VROverlayHandle_t m_overlayHandle;
+    // HANDLERS
 
-	vr::IVRSystem* m_VRSystem;
+    // QT VARIABLES
 
-	QOpenGLContext *m_openGLContext;
-	QGraphicsScene *m_scene;
-	QOpenGLFramebufferObject *m_frameBuffer;
-	QOffscreenSurface *m_vrSurface;
+    // Visibility
+    bool m_isVisible;
+    QElapsedTimer m_visibleTimeout;
 
-	QTimer *m_pumpEventsTimer;
+    // Graphics
+    QGraphicsScene *m_scene;
+    QOpenGLContext *m_glContext;
+    QOffscreenSurface *m_surface;
+    QOpenGLFramebufferObject *m_frameBuffer;
 
-	// the widget we're drawing into the texture
-	QWidget *m_widget;
+    // Event loop
+    QTimer *m_pumpEventsTimer;
 
-	QPointF m_lastMousePoint;
-	Qt::MouseButtons m_lastMouseButtons;
+    // Widget
+    QWidget *m_widget;
+
+    // Input handling
+    QPointF m_lastMousePoint;
+    Qt::MouseButtons m_lastMouseButtons;
 };
 
 
