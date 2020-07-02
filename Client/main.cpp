@@ -26,7 +26,7 @@ int main(int argc, char** argv)
     qDebug().noquote() << "Using" << Client::Version();
 
 
-    OpenVROverlayController::SharedInstance()->Init("e");
+	OpenVROverlayController::SharedInstance()->Init();
 
     return app.exec();
 }
