@@ -66,13 +66,15 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/lib/${OVR_LIB})
 # ---Build---
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/client.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/overlaywidget.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/overlaywidget.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.cpp
 )
 set(${project}_MOC
-        ${CMAKE_CURRENT_SOURCE_DIR}/client.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/overlaywidget.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/client.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/procmon.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/overlaywidget.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.h
 )
 
 include_directories(${INCLUDE_DIRS})

@@ -25,8 +25,13 @@ int main(int argc, char** argv)
     atexit(enet_deinitialize);
     qDebug().noquote() << "Using" << Client::Version();
 
+    QPixmap pix;
+    pix.load(":/uwu.png");
+    QLabel label;
+    label.setPixmap(pix);
 
-    OpenVROverlayController::SharedInstance()->Init("e");
+    OpenVROverlayController::SharedInstance()->Init();
+    OpenVROverlayController::SharedInstance()->SetWidget(&label);
 
     return app.exec();
 }

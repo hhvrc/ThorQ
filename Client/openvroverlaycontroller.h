@@ -25,40 +25,54 @@ class OpenVROverlayController : public QObject
 {
     Q_OBJECT
 
+    bool m_isVisible;
+    float m_alpha;
+    float m_width;
+    QColor m_tint;
+
 public:
     static bool IsSteamVRRunning();
     static bool IsHmdPresent();
     static OpenVROverlayController *SharedInstance();
-
+public:
     OpenVROverlayController();
     ~OpenVROverlayController() override;
-
-    bool Init();
-    void Shutdown();
 
     void SetWidget( QWidget* pWidget );
     QWidget* GetWidget() const;
 
-    void SetTint(const QColor& color);
-    QColor GetTint() const;
+    void SetIsVisible(bool show);
+    bool GetIsVisible();
+
+    void SetWidth(float meters);
+    float GetWidth() const;
 
     void SetAlpha(float alpha);
     float GetAlpha() const;
 
-    void SetWidth(float meters);
-    float GetWidth() const;
+    void SetTint(const QColor& color);
+    QColor GetTint() const;
 signals:
     void VrExited();
 public slots:
+    bool Init();
+    void Shutdown();
+protected:
     vr::EVRInitError ConnectToVRRuntime();
     void DisconnectFromVRRuntime();
 
     void PollEvents();
-    vr::EVROverlayError DrawOverlay(bool show = true, float size = 1.f, float alpha = 0.9f);
 
-protected:
-
+    void OverlayCreate();
+    void OverlayInit();
+    void OverlayProcess();
+    void OverlayDraw();
+    void OverlayTransform();
 private:
+    // Widget
+    QWidget *m_widget;
+    QTimer *m_pumpEventsTimer;
+    QElapsedTimer m_visibleTimeout;
 
     // OPENVR VARIABLES
     vr::IVRSystem* m_system;
@@ -68,25 +82,11 @@ private:
     vr::HmdMatrix34_t m_deviceOffset;
     vr::TrackedDeviceIndex_t m_deviceIndex;
 
-    // HANDLERS
-
-    // QT VARIABLES
-
-    // Visibility
-    bool m_isVisible;
-    QElapsedTimer m_visibleTimeout;
-
     // Graphics
     QGraphicsScene *m_scene;
     QOpenGLContext *m_glContext;
     QOffscreenSurface *m_surface;
     QOpenGLFramebufferObject *m_frameBuffer;
-
-    // Event loop
-    QTimer *m_pumpEventsTimer;
-
-    // Widget
-    QWidget *m_widget;
 
     // Input handling
     QPointF m_lastMousePoint;
