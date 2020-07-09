@@ -1,9 +1,10 @@
 #include <QDebug>
-#include <QtWidgets/QApplication>
+#include <QApplication>
+#include <QCoreApplication>
 
 #include <enet.h>
 #include "client.h"
-#include "overlaywidget.h"
+#include "loginwidget.h"
 #include "openvroverlaycontroller.h"
 
 int main(int argc, char** argv)
@@ -14,7 +15,16 @@ int main(int argc, char** argv)
     // TODO: Add pre-encryption flag that signalises if connection is encrypted or not so clients can re-authenticate
 
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-	QApplication app(argc, argv);
+    QApplication app(argc, argv);
+
+    QString stylesheet;
+    QFile file("stylesheet.css");
+    if (file.open(QFile::ReadOnly | QFile::Text))
+    {
+        QTextStream stream(&file);
+        stylesheet = stream.readAll();
+    }
+    app.setStyleSheet(stylesheet);
 
     // Initialize ENet
     if (enet_initialize() < 0)
@@ -25,13 +35,11 @@ int main(int argc, char** argv)
     atexit(enet_deinitialize);
     qDebug().noquote() << "Using" << Client::Version();
 
-    QPixmap pix;
-    pix.load(":/uwu.png");
-    QLabel label;
-    label.setPixmap(pix);
+    LoginWidget e;
+    e.show();
 
-    OpenVROverlayController::SharedInstance()->Init();
-    OpenVROverlayController::SharedInstance()->SetWidget(&label);
+    //OpenVROverlayController::SharedInstance()->Init();
+    //OpenVROverlayController::SharedInstance()->SetWidget(&label);
 
     return app.exec();
 }

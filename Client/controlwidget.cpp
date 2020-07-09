@@ -1,4 +1,4 @@
-#include "overlaywidget.h"
+#include "controlwidget.h"
 
 OverlayWidget::OverlayWidget(QWidget *parent) :
 	QWidget(parent)
