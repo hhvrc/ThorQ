@@ -4,15 +4,28 @@
 
 using namespace ThorQ;
 
-Crypto::Crypto() :
-	m_ready(false),
-	m_streamCipher(Botan::StreamCipher::create("ChaCha(20)"))
+std::vector<uint8_t> Crypto::GenRandBytes(std::size_t len)
 {
-	m_key = new Botan::ECDH_PrivateKey(Botan::system_rng(), Botan::EC_Group("secp256r1"));
+    if (len == 0)
+        return std::vector<uint8_t>();
+
+    std::vector<std::uint8_t> output(len);
+    Botan::AutoSeeded_RNG().randomize(output.data(), len);
+
+    return output;
+}
+
+Crypto::Crypto()
+    : m_ready(false)
+    , m_rng(new Botan::AutoSeeded_RNG())
+    , m_key(new Botan::ECDH_PrivateKey(*m_rng, Botan::EC_Group("secp256r1")))
+    , m_streamCipher(Botan::StreamCipher::create("ChaCha(20)"))
+{
 }
 
 Crypto::~Crypto()
 {
+    delete m_rng;
 	delete m_key;
 }
 
@@ -37,8 +50,8 @@ bool Crypto::Agree(uint8_t* data, std::size_t len)
 	if (len == m_key->public_value().size())
 	{
 		try
-		{
-			Botan::PK_Key_Agreement ecdh(*m_key, Botan::system_rng(), "KDF2(SHA-256)");
+        {
+            Botan::PK_Key_Agreement ecdh(*m_key, *m_rng, "KDF2(SHA-256)");
 			m_streamCipher->set_key(ecdh.derive_key(32, data, len));
 			m_ready = true;
 			return true;
@@ -59,7 +72,7 @@ void Crypto::Reset()
 	{
 		m_ready = false;
 		Botan::ECDH_PrivateKey* oldKey = m_key;
-		m_key = new Botan::ECDH_PrivateKey(Botan::system_rng(), Botan::EC_Group("secp256r1"));
+        m_key = new Botan::ECDH_PrivateKey(*m_rng, Botan::EC_Group("secp256r1"));
 		delete oldKey;
 		m_streamCipher->clear();
 	}
@@ -78,7 +91,7 @@ std::vector<uint8_t> Crypto::Encrypt(std::vector<uint8_t> data)
 		{
 			std::vector<std::uint8_t> output(24 + data.size());
 
-			Botan::system_rng().randomize(output.data(), 24);
+            m_rng->randomize(output.data(), 24);
 			m_streamCipher->set_iv(output.data(), 24);
 
 			m_streamCipher->encrypt(data);
@@ -105,7 +118,7 @@ std::vector<uint8_t> Crypto::Encrypt(const uint8_t* data, std::size_t len)
 		{
 			std::vector<std::uint8_t> output(24 + len);
 
-			Botan::system_rng().randomize(output.data(), 24);
+            m_rng->randomize(output.data(), 24);
 			m_streamCipher->set_iv(output.data(), 24);
 
 			std::vector<std::uint8_t> vec(data, data + len);
