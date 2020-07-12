@@ -2,30 +2,103 @@
 
 #include <QDebug>
 #include <QLabel>
-#include <QPalette>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QGraphicsDropShadowEffect>
 
-bool ddd = false;
+quint64 ddd = 0;
 
-LoginWidget::LoginWidget()
+LoginWidget::LoginWidget(QWidget* parent)
+    : QWidget(parent)
+    , m_state(-1)
+    , m_ping(0)
 {
-    m_vlayout = new QVBoxLayout(this);
-    setLayout(m_vlayout);
-    m_onlineStatus = new QLabel("● Offline", this);
-    m_onlineStatus->setStyleSheet("QLabel { color: red; }");
-    m_loginButton = new QPushButton("Login", this);
-
     setWindowTitle("ThorQ Login");
 
-    m_vlayout->addWidget(m_onlineStatus);
-    m_vlayout->addWidget(m_loginButton);
+    m_title = new QLabel("ThorQ", this);
+    m_title->setStyleSheet("font-size: 72px");
 
-    connect(m_loginButton, &QPushButton::clicked, [this](bool checked)
+    m_onlineStatus = new QLabel("● Offline", this);
+    m_onlineStatus->setStyleSheet("font-size: 16px; color: #FF0000");
+
+    m_headerLayout = new QHBoxLayout();
+    m_headerLayout->addWidget(m_title);
+    m_headerLayout->addWidget(m_onlineStatus);
+
+    m_loginButton = new QPushButton("Login", this);
+    m_usernameInput = new QLineEdit("Username", this);
+
+    //auto shadow = new QGraphicsDropShadowEffect();
+    //shadow->setXOffset(4);
+    //shadow->setYOffset(4);
+    //m_loginButton->setGraphicsEffect(shadow);
+
+    m_mainLayout = new QVBoxLayout(this);
+    m_mainLayout->addLayout(m_headerLayout);
+    m_mainLayout->addWidget(m_usernameInput);
+    m_mainLayout->addWidget(m_loginButton);
+    setLayout(m_mainLayout);
+
+    setFixedSize(m_mainLayout->geometry().size());
+    setWindowFlags(Qt::MSWindowsFixedSizeDialogHint);
+
+
+    connect(m_loginButton, &QPushButton::clicked, [this](){ emit LoginRequest(m_usernameInput->text()); });
+}
+
+LoginWidget::~LoginWidget()
+{
+
+}
+
+void LoginWidget::SetState(qint16 state)
+{
+    if (m_state != state)
     {
-        m_onlineStatus->setStyleSheet(ddd ? "color: green" : "color: red");
-        m_onlineStatus->setText(ddd ? "● Online" : "● Offline");
-        ddd = !ddd;
-    });
+        m_state = state;
+        updateStatus();
+    }
+}
+
+void LoginWidget::SetConnectionPing(qint64 ping)
+{
+    if (m_ping != ping)
+    {
+        m_ping = ping;
+
+        if (m_state > ThorQ::ClientState::Connecting)
+            updateStatus();
+    }
+}
+
+void LoginWidget::updateStatus()
+{
+    switch (m_state) {
+    case ThorQ::ClientState::Disconnected:
+        m_onlineStatus->setStyleSheet("font-size: 16px; color: #FF0000");
+        m_onlineStatus->setText(QString("● Offline"));
+        break;
+    case ThorQ::ClientState::Disconnecting:
+        m_onlineStatus->setStyleSheet("font-size: 16px; color: #FF0000");
+        m_onlineStatus->setText(QString("● Disconnecting..."));
+        break;
+    case ThorQ::ClientState::Connecting:
+        m_onlineStatus->setStyleSheet("font-size: 16px; color: #FFA500");
+        m_onlineStatus->setText(QString("● Connecting..."));
+        break;
+    case ThorQ::ClientState::Connected:
+        m_onlineStatus->setStyleSheet("font-size: 16px; color: #FFA500");
+        m_onlineStatus->setText(QString("● Connected\n%1 ms").arg(m_ping));
+        m_usernameInput->show();
+        m_loginButton->show();
+        return;
+    default:
+        m_onlineStatus->setStyleSheet("font-size: 16px; color: #FFFFFF");
+        m_onlineStatus->setText(QString("● ????"));
+        break;
+    }
+
+    m_usernameInput->hide();
+    m_loginButton->hide();
 }

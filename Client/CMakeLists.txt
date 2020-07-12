@@ -76,6 +76,7 @@ set(${project}_SOURCES
 set(${project}_MOC
     ${CMAKE_CURRENT_SOURCE_DIR}/client.h
     ${CMAKE_CURRENT_SOURCE_DIR}/procmon.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/userdata.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.h

@@ -13,17 +13,7 @@ namespace ThorQ {
 	class Crypto;
 
 	class Instance
-	{
-		std::string m_name;
-
-		ENetPeer* m_peer;
-		Instance* m_partner;
-		Instance* m_requestTarget;
-
-		bool m_hasCollar;
-
-		Crypto* m_crypto;
-
+    {
 		Instance(const Instance&) = delete;
 		Instance& operator=(const Instance&) = delete;
 	public:
@@ -39,7 +29,8 @@ namespace ThorQ {
 		ENetPeer* Peer() const;
 
 		void RequestOn(Instance* target);
-		void RequestAcceptFrom(Instance* sender);
+        bool RequestAcceptFrom(Instance* sender);
+        bool RequestDenyFrom(Instance* sender);
 		Instance* Partner() const;
 		void ClearPartner();
 		bool HasPartner();
@@ -47,14 +38,43 @@ namespace ThorQ {
 		void SetHasCollar(bool hasCollar);
 		bool HasCollar() const;
 
-		void SendRaw(const std::vector<std::uint8_t>& data, bool unreliable = false);
-		void SendRaw(const std::uint8_t* data, std::size_t len, bool unreliable = false);
-		void SendEncrypted(const std::vector<std::uint8_t>& data, bool unreliable = false);
-		void SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable = false);
-		void SendEncMessage(std::uint32_t meta);
-		void SendEncMessage(std::uint32_t meta, const std::string& message);
+        int ClientState() const;
+        void SetClientState(int state);
 
-		Crypto* GetCrypto();
+        int CryptoState() const;
+        void SetCryptoState(int state);
+
+        void SendHeartbeat();
+        void SendRaw(std::uint32_t meta);
+        void SendRaw(std::uint32_t meta, const std::string& message, bool unreliable = false);
+        void SendRaw(const std::vector<std::uint8_t>& data, bool unreliable = false);
+        void SendRaw(const std::uint8_t* data, std::size_t len, bool unreliable = false);
+        void SendEncrypted(std::uint32_t meta);
+        void SendEncrypted(std::uint32_t meta, const std::string& message, bool unreliable = false);
+        void SendEncrypted(const std::vector<std::uint8_t>& data, bool unreliable = false);
+        void SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable = false);
+
+        void CryptoInit();
+        void CryptoEstablish(const std::vector<std::uint8_t>& response);
+        bool CryptoVerify(const std::vector<std::uint8_t>& response);
+
+        Crypto* GetCrypto();
+    private:
+        std::uint8_t GetFlag(bool withHeartbeat = false);
+
+        Crypto* m_crypto;
+
+        int m_clientState;
+        int m_cryptoState;
+
+        std::string m_name;
+        bool m_hasCollar;
+
+        ENetPeer* m_peer;
+        Instance* m_partner;
+        Instance* m_requestedPartner;
+
+        std::vector<std::uint8_t> m_verificationData;
 	};
 }
 

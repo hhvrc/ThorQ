@@ -13,6 +13,8 @@
 #define DISCONNECT_ERROR 0x00000001
 #define DISCONNECT_SHUTDOWN 0x00000002
 
+#define SCOPELOCK(l) std::scoped_lock<std::mutex> lock(const_cast<std::mutex&>(l))
+
 QString ipv6_to_str(const struct in6_addr& addr)
 {
 	char buffer[50];
@@ -33,62 +35,54 @@ std::string ExtractString(const std::uint8_t* data, std::size_t dataSize, std::s
 	return std::string(data + startOffset, data + dataSize - endOffset);
 }
 
-Client::Client() :
-	m_crypto(new ThorQ::Crypto()),
-	m_address(),
-	m_port(0),
-	m_connected(false),
-	m_reconnect(true),
-	m_username(),
-	m_requestedUsername(),
-	m_thread(nullptr),
-	m_pingTimer(new QElapsedTimer()),
-	m_peer(nullptr),
-	m_client(nullptr)
+Client::Client(ENetHost* host, const QString& hostname, int port)
+    : QObject()
+    , m_crypto(new ThorQ::Crypto())
+    , m_address(hostname)
+    , m_port(port)
+    , m_clientState(ThorQ::ClientState::Disconnected)
+    , m_cryptoState(ThorQ::CryptoState::None)
+    , m_sessionState(ThorQ::SessionState::LoggedOut)
+    , m_ping(0)
+    , m_username()
+    , m_partnerName()
+    , m_onlineUsers()
+    , m_thread(new QThread())
+    , m_awaitingPing(false)
+    , m_pingTimer(new QElapsedTimer())
+    , m_peer(nullptr)
+    , m_host(host)
 {
-	QObject::connect(this, &Client::portChanged, this, &Client::Disconnect);
-	QObject::connect(this, &Client::addressChanged, this, &Client::Disconnect);
+    QObject::connect(this, &Client::PortChanged, this, &Client::Disconnect);
+    QObject::connect(this, &Client::AddressChanged, this, &Client::Disconnect);
+    QObject::connect(m_thread, &QThread::started, this, &Client::Run);
+
+    reinterpret_cast<QObject*>(this)->moveToThread(m_thread);
+    m_thread->start();
 }
 
-Client* Client::NewClient(QString hostname, int port)
+Client* Client::NewClient(const QString& hostname, int port)
 {
 	ENetHost* host = enet_host_create(nullptr, 1, 2, 0, 0);
 
 	if (host == nullptr)
 		return nullptr;
 
-	Client* cli = new Client();
-	cli->m_client = host;
-	cli->m_address = hostname;
-	cli->m_port = port;
-
-	cli->m_thread = new QThread();
-	cli->moveToThread(cli->m_thread);
-	cli->m_thread->start();
-
-	return cli;
+    return new Client(host, hostname, port);
 }
 
 Client::~Client()
 {
-	if (m_thread != nullptr)
+    m_thread->quit();
+    m_thread->requestInterruption();
+    m_thread->wait();
+
+    if (m_host != nullptr)
 	{
-		m_thread->quit();
-		m_thread->requestInterruption();
-		m_thread->wait();
+        enet_host_destroy(m_host);
 	}
 
-	if (m_peer != nullptr)
-	{
-		enet_peer_disconnect_now(m_peer, DISCONNECT_SHUTDOWN);
-	}
-
-	if (m_client != nullptr)
-	{
-		enet_host_destroy(m_client);
-	}
-
-	delete m_pingTimer;
+    delete m_pingTimer;
 	delete m_crypto;
 }
 
@@ -97,253 +91,500 @@ QString Client::Version()
 	return QString("ENet-%1.%2.%3").arg(ENET_VERSION_MAJOR).arg(ENET_VERSION_MINOR).arg(ENET_VERSION_PATCH);
 }
 
-QString Client::address() const
+QString Client::Address() const
 {
+    SCOPELOCK(l_address);
 	return m_address;
 }
 
-int Client::port() const
+int Client::Port() const
 {
-	return m_port;
+    return m_port.load();
 }
 
-bool Client::connected() const
+int Client::Ping() const
 {
-	return m_connected;
+    return m_ping.load();
 }
 
-bool Client::authenticated() const
+int Client::ClientState() const
 {
-	return m_crypto->IsCryptoReady();
+    return m_clientState.load();
 }
 
-QString Client::username() const
+int Client::CryptoState() const
 {
-	return m_username;
+    return m_cryptoState.load();
+}
+
+int Client::SessionState() const
+{
+    return m_sessionState.load();
+}
+
+QString Client::Username() const
+{
+    SCOPELOCK(l_username);
+    return QString::fromStdString(m_username);
+}
+
+UserData Client::Partner() const
+{
+    SCOPELOCK(l_onlineUsers);
+    for (UserData user : m_onlineUsers)
+    {
+        if (user.username == m_partnerName)
+            return user;
+    }
+
+    return UserData();
+}
+
+QList<UserData> Client::OnlineUsers() const
+{
+    SCOPELOCK(l_onlineUsers);
+    return m_onlineUsers;
 }
 
 void Client::setAddress(const QString& address)
 {
-	if (address != m_address)
+    SCOPELOCK(l_address);
+    if (address != m_address)
 	{
 		m_address = address;
-		emit addressChanged(address);
+        emit AddressChanged(address);
 	}
 }
 
 void Client::setPort(int port)
 {
-	if (port != m_port)
-	{
-		m_port = port;
-		emit portChanged(port);
-	}
+    int oldPort = m_port.exchange(port);
+
+    if (oldPort != port)
+        emit PortChanged(port);
 }
 
-void Client::Login(const QString& username)
+void Client::Connect()
 {
-	if (!connected() || !authenticated() || !m_username.isEmpty())
-		return;
+    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_Connect);
+}
 
-	m_requestedUsername = username;
+void Client::Disconnect()
+{
+    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_Disconnect);
+}
 
-	// TODO: make this code invoke from the thread of the object
-	SendEncrypted(ThorQ::ThorqEnums::USER_Login, username.toStdString());
+void Client::Login(const QString &username)
+{
+    SCOPELOCK(l_username);
+
+    if (ClientState() != ThorQ::ClientState::Connected || SessionState() != ThorQ::SessionState::LoggedOut)
+        return;
+
+    m_username = username.toStdString();
+
+    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_Login);
 }
 
 void Client::Logout()
 {
-	if (!connected() || !authenticated() || m_username.isEmpty())
-		return;
-
-	// TODO: make this code invoke from the thread of the object
-	SendEncrypted(ThorQ::ThorqEnums::USER_Logout);
+    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_Logout);
 }
 
-void Client::SetAuto(int a, int b, int c)
+void Client::RequestSession(const QString &username)
 {
-	// TODO: make this code invoke from the thread of the object
-
+    SCOPELOCK(l_requestedPartner);
+    m_requestedPartner = username.toStdString();
+    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_SessionRequest);
 }
 
-void Client::SendA(int i)
+void Client::AcceptRequest()
 {
-	// TODO: make this code invoke from the thread of the object
-
+    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_SessionAccept);
 }
 
-void Client::SendB(int i)
+void Client::DenyRequest()
 {
-	// TODO: make this code invoke from the thread of the object
-
+    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_SessionDeny);
 }
 
-void Client::SendC(int i)
+void Client::LeaveSession()
 {
-	// TODO: make this code invoke from the thread of the object
-
+    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_SessionLeave);
 }
 
-void Client::run()
+void Client::SetShock(bool enable, int strength)
+{
+    if (enable)
+    {
+        m_shockValue.store(strength);
+        m_actionFlags.fetch_or(ThorQ::CollarFlags::COLLAR_Shock);
+    }
+    else
+    {
+        m_actionFlags.fetch_and(~ThorQ::CollarFlags::COLLAR_Shock);
+    }
+}
+void Client::SetVibrate(bool enable, int strength)
+{
+    if (enable)
+    {
+        m_vibrateValue.store(strength);
+        m_actionFlags.fetch_or(ThorQ::CollarFlags::COLLAR_Vibrate);
+    }
+    else
+    {
+        m_actionFlags.fetch_and(~ThorQ::CollarFlags::COLLAR_Vibrate);
+    }
+}
+void Client::SetBeep(bool enable, int count)
+{
+    if (enable)
+    {
+        m_beepValue.store(count);
+        m_actionFlags.fetch_or(ThorQ::CollarFlags::COLLAR_Beep);
+    }
+    else
+    {
+        m_actionFlags.fetch_and(~ThorQ::CollarFlags::COLLAR_Beep);
+    }
+}
+void Client::SetAuto(bool enable, int sensitivity, int shockStrength, int vibrateStrength, int beepCount)
+{
+    if (enable)
+    {
+        m_autoSensitivity.store(sensitivity);
+        m_autoShock.store(shockStrength);
+        m_autoShock.store(vibrateStrength);
+        m_autoShock.store(beepCount);
+        m_actionFlags.fetch_or(ThorQ::CollarFlags::COLLAR_Auto);
+    }
+    else
+    {
+        m_actionFlags.fetch_and(~ThorQ::CollarFlags::COLLAR_Auto);
+    }
+}
+
+void Client::Run()
 {
 	ENetEvent event;
 
 	while (!m_thread->isInterruptionRequested())
 	{
-		while (enet_host_service(m_client, &event, 500) > 0)
+        while (enet_host_service(m_host, &event, 0) > 0)
 		{
 			switch (event.type)
 			{
-			case ENET_EVENT_TYPE_CONNECT:
-				handleConnect();
+            case ENET_EVENT_TYPE_CONNECT:
+                SetCryptoState(ThorQ::CryptoState::None);
+                SetClientState(ThorQ::ClientState::Connecting);
 				break;
-			case ENET_EVENT_TYPE_RECEIVE:
-				emit dataRx();
-				handleMessage(event.packet);
+            case ENET_EVENT_TYPE_RECEIVE:
+                HandleMessage(event.packet);
 				enet_packet_destroy(event.packet);
 				break;
-			case ENET_EVENT_TYPE_DISCONNECT:
-				emit Disconnected();
+            case ENET_EVENT_TYPE_DISCONNECT:
+                SetCryptoState(ThorQ::CryptoState::None);
+                SetClientState(ThorQ::ClientState::Disconnected);
+                m_peer = nullptr;
+
+                if (ClientState() != ThorQ::ClientState::Disconnecting)
+                    emit Error("Unexpected disconnect!");
+
+                SetClientState(ThorQ::ClientState::Disconnected);
 				break;
-			case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-				emit TimedOut();
+            case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
+                SetCryptoState(ThorQ::CryptoState::None);
+                SetClientState(ThorQ::ClientState::Disconnected);
+                m_peer = nullptr;
+
+                emit Error("Timed out!");
+
+                SetClientState(ThorQ::ClientState::Disconnected);
 				break;
 			case ENET_EVENT_TYPE_NONE:
 				break;
 			}
+        }
+
+        // Send stuff
+        if (SessionState() == ThorQ::SessionState::InSession)
+        {
+            if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Shock) != 0)
+            {
+                SendEncrypted(ThorQ::MessageEnums::COMMAND_Shock, true);
+            }
+
+            if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Vibrate) != 0)
+            {
+                SendEncrypted(ThorQ::MessageEnums::COMMAND_Vibrate, true);
+            }
+
+            if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Beep) != 0)
+            {
+                SendEncrypted(ThorQ::MessageEnums::COMMAND_Beep, true);
+            }
+
+            if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Auto) != 0)
+            {
+                SendEncrypted(ThorQ::MessageEnums::COMMAND_Auto, false);
+            }
+
+            if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionLeave) != 0)
+            {
+                SendEncrypted(ThorQ::MessageEnums::SESSION_Leave);
+            }
+        }
+        else if (!m_requestingPartner.empty())
+        {
+            if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionAccept) != 0)
+            {
+                SendEncrypted(ThorQ::MessageEnums::SESSION_Accept, m_requestingPartner);
+            }
+            else if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionDeny) != 0)
+            {
+                SendEncrypted(ThorQ::MessageEnums::SESSION_Deny, m_requestingPartner);
+            }
+        }
+
+        if (ClientState() == ThorQ::ClientState::Connecting || ClientState() == ThorQ::ClientState::Connected)
+        {
+            if (m_pingTimer->elapsed() > 500)
+            {
+                if (m_awaitingPing)
+                    qDebug() << "ping timed out!";
+
+                m_pingTimer->start();
+                SendHeartbeat();
+                m_awaitingPing = true;
+            }
 		}
 
-		if (m_crypto->IsCryptoReady())
+
+    }
+
+    if (m_peer != nullptr)
+    {
+        enet_peer_disconnect_now(m_peer, DISCONNECT_SHUTDOWN);
+    }
+}
+
+void Client::SetPing(int ping)
+{
+    if (m_ping != ping)
+    {
+        m_ping = ping;
+        emit PingChanged(ping);
+    }
+}
+
+void Client::SetClientState(int state)
+{
+    if (m_clientState != state)
+    {
+        m_clientState = state;
+        emit ClientStateChanged(state);
+    }
+}
+
+void Client::SetCryptoState(int state)
+{
+    if (m_cryptoState != state)
+    {
+        m_cryptoState = state;
+        emit CryptoStateChanged(state);
+    }
+}
+
+void Client::SetSessionState(int state)
+{
+    if (m_sessionState != state)
+    {
+        m_sessionState = state;
+        emit SessionStateChanged(state);
+    }
+}
+
+void Client::SetUsername(const QString &username)
+{
+    SCOPELOCK(l_username);
+    m_username = username.toStdString();
+}
+
+void Client::SetPartner(const QString &username)
+{
+    SCOPELOCK(l_onlineUsers);
+    m_partnerName = username;
+}
+
+void Client::UpsertOnlineUser(const UserData &user)
+{
+    SCOPELOCK(l_onlineUsers);
+    for (int i = 0; i < m_onlineUsers.size(); i++)
+    {
+        if (m_onlineUsers[i].username == user.username)
+        {
+            m_onlineUsers[i].hasCollar = user.hasCollar;
+            m_onlineUsers[i].inSession = user.inSession;
+            return;
+        }
+    }
+    m_onlineUsers.push_back(user);
+}
+
+void Client::RemoveOnlineUser(const QString &user)
+{
+
+}
+
+void Client::HandleMessage(ENetPacket* packet)
+{
+    if (ClientState() == ThorQ::ClientState::Disconnecting || ClientState() == ThorQ::ClientState::Disconnected || packet->dataLength < sizeof(std::uint8_t))
+        return;
+
+    std::uint8_t flag = ntohl(static_cast<std::uint8_t>(*packet->data));
+
+    if ((flag & ThorQ::PreEncryptionFlag::HEARTBEAT) != 0)
+    {
+        if (m_awaitingPing)
+        {
+            SetPing(m_pingTimer->elapsed());
+            m_awaitingPing = false;
+        }
+        return;
+    }
+
+    if (packet->dataLength == sizeof(std::uint8_t))
+        return;
+
+    std::vector<std::uint8_t> data(packet->data + sizeof(std::uint8_t), packet->data + packet->dataLength - sizeof(std::uint8_t));
+
+    if ((flag & ThorQ::PreEncryptionFlag::CRYPT_ESTABLISH) != 0)
+    {
+        if (m_crypto->IsCryptoReady())
+        {
+            m_crypto->Reset();
+        }
+
+        if (m_crypto->Agree(data))
 		{
-			if (m_pingTimer->isValid())
-			{
-				qDebug() << "ping timed out!";
-			}
-
-			m_pingTimer->start();
-			SendEncrypted(ThorQ::ThorqEnums::HEARTBEAT);
-		}
-	}
-
-	m_reconnect = false;
-	Disconnect();
-}
-
-void Client::setConnected(bool connected)
-{
-	if (connected != m_connected)
-	{
-		m_connected = connected;
-		emit connectedChanged(connected);
-	}
-}
-
-void Client::Connect()
-{
-	if (connected())
-		return;
-
-	// TODO: make this code invoke from the thread of the object
-	ENetAddress address;
-	enet_address_set_host(&address, m_address.toStdString().c_str());
-	address.port = m_port;
-	m_peer = enet_host_connect(m_client, &address, 4, 0);
-
-	if (m_peer != nullptr)
-	{
-		setConnected(true);
-	}
-	else
-	{
-		emit Error("Failed to connect");
-	}
-}
-
-void Client::Disconnect()
-{
-	if (!connected())
-		return;
-
-	if (m_peer == nullptr)
-	{
-		setConnected(false);
-		return;
-	}
-
-	// TODO: make this code invoke from the thread of the object
-	enet_peer_disconnect(m_peer, 0);
-
-}
-
-void Client::handleConnect()
-{
-	qDebug().noquote() << "Connected to" << ipv6_to_str(m_peer->address.host) << m_peer->address.port;
-	emit Connected();
-}
-
-void Client::handleMessage(ENetPacket* packet)
-{
-	if (!m_crypto->IsCryptoReady())
-	{
-		if (m_crypto->Agree(packet->data, packet->dataLength))
-		{
-			SendRaw(m_crypto->PublicKey());
-			return;
+            SendRaw(m_crypto->PublicKey());
+            SetCryptoState(ThorQ::CryptoState::Establishing);
 		}
 		else
 		{
-			enet_peer_disconnect_now(m_peer, DISCONNECT_ERROR);
-			emit Error("Failed to establish cryptographic link");
-			emit Disconnected();
-			return;
+            m_crypto->Reset();
+            SetCryptoState(ThorQ::CryptoState::None);
 		}
+        return;
 	}
 
-	std::vector<std::uint8_t> data = m_crypto->Decrypt(packet->data, packet->dataLength);
+    if (!m_crypto->IsCryptoReady())
+        return;
 
-	if (data.empty())
-	{
-		qDebug() << "Data is empty!";
-		return;
-	}
+    if ((flag & ThorQ::PreEncryptionFlag::CRYPT_VERIFY) != 0)
+    {
+        if (data.size() != sizeof(std::uint64_t))
+            return;
 
-	std::uint32_t meta = ntohl(*(std::int32_t*)data.data());
+        if (static_cast<std::uint64_t>(*data.data()) == UINT64_MAX)
+        {
+            SendEncrypted(data);
+            SetCryptoState(ThorQ::CryptoState::Verifying);
+        }
+        else
+        {
+            m_crypto->Reset();
+            SetCryptoState(ThorQ::CryptoState::None);
+        }
+        return;
+    }
 
-	if ((meta & 0xFF) == ThorQ::ThorqEnums::HEARTBEAT)
-	{
-		if (m_pingTimer->isValid())
-		{
-			qDebug().noquote() << "Latency:" << m_pingTimer->elapsed();
-			m_pingTimer->invalidate();
-		}
-	}
+    if ((flag & ThorQ::PreEncryptionFlag::CRYPT_OK) == 0)
+        return;
+
+    SetCryptoState(ThorQ::CryptoState::Ok);
+    SetClientState(ThorQ::ClientState::Connected);
+
+    qDebug() << "uwu";
 }
 
-void Client::SendRaw(const std::vector<uint8_t>& data, bool unreliable) { SendRaw(data.data(), data.size(), unreliable); }
-void Client::SendRaw(const uint8_t* data, std::size_t len, bool unreliable)
+std::uint8_t Client::GetFlag(bool withHeartbeat)
 {
-	emit dataTx();
-	enet_peer_send(m_peer, unreliable ? 1 : 0, enet_packet_create(data, len, unreliable ? ENET_PACKET_FLAG_UNSEQUENCED : ENET_PACKET_FLAG_RELIABLE));
+    std::uint8_t flag = withHeartbeat ? ThorQ::PreEncryptionFlag::HEARTBEAT : 0;
+
+    switch (CryptoState()) {
+    case ThorQ::CryptoState::Establishing:
+        flag |= ThorQ::PreEncryptionFlag::CRYPT_ESTABLISH;
+        break;
+    case ThorQ::CryptoState::Verifying:
+        flag |= ThorQ::PreEncryptionFlag::CRYPT_VERIFY;
+        break;
+    case ThorQ::CryptoState::Ok:
+        flag |= ThorQ::PreEncryptionFlag::CRYPT_OK;
+        break;
+    }
+
+    return htonl(flag);
 }
 
-void Client::SendEncrypted(const std::vector<uint8_t>& data, bool unreliable) { SendEncrypted(data.data(), data.size(), unreliable); }
-void Client::SendEncrypted(const uint8_t* data, std::size_t len, bool unreliable)
+void Client::SendHeartbeat()
 {
-	SendRaw(m_crypto->Encrypt(data, len), unreliable);
+    std::uint8_t flag = GetFlag(true);
+    enet_peer_send(m_peer, 1, enet_packet_create(&flag, sizeof(std::uint8_t), ENET_PACKET_FLAG_UNSEQUENCED));
 }
 
-void Client::SendEncrypted(uint32_t meta)
+void Client::SendRaw(std::uint32_t meta, bool unreliable)
 {
-	meta = htonl(meta);
-	SendEncrypted(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t));
+    meta = htonl(meta);
+    SendRaw(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t), unreliable);
 }
-
-void Client::SendEncrypted(uint32_t meta, const std::string& message)
+void Client::SendRaw(std::uint32_t meta, const std::string &message, bool unreliable)
 {
-	meta = htonl(meta);
-	std::size_t len = sizeof(std::uint32_t) + message.length();
-	std::uint8_t* data = new std::uint8_t[len];
-	memcpy(data, &meta, sizeof(std::uint32_t));
-	memcpy(data + sizeof(std::uint32_t), message.data(), message.length());
-	SendEncrypted(data, len);
+    meta = htonl(meta);
+    std::vector<std::uint8_t> data;
+    data.resize(sizeof(std::uint32_t) + message.length());
+    memcpy(data.data(), &meta, sizeof(std::uint32_t));
+    memcpy(data.data() + sizeof(std::uint32_t), message.data(), message.length());
+    SendRaw(data, unreliable);
+}
+void Client::SendRaw(const std::vector<uint8_t>& data, bool unreliable)
+{
+    if (ClientState() < ThorQ::ClientState::Connecting)
+        return;
+
+    std::size_t size = data.size() + 1;
+    std::uint8_t* dat = new std::uint8_t[size];
+    dat[0] = GetFlag();
+    memcpy(dat + 1, data.data(), data.size());
+
+    enet_peer_send(m_peer, unreliable ? 1 : 0, enet_packet_create(dat, size, unreliable ? ENET_PACKET_FLAG_UNSEQUENCED : ENET_PACKET_FLAG_RELIABLE));
+}
+void Client::SendRaw(const std::uint8_t* data, std::size_t len, bool unreliable) { SendRaw(std::vector<std::uint8_t>(data, data + len), unreliable); }
+
+void Client::SendEncrypted(std::uint32_t meta, bool unreliable)
+{
+    meta = htonl(meta);
+    SendEncrypted(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t), unreliable);
+}
+void Client::SendEncrypted(std::uint32_t meta, const std::string &message, bool unreliable)
+{
+    meta = htonl(meta);
+    std::vector<std::uint8_t> data;
+    data.resize(sizeof(std::uint32_t) + message.length());
+    memcpy(data.data(), &meta, sizeof(std::uint32_t));
+    memcpy(data.data() + sizeof(std::uint32_t), message.data(), message.length());
+    SendEncrypted(data, unreliable);
+}
+void Client::SendEncrypted(const std::vector<std::uint8_t>& data, bool unreliable) { SendEncrypted(data.data(), data.size(), unreliable); }
+void Client::SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable)
+{
+    if (ClientState() != ThorQ::ClientState::Connected)
+        return;
+
+    std::vector<std::uint8_t> encrypted = m_crypto->Encrypt(data, len);
+
+    encrypted.insert(encrypted.begin(), GetFlag());
+
+    enet_peer_send(m_peer, unreliable ? 1 : 0, enet_packet_create(encrypted.data(), encrypted.size(), unreliable ? ENET_PACKET_FLAG_UNSEQUENCED : ENET_PACKET_FLAG_RELIABLE));
 }

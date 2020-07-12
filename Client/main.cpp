@@ -32,14 +32,26 @@ int main(int argc, char** argv)
         printf("Failed to initialize ENet");
         exit(EXIT_FAILURE);
     }
-    atexit(enet_deinitialize);
     qDebug().noquote() << "Using" << Client::Version();
 
     LoginWidget e;
     e.show();
 
+    Client* cli = Client::NewClient("localhost", 12345);
+    QObject::connect(cli, &Client::ClientStateChanged, &e, &LoginWidget::SetState);
+
+    QObject::connect(&e, &LoginWidget::LoginRequest, [&](const QString& username)
+    {
+       qDebug() << username;
+    });
+
+    cli->Connect();
+
     //OpenVROverlayController::SharedInstance()->Init();
     //OpenVROverlayController::SharedInstance()->SetWidget(&label);
 
-    return app.exec();
+    int retval = app.exec();
+
+    enet_deinitialize();
+    return retval;
 }
