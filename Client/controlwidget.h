@@ -2,8 +2,12 @@
 #define OVERLAYWIDGET_H
 
 #include <QWidget>
-#include <QImage>
-#include <QLabel>
+
+class QVBoxLayout;
+class QHBoxLayout;
+class QLabel;
+class QLineEdit;
+class QPushButton;
 
 namespace Ui {
 class ControlWidget;

@@ -35,11 +35,9 @@ std::string ExtractString(const std::uint8_t* data, std::size_t dataSize, std::s
 	return std::string(data + startOffset, data + dataSize - endOffset);
 }
 
-Client::Client(ENetHost* host, const QString& hostname, int port)
+Client::Client(ENetHost* host)
     : QObject()
     , m_crypto(new ThorQ::Crypto())
-    , m_address(hostname)
-    , m_port(port)
     , m_clientState(ThorQ::ClientState::Disconnected)
     , m_cryptoState(ThorQ::CryptoState::None)
     , m_sessionState(ThorQ::SessionState::LoggedOut)
@@ -50,8 +48,9 @@ Client::Client(ENetHost* host, const QString& hostname, int port)
     , m_thread(new QThread())
     , m_awaitingPing(false)
     , m_pingTimer(new QElapsedTimer())
-    , m_peer(nullptr)
     , m_host(host)
+    , m_peer(nullptr)
+    , m_address(new ENetAddress())
 {
     QObject::connect(this, &Client::PortChanged, this, &Client::Disconnect);
     QObject::connect(this, &Client::AddressChanged, this, &Client::Disconnect);
@@ -61,14 +60,14 @@ Client::Client(ENetHost* host, const QString& hostname, int port)
     m_thread->start();
 }
 
-Client* Client::NewClient(const QString& hostname, int port)
+Client* Client::NewClient()
 {
 	ENetHost* host = enet_host_create(nullptr, 1, 2, 0, 0);
 
 	if (host == nullptr)
 		return nullptr;
 
-    return new Client(host, hostname, port);
+    return new Client(host);
 }
 
 Client::~Client()
@@ -82,6 +81,7 @@ Client::~Client()
         enet_host_destroy(m_host);
 	}
 
+    delete m_address;
     delete m_pingTimer;
 	delete m_crypto;
 }
@@ -89,17 +89,6 @@ Client::~Client()
 QString Client::Version()
 {
 	return QString("ENet-%1.%2.%3").arg(ENET_VERSION_MAJOR).arg(ENET_VERSION_MINOR).arg(ENET_VERSION_PATCH);
-}
-
-QString Client::Address() const
-{
-    SCOPELOCK(l_address);
-	return m_address;
-}
-
-int Client::Port() const
-{
-    return m_port.load();
 }
 
 int Client::Ping() const
@@ -146,26 +135,12 @@ QList<UserData> Client::OnlineUsers() const
     return m_onlineUsers;
 }
 
-void Client::setAddress(const QString& address)
+void Client::Connect(const char* address, int port)
 {
     SCOPELOCK(l_address);
-    if (address != m_address)
-	{
-		m_address = address;
-        emit AddressChanged(address);
-	}
-}
+    enet_address_set_host(m_address, address);
+    m_address->port = port;
 
-void Client::setPort(int port)
-{
-    int oldPort = m_port.exchange(port);
-
-    if (oldPort != port)
-        emit PortChanged(port);
-}
-
-void Client::Connect()
-{
     m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_Connect);
 }
 
@@ -308,42 +283,59 @@ void Client::Run()
         }
 
         // Send stuff
-        if (SessionState() == ThorQ::SessionState::InSession)
+        if (ClientState() == ThorQ::ClientState::Connected)
         {
-            if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Shock) != 0)
+            if (SessionState() == ThorQ::SessionState::InSession)
             {
-                SendEncrypted(ThorQ::MessageEnums::COMMAND_Shock, true);
-            }
+                if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Shock) != 0)
+                {
+                    SendEncrypted(ThorQ::MessageEnums::COMMAND_Shock, true);
+                }
 
-            if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Vibrate) != 0)
-            {
-                SendEncrypted(ThorQ::MessageEnums::COMMAND_Vibrate, true);
-            }
+                if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Vibrate) != 0)
+                {
+                    SendEncrypted(ThorQ::MessageEnums::COMMAND_Vibrate, true);
+                }
 
-            if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Beep) != 0)
-            {
-                SendEncrypted(ThorQ::MessageEnums::COMMAND_Beep, true);
-            }
+                if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Beep) != 0)
+                {
+                    SendEncrypted(ThorQ::MessageEnums::COMMAND_Beep, true);
+                }
 
-            if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Auto) != 0)
-            {
-                SendEncrypted(ThorQ::MessageEnums::COMMAND_Auto, false);
-            }
+                if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Auto) != 0)
+                {
+                    SendEncrypted(ThorQ::MessageEnums::COMMAND_Auto, false);
+                }
 
-            if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionLeave) != 0)
+                if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionLeave) != 0)
+                {
+                    SendEncrypted(ThorQ::MessageEnums::SESSION_Leave);
+                }
+            }
+            else if (!m_requestingPartner.empty())
             {
-                SendEncrypted(ThorQ::MessageEnums::SESSION_Leave);
+                if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionAccept) != 0)
+                {
+                    SendEncrypted(ThorQ::MessageEnums::SESSION_Accept, m_requestingPartner);
+                    m_requestingPartner.clear();
+                }
+                else if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionDeny) != 0)
+                {
+                    SendEncrypted(ThorQ::MessageEnums::SESSION_Deny, m_requestingPartner);
+                    m_requestingPartner.clear();
+                }
+            }
+            else
+            {
+
             }
         }
-        else if (!m_requestingPartner.empty())
+        else if (ClientState() == ThorQ::ClientState::Disconnected)
         {
-            if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionAccept) != 0)
+            if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_Connect) != 0)
             {
-                SendEncrypted(ThorQ::MessageEnums::SESSION_Accept, m_requestingPartner);
-            }
-            else if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionDeny) != 0)
-            {
-                SendEncrypted(ThorQ::MessageEnums::SESSION_Deny, m_requestingPartner);
+                m_peer = enet_host_connect(m_host, m_address, 4, 0);
+                SetClientState(ThorQ::ClientState::Connecting);
             }
         }
 
@@ -351,8 +343,8 @@ void Client::Run()
         {
             if (m_pingTimer->elapsed() > 500)
             {
-                if (m_awaitingPing)
-                    qDebug() << "ping timed out!";
+                //if (m_awaitingPing)
+                //    qDebug() << "ping timed out!";
 
                 m_pingTimer->start();
                 SendHeartbeat();

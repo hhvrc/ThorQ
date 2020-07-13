@@ -10,9 +10,10 @@
 class QThread;
 class QElapsedTimer;
 namespace ThorQ { class Crypto; }
-typedef struct _ENetPeer   ENetPeer;
-typedef struct _ENetHost   ENetHost;
-typedef struct _ENetPacket ENetPacket;
+typedef struct _ENetPeer    ENetPeer;
+typedef struct _ENetHost    ENetHost;
+typedef struct _ENetPacket  ENetPacket;
+typedef struct _ENetAddress ENetAddress;
 
 #include "userdata.h"
 
@@ -20,15 +21,12 @@ class Client : public QObject
 {
 	Q_OBJECT
 	Q_DISABLE_COPY(Client)
-    Client(ENetHost* client, const QString& hostname, int Port);
+    Client(ENetHost* client);
 public:
-    static Client* NewClient(const QString& hostname, int Port);
+    static Client* NewClient();
 	~Client();
 
     static QString Version();
-
-    QString Address() const;
-    int Port() const;
 
     int Ping() const;
     int ClientState() const;
@@ -39,10 +37,7 @@ public:
     UserData Partner() const;
     QList<UserData> OnlineUsers() const;
 public slots:
-    void setAddress(const QString& Address);
-    void setPort(int port);
-
-    void Connect();
+    void Connect(const char* address, int port);
     void Disconnect();
 
     void Login(const QString& Username);
@@ -113,10 +108,6 @@ private:
 private:
 	ThorQ::Crypto* m_crypto;
 
-    std::mutex l_address;
-    QString m_address;
-    std::atomic_int m_port;
-
     std::atomic_int m_clientState;
     std::atomic_int m_cryptoState;
     std::atomic_int m_sessionState;
@@ -150,8 +141,11 @@ private:
     bool m_awaitingPing;
     QElapsedTimer* m_pingTimer;
 
-	ENetPeer* m_peer;
     ENetHost* m_host;
+    ENetPeer* m_peer;
+
+    std::mutex l_address;
+    ENetAddress* m_address;
 };
 
 #endif // CLIENT_H
