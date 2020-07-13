@@ -191,12 +191,10 @@ void ThorQ::Instance::SendHeartbeat()
 
 void ThorQ::Instance::SendRaw(std::uint32_t meta)
 {
-    meta = htonl(meta);
     SendRaw(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t));
 }
 void ThorQ::Instance::SendRaw(std::uint32_t meta, const std::string &message, bool unreliable)
 {
-    meta = htonl(meta);
     std::size_t len = sizeof(std::uint32_t) + message.length();
     std::uint8_t* data = new std::uint8_t[len];
     memcpy(data, &meta, sizeof(std::uint32_t));
@@ -216,12 +214,10 @@ void ThorQ::Instance::SendRaw(const std::uint8_t* data, std::size_t len, bool un
 
 void ThorQ::Instance::SendEncrypted(uint32_t meta)
 {
-    meta = htonl(meta);
     SendEncrypted(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t));
 }
 void ThorQ::Instance::SendEncrypted(std::uint32_t meta, const std::string &message, bool unreliable)
 {
-    meta = htonl(meta);
     std::size_t len = sizeof(std::uint32_t) + message.length();
     std::uint8_t* data = new std::uint8_t[len];
     memcpy(data, &meta, sizeof(std::uint32_t));
@@ -307,9 +303,7 @@ std::uint8_t ThorQ::Instance::GetFlag(bool withHeartbeat)
     case ThorQ::CryptoState::Ok:
         flag |= ThorQ::PreEncryptionFlag::CRYPT_OK;
         break;
-    }
-
-    flag = htonl(flag);
+	}
 
     return flag;
 }

@@ -434,7 +434,7 @@ void Client::HandleMessage(ENetPacket* packet)
     if (ClientState() == ThorQ::ClientState::Disconnecting || ClientState() == ThorQ::ClientState::Disconnected || packet->dataLength < sizeof(std::uint8_t))
         return;
 
-    std::uint8_t flag = ntohl(static_cast<std::uint8_t>(*packet->data));
+	std::uint8_t flag = static_cast<std::uint8_t>(*packet->data);
 
     if ((flag & ThorQ::PreEncryptionFlag::HEARTBEAT) != 0)
     {
@@ -517,7 +517,7 @@ std::uint8_t Client::GetFlag(bool withHeartbeat)
         break;
     }
 
-    return htonl(flag);
+	return flag;
 }
 
 void Client::SendHeartbeat()
@@ -528,12 +528,10 @@ void Client::SendHeartbeat()
 
 void Client::SendRaw(std::uint32_t meta, bool unreliable)
 {
-    meta = htonl(meta);
     SendRaw(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t), unreliable);
 }
 void Client::SendRaw(std::uint32_t meta, const std::string &message, bool unreliable)
 {
-    meta = htonl(meta);
     std::vector<std::uint8_t> data;
     data.resize(sizeof(std::uint32_t) + message.length());
     memcpy(data.data(), &meta, sizeof(std::uint32_t));
@@ -556,12 +554,10 @@ void Client::SendRaw(const std::uint8_t* data, std::size_t len, bool unreliable)
 
 void Client::SendEncrypted(std::uint32_t meta, bool unreliable)
 {
-    meta = htonl(meta);
     SendEncrypted(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t), unreliable);
 }
 void Client::SendEncrypted(std::uint32_t meta, const std::string &message, bool unreliable)
 {
-    meta = htonl(meta);
     std::vector<std::uint8_t> data;
     data.resize(sizeof(std::uint32_t) + message.length());
     memcpy(data.data(), &meta, sizeof(std::uint32_t));
