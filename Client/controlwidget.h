@@ -6,7 +6,7 @@
 #include <QLabel>
 
 namespace Ui {
-class OverlayWidget;
+class ControlWidget;
 }
 
 class OverlayWidget : public QWidget
