@@ -33,9 +33,9 @@ class OpenVROverlayController : public QObject
 public:
     static bool IsSteamVRRunning();
     static bool IsHmdPresent();
-    static OpenVROverlayController *SharedInstance();
+    static OpenVROverlayController* SharedInstance();
 public:
-    OpenVROverlayController();
+    OpenVROverlayController(QObject* parent = nullptr);
     ~OpenVROverlayController() override;
 
     void SetWidget( QWidget* pWidget );
@@ -72,7 +72,7 @@ private:
     // Widget
     QWidget *m_widget;
     QTimer *m_pumpEventsTimer;
-    QElapsedTimer m_visibleTimeout;
+    QTimer* m_visibilityTimer;
 
     // OPENVR VARIABLES
     vr::IVRSystem* m_system;

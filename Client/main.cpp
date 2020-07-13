@@ -35,9 +35,9 @@ int main(int argc, char** argv)
     qDebug().noquote() << "Using" << Client::Version();
 
     LoginWidget e;
-    e.show();
+    //e.show();
 
-    Client* cli = Client::NewClient("localhost", 12345);
+    Client* cli = Client::NewClient();
     QObject::connect(cli, &Client::ClientStateChanged, &e, &LoginWidget::SetState);
 
     QObject::connect(&e, &LoginWidget::LoginRequest, [&](const QString& username)
@@ -45,10 +45,10 @@ int main(int argc, char** argv)
        qDebug() << username;
     });
 
-    cli->Connect();
+    cli->Connect("localhost", 12345);
 
-    //OpenVROverlayController::SharedInstance()->Init();
-    //OpenVROverlayController::SharedInstance()->SetWidget(&label);
+    OpenVROverlayController::SharedInstance()->Init();
+    OpenVROverlayController::SharedInstance()->SetWidget(&e);
 
     int retval = app.exec();
 

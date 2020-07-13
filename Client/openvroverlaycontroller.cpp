@@ -42,18 +42,29 @@ OpenVROverlayController *OpenVROverlayController::SharedInstance()
     return s_pSharedVRController;
 }
 
-OpenVROverlayController::OpenVROverlayController()
-    : QObject()
+OpenVROverlayController::OpenVROverlayController(QObject* parent)
+    : QObject(parent)
     , m_widget( nullptr )
-    , m_pumpEventsTimer( nullptr )
+    , m_pumpEventsTimer(new QTimer(this))
+    , m_visibilityTimer(new QTimer(this))
+    , m_system( nullptr )
     , m_handle(vr::k_ulOverlayHandleInvalid)
+    , m_deviceOffset()
     , m_deviceIndex(vr::k_unTrackedDeviceIndexInvalid)
     , m_scene( nullptr )
     , m_glContext( nullptr )
     , m_surface ( nullptr )
     , m_frameBuffer( nullptr )
+    , m_lastMousePoint()
     , m_lastMouseButtons( 0 )
 {
+    connect(m_pumpEventsTimer, &QTimer::timeout, this, &OpenVROverlayController::PollEvents);
+    connect(m_visibilityTimer, &QTimer::timeout, [](){ qDebug() << "Hide!"; });
+
+    m_pumpEventsTimer->setInterval(20);
+
+    m_visibilityTimer->setInterval(5000);
+    m_visibilityTimer->setSingleShot(true);
 }
 
 OpenVROverlayController::~OpenVROverlayController()
@@ -90,9 +101,6 @@ bool OpenVROverlayController::Init()
     // Initialize overlay
     OverlayProcess();
 
-    m_pumpEventsTimer = new QTimer( this );
-    connect(m_pumpEventsTimer, &QTimer::timeout, this, &OpenVROverlayController::PollEvents);
-    m_pumpEventsTimer->setInterval( 20 );
     m_pumpEventsTimer->start();
 
     return true;
@@ -169,14 +177,14 @@ void OpenVROverlayController::PollEvents()
         {
         case vr::VREvent_ButtonPress:
         {
-            qDebug() << "Buttonpress!";
             vr::VRControllerState_t state;
             m_system->GetControllerState(event.trackedDeviceIndex, &state, sizeof( state ));
-            bool pushed = (state.ulButtonPressed & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_A)) != 0;
+            bool pushed = (state.ulButtonPressed & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_ApplicationMenu)) != 0;
 
             if (pushed)
             {
-                m_visibleTimeout.start();
+                qDebug() << "Show!";
+                m_visibilityTimer->start();
                 m_deviceIndex = event.trackedDeviceIndex;
                 OverlayProcess();
             }
@@ -330,7 +338,7 @@ void OpenVROverlayController::OverlayInit()
     // I want this, but it blocks user input :c
     //Dbg(vr::VROverlay()->SetOverlayFlag(m_handle, vr::VROverlayFlags_MakeOverlaysInteractiveIfVisible, true), __LINE__);
 
-    m_visibleTimeout.start();
+    m_visibilityTimer->start();
 }
 void OpenVROverlayController::OverlayProcess()
 {

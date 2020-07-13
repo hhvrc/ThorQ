@@ -11,7 +11,7 @@ quint64 ddd = 0;
 
 LoginWidget::LoginWidget(QWidget* parent)
     : QWidget(parent)
-    , m_state(-1)
+    , m_state(ThorQ::ClientState::Disconnected)
     , m_ping(0)
 {
     setWindowTitle("ThorQ Login");
@@ -45,6 +45,8 @@ LoginWidget::LoginWidget(QWidget* parent)
 
 
     connect(m_loginButton, &QPushButton::clicked, [this](){ emit LoginRequest(m_usernameInput->text()); });
+
+    updateStatus();
 }
 
 LoginWidget::~LoginWidget()
