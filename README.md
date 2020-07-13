@@ -3,8 +3,7 @@
 Server and Client to control a shock-collar remotely from anywhere in the world.
 
 ##### Why?
-- I want to be domesticated UwU
-- Why not
+- Moneyyyyyyyyyyyyyyyyyyyyyyyyyyy
 
 ## Libraries used
 | Use Case | Name | Link |
