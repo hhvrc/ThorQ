@@ -6,46 +6,35 @@
 #include <cstdlib>
 bool ProcessIsRuning(const char* processName)
 {
-    char buf[128]{0};
+	char buf[128]{0};
 
-    snprintf(buf, 128, "ps | grep %s > /dev/null", processName);
+	snprintf(buf, 128, "ps | grep %s > /dev/null", processName);
 
-    return system(buf) == 0;
+	return system(buf) == 0;
 }
 #elif _WIN32
-//#include <tlhelp32.h>
+#include <tlhelp32.h>
 bool ProcessIsRuning(const char* processName)
 {
-    /*
-    char* p = strrchr(processName, '\\');
-    if(p)
-        processName = p+1;
+	char* p = strrchr(processName, '\\');
 
-    PROCESSENTRY32 processInfo;
-    processInfo.dwSize = sizeof(processInfo);
+	if(p)
+		processName = p+1;
 
-    HANDLE processesSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
-    if ( processesSnapshot == INVALID_HANDLE_VALUE )
-        return 0;
+	PROCESSENTRY32 processInfo;
+	processInfo.dwSize = sizeof(processInfo);
 
-    Process32First(processesSnapshot, &processInfo);
-    if ( !strcmp(processName, processInfo.szExeFile) )
-    {
-        CloseHandle(processesSnapshot);
-        return processInfo.th32ProcessID;
-    }
+	HANDLE processesSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
+	if ( processesSnapshot == INVALID_HANDLE_VALUE )
+		return false;
 
-    while ( Process32Next(processesSnapshot, &processInfo) )
-    {
-        if ( !strcmp(processName, processInfo.szExeFile) )
-        {
-          CloseHandle(processesSnapshot);
-          return processInfo.th32ProcessID;
-        }
-    }
+	bool result = false;
+	if (Process32First(processesSnapshot, &processInfo)) {
+		do { result = (strcmp(processName, processInfo.szExeFile) == 0); }
+		while (!result && Process32Next(processesSnapshot, &processInfo))
+	}
 
-    CloseHandle(processesSnapshot);
-    */
-    return 0;
+	CloseHandle(processesSnapshot);
+	return result;
 }
 #endif

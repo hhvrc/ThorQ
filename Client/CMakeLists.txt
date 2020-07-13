@@ -65,23 +65,25 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/lib/${OVR_LIB})
 
 # ---Build---
 set(${project}_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/client.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/client.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/serial.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.cpp
 )
 set(${project}_MOC
-    ${CMAKE_CURRENT_SOURCE_DIR}/client.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/procmon.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/userdata.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.h
+	${CMAKE_CURRENT_SOURCE_DIR}/client.h
+	${CMAKE_CURRENT_SOURCE_DIR}/serial.h
+	${CMAKE_CURRENT_SOURCE_DIR}/procmon.h
+	${CMAKE_CURRENT_SOURCE_DIR}/userdata.h
+	${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.h
+	${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.h
+	${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.h
+	${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.h
+	${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.h
 )
 
 include_directories(${INCLUDE_DIRS})
