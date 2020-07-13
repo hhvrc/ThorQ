@@ -4,6 +4,7 @@
 
 #include <enet.h>
 #include "client.h"
+#include "loginwidget.h"
 #include "openvroverlaycontroller.h"
 
 int main(int argc, char** argv)
