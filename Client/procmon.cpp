@@ -13,9 +13,10 @@ bool ProcessIsRuning(const char* processName)
 	return system(buf) == 0;
 }
 #elif _WIN32
-#include <tlhelp32.h>
+//#include <tlhelp32.h>
 bool ProcessIsRuning(const char* processName)
 {
+    /*
 	char* p = strrchr(processName, '\\');
 
 	if(p)
@@ -36,5 +37,7 @@ bool ProcessIsRuning(const char* processName)
 
 	CloseHandle(processesSnapshot);
 	return result;
+    */
+    return true;
 }
 #endif
