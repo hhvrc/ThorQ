@@ -262,18 +262,11 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 		break;
 	}
 }
-std::string ipv6_to_str(const struct in6_addr& addr)
+std::string enetaddr_to_str(const ENetAddress* addr)
 {
 	char buffer[50];
-	snprintf(buffer, sizeof(buffer), "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
-				 (int)addr.s6_addr[0], (int)addr.s6_addr[1],
-				 (int)addr.s6_addr[2], (int)addr.s6_addr[3],
-				 (int)addr.s6_addr[4], (int)addr.s6_addr[5],
-				 (int)addr.s6_addr[6], (int)addr.s6_addr[7],
-				 (int)addr.s6_addr[8], (int)addr.s6_addr[9],
-				 (int)addr.s6_addr[10], (int)addr.s6_addr[11],
-				 (int)addr.s6_addr[12], (int)addr.s6_addr[13],
-				 (int)addr.s6_addr[14], (int)addr.s6_addr[15]);
+	if (enet_address_get_host_ip(addr, buffer, 50) < 0)
+		return "ERROR";
 	return std::string(buffer);
 }
 
@@ -282,7 +275,7 @@ void handleNewConnection(ENetPeer* peer)
     // Dont worry, this is ok
     (void)new Instance(peer);
 
-	printf("A new client connected from:\n\tIPV6: %llx\n\tPORT: %u\n", peer->address.host, peer->address.port);
+	printf("A new client connected from:\n\tIPV6: %s\n\tPORT: %u\n", enetaddr_to_str(&peer->address).c_str(), peer->address.port);
     fflush(stdout);
 }
 
