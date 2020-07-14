@@ -59,7 +59,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	printf("Got %lu bytes\n", size);
 	fflush(stdout);
 
-    if ((flag & ThorQ::PreEncryptionFlag::HEARTBEAT) != 0)
+    if ((flag & ThorQ::HeaderFlag::HEADER_HEARTBEAT) != 0)
     {
         instance->SendHeartbeat();
 		printf("Heartbeat\n");
@@ -67,7 +67,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
         return;
     }
 
-    if ((flag & ThorQ::PreEncryptionFlag::CRYPT_REQUEST) != 0)
+    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_REQUEST) != 0)
     {
         instance->CryptoInit();
 		printf("Got request\n");
@@ -78,7 +78,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	if (size == 0)
 		return;
 
-    if ((flag & ThorQ::PreEncryptionFlag::CRYPT_ESTABLISH) != 0 && instance->CryptoState() == ThorQ::CryptoState::Establishing)
+    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_ESTABLISH) != 0 && instance->CryptoState() == ThorQ::CryptoState::Establishing)
     {
 		printf("Got establish\n");
 		fflush(stdout);
@@ -91,7 +91,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 
 	std::vector<std::uint8_t> vec = instance->GetCrypto()->Decrypt(data, size);
 
-    if ((flag & ThorQ::PreEncryptionFlag::CRYPT_VERIFY) != 0)
+    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_VERIFY) != 0)
     {
 		printf("Got verify\n");
 		fflush(stdout);
@@ -103,7 +103,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
         return;
     }
 
-    if ((flag & ThorQ::PreEncryptionFlag::CRYPT_OK) == 0)
+    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_OK) == 0)
         return;
 
 	std::uint32_t meta = static_cast<std::uint32_t>(*data);

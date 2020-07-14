@@ -15,7 +15,7 @@ find_package(
     COMPONENTS
         Core
         Gui
-		OpenGL
+        OpenGL
         Widgets
         Concurrent
     REQUIRED
@@ -67,7 +67,7 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/lib/${OVR_LIB})
 set(${project}_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/client.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/serial.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.cpp

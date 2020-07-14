@@ -7,8 +7,8 @@ struct UserData
 {
 public:
     QString username = "";
-    bool hasCollar = false;
     bool inSession = false;
+    bool hasCollar = false;
 };
 
 #endif // USERDATA_H

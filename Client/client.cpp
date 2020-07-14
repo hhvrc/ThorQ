@@ -436,7 +436,7 @@ void Client::HandleMessage(ENetPacket* packet)
 
 	std::uint8_t flag = static_cast<std::uint8_t>(*packet->data);
 
-    if ((flag & ThorQ::PreEncryptionFlag::HEARTBEAT) != 0)
+    if ((flag & ThorQ::HeaderFlag::HEADER_HEARTBEAT) != 0)
     {
         if (m_awaitingPing)
         {
@@ -451,7 +451,7 @@ void Client::HandleMessage(ENetPacket* packet)
 
     std::vector<std::uint8_t> data(packet->data + sizeof(std::uint8_t), packet->data + packet->dataLength - sizeof(std::uint8_t));
 
-    if ((flag & ThorQ::PreEncryptionFlag::CRYPT_ESTABLISH) != 0)
+    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_ESTABLISH) != 0)
     {
         if (m_crypto->IsCryptoReady())
         {
@@ -474,25 +474,16 @@ void Client::HandleMessage(ENetPacket* packet)
     if (!m_crypto->IsCryptoReady())
         return;
 
-    if ((flag & ThorQ::PreEncryptionFlag::CRYPT_VERIFY) != 0)
-    {
-        if (data.size() != sizeof(std::uint64_t))
-            return;
 
-        if (static_cast<std::uint64_t>(*data.data()) == UINT64_MAX)
-        {
-            SendEncrypted(data);
-            SetCryptoState(ThorQ::CryptoState::Verifying);
-        }
-        else
-        {
-            m_crypto->Reset();
-            SetCryptoState(ThorQ::CryptoState::None);
-        }
+    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_VERIFY) != 0)
+    {
+        qDebug() << "Verifying!";
+        SetCryptoState(ThorQ::CryptoState::Verifying);
+        SendEncrypted(vec);
         return;
     }
 
-    if ((flag & ThorQ::PreEncryptionFlag::CRYPT_OK) == 0)
+    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_OK) == 0)
         return;
 
     SetCryptoState(ThorQ::CryptoState::Ok);
@@ -503,17 +494,20 @@ void Client::HandleMessage(ENetPacket* packet)
 
 std::uint8_t Client::GetFlag(bool withHeartbeat)
 {
-    std::uint8_t flag = withHeartbeat ? ThorQ::PreEncryptionFlag::HEARTBEAT : 0;
+    std::uint8_t flag = withHeartbeat ? ThorQ::HeaderFlag::HEADER_HEARTBEAT : 0;
 
     switch (CryptoState()) {
+    case ThorQ::CryptoState::Requesting:
+        flag |= ThorQ::HeaderFlag::HEADER_CRYPT_REQUEST;
+        break;
     case ThorQ::CryptoState::Establishing:
-        flag |= ThorQ::PreEncryptionFlag::CRYPT_ESTABLISH;
+        flag |= ThorQ::HeaderFlag::HEADER_CRYPT_ESTABLISH;
         break;
     case ThorQ::CryptoState::Verifying:
-        flag |= ThorQ::PreEncryptionFlag::CRYPT_VERIFY;
+        flag |= ThorQ::HeaderFlag::HEADER_CRYPT_VERIFY;
         break;
     case ThorQ::CryptoState::Ok:
-        flag |= ThorQ::PreEncryptionFlag::CRYPT_OK;
+        flag |= ThorQ::HeaderFlag::HEADER_CRYPT_OK;
         break;
     }
 
