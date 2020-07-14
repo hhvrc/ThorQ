@@ -267,7 +267,7 @@ bool ThorQ::Instance::CryptoVerify(const std::uint8_t* data, std::size_t size)
 	if (memcmp(m_verificationData, data, 256) == 0)
 	{
         SetCryptoState(ThorQ::CryptoState::Ok);
-        SendRaw(ThorQ::MessageEnums::ACKNOWLEDGE_OK);
+        SendEncrypted(ThorQ::MessageEnums::ACKNOWLEDGE_OK);
 
         if (ClientState() == ThorQ::ClientState::Connecting)
             SetClientState(ThorQ::ClientState::Connected);

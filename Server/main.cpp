@@ -96,8 +96,9 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 		printf("Got verify\n");
 		fflush(stdout);
 		if (instance->CryptoVerify(vec.data(), vec.size()))
-		{
-
+        {
+            printf("HANDSHAKE COMPLETE\n");
+            fflush(stdout);
 		}
         return;
     }

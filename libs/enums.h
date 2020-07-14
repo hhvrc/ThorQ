@@ -85,6 +85,7 @@ namespace ThorQ {
     enum CryptoState
     {
         None,
+        Requesting,
         Establishing,
         Verifying,
         Ok
