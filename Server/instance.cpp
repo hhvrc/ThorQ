@@ -241,15 +241,15 @@ void ThorQ::Instance::CryptoInit()
     SendRaw(GetCrypto()->PublicKey());
 }
 
-void ThorQ::Instance::CryptoEstablish(const std::vector<std::uint8_t> &clientsPubKey)
+void ThorQ::Instance::CryptoEstablish(const std::uint8_t* data, std::size_t size)
 {
-    if (GetCrypto()->Agree(clientsPubKey))
+	if (GetCrypto()->Agree(data, size))
     {
         if (CryptoState() != ThorQ::CryptoState::Establishing)
             return;
         SetCryptoState(ThorQ::CryptoState::Verifying);
-        m_verificationData = Crypto::GenRandBytes(256);
-        SendEncrypted(m_verificationData);
+		Crypto::RandomizeBytes(m_verificationData, 256);
+		SendEncrypted(m_verificationData, 256);
         return;
     }
 
@@ -259,14 +259,13 @@ void ThorQ::Instance::CryptoEstablish(const std::vector<std::uint8_t> &clientsPu
 }
 
 
-bool ThorQ::Instance::CryptoVerify(const std::vector<std::uint8_t> &response)
+bool ThorQ::Instance::CryptoVerify(const std::uint8_t* data, std::size_t size)
 {
-    if (CryptoState() != ThorQ::CryptoState::Verifying)
+	if (CryptoState() != ThorQ::CryptoState::Verifying || size != 256)
         return false;
 
-    if (!m_verificationData.empty() && m_verificationData == response)
-    {
-        m_verificationData.clear();
+	if (memcmp(m_verificationData, data, 256))
+	{
         SetCryptoState(ThorQ::CryptoState::Ok);
         SendRaw(ThorQ::MessageEnums::ACKNOWLEDGE_OK);
 

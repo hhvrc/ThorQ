@@ -55,8 +55,8 @@ namespace ThorQ {
         void SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable = false);
 
         void CryptoInit();
-        void CryptoEstablish(const std::vector<std::uint8_t>& response);
-        bool CryptoVerify(const std::vector<std::uint8_t>& response);
+		void CryptoEstablish(const std::uint8_t* data, std::size_t size);
+		bool CryptoVerify(const std::uint8_t* data, std::size_t size);
 
         Crypto* GetCrypto();
     private:
@@ -74,7 +74,7 @@ namespace ThorQ {
         Instance* m_partner;
         Instance* m_requestedPartner;
 
-        std::vector<std::uint8_t> m_verificationData;
+		std::uint8_t m_verificationData[256];
 	};
 }
 

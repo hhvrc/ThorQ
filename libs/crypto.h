@@ -19,18 +19,18 @@ namespace ThorQ {
 		Botan::ECDH_PrivateKey* m_key;
 		std::unique_ptr<Botan::StreamCipher> m_streamCipher;
     public:
-        static std::vector<std::uint8_t> GenRandBytes(std::size_t len);
+		static void RandomizeBytes(std::uint8_t* data, std::size_t len);
 
 		Crypto();
 		~Crypto();
 		std::vector<std::uint8_t> PublicKey() const;
 		bool IsCryptoReady();
-		bool Agree(std::vector<std::uint8_t> data);
-		bool Agree(std::uint8_t* data, std::size_t len);
+		bool Agree(const std::vector<std::uint8_t>& data);
+		bool Agree(const std::uint8_t* data, std::size_t len);
 		void Reset();
 		std::vector<std::uint8_t> Encrypt(std::vector<std::uint8_t> data);
 		std::vector<std::uint8_t> Encrypt(const std::uint8_t* data, std::size_t len);
-		std::vector<std::uint8_t> Decrypt(std::vector<std::uint8_t> data);
+		std::vector<std::uint8_t> Decrypt(const std::vector<std::uint8_t>& data);
         std::vector<std::uint8_t> Decrypt(const std::uint8_t* data, std::size_t len);
 	};
 }

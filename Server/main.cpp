@@ -49,10 +49,12 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 		return;
     }
 
-    if (instance->ClientState() == ThorQ::ClientState::Disconnecting || instance->ClientState() == ThorQ::ClientState::Disconnected || packet->dataLength < sizeof(std::uint8_t))
-        return;
+	if (instance->ClientState() == ThorQ::ClientState::Disconnecting || instance->ClientState() == ThorQ::ClientState::Disconnected || packet->dataLength < sizeof(std::uint8_t))
+		return;
 
 	std::uint8_t flag = static_cast<std::uint8_t>(*packet->data);
+	std::uint8_t* data = packet->data + sizeof(std::uint8_t);
+	std::size_t size = packet->dataLength - sizeof(std::uint8_t);
 
     if ((flag & ThorQ::PreEncryptionFlag::HEARTBEAT) != 0)
     {
@@ -67,13 +69,13 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
     }
 
     if (packet->dataLength == sizeof(std::uint8_t))
-        return;
-
-    std::vector<std::uint8_t> data(packet->data + sizeof(std::uint8_t), packet->data + packet->dataLength - sizeof(std::uint8_t));
+		return;
 
     if ((flag & ThorQ::PreEncryptionFlag::CRYPT_ESTABLISH) != 0 && instance->CryptoState() == ThorQ::CryptoState::Establishing)
     {
-        instance->CryptoEstablish(data);
+		printf("Got establish (%lu)\n", packet->dataLength);
+		fflush(stdout);
+		instance->CryptoEstablish(data, size);
         return;
     }
 
@@ -82,14 +84,15 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 
     if ((flag & ThorQ::PreEncryptionFlag::CRYPT_VERIFY) != 0)
     {
-        instance->CryptoVerify(data);
+		printf("Got verify (%lu)\n", packet->dataLength);
+		instance->CryptoVerify(data, size);
         return;
     }
 
     if ((flag & ThorQ::PreEncryptionFlag::CRYPT_OK) == 0)
         return;
 
-	std::uint32_t meta = static_cast<std::uint32_t>(*data.data());
+	std::uint32_t meta = static_cast<std::uint32_t>(*data);
 
 	instance->SetHasCollar((meta & FLAG_CollarConnected) != 0);
 
@@ -99,7 +102,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	{
 		if (meta == USER_Login)
 		{
-			std::string name = ExtractString(data.data(), data.size(), sizeof(std::uint32_t));
+			std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
 			if (!registeredInstances.TryAdd(name, instance))
 			{
@@ -168,7 +171,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	}
 	case SESSION_Request:
 	{
-		std::string name = ExtractString(data.data(), data.size(), sizeof(std::uint32_t));
+		std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
 		Instance* otherInstance = registeredInstances.GetInstance(name);
 
@@ -183,7 +186,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	}
 	case SESSION_Accept:
 	{
-		std::string name = ExtractString(data.data(), data.size(), sizeof(std::uint32_t));
+		std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
 		Instance* otherInstance = registeredInstances.GetInstance(name);
 
@@ -201,7 +204,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	}
     case SESSION_Deny:
     {
-        std::string name = ExtractString(data.data(), data.size(), sizeof(std::uint32_t));
+		std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
         Instance* otherInstance = registeredInstances.GetInstance(name);
 

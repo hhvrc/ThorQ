@@ -4,15 +4,12 @@
 
 using namespace ThorQ;
 
-std::vector<uint8_t> Crypto::GenRandBytes(std::size_t len)
+void Crypto::RandomizeBytes(std::uint8_t* data, std::size_t len)
 {
-    if (len == 0)
-        return std::vector<uint8_t>();
+	if (data == nullptr || len == 0)
+		return;
 
-    std::vector<std::uint8_t> output(len);
-    Botan::AutoSeeded_RNG().randomize(output.data(), len);
-
-    return output;
+	Botan::AutoSeeded_RNG().randomize(data, len);
 }
 
 Crypto::Crypto()
@@ -40,12 +37,12 @@ bool Crypto::IsCryptoReady()
 }
 
 #include <iostream>
-bool Crypto::Agree(std::vector<std::uint8_t> data)
+bool Crypto::Agree(const std::vector<std::uint8_t>& data)
 {
 	return Agree(data.data(), data.size());
 }
 
-bool Crypto::Agree(uint8_t* data, std::size_t len)
+bool Crypto::Agree(const uint8_t* data, std::size_t len)
 {
 	if (len == m_key->public_value().size())
 	{
@@ -139,7 +136,7 @@ std::vector<uint8_t> Crypto::Encrypt(const uint8_t* data, std::size_t len)
 	return std::vector<std::uint8_t>();
 }
 
-std::vector<uint8_t> Crypto::Decrypt(std::vector<uint8_t> data)
+std::vector<uint8_t> Crypto::Decrypt(const std::vector<uint8_t>& data)
 {
 	if (data.size() > 24)
 	{
