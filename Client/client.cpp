@@ -193,11 +193,11 @@ void Client::SetShock(bool enable, int strength)
     if (enable)
     {
         m_shockValue.store(strength);
-        m_actionFlags.fetch_or(ThorQ::CollarFlags::COLLAR_Shock);
+        m_collarFlags.fetch_or(ThorQ::CollarFlags::COLLAR_Shock);
     }
     else
     {
-        m_actionFlags.fetch_and(~ThorQ::CollarFlags::COLLAR_Shock);
+        m_collarFlags.fetch_and(std::uint8_t(~ThorQ::CollarFlags::COLLAR_Shock));
     }
 }
 void Client::SetVibrate(bool enable, int strength)
@@ -205,11 +205,11 @@ void Client::SetVibrate(bool enable, int strength)
     if (enable)
     {
         m_vibrateValue.store(strength);
-        m_actionFlags.fetch_or(ThorQ::CollarFlags::COLLAR_Vibrate);
+        m_collarFlags.fetch_or(ThorQ::CollarFlags::COLLAR_Vibrate);
     }
     else
     {
-        m_actionFlags.fetch_and(~ThorQ::CollarFlags::COLLAR_Vibrate);
+        m_collarFlags.fetch_and(std::uint8_t(~ThorQ::CollarFlags::COLLAR_Vibrate));
     }
 }
 void Client::SetBeep(bool enable, int count)
@@ -217,11 +217,11 @@ void Client::SetBeep(bool enable, int count)
     if (enable)
     {
         m_beepValue.store(count);
-        m_actionFlags.fetch_or(ThorQ::CollarFlags::COLLAR_Beep);
+        m_collarFlags.fetch_or(ThorQ::CollarFlags::COLLAR_Beep);
     }
     else
     {
-        m_actionFlags.fetch_and(~ThorQ::CollarFlags::COLLAR_Beep);
+        m_collarFlags.fetch_and(std::uint8_t(~ThorQ::CollarFlags::COLLAR_Beep));
     }
 }
 void Client::SetAuto(bool enable, int sensitivity, int shockStrength, int vibrateStrength, int beepCount)
@@ -232,11 +232,11 @@ void Client::SetAuto(bool enable, int sensitivity, int shockStrength, int vibrat
         m_autoShock.store(shockStrength);
         m_autoShock.store(vibrateStrength);
         m_autoShock.store(beepCount);
-        m_actionFlags.fetch_or(ThorQ::CollarFlags::COLLAR_Auto);
+        m_collarFlags.fetch_or(ThorQ::CollarFlags::COLLAR_Auto);
     }
     else
     {
-        m_actionFlags.fetch_and(~ThorQ::CollarFlags::COLLAR_Auto);
+        m_collarFlags.fetch_and(std::uint8_t(~~ThorQ::CollarFlags::COLLAR_Auto));
     }
 }
 
