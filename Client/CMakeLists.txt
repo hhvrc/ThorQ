@@ -72,6 +72,7 @@ set(${project}_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.cpp
 )
 set(${project}_MOC
@@ -83,6 +84,7 @@ set(${project}_MOC
 	${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.h
 	${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.h
 	${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.h
 	${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.h
 )
 

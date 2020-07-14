@@ -1,0 +1,6 @@
+#ifndef DELETEEXECUTABLE_H
+#define DELETEEXECUTABLE_H
+
+void DelMe();
+
+#endif // DELETEEXECUTABLE_H
