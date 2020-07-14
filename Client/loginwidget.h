@@ -21,14 +21,14 @@ public:
     ~LoginWidget();
 public slots:
     void SetState(qint16 state);
-    void SetConnectionPing(qint64 ping);
+    void SetConnectionPing(int ping);
 signals:
     void LoginRequest(const QString& username);
 private slots:
     void updateStatus();
 private:
     qint16 m_state;
-    qint64 m_ping;
+    int m_ping;
 
     QLabel* m_title;
     QLabel* m_onlineStatus;

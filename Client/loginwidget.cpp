@@ -63,7 +63,7 @@ void LoginWidget::SetState(qint16 state)
     }
 }
 
-void LoginWidget::SetConnectionPing(qint64 ping)
+void LoginWidget::SetConnectionPing(int ping)
 {
     if (m_ping != ping)
     {

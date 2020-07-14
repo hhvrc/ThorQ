@@ -431,6 +431,8 @@ void Client::RemoveOnlineUser(const QString &user)
 
 void Client::HandleMessage(ENetPacket* packet)
 {
+    qint16 time = m_pingTimer->elapsed();
+
     if (ClientState() == ThorQ::ClientState::Disconnecting || ClientState() == ThorQ::ClientState::Disconnected || packet->dataLength < sizeof(std::uint8_t))
         return;
 
@@ -440,8 +442,8 @@ void Client::HandleMessage(ENetPacket* packet)
     {
         if (m_awaitingPing)
         {
-            SetPing(m_pingTimer->elapsed());
             m_awaitingPing = false;
+            SetPing(time);
         }
         return;
     }
