@@ -273,7 +273,9 @@ std::string enetaddr_to_str(const ENetAddress* addr)
 void handleNewConnection(ENetPeer* peer)
 {
     // Dont worry, this is ok
-    (void)new Instance(peer);
+	Instance* instance = new Instance(peer);
+
+	instance->SetClientState(ThorQ::ClientState::Connecting);
 
 	printf("A new client connected from:\n\tIPV6: %s\n\tPORT: %u\n", enetaddr_to_str(&peer->address).c_str(), peer->address.port);
     fflush(stdout);
