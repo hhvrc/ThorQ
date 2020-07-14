@@ -20,6 +20,29 @@ void Dbg(vr::VROverlayError err, int line)
         qDebug() << "Error:" << err << "line:"<< line;
 }
 
+QMatrix4x4 ToQMatrix(const vr::HmdMatrix34_t& mat)
+{
+    return QMatrix4x4(
+                mat.m[0][0], mat.m[0][1], mat.m[0][2], mat.m[0][3],
+                mat.m[1][0], mat.m[1][1], mat.m[1][2], mat.m[1][3],
+                mat.m[2][0], mat.m[2][1], mat.m[2][2], mat.m[2][3],
+                0.f,         0.f,         0.f,         1.f
+            );
+}
+vr::HmdMatrix34_t ToHmdMatrix34(const QMatrix4x4& mat)
+{
+    vr::HmdMatrix34_t ret;
+    for (int i = 0; i < 3; i++)
+    {
+        QVector4D row = mat.row(i);
+        ret.m[i][0] = row.x();
+        ret.m[i][1] = row.y();
+        ret.m[i][2] = row.z();
+        ret.m[i][3] = row.w();
+    }
+    return ret;
+}
+
 bool OpenVROverlayController::IsSteamVRRunning()
 {
     // TODO: Look for process with name "SteamVR"
@@ -180,6 +203,7 @@ void OpenVROverlayController::PollEvents()
             vr::VRControllerState_t state;
             m_system->GetControllerState(event.trackedDeviceIndex, &state, sizeof( state ));
             bool pushed = (state.ulButtonPressed & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_ApplicationMenu)) != 0;
+
 
             if (pushed)
             {
@@ -397,13 +421,16 @@ void OpenVROverlayController::OverlayTransform()
         qDebug() << "Device is invalid" << __LINE__;
         return;
     }
-
-    // TODO: Check which hand
-
-    // TODO: Calculate offset
-
     qDebug() << "Reposition";
-    //Dbg(VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_handle, m_deviceIndex, &m_deviceOffset), __LINE__);
+
+    // Calculate offset
+    QMatrix4x4 mat;
+    mat.translate(0,0,0);
+    mat.rotate(-90, 1, 0);
+    m_deviceOffset = ToHmdMatrix34(mat);
+
+    // Position
+    Dbg(vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_handle, m_deviceIndex, &m_deviceOffset), __LINE__);
 }
 
 void OpenVROverlayController::SetIsVisible(bool show)
