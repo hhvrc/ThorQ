@@ -15,24 +15,17 @@
 
 #define SCOPELOCK(l) std::scoped_lock<std::mutex> lock(const_cast<std::mutex&>(l))
 
-QString ipv6_to_str(const struct in6_addr& addr)
+std::string enetaddr_to_str(const ENetAddress* addr)
 {
-	char buffer[50];
-	snprintf(buffer, sizeof(buffer), "%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x:%02x%02x",
-				 (int)addr.s6_addr[0], (int)addr.s6_addr[1],
-				 (int)addr.s6_addr[2], (int)addr.s6_addr[3],
-				 (int)addr.s6_addr[4], (int)addr.s6_addr[5],
-				 (int)addr.s6_addr[6], (int)addr.s6_addr[7],
-				 (int)addr.s6_addr[8], (int)addr.s6_addr[9],
-				 (int)addr.s6_addr[10], (int)addr.s6_addr[11],
-				 (int)addr.s6_addr[12], (int)addr.s6_addr[13],
-				 (int)addr.s6_addr[14], (int)addr.s6_addr[15]);
-	return QString(buffer);
+    char buffer[50];
+    if (enet_address_get_host_ip(addr, buffer, 50) < 0)
+        return "ERROR";
+    return std::string(buffer);
 }
 
 std::string ExtractString(const std::uint8_t* data, std::size_t dataSize, std::size_t startOffset = 0, std::size_t endOffset = 0)
 {
-	return std::string(data + startOffset, data + dataSize - endOffset);
+    return std::string(data + startOffset, data + dataSize - endOffset);
 }
 
 Client::Client(ENetHost* host)
@@ -42,14 +35,27 @@ Client::Client(ENetHost* host)
     , m_cryptoState(ThorQ::CryptoState::None)
     , m_sessionState(ThorQ::SessionState::LoggedOut)
     , m_ping(0)
+    , l_username()
     , m_username()
-    , m_partnerName()
-    , m_onlineUsers()
+    , l_requestedPartner()
+    , m_requestedPartner()
+    , l_requestingPartner()
+    , m_requestingPartner()
+    , m_actionFlags(0)
+    , m_collarFlags(0)
+    , m_shockValue(0)
+    , m_vibrateValue(0)
+    , m_beepValue(0)
+    , m_autoSensitivity(0)
+    , m_autoShock(0)
+    , m_autoVibrate(0)
+    , m_autoBeep(0)
     , m_thread(new QThread())
     , m_awaitingPing(false)
     , m_pingTimer(new QElapsedTimer())
     , m_host(host)
     , m_peer(nullptr)
+    , l_address()
     , m_address(new ENetAddress())
 {
     QObject::connect(this, &Client::PortChanged, this, &Client::Disconnect);
@@ -62,10 +68,10 @@ Client::Client(ENetHost* host)
 
 Client* Client::NewClient()
 {
-	ENetHost* host = enet_host_create(nullptr, 1, 2, 0, 0);
+    ENetHost* host = enet_host_create(nullptr, 1, 2, 0, 0);
 
-	if (host == nullptr)
-		return nullptr;
+    if (host == nullptr)
+        return nullptr;
 
     return new Client(host);
 }
@@ -77,18 +83,18 @@ Client::~Client()
     m_thread->wait();
 
     if (m_host != nullptr)
-	{
+    {
         enet_host_destroy(m_host);
-	}
+    }
 
     delete m_address;
     delete m_pingTimer;
-	delete m_crypto;
+    delete m_crypto;
 }
 
 QString Client::Version()
 {
-	return QString("ENet-%1.%2.%3").arg(ENET_VERSION_MAJOR).arg(ENET_VERSION_MINOR).arg(ENET_VERSION_PATCH);
+    return QString("ENet-%1.%2.%3").arg(ENET_VERSION_MAJOR).arg(ENET_VERSION_MINOR).arg(ENET_VERSION_PATCH);
 }
 
 int Client::Ping() const
@@ -111,37 +117,19 @@ int Client::SessionState() const
     return m_sessionState.load();
 }
 
-QString Client::Username() const
-{
-    SCOPELOCK(l_username);
-    return QString::fromStdString(m_username);
-}
-
-UserData Client::Partner() const
-{
-    SCOPELOCK(l_onlineUsers);
-    for (UserData user : m_onlineUsers)
-    {
-        if (user.username == m_partnerName)
-            return user;
-    }
-
-    return UserData();
-}
-
-QList<UserData> Client::OnlineUsers() const
-{
-    SCOPELOCK(l_onlineUsers);
-    return m_onlineUsers;
-}
-
-void Client::Connect(const char* address, int port)
+bool Client::Connect(const char* address, int port)
 {
     SCOPELOCK(l_address);
-    enet_address_set_host(m_address, address);
+    if (enet_address_set_host(m_address, address) < 0)
+        return false;
+
     m_address->port = port;
 
+    qDebug() << "Signalizing connect!";
     m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_Connect);
+    qDebug() << "Done.";
+
+    return true;
 }
 
 void Client::Disconnect()
@@ -242,22 +230,24 @@ void Client::SetAuto(bool enable, int sensitivity, int shockStrength, int vibrat
 
 void Client::Run()
 {
-	ENetEvent event;
+    ENetEvent event;
 
-	while (!m_thread->isInterruptionRequested())
-	{
+    while (!m_thread->isInterruptionRequested())
+    {
         while (enet_host_service(m_host, &event, 0) > 0)
-		{
-			switch (event.type)
-			{
+        {
+            switch (event.type)
+            {
             case ENET_EVENT_TYPE_CONNECT:
+                qDebug() << "Connected!";
                 SetCryptoState(ThorQ::CryptoState::None);
                 SetClientState(ThorQ::ClientState::Connecting);
-				break;
+                requestEncryptionHandshake();
+                break;
             case ENET_EVENT_TYPE_RECEIVE:
                 HandleMessage(event.packet);
-				enet_packet_destroy(event.packet);
-				break;
+                enet_packet_destroy(event.packet);
+                break;
             case ENET_EVENT_TYPE_DISCONNECT:
                 SetCryptoState(ThorQ::CryptoState::None);
                 SetClientState(ThorQ::ClientState::Disconnected);
@@ -267,7 +257,7 @@ void Client::Run()
                     emit Error("Unexpected disconnect!");
 
                 SetClientState(ThorQ::ClientState::Disconnected);
-				break;
+                break;
             case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
                 SetCryptoState(ThorQ::CryptoState::None);
                 SetClientState(ThorQ::ClientState::Disconnected);
@@ -276,10 +266,10 @@ void Client::Run()
                 emit Error("Timed out!");
 
                 SetClientState(ThorQ::ClientState::Disconnected);
-				break;
-			case ENET_EVENT_TYPE_NONE:
-				break;
-			}
+                break;
+            case ENET_EVENT_TYPE_NONE:
+                break;
+            }
         }
 
         // Send stuff
@@ -325,15 +315,18 @@ void Client::Run()
                     m_requestingPartner.clear();
                 }
             }
-            else
+            else if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_Disconnect) != 0)
             {
-
+                SetClientState(ThorQ::ClientState::Disconnecting);
+                enet_peer_disconnect(m_peer, 0);
             }
         }
         else if (ClientState() == ThorQ::ClientState::Disconnected)
         {
             if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_Connect) != 0)
             {
+                qDebug() << "Connecting!";
+                m_actionFlags.fetch_and(std::uint8_t(~ThorQ::ClientActionFlag::ACTION_Connect));
                 m_peer = enet_host_connect(m_host, m_address, 4, 0);
                 SetClientState(ThorQ::ClientState::Connecting);
             }
@@ -343,14 +336,14 @@ void Client::Run()
         {
             if (m_pingTimer->elapsed() > 500)
             {
-                //if (m_awaitingPing)
-                //    qDebug() << "ping timed out!";
+                if (m_awaitingPing)
+                    qDebug() << "ping timed out!";
 
                 m_pingTimer->start();
                 SendHeartbeat();
                 m_awaitingPing = true;
             }
-		}
+        }
 
 
     }
@@ -405,28 +398,8 @@ void Client::SetUsername(const QString &username)
 
 void Client::SetPartner(const QString &username)
 {
-    SCOPELOCK(l_onlineUsers);
-    m_partnerName = username;
-}
-
-void Client::UpsertOnlineUser(const UserData &user)
-{
-    SCOPELOCK(l_onlineUsers);
-    for (int i = 0; i < m_onlineUsers.size(); i++)
-    {
-        if (m_onlineUsers[i].username == user.username)
-        {
-            m_onlineUsers[i].hasCollar = user.hasCollar;
-            m_onlineUsers[i].inSession = user.inSession;
-            return;
-        }
-    }
-    m_onlineUsers.push_back(user);
-}
-
-void Client::RemoveOnlineUser(const QString &user)
-{
-
+    SCOPELOCK(l_partnerName);
+    m_partnerName = username.toStdString();
 }
 
 void Client::HandleMessage(ENetPacket* packet)
@@ -436,7 +409,9 @@ void Client::HandleMessage(ENetPacket* packet)
     if (ClientState() == ThorQ::ClientState::Disconnecting || ClientState() == ThorQ::ClientState::Disconnected || packet->dataLength < sizeof(std::uint8_t))
         return;
 
-	std::uint8_t flag = static_cast<std::uint8_t>(*packet->data);
+    std::uint8_t flag = static_cast<std::uint8_t>(*packet->data);
+    std::uint8_t* data = packet->data + sizeof(std::uint8_t);
+    std::size_t size = packet->dataLength - sizeof(std::uint8_t);
 
     if ((flag & ThorQ::HeaderFlag::HEADER_HEARTBEAT) != 0)
     {
@@ -451,31 +426,31 @@ void Client::HandleMessage(ENetPacket* packet)
     if (packet->dataLength == sizeof(std::uint8_t))
         return;
 
-    std::vector<std::uint8_t> data(packet->data + sizeof(std::uint8_t), packet->data + packet->dataLength - sizeof(std::uint8_t));
-
     if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_ESTABLISH) != 0)
     {
+        qDebug() << "Establishing!";
         if (m_crypto->IsCryptoReady())
         {
             m_crypto->Reset();
         }
 
-        if (m_crypto->Agree(data))
-		{
-            SendRaw(m_crypto->PublicKey());
+        if (m_crypto->Agree(data, size))
+        {
             SetCryptoState(ThorQ::CryptoState::Establishing);
-		}
-		else
-		{
+            SendRaw(m_crypto->PublicKey());
+        }
+        else
+        {
             m_crypto->Reset();
             SetCryptoState(ThorQ::CryptoState::None);
-		}
+        }
         return;
-	}
+    }
 
     if (!m_crypto->IsCryptoReady())
         return;
 
+    std::vector<std::uint8_t> vec = m_crypto->Decrypt(data, size);
 
     if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_VERIFY) != 0)
     {
@@ -513,7 +488,16 @@ std::uint8_t Client::GetFlag(bool withHeartbeat)
         break;
     }
 
-	return flag;
+    return flag;
+}
+
+void Client::requestEncryptionHandshake()
+{
+    qDebug() << "Requesting!";
+    m_crypto->Reset();
+    SetCryptoState(ThorQ::CryptoState::Requesting);
+    std::uint8_t flag = GetFlag();
+    enet_peer_send(m_peer, 0, enet_packet_create(&flag, sizeof(std::uint8_t), ENET_PACKET_FLAG_RELIABLE));
 }
 
 void Client::SendHeartbeat()
@@ -524,10 +508,12 @@ void Client::SendHeartbeat()
 
 void Client::SendRaw(std::uint32_t meta, bool unreliable)
 {
+    meta = htonl(meta);
     SendRaw(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t), unreliable);
 }
 void Client::SendRaw(std::uint32_t meta, const std::string &message, bool unreliable)
 {
+    meta = htonl(meta);
     std::vector<std::uint8_t> data;
     data.resize(sizeof(std::uint32_t) + message.length());
     memcpy(data.data(), &meta, sizeof(std::uint32_t));
@@ -550,20 +536,31 @@ void Client::SendRaw(const std::uint8_t* data, std::size_t len, bool unreliable)
 
 void Client::SendEncrypted(std::uint32_t meta, bool unreliable)
 {
+    std::uint8_t data[sizeof(std::uint8_t) + sizeof(std::uint32_t)];
+
+    data[0] = GetFlag();
+
+    meta = htonl(meta);
+    memcpy(data + sizeof(std::uint8_t), &meta, sizeof(std::uint32_t));
+
     SendEncrypted(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t), unreliable);
 }
 void Client::SendEncrypted(std::uint32_t meta, const std::string &message, bool unreliable)
 {
-    std::vector<std::uint8_t> data;
-    data.resize(sizeof(std::uint32_t) + message.length());
-    memcpy(data.data(), &meta, sizeof(std::uint32_t));
-    memcpy(data.data() + sizeof(std::uint32_t), message.data(), message.length());
+    std::size_t size = sizeof(std::uint32_t) + message.length();
+    std::uint8_t* data = new std::uint8_t[size];
+
+    meta = htonl(meta);
+    memcpy(data, &meta, sizeof(std::uint32_t));
+
+    memcpy(data + sizeof(std::uint32_t), message.data(), message.length());
+
     SendEncrypted(data, unreliable);
 }
 void Client::SendEncrypted(const std::vector<std::uint8_t>& data, bool unreliable) { SendEncrypted(data.data(), data.size(), unreliable); }
 void Client::SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable)
 {
-    if (ClientState() != ThorQ::ClientState::Connected)
+    if (CryptoState() < ThorQ::CryptoState::Verifying)
         return;
 
     std::vector<std::uint8_t> encrypted = m_crypto->Encrypt(data, len);

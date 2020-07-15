@@ -32,12 +32,8 @@ public:
     int ClientState() const;
     int CryptoState() const;
     int SessionState() const;
-
-    QString Username() const;
-    UserData Partner() const;
-    QList<UserData> OnlineUsers() const;
 public slots:
-    void Connect(const char* address, int port);
+    bool Connect(const char* address, int port);
     void Disconnect();
 
     void Login(const QString& Username);
@@ -62,14 +58,10 @@ signals:
     void SessionStateChanged(int state);
 
     void usernameChanged(const QString& username);
-    void PartnerChanged(const UserData& user);
+    void partnerChanged(const UserData& user);
 
-    void UserOnline(const UserData& user);
+    void userUpdate(const UserData& user);
     void UserOffline(const QString& user);
-    void UserCollarOn(const QString& user);
-    void UserCollarOff(const QString& user);
-    void UserInSession(const QString& user);
-    void UserLeftSession(const QString& user);
 
     void ReceivedShock(int strength);
     void ReceivedVibrate(int strength);
@@ -89,12 +81,11 @@ private slots:
     void SetUsername(const QString& username);
     void SetPartner(const QString& username);
 
-    void UpsertOnlineUser(const UserData& user);
-    void RemoveOnlineUser(const QString& user);
-
     void HandleMessage(ENetPacket* packet);
 
+    void requestEncryptionHandshake();
     void SendHeartbeat();
+
     void SendRaw(std::uint32_t meta, bool unreliable = false);
     void SendRaw(std::uint32_t meta, const std::string& message, bool unreliable = false);
     void SendRaw(const std::vector<std::uint8_t>& data, bool unreliable = false);
@@ -116,15 +107,14 @@ private:
     std::mutex l_username;
     std::string m_username;
 
+    std::mutex l_partnerName;
+    std::string m_partnerName;
+
     std::mutex l_requestedPartner;
     std::string m_requestedPartner;
 
     std::mutex l_requestingPartner;
     std::string m_requestingPartner;
-
-    std::mutex l_onlineUsers;
-    QString m_partnerName;
-    QList<UserData> m_onlineUsers;
 
     std::atomic_uint8_t m_actionFlags;
     std::atomic_uint8_t m_collarFlags;
