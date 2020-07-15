@@ -24,12 +24,7 @@
 class OpenVROverlayController : public QObject
 {
     Q_OBJECT
-
-    bool m_isVisible;
-    float m_alpha;
-    float m_width;
-    QColor m_tint;
-
+    Q_DISABLE_COPY(OpenVROverlayController)
 public:
     static bool IsSteamVRRunning();
     static bool IsHmdPresent();
@@ -38,30 +33,40 @@ public:
     OpenVROverlayController(QObject* parent = nullptr);
     ~OpenVROverlayController() override;
 
-    void SetWidget( QWidget* pWidget );
     QWidget* GetWidget() const;
-
-    void SetIsVisible(bool show);
-    bool GetIsVisible();
-
-    void SetWidth(float meters);
+    bool GetIsVisible() const;
     float GetWidth() const;
-
-    void SetAlpha(float alpha);
     float GetAlpha() const;
-
-    void SetTint(const QColor& color);
     QColor GetTint() const;
 signals:
     void VrExited();
+
+    void WidgetChanged(QWidget* widget);
+    void IsVisibleChanged(bool visible);
+    void WidthChanged(float width);
+    void AlphaChanged(float alpha);
+    void TintChanged(const QColor& color);
 public slots:
     bool Init();
     void Shutdown();
+
+    void SetWidget(QWidget* widget);
+    void SetIsVisible(bool visible);
+    void ToggleIsVisible();
+    void SetIsVisibleTimeout(bool enabled, int msecs);
+    void SetWidth(float width);
+    void SetAlpha(float alpha);
+    void SetTint(const QColor& color);
 protected:
-    vr::EVRInitError ConnectToVRRuntime();
+    bool ConnectToVRRuntime();
     void DisconnectFromVRRuntime();
 
+    void SetTrackedDevice(vr::TrackedDeviceIndex_t index);
+    vr::TrackedDeviceIndex_t GetTrackedDevice() const;
+
     void PollEvents();
+
+    void SetOverlayResolution(int width, int height);
 
     void OverlayCreate();
     void OverlayInit();
@@ -69,15 +74,19 @@ protected:
     void OverlayDraw();
     void OverlayTransform();
 private:
+    bool m_isInitialized;
+    bool m_isVisible;
+    float m_alpha;
+    float m_width;
+    QColor m_tint;
+
     // Widget
     QWidget *m_widget;
     QTimer *m_pumpEventsTimer;
     QTimer* m_visibilityTimer;
 
-    // OPENVR VARIABLES
-    vr::IVRSystem* m_system;
-
     // Overlay stuff
+    vr::IVRSystem* m_ivrSystem;
     vr::VROverlayHandle_t m_handle;
     vr::HmdMatrix34_t m_deviceOffset;
     vr::TrackedDeviceIndex_t m_deviceIndex;
