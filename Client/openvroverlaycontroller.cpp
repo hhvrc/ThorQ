@@ -92,8 +92,10 @@ OpenVROverlayController::OpenVROverlayController(QObject* parent)
 
     // Calculate offset
     QMatrix4x4 mat;
-    mat.translate(0,0,0);
-    mat.rotate(-90, 1, 0);
+    mat.scale(0.25f);
+    mat.translate(0, -0.03f, -0.15f);
+    mat.rotate(-90, -1, 1);
+    mat.optimize();
     m_deviceOffset = ToHmdMatrix34(mat);
 }
 
@@ -495,7 +497,7 @@ void OpenVROverlayController::OverlayInit()
         return;
 
     // Alpha
-    m_alpha = 1.f;
+    m_alpha = 0.9f;
     Dbg(vr::VROverlay()->SetOverlayAlpha(m_handle, m_alpha), __LINE__);
 
     // Tint
