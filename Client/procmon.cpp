@@ -4,18 +4,19 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#elif _WIN32
+//#include <tlhelp32.h>
+#endif
+
 bool ProcessIsRuning(const char* processName)
 {
+#if __linux__
 	char buf[128]{0};
 
 	snprintf(buf, 128, "ps | grep %s > /dev/null", processName);
 
 	return system(buf) == 0;
-}
 #elif _WIN32
-//#include <tlhelp32.h>
-bool ProcessIsRuning(const char* processName)
-{
     /*
 	char* p = strrchr(processName, '\\');
 
@@ -39,5 +40,5 @@ bool ProcessIsRuning(const char* processName)
 	return result;
     */
     return true;
-}
 #endif
+}
