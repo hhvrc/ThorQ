@@ -483,26 +483,24 @@ void Client::HandleMessage(ENetPacket* packet)
     qDebug() << "uwu";
 }
 
-std::uint8_t Client::GetFlag(bool withHeartbeat)
+std::uint8_t Client::GetFlag()
 {
-    std::uint8_t flag = withHeartbeat ? ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT : 0;
-
     switch (CryptoState()) {
     case ThorQ::CryptoState::Requesting:
-        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_REQUEST;
+        return ThorQ::MessageHeaderEnums::HEADER_CRYPT_REQUEST;
         break;
     case ThorQ::CryptoState::Establishing:
-        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH;
+        return ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH;
         break;
     case ThorQ::CryptoState::Verifying:
-        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY;
+        return ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY;
         break;
     case ThorQ::CryptoState::Ok:
-        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK;
+        return ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK;
         break;
     }
 
-    return flag;
+    return 0;
 }
 
 void Client::requestEncryptionHandshake()
@@ -521,7 +519,7 @@ void Client::SendHeartbeat()
 {
     qDebug() << "TX!";
 
-    std::uint8_t flag = GetFlag(true);
+    std::uint8_t flag = ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT;
     enet_peer_send(m_peer, 1, enet_packet_create(&flag, sizeof(std::uint8_t), ENET_PACKET_FLAG_UNSEQUENCED));
 }
 
