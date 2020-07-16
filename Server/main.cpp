@@ -102,6 +102,8 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
     }
     case ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK:
     {
+		if (data == nullptr || size == 0)
+			return;
         break;
     }
     default:

@@ -295,19 +295,20 @@ ThorQ::Crypto* ThorQ::Instance::GetCrypto()
 
 std::uint8_t ThorQ::Instance::GetFlag(bool withHeartbeat)
 {
-    std::uint8_t flag = withHeartbeat ? ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT : 0;
+	if (withHeartbeat)
+		return ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT;
 
     switch (CryptoState()) {
     case ThorQ::CryptoState::Establishing:
-        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH;
+		return ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH;
         break;
     case ThorQ::CryptoState::Verifying:
-        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY;
+		return ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY;
         break;
     case ThorQ::CryptoState::Ok:
-        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK;
+		return ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK;
         break;
 	}
 
-    return flag;
+	return 0;
 }
