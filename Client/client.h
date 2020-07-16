@@ -95,7 +95,7 @@ private slots:
     void SendEncrypted(const std::vector<std::uint8_t>& data, bool unreliable = false);
     void SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable = false);
 private:
-    std::uint8_t GetFlag(bool withHeartbeat = false);
+    std::uint8_t GetFlag();
 private:
 	ThorQ::Crypto* m_crypto;
 
