@@ -499,8 +499,9 @@ void OpenVROverlayController::OverlayInit()
     Dbg(vr::VROverlay()->SetOverlayAlpha(m_handle, m_alpha), __LINE__);
 
     // Tint
-    m_tint = QColor(0, 0, 0, 255);
-    Dbg(vr::VROverlay()->SetOverlayColor(m_handle, m_tint.redF(), m_tint.greenF(), m_tint.blueF()), __LINE__);
+    // Makes overlay black for some reason?
+    //m_tint = QColor(0, 0, 0, 0);
+    //Dbg(vr::VROverlay()->SetOverlayColor(m_handle, m_tint.redF(), m_tint.greenF(), m_tint.blueF()), __LINE__);
 
     // Visibility
     m_isVisible = false;
