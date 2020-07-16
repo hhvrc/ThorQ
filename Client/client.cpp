@@ -279,39 +279,39 @@ void Client::Run()
             {
                 if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Shock) != 0)
                 {
-                    SendEncrypted(ThorQ::MessageEnums::COMMAND_Shock, true);
+                    SendEncrypted(ThorQ::MessageContentEnums::COMMAND_Shock, true);
                 }
 
                 if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Vibrate) != 0)
                 {
-                    SendEncrypted(ThorQ::MessageEnums::COMMAND_Vibrate, true);
+                    SendEncrypted(ThorQ::MessageContentEnums::COMMAND_Vibrate, true);
                 }
 
                 if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Beep) != 0)
                 {
-                    SendEncrypted(ThorQ::MessageEnums::COMMAND_Beep, true);
+                    SendEncrypted(ThorQ::MessageContentEnums::COMMAND_Beep, true);
                 }
 
                 if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Auto) != 0)
                 {
-                    SendEncrypted(ThorQ::MessageEnums::COMMAND_Auto, false);
+                    SendEncrypted(ThorQ::MessageContentEnums::COMMAND_Auto, false);
                 }
 
                 if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionLeave) != 0)
                 {
-                    SendEncrypted(ThorQ::MessageEnums::SESSION_Leave);
+                    SendEncrypted(ThorQ::MessageContentEnums::SESSION_Leave);
                 }
             }
             else if (!m_requestingPartner.empty())
             {
                 if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionAccept) != 0)
                 {
-                    SendEncrypted(ThorQ::MessageEnums::SESSION_Accept, m_requestingPartner);
+                    SendEncrypted(ThorQ::MessageContentEnums::SESSION_Accept, m_requestingPartner);
                     m_requestingPartner.clear();
                 }
                 else if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionDeny) != 0)
                 {
-                    SendEncrypted(ThorQ::MessageEnums::SESSION_Deny, m_requestingPartner);
+                    SendEncrypted(ThorQ::MessageContentEnums::SESSION_Deny, m_requestingPartner);
                     m_requestingPartner.clear();
                 }
             }
@@ -404,47 +404,73 @@ void Client::SetPartner(const QString &username)
 
 void Client::HandleMessage(ENetPacket* packet)
 {
-    qint16 time = m_pingTimer->elapsed();
+    int time = m_pingTimer->elapsed();
 
     if (ClientState() == ThorQ::ClientState::Disconnecting || ClientState() == ThorQ::ClientState::Disconnected || packet->dataLength < sizeof(std::uint8_t))
         return;
 
-    std::uint8_t flag = static_cast<std::uint8_t>(*packet->data);
+    std::uint8_t header = static_cast<std::uint8_t>(*packet->data);
     std::uint8_t* data = packet->data + sizeof(std::uint8_t);
     std::size_t size = packet->dataLength - sizeof(std::uint8_t);
 
-    if ((flag & ThorQ::HeaderFlag::HEADER_HEARTBEAT) != 0)
+    switch (header) {
+    case ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT:
     {
         if (m_awaitingPing)
         {
+            qDebug() << "RX!";
             m_awaitingPing = false;
             SetPing(time);
         }
         return;
     }
-
-    if (packet->dataLength == sizeof(std::uint8_t))
-        return;
-
-    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_ESTABLISH) != 0)
+    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH:
     {
-        qDebug() << "Establishing!";
+        if (packet->dataLength > sizeof(std::uint8_t))
+        {
+            qDebug() << "Establishing!";
+            if (m_crypto->IsCryptoReady())
+            {
+                m_crypto->Reset();
+            }
+
+            if (m_crypto->Agree(data, size))
+            {
+                SetCryptoState(ThorQ::CryptoState::Establishing);
+                SendRaw(m_crypto->PublicKey());
+            }
+            else
+            {
+                m_crypto->Reset();
+                SetCryptoState(ThorQ::CryptoState::None);
+            }
+        }
+        return;
+    }
+    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY:
+    {
         if (m_crypto->IsCryptoReady())
         {
-            m_crypto->Reset();
-        }
-
-        if (m_crypto->Agree(data, size))
-        {
-            SetCryptoState(ThorQ::CryptoState::Establishing);
-            SendRaw(m_crypto->PublicKey());
-        }
-        else
-        {
-            m_crypto->Reset();
-            SetCryptoState(ThorQ::CryptoState::None);
+            qDebug() << "Verifying!";
+            SetCryptoState(ThorQ::CryptoState::Verifying);
+            SendEncrypted(m_crypto->Decrypt(data, size));
         }
         return;
+    }
+    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK:
+    {
+        SetCryptoState(ThorQ::CryptoState::Ok);
+        SetClientState(ThorQ::ClientState::Connected);
+        break;
+    }
+    default:
+    {
+        qDebug() << "Got unknown HeaderEnum:" << header;
+        SetCryptoState(ThorQ::CryptoState::None);
+        SetClientState(ThorQ::ClientState::Connecting);
+        requestEncryptionHandshake();
+        return;
+    }
     }
 
     if (!m_crypto->IsCryptoReady())
@@ -452,39 +478,27 @@ void Client::HandleMessage(ENetPacket* packet)
 
     std::vector<std::uint8_t> vec = m_crypto->Decrypt(data, size);
 
-    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_VERIFY) != 0)
-    {
-        qDebug() << "Verifying!";
-        SetCryptoState(ThorQ::CryptoState::Verifying);
-        SendEncrypted(vec);
-        return;
-    }
-
-    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_OK) == 0)
-        return;
-
-    SetCryptoState(ThorQ::CryptoState::Ok);
-    SetClientState(ThorQ::ClientState::Connected);
+    std::uint8_t meta = static_cast<std::uint8_t>(*vec.data());
 
     qDebug() << "uwu";
 }
 
 std::uint8_t Client::GetFlag(bool withHeartbeat)
 {
-    std::uint8_t flag = withHeartbeat ? ThorQ::HeaderFlag::HEADER_HEARTBEAT : 0;
+    std::uint8_t flag = withHeartbeat ? ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT : 0;
 
     switch (CryptoState()) {
     case ThorQ::CryptoState::Requesting:
-        flag |= ThorQ::HeaderFlag::HEADER_CRYPT_REQUEST;
+        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_REQUEST;
         break;
     case ThorQ::CryptoState::Establishing:
-        flag |= ThorQ::HeaderFlag::HEADER_CRYPT_ESTABLISH;
+        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH;
         break;
     case ThorQ::CryptoState::Verifying:
-        flag |= ThorQ::HeaderFlag::HEADER_CRYPT_VERIFY;
+        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY;
         break;
     case ThorQ::CryptoState::Ok:
-        flag |= ThorQ::HeaderFlag::HEADER_CRYPT_OK;
+        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK;
         break;
     }
 
@@ -493,6 +507,9 @@ std::uint8_t Client::GetFlag(bool withHeartbeat)
 
 void Client::requestEncryptionHandshake()
 {
+    if (ClientState() != ThorQ::ClientState::Connecting)
+        return;
+
     qDebug() << "Requesting!";
     m_crypto->Reset();
     SetCryptoState(ThorQ::CryptoState::Requesting);
@@ -502,6 +519,8 @@ void Client::requestEncryptionHandshake()
 
 void Client::SendHeartbeat()
 {
+    qDebug() << "TX!";
+
     std::uint8_t flag = GetFlag(true);
     enet_peer_send(m_peer, 1, enet_packet_create(&flag, sizeof(std::uint8_t), ENET_PACKET_FLAG_UNSEQUENCED));
 }

@@ -7,6 +7,10 @@
 #include "loginwidget.h"
 #include "openvroverlaycontroller.h"
 
+#include <QLabel>
+
+#define COMTEST 1
+
 int main(int argc, char** argv)
 {
     // TODO: make GUI the main thread, and Networking a seperate thread
@@ -16,7 +20,7 @@ int main(int argc, char** argv)
 
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication app(argc, argv);
-
+#if COMTEST
     QString stylesheet;
     QFile file("stylesheet.css");
     if (file.open(QFile::ReadOnly | QFile::Text))
@@ -35,7 +39,7 @@ int main(int argc, char** argv)
     qDebug().noquote() << "Using" << Client::Version();
 
     LoginWidget e;
-    //e.show();
+    e.show();
 
     Client* cli = Client::NewClient();
     QObject::connect(cli, &Client::ClientStateChanged, &e, &LoginWidget::SetState);
@@ -47,12 +51,17 @@ int main(int argc, char** argv)
     });
 
     cli->Connect("localhost", 12345);
+#else
+    QPixmap pix(":/uwu.png");
+    QLabel lab;
+    lab.setPixmap(pix);
 
     OpenVROverlayController::SharedInstance()->Init();
-    OpenVROverlayController::SharedInstance()->SetWidget(&e);
+    OpenVROverlayController::SharedInstance()->SetWidget(&lab);
+#endif
 
     int retval = app.exec();
 
-    enet_deinitialize();
+    //enet_deinitialize();
     return retval;
 }

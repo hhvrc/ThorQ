@@ -5,6 +5,7 @@
 #include <enet.h>
 #include <enums.h>
 #include <crypto.h>
+#include <constants.h>
 
 ThorQ::Instance::Instance(ENetPeer* peer)
     : m_crypto(new Crypto())
@@ -59,18 +60,18 @@ void ThorQ::Instance::RequestOn(Instance* target)
 		return;
 
 	if (m_partner != nullptr) {
-        SendEncrypted(ThorQ::MessageEnums::ACKNOWLEDGE_Denied, "You are already in another session");
+        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, "You are already in another session");
 		return;
 	}
 
 	if (target == this) {
-        SendEncrypted(ThorQ::MessageEnums::ACKNOWLEDGE_Denied, "Cannot request on self");
+        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, "Cannot request on self");
 		return;
 	}
 
 	if (target->HasPartner())
 	{
-        SendEncrypted(ThorQ::MessageEnums::ACKNOWLEDGE_Denied, target->Name() + " is already in another session");
+        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, target->Name() + " is already in another session");
 		return;
 	}
 
@@ -82,33 +83,33 @@ bool ThorQ::Instance::RequestAcceptFrom(Instance* sender)
 {
 	if (sender == this)
 	{
-        SendEncrypted(ThorQ::MessageEnums::ACKNOWLEDGE_Denied, "Cannot start session with self");
+        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, "Cannot start session with self");
         return false;
 	}
 
     if (sender->m_requestedPartner != this)
 	{
-        SendEncrypted(ThorQ::MessageEnums::ACKNOWLEDGE_Denied, " Request from " + sender->Name() + " is invalid / never got sent");
+        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, " Request from " + sender->Name() + " is invalid / never got sent");
         return false;
 	}
 
 	if (!sender->HasPartner())
 	{
-        SendEncrypted(ThorQ::MessageEnums::ACKNOWLEDGE_Denied, sender->Name() + " is already in another session");
+        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, sender->Name() + " is already in another session");
         return false;
 	}
 
 	if (m_partner != nullptr)
 	{
-        SendEncrypted(ThorQ::MessageEnums::ACKNOWLEDGE_Denied, "You are already in another session");
+        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, "You are already in another session");
         return false;
 	}
 
 	this->m_partner = sender;
     sender->m_partner = this;
 
-    sender->SendEncrypted(ThorQ::MessageEnums::NOTIFY_SessionAccepted, this->Name());
-    this->SendEncrypted(ThorQ::MessageEnums::NOTIFY_SessionAccepted, sender->Name());
+    sender->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionAccepted, this->Name());
+    this->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionAccepted, sender->Name());
 
     return true;
 }
@@ -117,18 +118,18 @@ bool ThorQ::Instance::RequestDenyFrom(ThorQ::Instance *sender)
 {
     if (sender == this)
     {
-        SendEncrypted(ThorQ::MessageEnums::ACKNOWLEDGE_Denied, "Cannot deny session with self");
+        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, "Cannot deny session with self");
         return false;
     }
 
     if (sender->m_requestedPartner != this)
     {
-        SendEncrypted(ThorQ::MessageEnums::ACKNOWLEDGE_Denied, " Request from " + sender->Name() + " is invalid / never got sent");
+        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, " Request from " + sender->Name() + " is invalid / never got sent");
         return false;
     }
 
-    sender->SendEncrypted(ThorQ::MessageEnums::NOTIFY_SessionDenied, this->Name());
-    this->SendEncrypted(ThorQ::MessageEnums::NOTIFY_SessionDenied, sender->Name());
+    sender->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionDenied, this->Name());
+    this->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionDenied, sender->Name());
 
     return true;
 }
@@ -141,8 +142,8 @@ void ThorQ::Instance::ClearPartner()
 	if (m_partner == nullptr)
 		return;
 
-    m_partner->SendEncrypted(ThorQ::MessageEnums::NOTIFY_SessionEnded, m_name);
-    SendEncrypted(ThorQ::MessageEnums::NOTIFY_SessionEnded, m_partner->Name());
+    m_partner->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionEnded, m_name);
+    SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionEnded, m_partner->Name());
 
 	m_partner->m_partner = nullptr;
 	m_partner = nullptr;
@@ -236,48 +237,52 @@ void ThorQ::Instance::SendEncrypted(const std::uint8_t* data, std::size_t len, b
 
 void ThorQ::Instance::CryptoInit()
 {
+    GetCrypto()->Reset();
     SetClientState(ThorQ::ClientState::Connecting);
     SetCryptoState(ThorQ::CryptoState::Establishing);
     SendRaw(GetCrypto()->PublicKey());
 }
 
-void ThorQ::Instance::CryptoEstablish(const std::uint8_t* data, std::size_t size)
+bool ThorQ::Instance::CryptoEstablish(const std::uint8_t* data, std::size_t size)
 {
-	if (GetCrypto()->Agree(data, size))
+    if (CryptoState() == ThorQ::CryptoState::Establishing && size != 0)
     {
-        if (CryptoState() != ThorQ::CryptoState::Establishing)
-            return;
-        SetCryptoState(ThorQ::CryptoState::Verifying);
-		Crypto::RandomizeBytes(m_verificationData, 256);
-		SendEncrypted(m_verificationData, 256);
-        return;
+        if (GetCrypto()->Agree(data, size))
+        {
+            SetCryptoState(ThorQ::CryptoState::Verifying);
+            Crypto::RandomizeBytes(m_verificationData, MESSAGE_PAYLOAD_MAX);
+            SendEncrypted(m_verificationData, MESSAGE_PAYLOAD_MAX);
+            return true;
+        }
     }
 
     GetCrypto()->Reset();
     SetCryptoState(ThorQ::CryptoState::None);
-    SendRaw(ThorQ::MessageEnums::ACKNOWLEDGE_Error);
+    SendRaw(ThorQ::MessageContentEnums::ACKNOWLEDGE_Error);
+
+    return false;
 }
 
 
 bool ThorQ::Instance::CryptoVerify(const std::uint8_t* data, std::size_t size)
 {
-	if (CryptoState() != ThorQ::CryptoState::Verifying || size != 256)
-        return false;
+    if (CryptoState() == ThorQ::CryptoState::Verifying && size == MESSAGE_PAYLOAD_MAX)
+    {
+        if (memcmp(m_verificationData, data, MESSAGE_PAYLOAD_MAX) == 0)
+        {
+            SetCryptoState(ThorQ::CryptoState::Ok);
+            SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_OK);
 
-	if (memcmp(m_verificationData, data, 256) == 0)
-	{
-        SetCryptoState(ThorQ::CryptoState::Ok);
-        SendEncrypted(ThorQ::MessageEnums::ACKNOWLEDGE_OK);
+            if (ClientState() == ThorQ::ClientState::Connecting)
+                SetClientState(ThorQ::ClientState::Connected);
 
-        if (ClientState() == ThorQ::ClientState::Connecting)
-            SetClientState(ThorQ::ClientState::Connected);
-
-        return true;
+            return true;
+        }
     }
 
     GetCrypto()->Reset();
     SetCryptoState(ThorQ::CryptoState::None);
-    SendRaw(ThorQ::MessageEnums::ACKNOWLEDGE_Error);
+    SendRaw(ThorQ::MessageContentEnums::ACKNOWLEDGE_Error);
 
     return false;
 }
@@ -290,17 +295,17 @@ ThorQ::Crypto* ThorQ::Instance::GetCrypto()
 
 std::uint8_t ThorQ::Instance::GetFlag(bool withHeartbeat)
 {
-    std::uint8_t flag = withHeartbeat ? ThorQ::HeaderFlag::HEADER_HEARTBEAT : 0;
+    std::uint8_t flag = withHeartbeat ? ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT : 0;
 
     switch (CryptoState()) {
     case ThorQ::CryptoState::Establishing:
-        flag |= ThorQ::HeaderFlag::HEADER_CRYPT_ESTABLISH;
+        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH;
         break;
     case ThorQ::CryptoState::Verifying:
-        flag |= ThorQ::HeaderFlag::HEADER_CRYPT_VERIFY;
+        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY;
         break;
     case ThorQ::CryptoState::Ok:
-        flag |= ThorQ::HeaderFlag::HEADER_CRYPT_OK;
+        flag |= ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK;
         break;
 	}
 

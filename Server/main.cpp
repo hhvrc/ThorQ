@@ -59,58 +59,69 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	printf("Got %lu bytes\n", size);
 	fflush(stdout);
 
-    if ((flag & ThorQ::HeaderFlag::HEADER_HEARTBEAT) != 0)
+    switch (flag) {
+    case ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT:
     {
         instance->SendHeartbeat();
-		printf("Heartbeat\n");
-		fflush(stdout);
+        printf("Heartbeat\n");
+        fflush(stdout);
         return;
     }
-
-    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_REQUEST) != 0)
+    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_REQUEST:
     {
         instance->CryptoInit();
-		printf("Got request\n");
-		fflush(stdout);
+        printf("Got request\n");
+        fflush(stdout);
         return;
     }
-
-	if (size == 0)
-		return;
-
-    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_ESTABLISH) != 0 && instance->CryptoState() == ThorQ::CryptoState::Establishing)
+    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH:
     {
-		printf("Got establish\n");
-		fflush(stdout);
-		instance->CryptoEstablish(data, size);
+        printf("Got establish\n");
+        fflush(stdout);
+        if (instance->CryptoEstablish(data, size))
+        {
+            printf("Establish complete\n");
+            fflush(stdout);
+        }
         return;
+    }
+    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY:
+    {
+        if (size != 0 && instance->GetCrypto()->IsCryptoReady())
+        {
+            printf("Got verify\n");
+            fflush(stdout);
+            std::vector<std::uint8_t> vec = instance->GetCrypto()->Decrypt(data, size);
+            if (instance->CryptoVerify(vec.data(), vec.size()))
+            {
+                printf("HANDSHAKE COMPLETE\n");
+                fflush(stdout);
+            }
+        }
+        return;
+    }
+    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK:
+    {
+        break;
+    }
+    default:
+    {
+        printf("Got unknown HeaderEnum: %i\n", flag);
+        fflush(stdout);
+        instance->SetCryptoState(ThorQ::CryptoState::None);
+        instance->SetClientState(ThorQ::ClientState::Connecting);
+        return;
+    }
     }
 
     if (!instance->GetCrypto()->IsCryptoReady())
         return;
 
-	std::vector<std::uint8_t> vec = instance->GetCrypto()->Decrypt(data, size);
+    std::vector<std::uint8_t> vec = instance->GetCrypto()->Decrypt(data, size);
 
-    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_VERIFY) != 0)
-    {
-		printf("Got verify\n");
-		fflush(stdout);
-		if (instance->CryptoVerify(vec.data(), vec.size()))
-        {
-            printf("HANDSHAKE COMPLETE\n");
-            fflush(stdout);
-		}
-        return;
-    }
+    std::uint8_t meta = static_cast<std::uint8_t>(*vec.data());
 
-    if ((flag & ThorQ::HeaderFlag::HEADER_CRYPT_OK) == 0)
-        return;
-
-	std::uint32_t meta = static_cast<std::uint32_t>(*data);
-
-	instance->SetHasCollar((meta & FLAG_CollarConnected) != 0);
-
-    meta &= 0xFF; // Remove flags from meta
+    instance->SetHasCollar((meta & FLAG_CollarConnected) != 0);
 
 	if (!instance->HasName())
 	{
@@ -119,23 +130,23 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 			std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
 			if (!registeredInstances.TryAdd(name, instance))
+            {
+                instance->SetName(name);
+                instance->ClearPartner();
+
+                BroadcastMessage(NOTIFY_UserOnline, name);
+                instance->SendEncrypted(ACKNOWLEDGE_OK, "Logged in");
+            }
+            else
 			{
                 instance->SendEncrypted(ACKNOWLEDGE_Denied, "Callname in use");
-				return;
-			}
-
-			instance->SetName(name);
-			instance->ClearPartner();
-
-			BroadcastMessage(NOTIFY_UserOnline, name);
-            instance->SendEncrypted(ACKNOWLEDGE_OK, "Logged in");
-			return;
+            }
 		}
 		else
 		{
             instance->SendEncrypted(ACKNOWLEDGE_Denied, "Please log in");
-			return;
 		}
+        return;
 	}
 
 	switch (meta){

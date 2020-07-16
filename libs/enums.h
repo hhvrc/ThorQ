@@ -2,24 +2,22 @@
 #define ENUMS_H
 
 namespace ThorQ {
+
 ///
-/// \brief Flags that describe encryption/heartbeat (Fits in a int8)
+/// \brief Enums that describe encryption/heartbeat (Fits in a int8)
 ///
-enum HeaderFlag {
-    HEADER_CRYPT_REQUEST   = 1 << 0,
-    HEADER_CRYPT_ESTABLISH = 1 << 1,
-    HEADER_CRYPT_VERIFY    = 1 << 2,
-    HEADER_CRYPT_OK        = 1 << 3,
-    HEADER_HEARTBEAT       = 1 << 4,
-    HEADER_RESERVED_6      = 1 << 5,
-    HEADER_RESERVED_7      = 1 << 6,
-    HEADER_RESERVED_8      = 1 << 7,
+enum MessageHeaderEnums {
+    HEADER_HEARTBEAT,
+    HEADER_CRYPT_REQUEST,
+    HEADER_CRYPT_ESTABLISH,
+    HEADER_CRYPT_VERIFY,
+    HEADER_CRYPT_OK
 };
 
 ///
-/// \brief Flags that describe the message type (Fits in a int8)
+/// \brief Enums that describe the message type (Fits in a int8)
 ///
-enum MessageEnums {
+enum MessageContentEnums {
     USER_Login = 0,
     USER_Logout,
     USER_List,
@@ -54,8 +52,7 @@ enum MessageEnums {
 
     ADMIN_Broadcast = 112,
 
-    FLAG_CollarConnected = 128,
-    FLAG_SetAutoTrigger = 256, // Sets values that Auto mode should use when being triggered
+    FLAG_CollarConnected = 128
 };
 
 enum ClientActionFlag {
@@ -77,7 +74,7 @@ enum CollarFlags {
     COLLAR_RESERVED_5 = 1 << 4,
     COLLAR_RESERVED_6 = 1 << 5,
     COLLAR_RESERVED_7 = 1 << 6,
-    COLLAR_RESERVED_8 = 1 << 7,
+    COLLAR_Present    = 1 << 7,
 };
 
 enum ClientState
@@ -106,15 +103,6 @@ enum SessionState
     LeavingSession,
     JoiningSession,
     InSession
-};
-
-enum CommandEnums
-{
-    Shock,
-    Vibrate,
-    Beep,
-    Auto,
-    Manual
 };
 }
 

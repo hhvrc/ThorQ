@@ -55,7 +55,7 @@ namespace ThorQ {
         void SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable = false);
 
         void CryptoInit();
-		void CryptoEstablish(const std::uint8_t* data, std::size_t size);
+        bool CryptoEstablish(const std::uint8_t* data, std::size_t size);
 		bool CryptoVerify(const std::uint8_t* data, std::size_t size);
 
         Crypto* GetCrypto();
