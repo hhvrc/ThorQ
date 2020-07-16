@@ -11,17 +11,17 @@ message("Configuring ${project}...")
 
 # ---Qt---
 find_package(
-    Qt5
-    COMPONENTS
-        Core
-        Gui
-        OpenGL
-        Widgets
-        Concurrent
-    REQUIRED
+	Qt5
+	COMPONENTS
+		Core
+		Gui
+		OpenGL
+		Widgets
+		Concurrent
+	REQUIRED
 )
 if (NOT Qt5Core_FOUND)
-    message(FATAL_ERROR "No Qt installation found, aborting")
+	message(FATAL_ERROR "No Qt installation found, aborting")
 endif()
 set(Qt5_VERSION ${Qt5Core_VERSION})
 set(Qt5_LIBS ${Qt5Core_LIBRARIES} ${Qt5Gui_LIBRARIES} ${Qt5OpenGL_LIBRARIES} ${Qt5Widgets_LIBRARIES} ${Qt5Concurrent_LIBRARIES})
@@ -36,10 +36,10 @@ macro(qt_add_resources)
    qt5_add_resources(${ARGN})
 endmacro()
 macro(qt_wrap_cpp)
-    qt5_wrap_cpp(${ARGN})
+	qt5_wrap_cpp(${ARGN})
 endmacro()
 macro(qt_wrap_ui)
-    qt5_wrap_ui(${ARGN})
+	qt5_wrap_ui(${ARGN})
 endmacro()
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -49,14 +49,14 @@ list(APPEND INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}
 
 # ---OpenVR---
 if(LINUX)
-    set(OVR_LIB linux)
+	set(OVR_LIB linux)
 elseif(WINDOWS)
-    set(OVR_LIB win)
+	set(OVR_LIB win)
 endif()
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(OVR_LIB ${OVR_LIB}64)
+	set(OVR_LIB ${OVR_LIB}64)
 elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set(OVR_LIB ${OVR_LIB}32)
+	set(OVR_LIB ${OVR_LIB}32)
 endif()
 list(APPEND LIBRARIES openvr_api)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/headers)
@@ -67,12 +67,12 @@ link_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/lib/${OVR_LIB})
 set(${project}_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/client.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/serial.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.cpp
 )
 set(${project}_MOC
@@ -84,17 +84,17 @@ set(${project}_MOC
 	${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.h
 	${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.h
 	${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.h
+	${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.h
 	${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.h
 )
 
 include_directories(${INCLUDE_DIRS})
 
 add_executable(${project}
-    main.cpp
-    qml.qrc
-    ${${project}_SOURCES}
-    ${${project}_MOC}
+	main.cpp
+	qml.qrc
+	${${project}_SOURCES}
+	${${project}_MOC}
 )
 
 set_target_properties(${project} PROPERTIES COMPILE_FLAGS -DBUILDER_STATIC_DEFINE)
