@@ -4,12 +4,20 @@
 #include <cstdint>
 #include <cstring>
 
-constexpr std::uint8_t VERSION_MAJOR = 1;
-constexpr std::uint8_t VERSION_MINOR = 0;
-constexpr std::uint8_t VERSION_PATCH = 0;
+#define VERSION_MAJOR 1
+#define VERSION_MINOR 0
+#define VERSION_PATCH 0
 
-constexpr std::size_t MESSAGE_HEADER_SIZE = 8;
-constexpr std::size_t MESSAGE_PAYLOAD_MAX = UINT8_MAX;
-constexpr std::size_t MESSAGE_DATA_MAX = MESSAGE_HEADER_SIZE + MESSAGE_PAYLOAD_MAX;
+#define CRYPTO_IV_LENGTH   32
+#define CRYPTO_KEY_LENGTH  32
+#define CRYPTO_EC_OID_NAME "secp256r1"
+#define CRYPTO_CIPHER_NAME "ChaCha(20)"
+#define CRYPTO_KEY_DERIVATION_FUNCTION "KDF2(SHA-256)"
+
+#define MESSAGE_HEADER_SIZE  4
+#define MESSAGE_META_SIZE    1
+#define MESSAGE_PAYLOAD_SIZE 256
+#define MESSAGE_MAX_SIZE MESSAGE_HEADER_SIZE + MESSAGE_META_SIZE + MESSAGE_PAYLOAD_SIZE + CRYPTO_IV_LENGTH
+
 
 #endif // CONSTANTS_H
