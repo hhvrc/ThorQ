@@ -25,13 +25,10 @@ namespace ThorQ {
 		~Crypto();
 		std::vector<std::uint8_t> PublicKey() const;
 		bool IsCryptoReady();
-		bool Agree(const std::vector<std::uint8_t>& data);
-		bool Agree(const std::uint8_t* data, std::size_t len);
+        bool Agree(const std::vector<std::uint8_t>& data);
 		void Reset();
-		std::vector<std::uint8_t> Encrypt(std::vector<std::uint8_t> data);
-		std::vector<std::uint8_t> Encrypt(const std::uint8_t* data, std::size_t len);
-		std::vector<std::uint8_t> Decrypt(const std::vector<std::uint8_t>& data);
-        std::vector<std::uint8_t> Decrypt(const std::uint8_t* data, std::size_t len);
+        bool Encrypt(std::vector<std::uint8_t>& data);
+        bool Decrypt(std::vector<std::uint8_t>& data);
 	};
 }
 

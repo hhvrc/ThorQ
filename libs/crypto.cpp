@@ -1,6 +1,7 @@
 #include "crypto.h"
 
 #include <botan_all.h>
+#include "constants.h"
 
 using namespace ThorQ;
 
@@ -15,8 +16,8 @@ void Crypto::RandomizeBytes(std::uint8_t* data, std::size_t len)
 Crypto::Crypto()
     : m_ready(false)
     , m_rng(new Botan::AutoSeeded_RNG())
-    , m_key(new Botan::ECDH_PrivateKey(*m_rng, Botan::EC_Group("secp256r1")))
-    , m_streamCipher(Botan::StreamCipher::create("ChaCha(20)"))
+    , m_key(new Botan::ECDH_PrivateKey(*m_rng, Botan::EC_Group(CRYPTO_EC_OID_NAME)))
+    , m_streamCipher(Botan::StreamCipher::create(CRYPTO_CIPHER_NAME))
 {
 }
 
@@ -36,20 +37,14 @@ bool Crypto::IsCryptoReady()
 	return m_ready;
 }
 
-#include <iostream>
-bool Crypto::Agree(const std::vector<std::uint8_t>& data)
+bool Crypto::Agree(const std::vector<uint8_t>& data)
 {
-	return Agree(data.data(), data.size());
-}
-
-bool Crypto::Agree(const uint8_t* data, std::size_t len)
-{
-	if (len == m_key->public_value().size())
+    if (data.size() == m_key->public_value().size())
 	{
 		try
         {
-            Botan::PK_Key_Agreement ecdh(*m_key, *m_rng, "KDF2(SHA-256)");
-			m_streamCipher->set_key(ecdh.derive_key(32, data, len));
+            Botan::PK_Key_Agreement ecdh(*m_key, *m_rng, CRYPTO_KEY_DERIVATION_FUNCTION);
+            m_streamCipher->set_key(ecdh.derive_key(CRYPTO_KEY_LENGTH, data));
 			m_ready = true;
 			return true;
 		}
@@ -69,7 +64,7 @@ void Crypto::Reset()
 	{
 		m_ready = false;
 		Botan::ECDH_PrivateKey* oldKey = m_key;
-        m_key = new Botan::ECDH_PrivateKey(*m_rng, Botan::EC_Group("secp256r1"));
+        m_key = new Botan::ECDH_PrivateKey(*m_rng, Botan::EC_Group(CRYPTO_EC_OID_NAME));
 		delete oldKey;
 		m_streamCipher->clear();
 	}
@@ -80,105 +75,51 @@ void Crypto::Reset()
 	}
 }
 
-std::vector<uint8_t> Crypto::Encrypt(std::vector<uint8_t> data)
+bool Crypto::Encrypt(std::vector<uint8_t>& data)
 {
 	if (!data.empty())
-	{
+    {
 		try
-		{
-			std::vector<std::uint8_t> output(24 + data.size());
+        {
+            std::uint8_t iv[CRYPTO_IV_LENGTH];
+            m_rng->randomize(iv, CRYPTO_IV_LENGTH);
+            m_streamCipher->set_iv(iv, CRYPTO_IV_LENGTH);
 
-            m_rng->randomize(output.data(), 24);
-			m_streamCipher->set_iv(output.data(), 24);
+            m_streamCipher->encrypt(data);
 
-			m_streamCipher->encrypt(data);
+			data.reserve(data.size() + CRYPTO_IV_LENGTH);
 
-			memcpy(output.data() + 24, data.data(), data.size());
-
-			return output;
+			data.insert(data.end(), iv, iv + CRYPTO_IV_LENGTH);
+            return true;
 		}
 		catch (Botan::Exception ex)
 		{
 			fprintf(stderr, "Error while doing encryption: %s\n", ex.what());
-			fflush(stderr);
+            fflush(stderr);
 		}
-	}
-
-	return std::vector<std::uint8_t>();
+    }
+    return false;
 }
-
-std::vector<uint8_t> Crypto::Encrypt(const uint8_t* data, std::size_t len)
+bool Crypto::Decrypt(std::vector<uint8_t>& data)
 {
-	if (data != nullptr && len != 0)
+    if (data.size() > CRYPTO_IV_LENGTH)
 	{
 		try
-		{
-			std::vector<std::uint8_t> output(24 + len);
+        {
+			std::size_t newSize = data.size() - CRYPTO_IV_LENGTH;
 
-            m_rng->randomize(output.data(), 24);
-			m_streamCipher->set_iv(output.data(), 24);
+			m_streamCipher->set_iv(data.data() + newSize, CRYPTO_IV_LENGTH);
 
-			std::vector<std::uint8_t> vec(data, data + len);
+			data.resize(newSize);
 
-			m_streamCipher->encrypt(vec);
-
-			memcpy(output.data() + 24, vec.data(), vec.size());
-
-			return output;
-		}
-		catch (Botan::Exception ex)
-		{
-			fprintf(stderr, "Error while doing encryption: %s\n", ex.what());
-			fflush(stderr);
-		}
-	}
-
-	return std::vector<std::uint8_t>();
-}
-
-std::vector<uint8_t> Crypto::Decrypt(const std::vector<uint8_t>& data)
-{
-	if (data.size() > 24)
-	{
-		try
-		{
-			m_streamCipher->set_iv(data.data(), 24);
-
-			std::vector<std::uint8_t> dataWithoutIv(data.begin() + 24, data.end());
-			m_streamCipher->decrypt(dataWithoutIv);
-
-			return dataWithoutIv;
+            m_streamCipher->decrypt(data);
+            return true;
 		}
 		catch (Botan::Exception ex)
 		{
 			fprintf(stderr, "Error while doing decryption: %s\n", ex.what());
-			fflush(stderr);
-		}
-	}
-
-	return std::vector<std::uint8_t>();
-}
-
-std::vector<uint8_t> Crypto::Decrypt(const uint8_t* data, std::size_t len)
-{
-	if (data != nullptr && len > 24)
-	{
-		try
-		{
-			m_streamCipher->set_iv(data, 24);
-
-			std::vector<std::uint8_t> dataWithoutIv(data + 24, data + len);
-
-			m_streamCipher->decrypt(dataWithoutIv);
-
-			return dataWithoutIv;
-		}
-		catch (Botan::Exception ex)
-		{
-			fprintf(stderr, "Error while doing decryption: %s\n", ex.what());
-			fflush(stderr);
-		}
-	}
-
-	return std::vector<std::uint8_t>();
+            fflush(stderr);
+        }
+    }
+    return false;
 }
