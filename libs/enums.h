@@ -7,38 +7,39 @@ namespace ThorQ {
 /// \brief Enums that describe encryption/heartbeat (Fits in a int8)
 ///
 enum MessageHeaderEnums {
-    HEADER_HEARTBEAT,
-    HEADER_CRYPT_REQUEST,
-    HEADER_CRYPT_ESTABLISH,
-    HEADER_CRYPT_VERIFY,
-    HEADER_CRYPT_OK
+    HEADER_HEARTBEAT  = 1 << 0,
+    HEADER_ENCRYPTED  = 1 << 1,
+    HEADER_RESERVED_3 = 1 << 2,
+    HEADER_RESERVED_4 = 1 << 3,
+    HEADER_RESERVED_5 = 1 << 4,
+    HEADER_RESERVED_6 = 1 << 5,
+    HEADER_RESERVED_7 = 1 << 6,
+    HEADER_RESERVED_8 = 1 << 7,
 };
 
 ///
 /// \brief Enums that describe the message type (Fits in a int8)
 ///
 enum MessageContentEnums {
-    USER_Login = 0,
+    CONTENT_ENCRYPTED,
+
+    CRYPT_REQUEST,
+    CRYPT_ESTABLISH,
+    CRYPT_VERIFY,
+    CRYPT_OK,
+
+    USER_Login,
     USER_Logout,
     USER_List,
 
-    SESSION_Request = 16,
+    SESSION_Request,
     SESSION_Accept,
     SESSION_Deny,
     SESSION_Leave,
 
-    ACKNOWLEDGE_OK = 32,
-    ACKNOWLEDGE_Error,
-    ACKNOWLEDGE_Denied,
-    ACKNOWLEDGE_Invalid,
+    COLLAR_Command,
 
-    COMMAND_Shock = 48,
-    COMMAND_Vibrate,
-    COMMAND_Beep,
-    COMMAND_Auto,
-    COMMAND_Manual,
-
-    NOTIFY_UserOnline = 64,
+    NOTIFY_UserOnline,
     NOTIFY_UserOffline,
     NOTIFY_UserLostConnection,
     NOTIFY_UserTimedOut,
@@ -50,20 +51,16 @@ enum MessageContentEnums {
     NOTIFY_UserCollarOn,
     NOTIFY_UserCollarOff,
 
-    ADMIN_Broadcast = 112,
+    ACKNOWLEDGE_OK,
+    ACKNOWLEDGE_Error,
+    ACKNOWLEDGE_Denied,
+    ACKNOWLEDGE_Invalid,
+    ACKNOWLEDGE_LoggedIn,
+    ACKNOWLEDGE_LoggedOut,
+
+    ADMIN_Broadcast,
 
     FLAG_CollarConnected = 128
-};
-
-enum ClientActionFlag {
-    ACTION_Connect        = 1 << 0,
-    ACTION_Disconnect     = 1 << 1,
-    ACTION_Login          = 1 << 2,
-    ACTION_Logout         = 1 << 3,
-    ACTION_SessionRequest = 1 << 4,
-    ACTION_SessionAccept  = 1 << 5,
-    ACTION_SessionDeny    = 1 << 6,
-    ACTION_SessionLeave   = 1 << 7,
 };
 
 enum CollarFlags {
@@ -75,6 +72,25 @@ enum CollarFlags {
     COLLAR_RESERVED_6 = 1 << 5,
     COLLAR_RESERVED_7 = 1 << 6,
     COLLAR_Present    = 1 << 7,
+};
+
+enum ClientActionFlag {
+    ACTION_Connect        = 1 << 0,
+    ACTION_Disconnect     = 1 << 1,
+    ACTION_Login          = 1 << 2,
+    ACTION_Logout         = 1 << 3,
+    ACTION_ListUsers      = 1 << 4,
+    ACTION_SessionRequest = 1 << 5,
+    ACTION_SessionAccept  = 1 << 6,
+    ACTION_SessionDeny    = 1 << 7,
+    ACTION_SessionLeave   = 1 << 8,
+    ACTION_RESERVED_10    = 1 << 9,
+    ACTION_RESERVED_11    = 1 << 10,
+    ACTION_RESERVED_12    = 1 << 11,
+    ACTION_RESERVED_13    = 1 << 12,
+    ACTION_RESERVED_14    = 1 << 13,
+    ACTION_RESERVED_15    = 1 << 14,
+    ACTION_RESERVED_16    = 1 << 15,
 };
 
 enum ClientState
