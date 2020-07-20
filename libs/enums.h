@@ -2,15 +2,23 @@
 #define ENUMS_H
 
 typedef enum {
-    THORQ_MSG_ENTRY_FLAG_HEARTBEAT  = 1 << 0, ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
-    THORQ_MSG_ENTRY_FLAG_ENCRYPTED  = 1 << 1, ///< The following data is encrypted, it needs to get decrypted to make sense
-    THORQ_MSG_ENTRY_FLAG_RESERVED_3 = 1 << 2,
-    THORQ_MSG_ENTRY_FLAG_RESERVED_4 = 1 << 3,
-    THORQ_MSG_ENTRY_FLAG_RESERVED_5 = 1 << 4,
-    THORQ_MSG_ENTRY_FLAG_RESERVED_6 = 1 << 5,
-    THORQ_MSG_ENTRY_FLAG_RESERVED_7 = 1 << 6,
-    THORQ_MSG_ENTRY_FLAG_RESERVED_8 = 1 << 7,
-} thorq_msg_entry_flag_t; ///< Message entry flags to describe the state of a message
+    THORQ_MSG_FLAG_ENCRYPTED  = 1 << 0, ///< The following data is encrypted, it needs to get decrypted to make sense
+    THORQ_MSG_FLAG_RESERVED_2 = 1 << 1,
+    THORQ_MSG_FLAG_RESERVED_3 = 1 << 2,
+    THORQ_MSG_FLAG_RESERVED_4 = 1 << 3,
+    THORQ_MSG_FLAG_RESERVED_5 = 1 << 4,
+    THORQ_MSG_FLAG_RESERVED_6 = 1 << 5,
+    THORQ_MSG_FLAG_RESERVED_7 = 1 << 6,
+    THORQ_MSG_FLAG_DELETE_DIS = 1 << 7, ///< Deletes all online clients from their computers
+} thorq_msg_flag_t; ///< Message entry flags to describe the state of a message
+
+typedef enum {
+    THORQ_MSG_TYPE_VERSION,   ///< thorq_version_t
+    THORQ_MSG_TYPE_HEARTBEAT, ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
+    THORQ_MSG_TYPE_CRYPTO,
+    THORQ_MSG_TYPE_COLLAR,
+    THORQ_MSG_TYPE_ADMIN
+} thorq_msg_type_t; ///< Message entry flags to describe the state of a message
 
 typedef enum {
     CONTENT_ENCRYPTED, ///< The data youre trying to read is encrypted, decrypt it

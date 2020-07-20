@@ -36,27 +36,6 @@ typedef struct __thorq_version
 }) thorq_version_t;
 
 /**
- * @brief The thorq_header_t struct
- */
-THORQPACKED(
-typedef struct __thorq_header
-{
-
-    thorq_version_t app_version{};
-    thorq_version_t link_version{};
-	std::uint8_t flags = 0;
-
-    bool operator == (const __thorq_header& other) const
-	{
-        return memcmp(this, &other, sizeof(__thorq_header)) == 0;
-	}
-    bool operator != (const __thorq_header& other) const
-	{
-        return memcmp(this, &other, sizeof(__thorq_header)) != 0;
-	}
-}) thorq_header_t;
-
-/**
  * @brief The thorq_payload_t struct
  */
 THORQPACKED(
@@ -82,8 +61,9 @@ typedef struct __thorq_payload
 THORQPACKED(
 typedef struct __thorq_message
 {
-    thorq_header_t  header{};
-    thorq_payload_t payload{};
+    std::uint8_t flags = 0;
+    std::uint8_t msgid = 0;
+    std::uint8_t payload[THORQ_MAX_PAYLOAD_LEN]{0};
     std::uint8_t payload_iv[THORQ_CRYPTO_IV_LENGTH]{0};
 
     bool operator == (const __thorq_message& other) const
