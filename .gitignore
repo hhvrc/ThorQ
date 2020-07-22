@@ -5,6 +5,9 @@ build/
 CMakeCache.txt
 CMakeLists.txt.user*
 
+*.h.*
+*.cpp.*
+
 *.bin
 *.check_cache
 *.cmake
