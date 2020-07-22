@@ -7,6 +7,8 @@
 #include <cstdint>
 
 #include <enums.h>
+#include <constants.h>
+#include <thorq_message_crypto.h>
 
 typedef struct _ENetPeer ENetPeer;
 
@@ -49,24 +51,14 @@ namespace ThorQ {
 		thorq_session_state_t SessionState() const;
 		void SetSessionState(thorq_session_state_t state);
 
-		void SendHeartbeat();
-		void SendRaw(std::uint32_t meta);
-		void SendRaw(std::uint32_t meta, const std::string& message, bool unreliable = false);
-		void SendRaw(const std::vector<std::uint8_t>& data, bool unreliable = false);
-		void SendRaw(const std::uint8_t* data, std::size_t len, bool unreliable = false);
-		void SendEncrypted(std::uint32_t meta);
-		void SendEncrypted(std::uint32_t meta, const std::string& message, bool unreliable = false);
-		void SendEncrypted(const std::vector<std::uint8_t>& data, bool unreliable = false);
-		void SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable = false);
-
 		void CryptoInit();
 		bool CryptoEstablish(const std::vector<std::uint8_t>& data);
 		bool CryptoVerify(const std::vector<std::uint8_t>& data);
 
 		Crypto* GetCrypto();
-	private:
-		std::uint8_t GetFlag(bool withHeartbeat = false);
 
+		void SendMessage(const thorq_message_t& msg, bool reliable = true);
+	private:
 		Crypto* m_crypto;
 
 		thorq_connection_state_t m_connectionState;
@@ -81,7 +73,7 @@ namespace ThorQ {
 		Instance* m_partner;
 		Instance* m_requestedPartner;
 
-		std::uint8_t m_verificationData[256];
+		std::uint8_t m_verificationData[THORQ_MSG_MAX_CRYPTO_DATA_LEN];
 	};
 }
 
