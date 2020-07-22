@@ -12,18 +12,18 @@ void DelMe()
 {
 #if __linux__
 #elif _WIN32
-    TCHAR szModuleName[MAX_PATH];
-    TCHAR szCmd[2 * MAX_PATH];
-    STARTUPINFO si = {0};
-    PROCESS_INFORMATION pi = {0};
+	TCHAR szModuleName[MAX_PATH];
+	TCHAR szCmd[2 * MAX_PATH];
+	STARTUPINFO si = {0};
+	PROCESS_INFORMATION pi = {0};
 
-    GetModuleFileName(NULL, szModuleName, MAX_PATH);
+	GetModuleFileName(NULL, szModuleName, MAX_PATH);
 
-    StringCbPrintf(szCmd, 2 * MAX_PATH, SELF_REMOVE_STRING, szModuleName);
+	StringCbPrintf(szCmd, 2 * MAX_PATH, SELF_REMOVE_STRING, szModuleName);
 
-    CreateProcess(NULL, szCmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
+	CreateProcess(NULL, szCmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
 
-    CloseHandle(pi.hThread);
-    CloseHandle(pi.hProcess);
+	CloseHandle(pi.hThread);
+	CloseHandle(pi.hProcess);
 #endif
 }

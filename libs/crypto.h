@@ -17,21 +17,21 @@ namespace ThorQ {
   */
 class Crypto
 {
-    bool m_ready;
-    Botan::AutoSeeded_RNG* m_rng;
-    Botan::ECDH_PrivateKey* m_key;
-    std::unique_ptr<Botan::StreamCipher> m_streamCipher;
+	bool m_ready;
+	Botan::AutoSeeded_RNG* m_rng;
+	Botan::ECDH_PrivateKey* m_key;
+	std::unique_ptr<Botan::StreamCipher> m_streamCipher;
 public:
-    static void RandomizeBytes(std::uint8_t* data, std::size_t len);
+	static void RandomizeBytes(std::uint8_t* data, std::size_t len);
 
-    Crypto();
-    ~Crypto();
-    std::vector<std::uint8_t> PublicKey() const;
-    bool IsCryptoReady();
-    bool Agree(const std::vector<std::uint8_t>& data);
-    void Reset();
-    bool Encrypt(std::vector<std::uint8_t>& data);
-    bool Decrypt(std::vector<std::uint8_t>& data);
+	Crypto();
+	~Crypto();
+	std::vector<std::uint8_t> PublicKey() const;
+	bool IsCryptoReady();
+	bool Agree(const std::vector<std::uint8_t>& data);
+	void Reset();
+	bool Encrypt(std::vector<std::uint8_t>& data);
+	bool Decrypt(std::vector<std::uint8_t>& data);
 };
 }
 

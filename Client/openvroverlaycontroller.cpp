@@ -16,87 +16,87 @@
 
 void Dbg(vr::VROverlayError err, int line)
 {
-    if (err != vr::VROverlayError_None)
-        qDebug() << "Error:" << err << "line:"<< line;
+	if (err != vr::VROverlayError_None)
+		qDebug() << "Error:" << err << "line:"<< line;
 }
 
 QMatrix4x4 ToQMatrix(const vr::HmdMatrix34_t& mat)
 {
-    return QMatrix4x4(
-                mat.m[0][0], mat.m[0][1], mat.m[0][2], mat.m[0][3],
-                mat.m[1][0], mat.m[1][1], mat.m[1][2], mat.m[1][3],
-                mat.m[2][0], mat.m[2][1], mat.m[2][2], mat.m[2][3],
-                0.f,         0.f,         0.f,         1.f
-           );
+	return QMatrix4x4(
+				mat.m[0][0], mat.m[0][1], mat.m[0][2], mat.m[0][3],
+				mat.m[1][0], mat.m[1][1], mat.m[1][2], mat.m[1][3],
+				mat.m[2][0], mat.m[2][1], mat.m[2][2], mat.m[2][3],
+				0.f,		 0.f,		 0.f,		 1.f
+		   );
 }
 vr::HmdMatrix34_t ToHmdMatrix34(const QMatrix4x4& mat)
 {
-    vr::HmdMatrix34_t ret;
-    for (int i = 0; i < 3; i++)
-    {
-        QVector4D row = mat.row(i);
-        ret.m[i][0] = row.x();
-        ret.m[i][1] = row.y();
-        ret.m[i][2] = row.z();
-        ret.m[i][3] = row.w();
-    }
-    return ret;
+	vr::HmdMatrix34_t ret;
+	for (int i = 0; i < 3; i++)
+	{
+		QVector4D row = mat.row(i);
+		ret.m[i][0] = row.x();
+		ret.m[i][1] = row.y();
+		ret.m[i][2] = row.z();
+		ret.m[i][3] = row.w();
+	}
+	return ret;
 }
 
 bool OpenVROverlayController::IsSteamVRRunning()
 {
-    // TODO: Look for process with name "SteamVR"
-    return false;
+	// TODO: Look for process with name "SteamVR"
+	return false;
 }
 
 bool OpenVROverlayController::IsHmdPresent()
 {
-    return vr::VR_IsHmdPresent();
+	return vr::VR_IsHmdPresent();
 }
 
 OpenVROverlayController* s_pSharedVRController = nullptr;
 
 OpenVROverlayController *OpenVROverlayController::SharedInstance()
 {
-    if (s_pSharedVRController == nullptr)
-    {
-        s_pSharedVRController = new OpenVROverlayController();
-    }
-    return s_pSharedVRController;
+	if (s_pSharedVRController == nullptr)
+	{
+		s_pSharedVRController = new OpenVROverlayController();
+	}
+	return s_pSharedVRController;
 }
 
 OpenVROverlayController::OpenVROverlayController(QObject* parent)
-    : QObject(parent)
-    , m_isInitialized(false)
-    , m_widget(nullptr)
-    , m_pumpEventsTimer(new QTimer(this))
-    , m_visibilityTimer(new QTimer(this))
-    , m_ivrSystem(nullptr)
-    , m_handle(vr::k_ulOverlayHandleInvalid)
-    , m_deviceOffset()
-    , m_deviceIndex(vr::k_unTrackedDeviceIndexInvalid)
-    , m_scene(nullptr)
-    , m_glContext(nullptr)
-    , m_surface(nullptr)
-    , m_frameBuffer(nullptr)
-    , m_lastMousePoint()
-    , m_lastMouseButtons(0)
+	: QObject(parent)
+	, m_isInitialized(false)
+	, m_widget(nullptr)
+	, m_pumpEventsTimer(new QTimer(this))
+	, m_visibilityTimer(new QTimer(this))
+	, m_ivrSystem(nullptr)
+	, m_handle(vr::k_ulOverlayHandleInvalid)
+	, m_deviceOffset()
+	, m_deviceIndex(vr::k_unTrackedDeviceIndexInvalid)
+	, m_scene(nullptr)
+	, m_glContext(nullptr)
+	, m_surface(nullptr)
+	, m_frameBuffer(nullptr)
+	, m_lastMousePoint()
+	, m_lastMouseButtons(0)
 {
-    connect(m_pumpEventsTimer, &QTimer::timeout, this, &OpenVROverlayController::PollEvents);
-    connect(m_visibilityTimer, &QTimer::timeout, [this](){ SetIsVisible(false); });
+	connect(m_pumpEventsTimer, &QTimer::timeout, this, &OpenVROverlayController::PollEvents);
+	connect(m_visibilityTimer, &QTimer::timeout, [this](){ SetIsVisible(false); });
 
-    m_pumpEventsTimer->setInterval(20);
+	m_pumpEventsTimer->setInterval(20);
 
-    m_visibilityTimer->setInterval(5000);
-    m_visibilityTimer->setSingleShot(true);
+	m_visibilityTimer->setInterval(5000);
+	m_visibilityTimer->setSingleShot(true);
 
-    // Calculate offset
-    QMatrix4x4 mat;
-    mat.scale(0.25f);
-    mat.translate(0, -0.03f, -0.15f);
-    mat.rotate(-90, -1, 1);
-    mat.optimize();
-    m_deviceOffset = ToHmdMatrix34(mat);
+	// Calculate offset
+	QMatrix4x4 mat;
+	mat.scale(0.25f);
+	mat.translate(0, -0.03f, -0.15f);
+	mat.rotate(-90, -1, 1);
+	mat.optimize();
+	m_deviceOffset = ToHmdMatrix34(mat);
 }
 
 OpenVROverlayController::~OpenVROverlayController()
@@ -105,194 +105,194 @@ OpenVROverlayController::~OpenVROverlayController()
 
 bool OpenVROverlayController::Init()
 {
-    if (m_isInitialized)
-        return true;
+	if (m_isInitialized)
+		return true;
 
-    QSurfaceFormat format;
-    format.setMajorVersion(4);
-    format.setMinorVersion(1);
-    format.setProfile(QSurfaceFormat::CompatibilityProfile);
+	QSurfaceFormat format;
+	format.setMajorVersion(4);
+	format.setMinorVersion(1);
+	format.setProfile(QSurfaceFormat::CompatibilityProfile);
 
-    m_glContext = new QOpenGLContext();
-    m_glContext->setFormat(format);
-    if(!m_glContext->create())
-        return false;
+	m_glContext = new QOpenGLContext();
+	m_glContext->setFormat(format);
+	if(!m_glContext->create())
+		return false;
 
-    // create an offscreen surface to attach the context and FBO to
-    m_surface = new QOffscreenSurface();
-    m_surface->create();
-    m_glContext->makeCurrent(m_surface);
+	// create an offscreen surface to attach the context and FBO to
+	m_surface = new QOffscreenSurface();
+	m_surface->create();
+	m_glContext->makeCurrent(m_surface);
 
-    m_scene = new QGraphicsScene();
-    connect(m_scene, &QGraphicsScene::changed, this, &OpenVROverlayController::OverlayDraw);
+	m_scene = new QGraphicsScene();
+	connect(m_scene, &QGraphicsScene::changed, this, &OpenVROverlayController::OverlayDraw);
 
-    // Loading the OpenVR Runtime
-    if (!ConnectToVRRuntime() || vr::VRCompositor() == nullptr || vr::VROverlay() == nullptr)
-        return false;
+	// Loading the OpenVR Runtime
+	if (!ConnectToVRRuntime() || vr::VRCompositor() == nullptr || vr::VROverlay() == nullptr)
+		return false;
 
-    OverlayCreate();
+	OverlayCreate();
 
-    m_pumpEventsTimer->start();
+	m_pumpEventsTimer->start();
 
-    m_isInitialized = true;
-    return true;
+	m_isInitialized = true;
+	return true;
 }
 void OpenVROverlayController::Shutdown()
 {
-    if (!m_isInitialized)
-        return;
-    m_isInitialized = false;
+	if (!m_isInitialized)
+		return;
+	m_isInitialized = false;
 
-    m_visibilityTimer->stop();
-    m_pumpEventsTimer->stop();
+	m_visibilityTimer->stop();
+	m_pumpEventsTimer->stop();
 
-    if (m_frameBuffer != nullptr)
-    {
-        delete m_frameBuffer;
-        m_frameBuffer = nullptr;
-    }
+	if (m_frameBuffer != nullptr)
+	{
+		delete m_frameBuffer;
+		m_frameBuffer = nullptr;
+	}
 
-    DisconnectFromVRRuntime();
+	DisconnectFromVRRuntime();
 
-    m_handle = vr::k_ulOverlayHandleInvalid;
+	m_handle = vr::k_ulOverlayHandleInvalid;
 
-    if (m_scene != nullptr)
-    {
-        delete m_scene;
-        m_scene = nullptr;
-    }
+	if (m_scene != nullptr)
+	{
+		delete m_scene;
+		m_scene = nullptr;
+	}
 
-    if (m_surface != nullptr)
-    {
-        delete m_surface;
-        m_surface = nullptr;
-    }
+	if (m_surface != nullptr)
+	{
+		delete m_surface;
+		m_surface = nullptr;
+	}
 
-    if(m_glContext != nullptr)
-    {
-        delete m_glContext;
-        m_glContext = nullptr;
-    }
+	if(m_glContext != nullptr)
+	{
+		delete m_glContext;
+		m_glContext = nullptr;
+	}
 }
 
 bool OpenVROverlayController::ConnectToVRRuntime()
 {
-    vr::EVRInitError err = vr::VRInitError_None;
-    m_ivrSystem = vr::VR_Init(&err, vr::VRApplication_Overlay);
-    return err == vr::VRInitError_None;
+	vr::EVRInitError err = vr::VRInitError_None;
+	m_ivrSystem = vr::VR_Init(&err, vr::VRApplication_Overlay);
+	return err == vr::VRInitError_None;
 }
 void OpenVROverlayController::DisconnectFromVRRuntime()
 {
-    vr::VR_Shutdown();
+	vr::VR_Shutdown();
 }
 
 void OpenVROverlayController::SetWidget(QWidget* widget)
 {
-    if (!m_isInitialized)
-        return;
+	if (!m_isInitialized)
+		return;
 
-    if (m_widget != widget)
-    {
-        m_widget = widget;
+	if (m_widget != widget)
+	{
+		m_widget = widget;
 
-        // all of the mouse handling stuff requires that the widget be at 0,0
-        m_widget->move(0, 0);
+		// all of the mouse handling stuff requires that the widget be at 0,0
+		m_widget->move(0, 0);
 
-        m_scene->addWidget(m_widget);
+		m_scene->addWidget(m_widget);
 
-        SetOverlayResolution(m_widget->width(), m_widget->height());
+		SetOverlayResolution(m_widget->width(), m_widget->height());
 
-        OverlayProcess();
-        emit WidgetChanged(widget);
-    }
+		OverlayProcess();
+		emit WidgetChanged(widget);
+	}
 }
 QWidget* OpenVROverlayController::GetWidget() const
 {
-    return m_widget;
+	return m_widget;
 }
 
 void OpenVROverlayController::SetIsVisible(bool visible)
 {
-    if (m_handle == vr::k_ulOverlayHandleInvalid)
-        return;
+	if (m_handle == vr::k_ulOverlayHandleInvalid)
+		return;
 
-    if (m_isVisible != visible)
-    {
-        m_isVisible = visible;
+	if (m_isVisible != visible)
+	{
+		m_isVisible = visible;
 
-        if (visible) {
-            qDebug() << "Show";
-            Dbg(vr::VROverlay()->ShowOverlay(m_handle), __LINE__);
-        } else {
-            qDebug() << "Hide";
-            Dbg(vr::VROverlay()->HideOverlay(m_handle), __LINE__);
-        }
+		if (visible) {
+			qDebug() << "Show";
+			Dbg(vr::VROverlay()->ShowOverlay(m_handle), __LINE__);
+		} else {
+			qDebug() << "Hide";
+			Dbg(vr::VROverlay()->HideOverlay(m_handle), __LINE__);
+		}
 
-        emit IsVisibleChanged(visible);
-    }
+		emit IsVisibleChanged(visible);
+	}
 }
 bool OpenVROverlayController::GetIsVisible() const
 {
-    return m_isVisible;
+	return m_isVisible;
 }
 
 void OpenVROverlayController::SetWidth(float width)
 {
-    if (m_handle == vr::k_ulOverlayHandleInvalid)
-        return;
+	if (m_handle == vr::k_ulOverlayHandleInvalid)
+		return;
 
-    if (m_width != width)
-    {
-        m_width = width;
-        Dbg(vr::VROverlay()->SetOverlayWidthInMeters(m_handle, m_width), __LINE__);
-        emit WidthChanged(width);
-    }
+	if (m_width != width)
+	{
+		m_width = width;
+		Dbg(vr::VROverlay()->SetOverlayWidthInMeters(m_handle, m_width), __LINE__);
+		emit WidthChanged(width);
+	}
 }
 float OpenVROverlayController::GetWidth() const
 {
-    return m_width;
+	return m_width;
 }
 
 void OpenVROverlayController::SetAlpha(float alpha)
 {
-    if (m_handle == vr::k_ulOverlayHandleInvalid)
-        return;
+	if (m_handle == vr::k_ulOverlayHandleInvalid)
+		return;
 
-    if (m_alpha != alpha)
-    {
-        m_alpha = alpha;
-        Dbg(vr::VROverlay()->SetOverlayAlpha(m_handle, alpha), __LINE__);
-        emit AlphaChanged(alpha);
-    }
+	if (m_alpha != alpha)
+	{
+		m_alpha = alpha;
+		Dbg(vr::VROverlay()->SetOverlayAlpha(m_handle, alpha), __LINE__);
+		emit AlphaChanged(alpha);
+	}
 }
 float OpenVROverlayController::GetAlpha() const
 {
-    return m_alpha;
+	return m_alpha;
 }
 
 void OpenVROverlayController::SetTint(const QColor& color)
 {
-    if (m_handle == vr::k_ulOverlayHandleInvalid)
-        return;
+	if (m_handle == vr::k_ulOverlayHandleInvalid)
+		return;
 
-    if (!color.isValid())
-        return;
+	if (!color.isValid())
+		return;
 
-    if (m_tint != color)
-    {
-        m_tint = color;
-        Dbg(vr::VROverlay()->SetOverlayColor(m_handle, m_tint.redF(), m_tint.greenF(), m_tint.blueF()), __LINE__);
-        emit TintChanged(color);
-    }
+	if (m_tint != color)
+	{
+		m_tint = color;
+		Dbg(vr::VROverlay()->SetOverlayColor(m_handle, m_tint.redF(), m_tint.greenF(), m_tint.blueF()), __LINE__);
+		emit TintChanged(color);
+	}
 }
 QColor OpenVROverlayController::GetTint() const
 {
-    return m_tint;
+	return m_tint;
 }
 
 void OpenVROverlayController::ToggleIsVisible()
 {
-    SetIsVisible(!m_isVisible);
+	SetIsVisible(!m_isVisible);
 }
 void OpenVROverlayController::SetIsVisibleTimeout(bool enabled, int msec)
 {
@@ -302,285 +302,285 @@ void OpenVROverlayController::SetIsVisibleTimeout(bool enabled, int msec)
 
 void OpenVROverlayController::SetTrackedDevice(vr::TrackedDeviceIndex_t index)
 {
-    if (m_deviceIndex != index)
-    {
-        m_deviceIndex = index;
-        OverlayTransform();
-        emit
-    }
+	if (m_deviceIndex != index)
+	{
+		m_deviceIndex = index;
+		OverlayTransform();
+		emit
+	}
 }
 
 vr::TrackedDeviceIndex_t OpenVROverlayController::GetTrackedDevice() const
 {
-    return m_deviceIndex;
+	return m_deviceIndex;
 }
 
 void OpenVROverlayController::PollEvents()
 {
-    if(vr::VRSystem() == nullptr)
-        return;
+	if(vr::VRSystem() == nullptr)
+		return;
 
-    vr::VREvent_t event;
-    while (vr::VRSystem()->PollNextEvent(&event, sizeof(event)))
-    {
-        switch(event.eventType)
-        {
-        case vr::VREvent_ButtonPress:
-        {
-            vr::VRControllerState_t state;
-            vr::VRSystem()->GetControllerState(event.trackedDeviceIndex, &state, sizeof(state));
+	vr::VREvent_t event;
+	while (vr::VRSystem()->PollNextEvent(&event, sizeof(event)))
+	{
+		switch(event.eventType)
+		{
+		case vr::VREvent_ButtonPress:
+		{
+			vr::VRControllerState_t state;
+			vr::VRSystem()->GetControllerState(event.trackedDeviceIndex, &state, sizeof(state));
 
-            if ((state.ulButtonPressed & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_ApplicationMenu)) != 0)
-            {
-                if (GetIsVisible())
-                {
-                    if (GetTrackedDevice() == event.trackedDeviceIndex)
-                    {
-                        SetIsVisible(false);
-                        m_visibilityTimer->stop();
-                    }
-                    else
-                    {
-                        SetTrackedDevice(event.trackedDeviceIndex);
-                    }
-                }
-                else
-                {
-                    SetTrackedDevice(event.trackedDeviceIndex);
-                    SetIsVisible(true);
-                    m_visibilityTimer->start();
-                }
-            }
-        }
-            break;
+			if ((state.ulButtonPressed & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_ApplicationMenu)) != 0)
+			{
+				if (GetIsVisible())
+				{
+					if (GetTrackedDevice() == event.trackedDeviceIndex)
+					{
+						SetIsVisible(false);
+						m_visibilityTimer->stop();
+					}
+					else
+					{
+						SetTrackedDevice(event.trackedDeviceIndex);
+					}
+				}
+				else
+				{
+					SetTrackedDevice(event.trackedDeviceIndex);
+					SetIsVisible(true);
+					m_visibilityTimer->start();
+				}
+			}
+		}
+			break;
 
-        case vr::VREvent_OverlayShown:
-        {
-            m_widget->repaint();
-        }
-            break;
+		case vr::VREvent_OverlayShown:
+		{
+			m_widget->repaint();
+		}
+			break;
 
-        case vr::VREvent_Quit:
-            QApplication::exit();
-            break;
+		case vr::VREvent_Quit:
+			QApplication::exit();
+			break;
 
-        case vr::VREvent_MouseMove:
-        case vr::VREvent_MouseButtonDown:
-        case vr::VREvent_MouseButtonUp:
-            qDebug() << "Please dont say that this captures these events...";
-            break;
-        }
-    }
+		case vr::VREvent_MouseMove:
+		case vr::VREvent_MouseButtonDown:
+		case vr::VREvent_MouseButtonUp:
+			qDebug() << "Please dont say that this captures these events...";
+			break;
+		}
+	}
 
-    while(vr::VROverlay()->PollNextOverlayEvent(m_handle, &event, sizeof(event)))
-    {
-        switch(event.eventType)
-        {
-        case vr::VREvent_MouseMove:
-        {
-            qDebug() << "MouseMove!";
-            QPointF ptNewMouse(event.data.mouse.x, event.data.mouse.y);
-            QPoint ptGlobal = ptNewMouse.toPoint();
-            QGraphicsSceneMouseEvent mouseEvent(QEvent::GraphicsSceneMouseMove);
-            mouseEvent.setWidget(nullptr);
-            mouseEvent.setPos(ptNewMouse);
-            mouseEvent.setScenePos(ptGlobal);
-            mouseEvent.setScreenPos(ptGlobal);
-            mouseEvent.setLastPos(m_lastMousePoint);
-            mouseEvent.setLastScenePos(m_widget->mapToGlobal(m_lastMousePoint.toPoint()));
-            mouseEvent.setLastScreenPos(m_widget->mapToGlobal(m_lastMousePoint.toPoint()));
-            mouseEvent.setButtons(m_lastMouseButtons);
-            mouseEvent.setButton(Qt::NoButton);
-            mouseEvent.setModifiers(0);
-            mouseEvent.setAccepted(false);
+	while(vr::VROverlay()->PollNextOverlayEvent(m_handle, &event, sizeof(event)))
+	{
+		switch(event.eventType)
+		{
+		case vr::VREvent_MouseMove:
+		{
+			qDebug() << "MouseMove!";
+			QPointF ptNewMouse(event.data.mouse.x, event.data.mouse.y);
+			QPoint ptGlobal = ptNewMouse.toPoint();
+			QGraphicsSceneMouseEvent mouseEvent(QEvent::GraphicsSceneMouseMove);
+			mouseEvent.setWidget(nullptr);
+			mouseEvent.setPos(ptNewMouse);
+			mouseEvent.setScenePos(ptGlobal);
+			mouseEvent.setScreenPos(ptGlobal);
+			mouseEvent.setLastPos(m_lastMousePoint);
+			mouseEvent.setLastScenePos(m_widget->mapToGlobal(m_lastMousePoint.toPoint()));
+			mouseEvent.setLastScreenPos(m_widget->mapToGlobal(m_lastMousePoint.toPoint()));
+			mouseEvent.setButtons(m_lastMouseButtons);
+			mouseEvent.setButton(Qt::NoButton);
+			mouseEvent.setModifiers(0);
+			mouseEvent.setAccepted(false);
 
-            m_lastMousePoint = ptNewMouse;
-            QApplication::sendEvent(m_scene, &mouseEvent);
+			m_lastMousePoint = ptNewMouse;
+			QApplication::sendEvent(m_scene, &mouseEvent);
 
-            // Fixme
-            OverlayProcess();
-        }
-            break;
+			// Fixme
+			OverlayProcess();
+		}
+			break;
 
-        case vr::VREvent_MouseButtonDown:
-        {
-            qDebug() << "MouseDown!";
-            Qt::MouseButton button = event.data.mouse.button == vr::VRMouseButton_Right ? Qt::RightButton : Qt::LeftButton;
+		case vr::VREvent_MouseButtonDown:
+		{
+			qDebug() << "MouseDown!";
+			Qt::MouseButton button = event.data.mouse.button == vr::VRMouseButton_Right ? Qt::RightButton : Qt::LeftButton;
 
-            m_lastMouseButtons |= button;
+			m_lastMouseButtons |= button;
 
-            QPoint ptGlobal = m_lastMousePoint.toPoint();
-            QGraphicsSceneMouseEvent mouseEvent(QEvent::GraphicsSceneMousePress);
-            mouseEvent.setWidget(nullptr);
-            mouseEvent.setPos(m_lastMousePoint);
-            mouseEvent.setButtonDownPos(button, m_lastMousePoint);
-            mouseEvent.setButtonDownScenePos(button, ptGlobal);
-            mouseEvent.setButtonDownScreenPos(button, ptGlobal);
-            mouseEvent.setScenePos(ptGlobal);
-            mouseEvent.setScreenPos(ptGlobal);
-            mouseEvent.setLastPos(m_lastMousePoint);
-            mouseEvent.setLastScenePos(ptGlobal);
-            mouseEvent.setLastScreenPos(ptGlobal);
-            mouseEvent.setButtons(m_lastMouseButtons);
-            mouseEvent.setButton(button);
-            mouseEvent.setModifiers(0);
-            mouseEvent.setAccepted(false);
+			QPoint ptGlobal = m_lastMousePoint.toPoint();
+			QGraphicsSceneMouseEvent mouseEvent(QEvent::GraphicsSceneMousePress);
+			mouseEvent.setWidget(nullptr);
+			mouseEvent.setPos(m_lastMousePoint);
+			mouseEvent.setButtonDownPos(button, m_lastMousePoint);
+			mouseEvent.setButtonDownScenePos(button, ptGlobal);
+			mouseEvent.setButtonDownScreenPos(button, ptGlobal);
+			mouseEvent.setScenePos(ptGlobal);
+			mouseEvent.setScreenPos(ptGlobal);
+			mouseEvent.setLastPos(m_lastMousePoint);
+			mouseEvent.setLastScenePos(ptGlobal);
+			mouseEvent.setLastScreenPos(ptGlobal);
+			mouseEvent.setButtons(m_lastMouseButtons);
+			mouseEvent.setButton(button);
+			mouseEvent.setModifiers(0);
+			mouseEvent.setAccepted(false);
 
-            QApplication::sendEvent(m_scene, &mouseEvent);
-        }
-            break;
+			QApplication::sendEvent(m_scene, &mouseEvent);
+		}
+			break;
 
-        case vr::VREvent_MouseButtonUp:
-        {
-            qDebug() << "MouseUp!";
-            Qt::MouseButton button = event.data.mouse.button == vr::VRMouseButton_Right ? Qt::RightButton : Qt::LeftButton;
-            m_lastMouseButtons &= ~button;
+		case vr::VREvent_MouseButtonUp:
+		{
+			qDebug() << "MouseUp!";
+			Qt::MouseButton button = event.data.mouse.button == vr::VRMouseButton_Right ? Qt::RightButton : Qt::LeftButton;
+			m_lastMouseButtons &= ~button;
 
-            QPoint ptGlobal = m_lastMousePoint.toPoint();
-            QGraphicsSceneMouseEvent mouseEvent(QEvent::GraphicsSceneMouseRelease);
-            mouseEvent.setWidget(NULL);
-            mouseEvent.setPos(m_lastMousePoint);
-            mouseEvent.setScenePos(ptGlobal);
-            mouseEvent.setScreenPos(ptGlobal);
-            mouseEvent.setLastPos(m_lastMousePoint);
-            mouseEvent.setLastScenePos(ptGlobal);
-            mouseEvent.setLastScreenPos(ptGlobal);
-            mouseEvent.setButtons(m_lastMouseButtons);
-            mouseEvent.setButton(button);
-            mouseEvent.setModifiers(0);
-            mouseEvent.setAccepted(false);
+			QPoint ptGlobal = m_lastMousePoint.toPoint();
+			QGraphicsSceneMouseEvent mouseEvent(QEvent::GraphicsSceneMouseRelease);
+			mouseEvent.setWidget(NULL);
+			mouseEvent.setPos(m_lastMousePoint);
+			mouseEvent.setScenePos(ptGlobal);
+			mouseEvent.setScreenPos(ptGlobal);
+			mouseEvent.setLastPos(m_lastMousePoint);
+			mouseEvent.setLastScenePos(ptGlobal);
+			mouseEvent.setLastScreenPos(ptGlobal);
+			mouseEvent.setButtons(m_lastMouseButtons);
+			mouseEvent.setButton(button);
+			mouseEvent.setModifiers(0);
+			mouseEvent.setAccepted(false);
 
-            QApplication::sendEvent(m_scene, &mouseEvent);
-        }
-            break;
-        }
-    }
+			QApplication::sendEvent(m_scene, &mouseEvent);
+		}
+			break;
+		}
+	}
 }
 
 void OpenVROverlayController::SetOverlayResolution(int width, int height)
 {
-    QOpenGLFramebufferObject* oldBuff = m_frameBuffer;
+	QOpenGLFramebufferObject* oldBuff = m_frameBuffer;
 
-    m_frameBuffer = new QOpenGLFramebufferObject(m_widget->width(), m_widget->height(), GL_TEXTURE_2D);
+	m_frameBuffer = new QOpenGLFramebufferObject(m_widget->width(), m_widget->height(), GL_TEXTURE_2D);
 
-    if (oldBuff != nullptr)
-        delete oldBuff;
+	if (oldBuff != nullptr)
+		delete oldBuff;
 
-    vr::HmdVector2_t vecWindowSize = { float(width), float(height) };
-    vr::VROverlay()->SetOverlayMouseScale(m_handle, &vecWindowSize);
+	vr::HmdVector2_t vecWindowSize = { float(width), float(height) };
+	vr::VROverlay()->SetOverlayMouseScale(m_handle, &vecWindowSize);
 }
 
 void OpenVROverlayController::OverlayCreate()
 {
-    vr::EVROverlayError err = vr::VROverlayError_None;
+	vr::EVROverlayError err = vr::VROverlayError_None;
 
-    qDebug() << "Find";
-    err = vr::VROverlay()->FindOverlay("ThorQ", &m_handle);
-    if (err != vr::VROverlayError_None)
-    {
-        if (err != vr::VROverlayError_UnknownOverlay)
-        {
-            Dbg(err, __LINE__);
-            return;
-        }
+	qDebug() << "Find";
+	err = vr::VROverlay()->FindOverlay("ThorQ", &m_handle);
+	if (err != vr::VROverlayError_None)
+	{
+		if (err != vr::VROverlayError_UnknownOverlay)
+		{
+			Dbg(err, __LINE__);
+			return;
+		}
 
-        qDebug() << "Create";
-        Dbg(vr::VROverlay()->CreateOverlay("ThorQ", "ThorQ", &m_handle), __LINE__);
+		qDebug() << "Create";
+		Dbg(vr::VROverlay()->CreateOverlay("ThorQ", "ThorQ", &m_handle), __LINE__);
 
-        OverlayInit();
-    }
+		OverlayInit();
+	}
 }
 
 void OpenVROverlayController::OverlayInit()
 {
-    if (m_handle == vr::k_ulOverlayHandleInvalid)
-        return;
+	if (m_handle == vr::k_ulOverlayHandleInvalid)
+		return;
 
-    // Alpha
-    m_alpha = 0.9f;
-    Dbg(vr::VROverlay()->SetOverlayAlpha(m_handle, m_alpha), __LINE__);
+	// Alpha
+	m_alpha = 0.9f;
+	Dbg(vr::VROverlay()->SetOverlayAlpha(m_handle, m_alpha), __LINE__);
 
-    // Tint
-    // Makes overlay black for some reason?
-    //m_tint = QColor(0, 0, 0, 0);
-    //Dbg(vr::VROverlay()->SetOverlayColor(m_handle, m_tint.redF(), m_tint.greenF(), m_tint.blueF()), __LINE__);
+	// Tint
+	// Makes overlay black for some reason?
+	//m_tint = QColor(0, 0, 0, 0);
+	//Dbg(vr::VROverlay()->SetOverlayColor(m_handle, m_tint.redF(), m_tint.greenF(), m_tint.blueF()), __LINE__);
 
-    // Visibility
-    m_isVisible = false;
-    Dbg(vr::VROverlay()->HideOverlay(m_handle), __LINE__);
+	// Visibility
+	m_isVisible = false;
+	Dbg(vr::VROverlay()->HideOverlay(m_handle), __LINE__);
 
-    // Flags
-    Dbg(vr::VROverlay()->SetOverlayInputMethod(m_handle, vr::VROverlayInputMethod_Mouse), __LINE__);
-    Dbg(vr::VROverlay()->SetOverlayFlag(m_handle, vr::VROverlayFlags_VisibleInDashboard, false), __LINE__);
+	// Flags
+	Dbg(vr::VROverlay()->SetOverlayInputMethod(m_handle, vr::VROverlayInputMethod_Mouse), __LINE__);
+	Dbg(vr::VROverlay()->SetOverlayFlag(m_handle, vr::VROverlayFlags_VisibleInDashboard, false), __LINE__);
 
-    // I want this, but it blocks user input :c
-    //Dbg(vr::VROverlay()->SetOverlayFlag(m_handle, vr::VROverlayFlags_MakeOverlaysInteractiveIfVisible, true), __LINE__);
+	// I want this, but it blocks user input :c
+	//Dbg(vr::VROverlay()->SetOverlayFlag(m_handle, vr::VROverlayFlags_MakeOverlaysInteractiveIfVisible, true), __LINE__);
 
-    m_visibilityTimer->start();
+	m_visibilityTimer->start();
 }
 
 void OpenVROverlayController::OverlayProcess()
 {
-    // Find or create the overlay
-    if (m_handle == vr::k_ulOverlayHandleInvalid)
-        OverlayCreate();
+	// Find or create the overlay
+	if (m_handle == vr::k_ulOverlayHandleInvalid)
+		OverlayCreate();
 
-    // Offset overlay from device (most likely a controller)
-    OverlayTransform();
+	// Offset overlay from device (most likely a controller)
+	OverlayTransform();
 
-    if (m_isVisible)
-        OverlayDraw();
+	if (m_isVisible)
+		OverlayDraw();
 }
 
 void OpenVROverlayController::OverlayDraw()
 {
-    if (m_handle == vr::k_ulOverlayHandleInvalid)
-    {
-        qDebug() << "Handle is invalid" << __LINE__;
-        return;
-    }
+	if (m_handle == vr::k_ulOverlayHandleInvalid)
+	{
+		qDebug() << "Handle is invalid" << __LINE__;
+		return;
+	}
 
-    if (m_frameBuffer == nullptr)
-    {
-        qDebug() << "Framebuffer is nullptr" << __LINE__;
-        return;
-    }
+	if (m_frameBuffer == nullptr)
+	{
+		qDebug() << "Framebuffer is nullptr" << __LINE__;
+		return;
+	}
 
-    qDebug() << "Draw";
+	qDebug() << "Draw";
 
-    m_glContext->makeCurrent(m_surface);
-    m_frameBuffer->bind();
+	m_glContext->makeCurrent(m_surface);
+	m_frameBuffer->bind();
 
-    QOpenGLPaintDevice device(m_frameBuffer->size());
-    QPainter painter(&device);
+	QOpenGLPaintDevice device(m_frameBuffer->size());
+	QPainter painter(&device);
 
-    m_scene->render(&painter);
+	m_scene->render(&painter);
 
-    m_frameBuffer->release();
+	m_frameBuffer->release();
 
-    GLuint glTexture = m_frameBuffer->texture();
-    if (glTexture != 0)
-    {
-        vr::Texture_t texture = {(void*)(uintptr_t)glTexture, vr::TextureType_OpenGL, vr::ColorSpace_Auto };
-        Dbg(vr::VROverlay()->SetOverlayTexture(m_handle, &texture), __LINE__);
-    }
+	GLuint glTexture = m_frameBuffer->texture();
+	if (glTexture != 0)
+	{
+		vr::Texture_t texture = {(void*)(uintptr_t)glTexture, vr::TextureType_OpenGL, vr::ColorSpace_Auto };
+		Dbg(vr::VROverlay()->SetOverlayTexture(m_handle, &texture), __LINE__);
+	}
 }
 
 void OpenVROverlayController::OverlayTransform()
 {
-    if (m_handle == vr::k_ulOverlayHandleInvalid)
-    {
-        qDebug() << "Handle is invalid" << __LINE__;
-        return;
-    }
-    if (m_deviceIndex == vr::k_unTrackedDeviceIndexInvalid)
-    {
-        qDebug() << "Device is invalid" << __LINE__;
-        return;
-    }
+	if (m_handle == vr::k_ulOverlayHandleInvalid)
+	{
+		qDebug() << "Handle is invalid" << __LINE__;
+		return;
+	}
+	if (m_deviceIndex == vr::k_unTrackedDeviceIndexInvalid)
+	{
+		qDebug() << "Device is invalid" << __LINE__;
+		return;
+	}
 
-    qDebug() << "Position";
+	qDebug() << "Position";
 
-    // Position
-    Dbg(vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_handle, m_deviceIndex, &m_deviceOffset), __LINE__);
+	// Position
+	Dbg(vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_handle, m_deviceIndex, &m_deviceOffset), __LINE__);
 }

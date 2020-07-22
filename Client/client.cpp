@@ -17,90 +17,90 @@
 
 std::string enetaddr_to_str(const ENetAddress* addr)
 {
-    char buffer[50];
-    if (enet_address_get_host_ip(addr, buffer, 50) < 0)
-        return "ERROR";
-    return std::string(buffer);
+	char buffer[50];
+	if (enet_address_get_host_ip(addr, buffer, 50) < 0)
+		return "ERROR";
+	return std::string(buffer);
 }
 
 std::string ExtractString(const std::uint8_t* data, std::size_t dataSize, std::size_t startOffset = 0, std::size_t endOffset = 0)
 {
-    return std::string(data + startOffset, data + dataSize - endOffset);
+	return std::string(data + startOffset, data + dataSize - endOffset);
 }
 
 Client::Client(ENetHost* host)
-    : QObject()
-    , m_crypto(new ThorQ::Crypto())
+	: QObject()
+	, m_crypto(new ThorQ::Crypto())
 	, m_connectionState(THORQ_CONNECTION_STATE_DISCONNECTED)
 	, m_cryptoState(THORQ_CRYPTO_STATE_NONE)
 	, m_loginState(THORQ_LOGIN_STATE_LOGGEDOUT)
 	, m_sessionState(THORQ_SESSION_STATE_NONE)
-    , m_ping(0)
-    , l_username()
-    , m_username()
-    , l_requestedPartner()
-    , m_requestedPartner()
-    , l_requestingPartner()
-    , m_requestingPartner()
-    , m_actionFlags(0)
-    , m_collarFlags(0)
-    , m_shockValue(0)
-    , m_vibrateValue(0)
-    , m_beepValue(0)
-    , m_autoSensitivity(0)
-    , m_autoShock(0)
-    , m_autoVibrate(0)
-    , m_autoBeep(0)
-    , m_thread(new QThread())
-    , m_awaitingPing(false)
-    , m_pingTimer(new QElapsedTimer())
-    , m_host(host)
-    , m_peer(nullptr)
-    , l_address()
-    , m_address(new ENetAddress())
+	, m_ping(0)
+	, l_username()
+	, m_username()
+	, l_requestedPartner()
+	, m_requestedPartner()
+	, l_requestingPartner()
+	, m_requestingPartner()
+	, m_actionFlags(0)
+	, m_collarFlags(0)
+	, m_shockValue(0)
+	, m_vibrateValue(0)
+	, m_beepValue(0)
+	, m_autoSensitivity(0)
+	, m_autoShock(0)
+	, m_autoVibrate(0)
+	, m_autoBeep(0)
+	, m_thread(new QThread())
+	, m_awaitingPing(false)
+	, m_pingTimer(new QElapsedTimer())
+	, m_host(host)
+	, m_peer(nullptr)
+	, l_address()
+	, m_address(new ENetAddress())
 {
-    QObject::connect(this, &Client::PortChanged, this, &Client::Disconnect);
-    QObject::connect(this, &Client::AddressChanged, this, &Client::Disconnect);
-    QObject::connect(m_thread, &QThread::started, this, &Client::Run);
+	QObject::connect(this, &Client::PortChanged, this, &Client::Disconnect);
+	QObject::connect(this, &Client::AddressChanged, this, &Client::Disconnect);
+	QObject::connect(m_thread, &QThread::started, this, &Client::Run);
 
-    reinterpret_cast<QObject*>(this)->moveToThread(m_thread);
-    m_thread->start();
+	reinterpret_cast<QObject*>(this)->moveToThread(m_thread);
+	m_thread->start();
 }
 
 Client* Client::NewClient()
 {
-    ENetHost* host = enet_host_create(nullptr, 1, 2, 0, 0);
+	ENetHost* host = enet_host_create(nullptr, 1, 2, 0, 0);
 
-    if (host == nullptr)
-        return nullptr;
+	if (host == nullptr)
+		return nullptr;
 
-    return new Client(host);
+	return new Client(host);
 }
 
 Client::~Client()
 {
-    m_thread->quit();
-    m_thread->requestInterruption();
-    m_thread->wait();
+	m_thread->quit();
+	m_thread->requestInterruption();
+	m_thread->wait();
 
-    if (m_host != nullptr)
-    {
-        enet_host_destroy(m_host);
-    }
+	if (m_host != nullptr)
+	{
+		enet_host_destroy(m_host);
+	}
 
-    delete m_address;
-    delete m_pingTimer;
-    delete m_crypto;
+	delete m_address;
+	delete m_pingTimer;
+	delete m_crypto;
 }
 
 QString Client::Version()
 {
-    return QString("ENet-%1.%2.%3").arg(ENET_VERSION_MAJOR).arg(ENET_VERSION_MINOR).arg(ENET_VERSION_PATCH);
+	return QString("ENet-%1.%2.%3").arg(ENET_VERSION_MAJOR).arg(ENET_VERSION_MINOR).arg(ENET_VERSION_PATCH);
 }
 
 int Client::Ping() const
 {
-    return m_ping.load();
+	return m_ping.load();
 }
 
 thorq_connection_state_t Client::ConnectionState() const
@@ -110,7 +110,7 @@ thorq_connection_state_t Client::ConnectionState() const
 
 thorq_crypto_state_t Client::CryptoState() const
 {
-    return m_cryptoState.load();
+	return m_cryptoState.load();
 }
 
 thorq_login_state_t Client::LoginState() const
@@ -120,7 +120,7 @@ thorq_login_state_t Client::LoginState() const
 
 thorq_session_state_t Client::SessionState() const
 {
-    return m_sessionState.load();
+	return m_sessionState.load();
 }
 
 bool Client::Connect(const char* address, int port)
@@ -139,7 +139,7 @@ bool Client::Connect(const char* address, int port)
 
 	m_actionFlags.fetch_or(ACTION_Connect);
 
-    return true;
+	return true;
 }
 
 void Client::Disconnect()
@@ -153,7 +153,7 @@ void Client::Disconnect()
 void Client::Login(const QString &username)
 {
 	if (LoginState() != THORQ_LOGIN_STATE_LOGGEDOUT)
-        return;
+		return;
 
 	{
 		SCOPELOCK(l_username);
@@ -173,8 +173,8 @@ void Client::Logout()
 
 void Client::RequestSession(const QString &username)
 {
-    SCOPELOCK(l_requestedPartner);
-    m_requestedPartner = username.toStdString();
+	SCOPELOCK(l_requestedPartner);
+	m_requestedPartner = username.toStdString();
 	m_actionFlags.fetch_or(ACTION_SessionRequest);
 }
 
@@ -195,120 +195,120 @@ void Client::LeaveSession()
 
 void Client::SetShock(bool enable, int strength)
 {
-    if (enable)
-    {
+	if (enable)
+	{
 		if (strength != -1)
 			m_shockValue.store(strength);
 		m_collarFlags.fetch_or(THORQ_COLLAR_STATE_SHOCK);
-    }
-    else
-    {
+	}
+	else
+	{
 		m_collarFlags.fetch_and(~THORQ_COLLAR_STATE_SHOCK);
-    }
+	}
 }
 void Client::SetVibrate(bool enable, int strength)
 {
-    if (enable)
-    {
+	if (enable)
+	{
 		if (strength != -1)
 			m_vibrateValue.store(strength);
 		m_collarFlags.fetch_or(THORQ_COLLAR_STATE_VIBRATE);
-    }
-    else
-    {
+	}
+	else
+	{
 		m_collarFlags.fetch_and(~THORQ_COLLAR_STATE_VIBRATE);
-    }
+	}
 }
 void Client::SetBeep(bool enable, int count)
 {
-    if (enable)
-    {
+	if (enable)
+	{
 		if (count != -1)
 			m_beepValue.store(count);
 		m_collarFlags.fetch_or(THORQ_COLLAR_STATE_BEEP);
-    }
-    else
-    {
+	}
+	else
+	{
 		m_collarFlags.fetch_and(~THORQ_COLLAR_STATE_BEEP);
-    }
+	}
 }
 void Client::SetAuto(bool enable, int sensitivity, int shockStrength, int vibrateStrength, int beepCount)
 {
-    if (enable)
-    {
-        m_autoSensitivity.store(sensitivity);
-        m_autoShock.store(shockStrength);
-        m_autoShock.store(vibrateStrength);
-        m_autoShock.store(beepCount);
+	if (enable)
+	{
+		m_autoSensitivity.store(sensitivity);
+		m_autoShock.store(shockStrength);
+		m_autoShock.store(vibrateStrength);
+		m_autoShock.store(beepCount);
 		m_collarFlags.fetch_or(THORQ_COLLAR_STATE_AUTO);
-    }
-    else
-    {
+	}
+	else
+	{
 		m_collarFlags.fetch_and(~THORQ_COLLAR_STATE_AUTO);
-    }
+	}
 }
 
 void Client::Run()
 {
-    ENetEvent event;
+	ENetEvent event;
 
-    while (!m_thread->isInterruptionRequested())
-    {
-        while (enet_host_service(m_host, &event, 0) > 0)
-        {
-            switch (event.type)
-            {
-            case ENET_EVENT_TYPE_CONNECT:
+	while (!m_thread->isInterruptionRequested())
+	{
+		while (enet_host_service(m_host, &event, 0) > 0)
+		{
+			switch (event.type)
+			{
+			case ENET_EVENT_TYPE_CONNECT:
 				qDebug() << "Connected!";
 				SetConnectionState(THORQ_CONNECTION_STATE_CONNECTING);
-                requestEncryptionHandshake();
-                break;
-            case ENET_EVENT_TYPE_RECEIVE:
-                HandleMessage(event.packet);
-                enet_packet_destroy(event.packet);
-                break;
+				requestEncryptionHandshake();
+				break;
+			case ENET_EVENT_TYPE_RECEIVE:
+				HandleMessage(event.packet);
+				enet_packet_destroy(event.packet);
+				break;
 			case ENET_EVENT_TYPE_DISCONNECT:
 				m_peer = nullptr;
 				if (ConnectionState() != THORQ_CONNECTION_STATE_DISCONNECTING)
 					emit Error("Unexpected disconnect!");
 				SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
-                break;
+				break;
 			case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
 				m_peer = nullptr;
 				emit Error("Timed out!");
 				SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
-                break;
-            case ENET_EVENT_TYPE_NONE:
-                break;
-            }
-        }
+				break;
+			case ENET_EVENT_TYPE_NONE:
+				break;
+			}
+		}
 
-        // Send stuff
+		// Send stuff
 		if (ConnectionState() == THORQ_CONNECTION_STATE_CONNECTED)
-        {
+		{
 			if (SessionState() == THORQ_SESSION_STATE_ACTIVE)
-            {
+			{
 				SendEncrypted(m_collarFlags.load(), true);
-            }
+			}
 			else if (SessionState() == THORQ_SESSION_STATE_DECIDING)
-            {
+			{
 				if ((m_actionFlags.load() & ACTION_SessionAccept) != 0)
-                {
+				{
 					SendEncrypted(THORQ_CMD_SESSION_ACCEPT, m_requestingPartner);
-                    m_requestingPartner.clear();
-                }
+					m_requestingPartner.clear();
+				}
 				else if ((m_actionFlags.load() & ACTION_SessionDeny) != 0)
-                {
+				{
 					SendEncrypted(THORQ_CMD_SESSION_DENY, m_requestingPartner);
-                    m_requestingPartner.clear();
-                }
-            }
+					m_requestingPartner.clear();
+				}
+			}
 			else if ((m_actionFlags.load() & ACTION_WantConnected) == 0)
-            {
+			{
 				qDebug() << "Disconnecting!";
 				SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTING);
-                enet_peer_disconnect(m_peer, 0);
-            }
+				enet_peer_disconnect(m_peer, 0);
+			}
 
 			if (m_pingTimer->elapsed() > 500)
 			{
@@ -319,31 +319,31 @@ void Client::Run()
 				SendHeartbeat();
 				m_awaitingPing = true;
 			}
-        }
-		else if (ConnectionState() == THORQ_CONNECTION_STATE_DISCONNECTED)
-        {
-			if ((m_actionFlags.load() & ACTION_WantConnected) != 0)
-            {
-				qDebug() << "Connecting!";
-                m_peer = enet_host_connect(m_host, m_address, 4, 0);
-				SetConnectionState(THORQ_CONNECTION_STATE_CONNECTING);
-            }
 		}
-    }
+		else if (ConnectionState() == THORQ_CONNECTION_STATE_DISCONNECTED)
+		{
+			if ((m_actionFlags.load() & ACTION_WantConnected) != 0)
+			{
+				qDebug() << "Connecting!";
+				m_peer = enet_host_connect(m_host, m_address, 4, 0);
+				SetConnectionState(THORQ_CONNECTION_STATE_CONNECTING);
+			}
+		}
+	}
 
-    if (m_peer != nullptr)
-    {
-        enet_peer_disconnect_now(m_peer, DISCONNECT_SHUTDOWN);
-    }
+	if (m_peer != nullptr)
+	{
+		enet_peer_disconnect_now(m_peer, DISCONNECT_SHUTDOWN);
+	}
 }
 
 void Client::SetPing(int ping)
 {
-    if (m_ping != ping)
-    {
-        m_ping = ping;
-        emit PingChanged(ping);
-    }
+	if (m_ping != ping)
+	{
+		m_ping = ping;
+		emit PingChanged(ping);
+	}
 }
 
 // Cascading setters
@@ -357,7 +357,7 @@ void Client::SetConnectionState(thorq_connection_state_t newState)
 			SetCryptoState(THORQ_CRYPTO_STATE_NONE);
 
 		emit ConnectionStateChanged(newState);
-    }
+	}
 }
 void Client::SetCryptoState(thorq_crypto_state_t newState)
 {
@@ -369,7 +369,7 @@ void Client::SetCryptoState(thorq_crypto_state_t newState)
 			SetLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
 
 		emit CryptoStateChanged(newState);
-    }
+	}
 }
 void Client::SetLoginState(thorq_login_state_t newState)
 {
@@ -390,196 +390,196 @@ void Client::SetSessionState(thorq_session_state_t newState)
 	if (newState != oldState)
 	{
 		emit SessionStateChanged(newState);
-    }
+	}
 }
 
 void Client::SetUsername(const QString &username)
 {
-    SCOPELOCK(l_username);
-    m_username = username.toStdString();
+	SCOPELOCK(l_username);
+	m_username = username.toStdString();
 }
 
 void Client::SetPartner(const QString &username)
 {
-    SCOPELOCK(l_partnerName);
-    m_partnerName = username.toStdString();
+	SCOPELOCK(l_partnerName);
+	m_partnerName = username.toStdString();
 }
 
 void Client::HandleMessage(ENetPacket* packet)
 {
-    int time = m_pingTimer->elapsed();
+	int time = m_pingTimer->elapsed();
 
 	if (ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED || packet->dataLength < sizeof(std::uint8_t))
-        return;
+		return;
 
-    std::uint8_t header = static_cast<std::uint8_t>(*packet->data);
-    std::uint8_t* data = packet->data + sizeof(std::uint8_t);
-    std::size_t size = packet->dataLength - sizeof(std::uint8_t);
+	std::uint8_t header = static_cast<std::uint8_t>(*packet->data);
+	std::uint8_t* data = packet->data + sizeof(std::uint8_t);
+	std::size_t size = packet->dataLength - sizeof(std::uint8_t);
 
-    switch (header) {
-    case ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT:
-    {
-        if (m_awaitingPing)
-        {
-            qDebug() << "RX!";
-            m_awaitingPing = false;
-            SetPing(time);
-        }
-        return;
-    }
-    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH:
-    {
-        if (packet->dataLength > sizeof(std::uint8_t))
-        {
-            qDebug() << "Establishing!";
-            if (m_crypto->IsCryptoReady())
-            {
-                m_crypto->Reset();
-            }
+	switch (header) {
+	case ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT:
+	{
+		if (m_awaitingPing)
+		{
+			qDebug() << "RX!";
+			m_awaitingPing = false;
+			SetPing(time);
+		}
+		return;
+	}
+	case ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH:
+	{
+		if (packet->dataLength > sizeof(std::uint8_t))
+		{
+			qDebug() << "Establishing!";
+			if (m_crypto->IsCryptoReady())
+			{
+				m_crypto->Reset();
+			}
 
-            if (m_crypto->Agree(data, size))
-            {
-                SetCryptoState(ThorQ::CryptoState::Establishing);
-                SendRaw(m_crypto->PublicKey());
-            }
-            else
-            {
-                m_crypto->Reset();
-                SetCryptoState(ThorQ::CryptoState::None);
-            }
-        }
-        return;
-    }
-    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY:
-    {
-        if (m_crypto->IsCryptoReady())
-        {
-            qDebug() << "Verifying!";
-            SetCryptoState(ThorQ::CryptoState::Verifying);
-            SendEncrypted(m_crypto->Decrypt(data, size));
-        }
-        return;
-    }
-    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK:
-    {
-        SetCryptoState(ThorQ::CryptoState::Ok);
+			if (m_crypto->Agree(data, size))
+			{
+				SetCryptoState(ThorQ::CryptoState::Establishing);
+				SendRaw(m_crypto->PublicKey());
+			}
+			else
+			{
+				m_crypto->Reset();
+				SetCryptoState(ThorQ::CryptoState::None);
+			}
+		}
+		return;
+	}
+	case ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY:
+	{
+		if (m_crypto->IsCryptoReady())
+		{
+			qDebug() << "Verifying!";
+			SetCryptoState(ThorQ::CryptoState::Verifying);
+			SendEncrypted(m_crypto->Decrypt(data, size));
+		}
+		return;
+	}
+	case ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK:
+	{
+		SetCryptoState(ThorQ::CryptoState::Ok);
 		SetConnectionState(ThorQ::ConnectionState::Connected);
-        break;
-    }
-    default:
-    {
-        qDebug() << "Got unknown HeaderEnum:" << header;
-        SetCryptoState(ThorQ::CryptoState::None);
+		break;
+	}
+	default:
+	{
+		qDebug() << "Got unknown HeaderEnum:" << header;
+		SetCryptoState(ThorQ::CryptoState::None);
 		SetConnectionState(ThorQ::ConnectionState::Connecting);
-        requestEncryptionHandshake();
-        return;
-    }
-    }
+		requestEncryptionHandshake();
+		return;
+	}
+	}
 
-    if (!m_crypto->IsCryptoReady())
-        return;
+	if (!m_crypto->IsCryptoReady())
+		return;
 
-    std::vector<std::uint8_t> vec = m_crypto->Decrypt(data, size);
+	std::vector<std::uint8_t> vec = m_crypto->Decrypt(data, size);
 
-    std::uint8_t meta = static_cast<std::uint8_t>(*vec.data());
+	std::uint8_t meta = static_cast<std::uint8_t>(*vec.data());
 
-    qDebug() << "uwu";
+	qDebug() << "uwu";
 }
 
 std::uint8_t Client::GetFlag()
 {
-    switch (CryptoState()) {
-    case ThorQ::CryptoState::Requesting:
-        return ThorQ::MessageHeaderEnums::HEADER_CRYPT_REQUEST;
-        break;
-    case ThorQ::CryptoState::Establishing:
-        return ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH;
-        break;
-    case ThorQ::CryptoState::Verifying:
-        return ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY;
-        break;
-    case ThorQ::CryptoState::Ok:
-        return ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK;
-        break;
-    }
+	switch (CryptoState()) {
+	case ThorQ::CryptoState::Requesting:
+		return ThorQ::MessageHeaderEnums::HEADER_CRYPT_REQUEST;
+		break;
+	case ThorQ::CryptoState::Establishing:
+		return ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH;
+		break;
+	case ThorQ::CryptoState::Verifying:
+		return ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY;
+		break;
+	case ThorQ::CryptoState::Ok:
+		return ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK;
+		break;
+	}
 
-    return 0;
+	return 0;
 }
 
 void Client::requestEncryptionHandshake()
 {
 	if (ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED)
-        return;
+		return;
 
-    qDebug() << "Requesting!";
-    m_crypto->Reset();
+	qDebug() << "Requesting!";
+	m_crypto->Reset();
 	SetCryptoState(THORQ_CRYPTO_STATE_REQUESTING);
-    std::uint8_t flag = GetFlag();
-    enet_peer_send(m_peer, 0, enet_packet_create(&flag, sizeof(std::uint8_t), ENET_PACKET_FLAG_RELIABLE));
+	std::uint8_t flag = GetFlag();
+	enet_peer_send(m_peer, 0, enet_packet_create(&flag, sizeof(std::uint8_t), ENET_PACKET_FLAG_RELIABLE));
 }
 
 void Client::SendHeartbeat()
 {
-    qDebug() << "TX!";
+	qDebug() << "TX!";
 
-    std::uint8_t flag = ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT;
-    enet_peer_send(m_peer, 1, enet_packet_create(&flag, sizeof(std::uint8_t), ENET_PACKET_FLAG_UNSEQUENCED));
+	std::uint8_t flag = ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT;
+	enet_peer_send(m_peer, 1, enet_packet_create(&flag, sizeof(std::uint8_t), ENET_PACKET_FLAG_UNSEQUENCED));
 }
 
 void Client::SendRaw(std::uint32_t meta, bool unreliable)
 {
-    meta = htonl(meta);
-    SendRaw(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t), unreliable);
+	meta = htonl(meta);
+	SendRaw(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t), unreliable);
 }
 void Client::SendRaw(std::uint32_t meta, const std::string &message, bool unreliable)
 {
-    meta = htonl(meta);
-    std::vector<std::uint8_t> data;
-    data.resize(sizeof(std::uint32_t) + message.length());
-    memcpy(data.data(), &meta, sizeof(std::uint32_t));
-    memcpy(data.data() + sizeof(std::uint32_t), message.data(), message.length());
-    SendRaw(data, unreliable);
+	meta = htonl(meta);
+	std::vector<std::uint8_t> data;
+	data.resize(sizeof(std::uint32_t) + message.length());
+	memcpy(data.data(), &meta, sizeof(std::uint32_t));
+	memcpy(data.data() + sizeof(std::uint32_t), message.data(), message.length());
+	SendRaw(data, unreliable);
 }
 void Client::SendRaw(const std::vector<uint8_t>& data, bool unreliable)
 {
-    std::size_t size = data.size() + 1;
-    std::uint8_t* dat = new std::uint8_t[size];
-    dat[0] = GetFlag();
-    memcpy(dat + 1, data.data(), data.size());
+	std::size_t size = data.size() + 1;
+	std::uint8_t* dat = new std::uint8_t[size];
+	dat[0] = GetFlag();
+	memcpy(dat + 1, data.data(), data.size());
 
-    enet_peer_send(m_peer, unreliable ? 1 : 0, enet_packet_create(dat, size, unreliable ? ENET_PACKET_FLAG_UNSEQUENCED : ENET_PACKET_FLAG_RELIABLE));
+	enet_peer_send(m_peer, unreliable ? 1 : 0, enet_packet_create(dat, size, unreliable ? ENET_PACKET_FLAG_UNSEQUENCED : ENET_PACKET_FLAG_RELIABLE));
 }
 void Client::SendRaw(const std::uint8_t* data, std::size_t len, bool unreliable) { SendRaw(std::vector<std::uint8_t>(data, data + len), unreliable); }
 
 void Client::SendEncrypted(std::uint32_t meta, bool unreliable)
 {
-    std::uint8_t data[sizeof(std::uint8_t) + sizeof(std::uint32_t)];
+	std::uint8_t data[sizeof(std::uint8_t) + sizeof(std::uint32_t)];
 
-    data[0] = GetFlag();
+	data[0] = GetFlag();
 
-    meta = htonl(meta);
-    memcpy(data + sizeof(std::uint8_t), &meta, sizeof(std::uint32_t));
+	meta = htonl(meta);
+	memcpy(data + sizeof(std::uint8_t), &meta, sizeof(std::uint32_t));
 
-    SendEncrypted(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t), unreliable);
+	SendEncrypted(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t), unreliable);
 }
 void Client::SendEncrypted(std::uint32_t meta, const std::string &message, bool unreliable)
 {
-    std::size_t size = sizeof(std::uint32_t) + message.length();
-    std::uint8_t* data = new std::uint8_t[size];
+	std::size_t size = sizeof(std::uint32_t) + message.length();
+	std::uint8_t* data = new std::uint8_t[size];
 
-    meta = htonl(meta);
-    memcpy(data, &meta, sizeof(std::uint32_t));
+	meta = htonl(meta);
+	memcpy(data, &meta, sizeof(std::uint32_t));
 
-    memcpy(data + sizeof(std::uint32_t), message.data(), message.length());
+	memcpy(data + sizeof(std::uint32_t), message.data(), message.length());
 
-    SendEncrypted(data, unreliable);
+	SendEncrypted(data, unreliable);
 }
 void Client::SendEncrypted(const std::vector<std::uint8_t>& data, bool unreliable) { SendEncrypted(data.data(), data.size(), unreliable); }
 void Client::SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable)
 {
-    std::vector<std::uint8_t> encrypted = m_crypto->Encrypt(data, len);
+	std::vector<std::uint8_t> encrypted = m_crypto->Encrypt(data, len);
 
-    encrypted.insert(encrypted.begin(), GetFlag());
+	encrypted.insert(encrypted.begin(), GetFlag());
 
-    enet_peer_send(m_peer, unreliable ? 1 : 0, enet_packet_create(encrypted.data(), encrypted.size(), unreliable ? ENET_PACKET_FLAG_UNSEQUENCED : ENET_PACKET_FLAG_RELIABLE));
+	enet_peer_send(m_peer, unreliable ? 1 : 0, enet_packet_create(encrypted.data(), encrypted.size(), unreliable ? ENET_PACKET_FLAG_UNSEQUENCED : ENET_PACKET_FLAG_RELIABLE));
 }

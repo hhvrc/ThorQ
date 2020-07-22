@@ -14,17 +14,17 @@ class QPushButton;
 
 class LoginWidget : public QWidget
 {
-    Q_OBJECT
-    Q_DISABLE_COPY(LoginWidget)
+	Q_OBJECT
+	Q_DISABLE_COPY(LoginWidget)
 public:
-    LoginWidget(QWidget* parent = nullptr);
-    ~LoginWidget();
+	LoginWidget(QWidget* parent = nullptr);
+	~LoginWidget();
 public slots:
 	void SetConnectionState(thorq_connection_state_t state);
 	void SetLoginState(thorq_login_state_t state);
-    void SetConnectionPing(int ping);
+	void SetConnectionPing(int ping);
 signals:
-    void LoginRequest(const QString& username);
+	void LoginRequest(const QString& username);
 private slots:
 	void updateUiConnectionState();
 	void updateUiLoginState();
@@ -32,15 +32,15 @@ private slots:
 private:
 	thorq_connection_state_t m_connectionState;
 	thorq_login_state_t m_loginState;
-    int m_ping;
+	int m_ping;
 
-    QLabel* m_title;
-    QLabel* m_onlineStatus;
-    QLineEdit* m_usernameInput;
-    QPushButton* m_loginButton;
+	QLabel* m_title;
+	QLabel* m_onlineStatus;
+	QLineEdit* m_usernameInput;
+	QPushButton* m_loginButton;
 
-    QVBoxLayout* m_mainLayout;
-    QHBoxLayout* m_headerLayout;
+	QVBoxLayout* m_mainLayout;
+	QHBoxLayout* m_headerLayout;
 };
 
 #endif // COMBINEWIDGET_H

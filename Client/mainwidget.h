@@ -8,10 +8,10 @@
 class MainWidget
 {
 public:
-    MainWidget();
+	MainWidget();
 private:
-    QVBoxLayout m_vlayour;
-    QHBoxLayout m_hlayout;
+	QVBoxLayout m_vlayour;
+	QHBoxLayout m_hlayout;
 };
 
 #endif // COMBINEWIDGET_H

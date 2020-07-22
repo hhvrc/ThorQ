@@ -6,6 +6,8 @@
 #include <vector>
 #include <cstdint>
 
+#include <enums.h>
+
 typedef struct _ENetPeer ENetPeer;
 
 namespace ThorQ {
@@ -13,7 +15,7 @@ namespace ThorQ {
 	class Crypto;
 
 	class Instance
-    {
+	{
 		Instance(const Instance&) = delete;
 		Instance& operator=(const Instance&) = delete;
 	public:
@@ -29,8 +31,8 @@ namespace ThorQ {
 		ENetPeer* Peer() const;
 
 		void RequestOn(Instance* target);
-        bool RequestAcceptFrom(Instance* sender);
-        bool RequestDenyFrom(Instance* sender);
+		bool RequestAcceptFrom(Instance* sender);
+		bool RequestDenyFrom(Instance* sender);
 		Instance* Partner() const;
 		void ClearPartner();
 		bool HasPartner();
@@ -38,41 +40,43 @@ namespace ThorQ {
 		void SetHasCollar(bool hasCollar);
 		bool HasCollar() const;
 
-        int ClientState() const;
-        void SetClientState(int state);
+		thorq_connection_state_t ConnectionState() const;
+		void SetConnectionState(thorq_connection_state_t state);
 
-        int CryptoState() const;
-        void SetCryptoState(int state);
+		int CryptoState() const;
+		void SetCryptoState(int state);
 
-        void SendHeartbeat();
-        void SendRaw(std::uint32_t meta);
-        void SendRaw(std::uint32_t meta, const std::string& message, bool unreliable = false);
-        void SendRaw(const std::vector<std::uint8_t>& data, bool unreliable = false);
-        void SendRaw(const std::uint8_t* data, std::size_t len, bool unreliable = false);
-        void SendEncrypted(std::uint32_t meta);
-        void SendEncrypted(std::uint32_t meta, const std::string& message, bool unreliable = false);
-        void SendEncrypted(const std::vector<std::uint8_t>& data, bool unreliable = false);
-        void SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable = false);
+		void SendHeartbeat();
+		void SendRaw(std::uint32_t meta);
+		void SendRaw(std::uint32_t meta, const std::string& message, bool unreliable = false);
+		void SendRaw(const std::vector<std::uint8_t>& data, bool unreliable = false);
+		void SendRaw(const std::uint8_t* data, std::size_t len, bool unreliable = false);
+		void SendEncrypted(std::uint32_t meta);
+		void SendEncrypted(std::uint32_t meta, const std::string& message, bool unreliable = false);
+		void SendEncrypted(const std::vector<std::uint8_t>& data, bool unreliable = false);
+		void SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable = false);
 
-        void CryptoInit();
-        bool CryptoEstablish(const std::uint8_t* data, std::size_t size);
+		void CryptoInit();
+		bool CryptoEstablish(const std::uint8_t* data, std::size_t size);
 		bool CryptoVerify(const std::uint8_t* data, std::size_t size);
 
-        Crypto* GetCrypto();
-    private:
-        std::uint8_t GetFlag(bool withHeartbeat = false);
+		Crypto* GetCrypto();
+	private:
+		std::uint8_t GetFlag(bool withHeartbeat = false);
 
-        Crypto* m_crypto;
+		Crypto* m_crypto;
 
-        int m_clientState;
-        int m_cryptoState;
+		thorq_connection_state_t m_connectionState;
+		thorq_crypto_state_t m_cryptoState;
+		thorq_login_state_t m_loginState;
+		thorq_session_state_t m_sessionState;
 
-        std::string m_name;
-        bool m_hasCollar;
+		std::string m_name;
+		bool m_hasCollar;
 
-        ENetPeer* m_peer;
-        Instance* m_partner;
-        Instance* m_requestedPartner;
+		ENetPeer* m_peer;
+		Instance* m_partner;
+		Instance* m_requestedPartner;
 
 		std::uint8_t m_verificationData[256];
 	};

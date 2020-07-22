@@ -47,7 +47,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 		enet_packet_destroy(packet);
 		enet_peer_disconnect_now(peer, DISCONNECT_ERROR);
 		return;
-    }
+	}
 
 	if (instance->ClientState() == ThorQ::ClientState::Disconnecting || instance->ClientState() == ThorQ::ClientState::Disconnected || packet->dataLength < sizeof(std::uint8_t))
 		return;
@@ -59,71 +59,71 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	printf("Got %lu bytes\n", size);
 	fflush(stdout);
 
-    switch (flag) {
-    case ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT:
-    {
-        instance->SendHeartbeat();
-        printf("Heartbeat\n");
-        fflush(stdout);
-        return;
-    }
-    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_REQUEST:
-    {
-        instance->CryptoInit();
-        printf("Got request\n");
-        fflush(stdout);
-        return;
-    }
-    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH:
-    {
-        printf("Got establish\n");
-        fflush(stdout);
-        if (instance->CryptoEstablish(data, size))
-        {
-            printf("Establish complete\n");
-            fflush(stdout);
-        }
-        return;
-    }
-    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY:
-    {
-        if (size != 0 && instance->GetCrypto()->IsCryptoReady())
-        {
-            printf("Got verify\n");
-            fflush(stdout);
-            std::vector<std::uint8_t> vec = instance->GetCrypto()->Decrypt(data, size);
-            if (instance->CryptoVerify(vec.data(), vec.size()))
-            {
-                printf("HANDSHAKE COMPLETE\n");
-                fflush(stdout);
-            }
-        }
-        return;
-    }
-    case ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK:
-    {
+	switch (flag) {
+	case ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT:
+	{
+		instance->SendHeartbeat();
+		printf("Heartbeat\n");
+		fflush(stdout);
+		return;
+	}
+	case ThorQ::MessageHeaderEnums::HEADER_CRYPT_REQUEST:
+	{
+		instance->CryptoInit();
+		printf("Got request\n");
+		fflush(stdout);
+		return;
+	}
+	case ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH:
+	{
+		printf("Got establish\n");
+		fflush(stdout);
+		if (instance->CryptoEstablish(data, size))
+		{
+			printf("Establish complete\n");
+			fflush(stdout);
+		}
+		return;
+	}
+	case ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY:
+	{
+		if (size != 0 && instance->GetCrypto()->IsCryptoReady())
+		{
+			printf("Got verify\n");
+			fflush(stdout);
+			std::vector<std::uint8_t> vec = instance->GetCrypto()->Decrypt(data, size);
+			if (instance->CryptoVerify(vec.data(), vec.size()))
+			{
+				printf("HANDSHAKE COMPLETE\n");
+				fflush(stdout);
+			}
+		}
+		return;
+	}
+	case ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK:
+	{
 		if (data == nullptr || size == 0)
 			return;
-        break;
-    }
-    default:
-    {
-        printf("Got unknown HeaderEnum: %i\n", flag);
-        fflush(stdout);
-        instance->SetCryptoState(ThorQ::CryptoState::None);
-        instance->SetClientState(ThorQ::ClientState::Connecting);
-        return;
-    }
-    }
+		break;
+	}
+	default:
+	{
+		printf("Got unknown HeaderEnum: %i\n", flag);
+		fflush(stdout);
+		instance->SetCryptoState(ThorQ::CryptoState::None);
+		instance->SetClientState(ThorQ::ClientState::Connecting);
+		return;
+	}
+	}
 
-    if (!instance->GetCrypto()->IsCryptoReady())
-        return;
+	if (!instance->GetCrypto()->IsCryptoReady())
+		return;
 
-    std::vector<std::uint8_t> vec = instance->GetCrypto()->Decrypt(data, size);
+	std::vector<std::uint8_t> vec = instance->GetCrypto()->Decrypt(data, size);
 
-    std::uint8_t meta = static_cast<std::uint8_t>(*vec.data());
+	std::uint8_t meta = static_cast<std::uint8_t>(*vec.data());
 
-    instance->SetHasCollar((meta & FLAG_CollarConnected) != 0);
+	instance->SetHasCollar((meta & FLAG_CollarConnected) != 0);
 
 	if (!instance->HasName())
 	{
@@ -132,29 +132,29 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 			std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
 			if (!registeredInstances.TryAdd(name, instance))
-            {
-                instance->SetName(name);
-                instance->ClearPartner();
-
-                BroadcastMessage(NOTIFY_UserOnline, name);
-                instance->SendEncrypted(ACKNOWLEDGE_OK, "Logged in");
-            }
-            else
 			{
-                instance->SendEncrypted(ACKNOWLEDGE_Denied, "Callname in use");
-            }
+				instance->SetName(name);
+				instance->ClearPartner();
+
+				BroadcastMessage(NOTIFY_UserOnline, name);
+				instance->SendEncrypted(ACKNOWLEDGE_OK, "Logged in");
+			}
+			else
+			{
+				instance->SendEncrypted(ACKNOWLEDGE_Denied, "Callname in use");
+			}
 		}
 		else
 		{
-            instance->SendEncrypted(ACKNOWLEDGE_Denied, "Please log in");
+			instance->SendEncrypted(ACKNOWLEDGE_Denied, "Please log in");
 		}
-        return;
+		return;
 	}
 
 	switch (meta){
 	case USER_Login:
 	{
-        instance->SendEncrypted(ACKNOWLEDGE_Denied, "Already logged in");
+		instance->SendEncrypted(ACKNOWLEDGE_Denied, "Already logged in");
 		break;
 	}
 	case USER_Logout:
@@ -165,8 +165,8 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 		// Disconnect session if one is ongoing
 		if (instance->HasPartner())
 		{
-            instance->SendEncrypted(NOTIFY_SessionEnded, instance->Partner()->Name());
-            instance->Partner()->SendEncrypted(NOTIFY_SessionEnded, instance->Name());
+			instance->SendEncrypted(NOTIFY_SessionEnded, instance->Partner()->Name());
+			instance->Partner()->SendEncrypted(NOTIFY_SessionEnded, instance->Name());
 
 			BroadcastMessage(NOTIFY_UserAvailable, instance->Partner()->Name());
 
@@ -179,7 +179,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 			BroadcastMessage(NOTIFY_UserOffline, instance->Name());
 			instance->SetName("");
 		}
-        instance->SendEncrypted(ACKNOWLEDGE_OK, "Logged out");
+		instance->SendEncrypted(ACKNOWLEDGE_OK, "Logged out");
 		break;
 	}
 	case USER_List:
@@ -192,7 +192,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 
 			txFlag |= i->HasCollar() ? FLAG_CollarConnected : 0;
 
-            instance->SendEncrypted(txFlag, i->Name());
+			instance->SendEncrypted(txFlag, i->Name());
 		}
 		break;
 	}
@@ -204,7 +204,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 
 		if (otherInstance == nullptr)
 		{
-            instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
+			instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
 			return;
 		}
 
@@ -219,7 +219,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 
 		if (otherInstance == nullptr)
 		{
-            instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
+			instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
 			return;
 		}
 
@@ -229,25 +229,25 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 		BroadcastMessage(NOTIFY_UserInSession, otherInstance->Name());
 		break;
 	}
-    case SESSION_Deny:
-    {
+	case SESSION_Deny:
+	{
 		std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
-        Instance* otherInstance = registeredInstances.GetInstance(name);
+		Instance* otherInstance = registeredInstances.GetInstance(name);
 
-        if (otherInstance == nullptr)
-        {
-            instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
-            return;
-        }
+		if (otherInstance == nullptr)
+		{
+			instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
+			return;
+		}
 
-        if (instance->RequestAcceptFrom(otherInstance))
-        {
-            BroadcastMessage(NOTIFY_UserInSession, instance->Name());
-            BroadcastMessage(NOTIFY_UserInSession, otherInstance->Name());
-        }
-        break;
-    }
+		if (instance->RequestAcceptFrom(otherInstance))
+		{
+			BroadcastMessage(NOTIFY_UserInSession, instance->Name());
+			BroadcastMessage(NOTIFY_UserInSession, otherInstance->Name());
+		}
+		break;
+	}
 	case SESSION_Leave:
 	{
 		Instance* other = instance->Partner();
@@ -262,18 +262,18 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	}
 	case COMMAND_Beep:
 	case COMMAND_Vibrate:
-    case COMMAND_Shock:
+	case COMMAND_Shock:
 	{
 		if (instance->HasName() && instance->HasPartner())
 			instance->Partner()->SendEncrypted(data, true);
 		break;
 	}
-    case COMMAND_Auto:
-    {
-        if (instance->HasName() && instance->HasPartner())
-            instance->Partner()->SendEncrypted(data, false);
-        break;
-    }
+	case COMMAND_Auto:
+	{
+		if (instance->HasName() && instance->HasPartner())
+			instance->Partner()->SendEncrypted(data, false);
+		break;
+	}
 	case ACKNOWLEDGE_OK:
 		std::cout << "Received ACK_OK" << std::endl;
 		break;
@@ -288,7 +288,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 		break;
 	default:
 		std::cout << "Received unknown message id " << meta << std::endl;
-        instance->SendEncrypted(ACKNOWLEDGE_Invalid, "Invalid message");
+		instance->SendEncrypted(ACKNOWLEDGE_Invalid, "Invalid message");
 		break;
 	}
 }
@@ -302,13 +302,13 @@ std::string enetaddr_to_str(const ENetAddress* addr)
 
 void handleNewConnection(ENetPeer* peer)
 {
-    // Dont worry, this is ok
+	// Dont worry, this is ok
 	Instance* instance = new Instance(peer);
 
 	instance->SetClientState(ThorQ::ClientState::Connecting);
 
 	printf("A new client connected from:\n\tIPV6: %s\n\tPORT: %u\n", enetaddr_to_str(&peer->address).c_str(), peer->address.port);
-    fflush(stdout);
+	fflush(stdout);
 }
 
 void handleDisconnect(ENetPeer* peer)
@@ -382,53 +382,53 @@ void handleTimeout(ENetPeer* peer)
 int main()
 {
 	if (enet_initialize() < 0)
-    {
-        printf("Failed to initialize ENet\n");
-        exit(EXIT_FAILURE);
-    }
-    atexit(enet_deinitialize);
+	{
+		printf("Failed to initialize ENet\n");
+		exit(EXIT_FAILURE);
+	}
+	atexit(enet_deinitialize);
 
-    printf("Using ENet-%i.%i.%i\n", ENET_VERSION_MAJOR, ENET_VERSION_MINOR, ENET_VERSION_PATCH);
-    fflush(stdout);
+	printf("Using ENet-%i.%i.%i\n", ENET_VERSION_MAJOR, ENET_VERSION_MINOR, ENET_VERSION_PATCH);
+	fflush(stdout);
 
-    // Setup server
-    ENetAddress address;
-    address.host = ENET_HOST_ANY;
-    address.port = SERVER_PORT;
-    ENetHost* server = enet_host_create(&address, SERVER_MAX_CONNECTIONS, 2, 0, 0); // two channels: communication(tcp), and commands(udp)
+	// Setup server
+	ENetAddress address;
+	address.host = ENET_HOST_ANY;
+	address.port = SERVER_PORT;
+	ENetHost* server = enet_host_create(&address, SERVER_MAX_CONNECTIONS, 2, 0, 0); // two channels: communication(tcp), and commands(udp)
 
-    if (server == nullptr)
-    {
-        printf("An error occurred while trying to create an ENet server host\n");
-        exit(EXIT_FAILURE);
-    }
+	if (server == nullptr)
+	{
+		printf("An error occurred while trying to create an ENet server host\n");
+		exit(EXIT_FAILURE);
+	}
 
-    ENetEvent event;
-    while (true) {
-        while (enet_host_service(server, &event, 0) > 0)
-        {
-            switch (event.type)
-            {
-            case ENET_EVENT_TYPE_CONNECT:
-                handleNewConnection(event.peer);
-                break;
-            case ENET_EVENT_TYPE_RECEIVE:
-                handleMessage(event.peer, event.packet);
-                enet_packet_destroy(event.packet);
-                break;
-            case ENET_EVENT_TYPE_DISCONNECT:
-                handleDisconnect(event.peer);
-                break;
-            case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-                handleTimeout(event.peer);
-                break;
-            case ENET_EVENT_TYPE_NONE:
-                break;
-            }
-        }
-    }
+	ENetEvent event;
+	while (true) {
+		while (enet_host_service(server, &event, 0) > 0)
+		{
+			switch (event.type)
+			{
+			case ENET_EVENT_TYPE_CONNECT:
+				handleNewConnection(event.peer);
+				break;
+			case ENET_EVENT_TYPE_RECEIVE:
+				handleMessage(event.peer, event.packet);
+				enet_packet_destroy(event.packet);
+				break;
+			case ENET_EVENT_TYPE_DISCONNECT:
+				handleDisconnect(event.peer);
+				break;
+			case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
+				handleTimeout(event.peer);
+				break;
+			case ENET_EVENT_TYPE_NONE:
+				break;
+			}
+		}
+	}
 
-    enet_host_destroy(server);
+	enet_host_destroy(server);
 
-    exit(EXIT_SUCCESS);
+	exit(EXIT_SUCCESS);
 }

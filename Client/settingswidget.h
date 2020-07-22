@@ -6,7 +6,7 @@
 class SettingsWidget
 {
 public:
-    SettingsWidget();
+	SettingsWidget();
 };
 
 #endif // SETTINGSWIDGET_H

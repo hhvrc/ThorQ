@@ -10,41 +10,41 @@
 quint64 ddd = 0;
 
 LoginWidget::LoginWidget(QWidget* parent)
-    : QWidget(parent)
+	: QWidget(parent)
 	, m_connectionState(THORQ_CONNECTION_STATE_DISCONNECTED)
 	, m_loginState(THORQ_LOGIN_STATE_LOGGEDOUT)
-    , m_ping(0)
+	, m_ping(0)
 {
-    setWindowTitle("ThorQ Login");
+	setWindowTitle("ThorQ Login");
 
-    m_title = new QLabel("ThorQ", this);
-    m_title->setStyleSheet("font-size: 72px");
+	m_title = new QLabel("ThorQ", this);
+	m_title->setStyleSheet("font-size: 72px");
 
-    m_onlineStatus = new QLabel("● Offline", this);
-    m_onlineStatus->setStyleSheet("font-size: 16px; color: #FF0000");
+	m_onlineStatus = new QLabel("● Offline", this);
+	m_onlineStatus->setStyleSheet("font-size: 16px; color: #FF0000");
 
-    m_headerLayout = new QHBoxLayout();
-    m_headerLayout->addWidget(m_title);
-    m_headerLayout->addWidget(m_onlineStatus);
+	m_headerLayout = new QHBoxLayout();
+	m_headerLayout->addWidget(m_title);
+	m_headerLayout->addWidget(m_onlineStatus);
 
-    m_loginButton = new QPushButton("Login", this);
-    m_usernameInput = new QLineEdit("Username", this);
+	m_loginButton = new QPushButton("Login", this);
+	m_usernameInput = new QLineEdit("Username", this);
 
-    //auto shadow = new QGraphicsDropShadowEffect();
-    //shadow->setXOffset(4);
-    //shadow->setYOffset(4);
-    //m_loginButton->setGraphicsEffect(shadow);
+	//auto shadow = new QGraphicsDropShadowEffect();
+	//shadow->setXOffset(4);
+	//shadow->setYOffset(4);
+	//m_loginButton->setGraphicsEffect(shadow);
 
-    m_mainLayout = new QVBoxLayout(this);
-    m_mainLayout->addLayout(m_headerLayout);
-    m_mainLayout->addWidget(m_usernameInput);
-    m_mainLayout->addWidget(m_loginButton);
-    setLayout(m_mainLayout);
+	m_mainLayout = new QVBoxLayout(this);
+	m_mainLayout->addLayout(m_headerLayout);
+	m_mainLayout->addWidget(m_usernameInput);
+	m_mainLayout->addWidget(m_loginButton);
+	setLayout(m_mainLayout);
 
-    setFixedSize(m_mainLayout->geometry().size());
-    setWindowFlags(Qt::MSWindowsFixedSizeDialogHint);
+	setFixedSize(m_mainLayout->geometry().size());
+	setWindowFlags(Qt::MSWindowsFixedSizeDialogHint);
 
-    connect(m_loginButton, &QPushButton::clicked, [this](){ emit LoginRequest(m_usernameInput->text()); });
+	connect(m_loginButton, &QPushButton::clicked, [this](){ emit LoginRequest(m_usernameInput->text()); });
 
 	updateUiConnectionState();
 }
@@ -57,10 +57,10 @@ LoginWidget::~LoginWidget()
 void LoginWidget::SetConnectionState(thorq_connection_state_t state)
 {
 	if (m_connectionState != state)
-    {
+	{
 		m_connectionState = state;
 		updateUiConnectionState();
-    }
+	}
 }
 
 void LoginWidget::SetLoginState(thorq_login_state_t state)
@@ -74,11 +74,11 @@ void LoginWidget::SetLoginState(thorq_login_state_t state)
 
 void LoginWidget::SetConnectionPing(int ping)
 {
-    if (m_ping != ping)
-    {
-        m_ping = ping;
+	if (m_ping != ping)
+	{
+		m_ping = ping;
 		updateUiPing();
-    }
+	}
 }
 
 void LoginWidget::updateUiConnectionState()

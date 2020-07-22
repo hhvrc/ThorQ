@@ -6,9 +6,9 @@
 struct UserData
 {
 public:
-    QString username = "";
-    bool inSession = false;
-    bool hasCollar = false;
+	QString username = "";
+	bool inSession = false;
+	bool hasCollar = false;
 };
 
 #endif // USERDATA_H
