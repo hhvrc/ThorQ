@@ -30,7 +30,7 @@ Crypto::~Crypto()
 	delete m_key;
 }
 
-std::vector<std::uint8_t> Crypto::PublicKey() const
+std::vector<std::uint8_t> Crypto::publicKey() const
 {
 	return m_key->public_value();
 }
@@ -40,7 +40,7 @@ bool Crypto::ready()
 	return m_ready;
 }
 
-bool Crypto::Agree(const std::vector<std::uint8_t>& data)
+bool Crypto::agree(const std::vector<std::uint8_t>& data)
 {
 	if (data.size() == m_key->public_value().size())
 	{
@@ -61,7 +61,7 @@ bool Crypto::Agree(const std::vector<std::uint8_t>& data)
 	return false;
 }
 
-void Crypto::Reset()
+void Crypto::reset()
 {
 	try
 	{
@@ -78,7 +78,7 @@ void Crypto::Reset()
 	}
 }
 
-bool Crypto::Encrypt(std::vector<std::uint8_t>& data)
+bool Crypto::encrypt(std::vector<std::uint8_t>& data)
 {
 	if (!data.empty())
 	{
@@ -102,10 +102,31 @@ bool Crypto::Encrypt(std::vector<std::uint8_t>& data)
 			fflush(stderr);
 		}
 	}
-	return false;
+    return false;
 }
 
-bool Crypto::Decrypt(std::vector<std::uint8_t>& data)
+bool Crypto::encrypt(std::vector<uint8_t> &data, uint8_t *iv)
+{
+    if (!data.empty())
+    {
+        try
+        {
+            m_rng->randomize(iv, THORQ_CRYPTO_CIPHER_IV_LEN);
+            m_streamCipher->set_iv(iv, THORQ_CRYPTO_CIPHER_IV_LEN);
+
+            m_streamCipher->encrypt(data);
+            return true;
+        }
+        catch (Botan::Exception ex)
+        {
+            fprintf(stderr, "Error while doing encryption: %s\n", ex.what());
+            fflush(stderr);
+        }
+    }
+    return false;
+}
+
+bool Crypto::decrypt(std::vector<std::uint8_t>& data)
 {
 	if (data.size() > THORQ_CRYPTO_CIPHER_IV_LEN)
 	{
@@ -126,5 +147,25 @@ bool Crypto::Decrypt(std::vector<std::uint8_t>& data)
 			fflush(stderr);
 		}
 	}
-	return false;
+    return false;
+}
+
+bool Crypto::decrypt(std::vector<uint8_t> &data, const uint8_t *iv)
+{
+    if (data.size() > THORQ_CRYPTO_CIPHER_IV_LEN)
+    {
+        try
+        {
+            m_streamCipher->set_iv(iv, THORQ_CRYPTO_CIPHER_IV_LEN);
+
+            m_streamCipher->decrypt(data);
+            return true;
+        }
+        catch (Botan::Exception ex)
+        {
+            fprintf(stderr, "Error while doing decryption: %s\n", ex.what());
+            fflush(stderr);
+        }
+    }
+    return false;
 }

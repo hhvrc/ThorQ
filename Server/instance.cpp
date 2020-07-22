@@ -210,16 +210,16 @@ void ThorQ::Instance::SetSessionState(thorq_session_state_t state)
 
 void ThorQ::Instance::CryptoInit()
 {
-	GetCrypto()->Reset();
+    GetCrypto()->reset();
 	SetCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
-	SendRaw(GetCrypto()->PublicKey());
+    SendRaw(GetCrypto()->publicKey());
 }
 
 bool ThorQ::Instance::CryptoEstablish(const std::vector<std::uint8_t>& data)
 {
 	if (CryptoState() == THORQ_CRYPTO_STATE_ESTABLISHING && !data.empty())
 	{
-		if (GetCrypto()->Agree(data))
+        if (GetCrypto()->agree(data))
 		{
 			SetCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
 			Crypto::RandomizeBytes(m_verificationData, MESSAGE_PAYLOAD_SIZE);
@@ -228,7 +228,7 @@ bool ThorQ::Instance::CryptoEstablish(const std::vector<std::uint8_t>& data)
 		}
 	}
 
-	GetCrypto()->Reset();
+    GetCrypto()->reset();
 	SetCryptoState(THORQ_CRYPTO_STATE_NONE);
 	SendRaw(ThorQ::MessageContentEnums::ACKNOWLEDGE_Error);
 
@@ -249,7 +249,7 @@ bool ThorQ::Instance::CryptoVerify(const std::vector<std::uint8_t>& data)
 		}
 	}
 
-	GetCrypto()->Reset();
+    GetCrypto()->reset();
 	SetCryptoState(THORQ_CRYPTO_STATE_NONE);
 	SendRaw(ThorQ::MessageContentEnums::ACKNOWLEDGE_Error);
 

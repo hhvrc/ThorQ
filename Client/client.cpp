@@ -464,7 +464,7 @@ void Client::HandleMessage(ENetPacket* packet)
         {
             SetCryptoState(ThorQ::CryptoState::Establishing);
 
-            msg.SetPayload(m_crypto->PublicKey());
+            msg.SetPayload(m_crypto->publicKey());
             msg.Send(m_peer);
         }
         else

@@ -33,7 +33,7 @@ public:
     /** Get the public key
      * @returns The generated public key
      */
-	std::vector<std::uint8_t> PublicKey() const;
+    std::vector<std::uint8_t> publicKey() const;
 
     /** Checks if shared secret has been established
      * @returns if shared secret is established
@@ -44,23 +44,37 @@ public:
      * @param data public key of foreign friend
      * @returns if key agreement succeeded
      */
-	bool Agree(const std::vector<std::uint8_t>& data);
+    bool agree(const std::vector<std::uint8_t>& data);
 
     /** Clear shared secret, and generate a new key pair
      */
-	void Reset();
+    void reset();
 
     /** Attempts to encrypt a vector as a reference
      * @param data Data to encrypt, this data will grow in size by a few bytes as a result of adding a IV to the end of it
      * @returns if the encryption was successful or not
      */
-	bool Encrypt(std::vector<std::uint8_t>& data);
+    bool encrypt(std::vector<std::uint8_t>& data);
+
+    /** Attempts to encrypt a vector as a reference
+     * @param data Data to encrypt
+     * @param iv Data to write IV to
+     * @returns if the encryption was successful or not
+     */
+    bool encrypt(std::vector<std::uint8_t>& data, std::uint8_t* iv);
 
     /** Attempts to decrypt a vector as a reference
      * @param data Data to decrypt, this data will shrink in size by a few bytes as a result of removing the IV from the end of it
      * @returns if the decryption was successful or not
      */
-	bool Decrypt(std::vector<std::uint8_t>& data);
+    bool decrypt(std::vector<std::uint8_t>& data);
+
+    /** Attempts to decrypt a vector as a reference
+     * @param data Data to decrypt
+     * @param iv Data to read IV from
+     * @returns if the decryption was successful or not
+     */
+    bool decrypt(std::vector<std::uint8_t>& data, const std::uint8_t* iv);
 };
 }
 
