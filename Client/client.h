@@ -34,7 +34,8 @@ public:
 	thorq_login_state_t LoginState() const;
 	thorq_session_state_t SessionState() const;
 public slots:
-	bool Connect(const char* address, int port);
+	void Connect(const char* address, int port);
+	void Reconnect();
 	void Disconnect();
 
 	void Login(const QString& Username);
@@ -181,7 +182,10 @@ private:
 	ENetHost* m_host;
 	ENetPeer* m_peer;
 
-	std::mutex l_address;
+	std::mutex l_requestedHost;
+	std::string m_requestedHostName;
+	int         m_requestedHostPort;
+
 	ENetAddress* m_address;
 };
 

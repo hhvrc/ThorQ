@@ -123,31 +123,25 @@ thorq_session_state_t Client::SessionState() const
 	return m_sessionState.load();
 }
 
-bool Client::Connect(const char* address, int port)
+void Client::Connect(const char* address, int port)
 {
-	if (ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED)
-		return false;
-
 	{
-		SCOPELOCK(l_address);
-
-		if (enet_address_set_host(m_address, address) < 0)
-			return false;
-
-		m_address->port = port;
+		SCOPELOCK(l_requestedHost);
+		m_requestedHostName = address;
+		m_requestedHostPort = port;
 	}
 
-	m_actionFlags.fetch_or(ACTION_Connect);
+	m_actionFlags.fetch_or(ACTION_WantConnected);
+}
 
-	return true;
+void Client::Reconnect()
+{
+
 }
 
 void Client::Disconnect()
 {
-	if (ConnectionState() != THORQ_CONNECTION_STATE_DISCONNECTED)
-		return;
-
-	m_actionFlags.fetch_or(ACTION_Disconnect);
+	m_actionFlags.fetch_and(~ACTION_WantConnected);
 }
 
 void Client::Login(const QString &username)
@@ -306,9 +300,13 @@ void Client::Run()
 					m_requestingPartner.clear();
 				}
 			}
-			else if ((actions & ACTION_WantConnected) == 0)
+			else if ((actions & ACTION_ReConnect) != 0 || (actions & ACTION_WantConnected) == 0)
 			{
-				qDebug() << "Disconnecting!";
+				if ((actions & ACTION_WantConnected) == 0)
+					qDebug() << "Disconnecting!";
+				else
+					qDebug() << "Reconnecting!";
+
 				SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTING);
 				enet_peer_disconnect(m_peer, 0);
 			}
@@ -328,8 +326,27 @@ void Client::Run()
 			if ((actions & ACTION_WantConnected) != 0)
 			{
 				qDebug() << "Connecting!";
-				m_peer = enet_host_connect(m_host, m_address, 4, 0);
-				SetConnectionState(THORQ_CONNECTION_STATE_CONNECTING);
+
+				bool success = false;
+
+				{
+					SCOPELOCK(l_requestedHost);
+					if (enet_address_set_host(m_address, m_requestedHostName.c_str()) < 0)
+					{
+						m_address->port = m_requestedHostPort;
+						success = true;
+					}
+				}
+
+				if (success)
+				{
+					m_peer = enet_host_connect(m_host, m_address, 4, 0);
+					SetConnectionState(THORQ_CONNECTION_STATE_CONNECTING);
+				}
+				else
+				{
+					// TODO: something
+				}
 			}
 		}
 	}
