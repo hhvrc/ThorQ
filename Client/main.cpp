@@ -62,6 +62,7 @@ int main(int argc, char** argv)
 
     int retval = app.exec();
 
-    //enet_deinitialize();
+    enet_deinitialize();
+
     return retval;
 }
