@@ -2,17 +2,17 @@
 
 bool __thorq_version::isCurrentClientVersion() const
 {
-	return *this == CurrentClientVersion;
+	return *this == thorq_msg_version_current_client;
 }
 
 bool __thorq_version::isCurrentServerVersion() const
 {
-	return *this == CurrentServerVersion;
+	return *this == thorq_msg_version_current_server;
 }
 
 bool __thorq_version::isCurrentLinkVersion() const
 {
-	return *this == CurrentLinkVersion;
+	return *this == thorq_msg_version_current_link;
 }
 
 void __thorq_version::toString(char* c_str) const

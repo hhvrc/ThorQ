@@ -24,25 +24,4 @@
 
 #define THORQ_MSG_MAX_PAYLOAD_LEN 255 ///< Maximum payload length
 
-#include "thorq_message_version.h"
-
-constexpr thorq_version_t CurrentClientVersion
-{
-	THORQ_VERSION_CLIENT_MAJOR,
-	THORQ_VERSION_CLIENT_MINOR,
-	THORQ_VERSION_CLIENT_PATCH
-};
-constexpr thorq_version_t CurrentServerVersion
-{
-	THORQ_VERSION_SERVER_MAJOR,
-	THORQ_VERSION_SERVER_MINOR,
-	THORQ_VERSION_SERVER_PATCH
-};
-constexpr thorq_version_t CurrentLinkVersion
-{
-	THORQ_VERSION_LINK_MAJOR,
-	THORQ_VERSION_LINK_MINOR,
-	THORQ_VERSION_LINK_PATCH
-};
-
 #endif // CONSTANTS_H

@@ -26,4 +26,23 @@ typedef struct __thorq_version
 	bool operator != (const __thorq_version& other) const;
 }) thorq_version_t;
 
+constexpr thorq_version_t thorq_msg_version_current_client
+{
+	THORQ_VERSION_CLIENT_MAJOR,
+	THORQ_VERSION_CLIENT_MINOR,
+	THORQ_VERSION_CLIENT_PATCH
+};
+constexpr thorq_version_t thorq_msg_version_current_server
+{
+	THORQ_VERSION_SERVER_MAJOR,
+	THORQ_VERSION_SERVER_MINOR,
+	THORQ_VERSION_SERVER_PATCH
+};
+constexpr thorq_version_t thorq_msg_version_current_link
+{
+	THORQ_VERSION_LINK_MAJOR,
+	THORQ_VERSION_LINK_MINOR,
+	THORQ_VERSION_LINK_PATCH
+};
+
 #endif // THORQ_MSG_VERSION_H
