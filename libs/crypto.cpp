@@ -19,7 +19,7 @@ void Crypto::RandomizeBytes(std::uint8_t* data, std::size_t len)
 Crypto::Crypto()
     : m_ready(false)
     , m_rng(new Botan::AutoSeeded_RNG())
-    , m_key(new Botan::ECDH_PrivateKey(*m_rng, Botan::EC_Group(THORQ_CRYPTO_EC_OID_NAME)))
+    , m_key(new Botan::ECDH_PrivateKey(*m_rng, Botan::EC_Group(THORQ_CRYPTO_EC_ID)))
     , m_streamCipher(Botan::StreamCipher::create(THORQ_CRYPTO_CIPHER_NAME))
 {
 }
@@ -46,7 +46,7 @@ bool Crypto::Agree(const std::vector<std::uint8_t>& data)
     {
         try
         {
-            Botan::PK_Key_Agreement ecdh(*m_key, *m_rng, THORQ_CRYPTO_KEY_DERIVATION_FUNCTION);
+            Botan::PK_Key_Agreement ecdh(*m_key, *m_rng, THORQ_CRYPTO_KEY_DVFUNC);
             m_streamCipher->set_key(ecdh.derive_key(THORQ_CRYPTO_KEY_LENGTH, data));
             m_ready = true;
             return true;
@@ -67,7 +67,7 @@ void Crypto::Reset()
     {
         m_ready = false;
         Botan::ECDH_PrivateKey* oldKey = m_key;
-        m_key = new Botan::ECDH_PrivateKey(*m_rng, Botan::EC_Group(THORQ_CRYPTO_EC_OID_NAME));
+        m_key = new Botan::ECDH_PrivateKey(*m_rng, Botan::EC_Group(THORQ_CRYPTO_EC_ID));
         delete oldKey;
         m_streamCipher->clear();
     }
@@ -84,15 +84,15 @@ bool Crypto::Encrypt(std::vector<std::uint8_t>& data)
     {
         try
         {
-            data.reserve(data.size() + THORQ_CRYPTO_IV_LENGTH);
+            data.reserve(data.size() + THORQ_CRYPTO_CIPHER_IV_LEN);
 
-            std::uint8_t iv[THORQ_CRYPTO_IV_LENGTH];
-            m_rng->randomize(iv, THORQ_CRYPTO_IV_LENGTH);
-            m_streamCipher->set_iv(iv, THORQ_CRYPTO_IV_LENGTH);
+            std::uint8_t iv[THORQ_CRYPTO_CIPHER_IV_LEN];
+            m_rng->randomize(iv, THORQ_CRYPTO_CIPHER_IV_LEN);
+            m_streamCipher->set_iv(iv, THORQ_CRYPTO_CIPHER_IV_LEN);
 
             m_streamCipher->encrypt(data);
 
-            data.insert(data.end(), iv, iv + THORQ_CRYPTO_IV_LENGTH);
+            data.insert(data.end(), iv, iv + THORQ_CRYPTO_CIPHER_IV_LEN);
 
             return true;
         }
@@ -107,13 +107,13 @@ bool Crypto::Encrypt(std::vector<std::uint8_t>& data)
 
 bool Crypto::Decrypt(std::vector<std::uint8_t>& data)
 {
-    if (data.size() > THORQ_CRYPTO_IV_LENGTH)
+    if (data.size() > THORQ_CRYPTO_CIPHER_IV_LEN)
     {
         try
         {
-            std::size_t newSize = data.size() - THORQ_CRYPTO_IV_LENGTH;
+            std::size_t newSize = data.size() - THORQ_CRYPTO_CIPHER_IV_LEN;
 
-            m_streamCipher->set_iv(data.data() + newSize, THORQ_CRYPTO_IV_LENGTH);
+            m_streamCipher->set_iv(data.data() + newSize, THORQ_CRYPTO_CIPHER_IV_LEN);
 
             data.resize(newSize);
 
