@@ -33,7 +33,7 @@ typedef enum {
 	THORQ_CMD_SESSION_DENY,
 	THORQ_CMD_SESSION_LEAVE,
 
-	THORQ_CMD_SET_COMPONENT_PRESENCE,
+    THORQ_CMD_SET_USER_STATE_FLAG,
 
 	THORQ_CMD_GET_LIST_USERS,
 	THORQ_CMD_GET_VERSION_SERVER,
@@ -42,21 +42,22 @@ typedef enum {
 } THORQ_CMD;
 
 typedef enum {
-	THORQ_COMPONENT_OPENVR,
-	THORQ_COMPONENT_COLLAR_NOBRAND_1,
-	THORQ_COMPONENT_COLLAR_NOBRAND_2,
-	THORQ_COMPONENT_COLLAR_AT211,
-	THORQ_COMPONENT_COLLAR_AT216,
-	THORQ_COMPONENT_COLLAR_AT918,
-	THORQ_COMPONENT_COLLAR_AT919C
-} THORQ_COMPONENT;
+    THORQ_USER_STATE_FLAG_COLLAR_PRESENT = 1 << 0, ///< User currently has a collar connected to their pc, this will show up as a [🗲] icon next to their name
+    THORQ_USER_STATE_FLAG_OPENVR_RUNNING = 1 << 1, ///< User is currently in Virtual Reality, this will show up as a [VR] icon next to their name
+    THORQ_USER_STATE_FLAG_RESERVED_3 = 1 << 2,
+    THORQ_USER_STATE_FLAG_RESERVED_4 = 1 << 3,
+    THORQ_USER_STATE_FLAG_RESERVED_5 = 1 << 4,
+    THORQ_USER_STATE_FLAG_RESERVED_6 = 1 << 5,
+    THORQ_USER_STATE_FLAG_RESERVED_7 = 1 << 6,
+    THORQ_USER_STATE_FLAG_RESERVED_8 = 1 << 7
+} THORQ_USER_STATE_FLAG; ///< Id of a device or service that client has
 
 typedef enum {
 	THORQ_CMD_ACK_OK,
 	THORQ_CMD_ACK_ERR_FAIL,
 	THORQ_CMD_ACK_ERR_ACCESS_DENIED,
 	THORQ_CMD_ACK_ERR_NOT_SUPPORTED,
-} THORQ_CMD_ACK;
+} THORQ_CMD_ACK; ///< Acknowledge of command sent from client
 
 typedef enum {
 	THORQ_NOTIFY_USER_STATE, ///< Session state, Collar state,
@@ -126,36 +127,36 @@ typedef enum {
 
 typedef enum
 {
-	THORQ_CONNECTION_STATE_DISCONNECTED,
-	THORQ_CONNECTION_STATE_DISCONNECTING,
-	THORQ_CONNECTION_STATE_CONNECTING,
-	THORQ_CONNECTION_STATE_CONNECTED
-} thorq_connection_state_t; ///< State machine for client
+    THORQ_CONNECTION_STATE_DISCONNECTED,  ///< Host is disconnected
+    THORQ_CONNECTION_STATE_DISCONNECTING, ///< Host has requested that the server disconnects it gracefully
+    THORQ_CONNECTION_STATE_CONNECTING,    ///< Host is connecting
+    THORQ_CONNECTION_STATE_CONNECTED      ///< Host is connected
+} thorq_connection_state_t; ///< State machine for connection
 
 typedef enum
 {
-	THORQ_CRYPTO_STATE_NONE,
-	THORQ_CRYPTO_STATE_REQUESTING,
-	THORQ_CRYPTO_STATE_ESTABLISHING,
-	THORQ_CRYPTO_STATE_VERIFYING,
-	THORQ_CRYPTO_STATE_ACTIVE
-} thorq_crypto_state_t; ///< State machine for cryptographic agreement with endpoint
+    THORQ_CRYPTO_STATE_NONE,         ///< The cryptographic link with the other host has not been established yet
+    THORQ_CRYPTO_STATE_REQUESTING,   ///< A request has been sent to the other host, requesting to begin a handshake
+    THORQ_CRYPTO_STATE_ESTABLISHING, ///< Hosts are now attempting to establish a shared secret
+    THORQ_CRYPTO_STATE_VERIFYING,    ///< Hosts are not trying to verify that they successfully agreed on a shared secret
+    THORQ_CRYPTO_STATE_ACTIVE        ///< Hosts have a shared secret and can send encrypted data between themselves
+} thorq_crypto_state_t; ///< State machine for crypto
 
 typedef enum
 {
-	THORQ_LOGIN_STATE_LOGGEDOUT,
-	THORQ_LOGIN_STATE_LOGGINGOUT,
-	THORQ_LOGIN_STATE_LOGGINGIN,
-	THORQ_LOGIN_STATE_LOGGEDIN
-} thorq_login_state_t; ///< State machine for login and session
+    THORQ_LOGIN_STATE_LOGGEDOUT,  ///< Client is logged out
+    THORQ_LOGIN_STATE_LOGGINGOUT, ///< Client has requested the server to log it out gracefully
+    THORQ_LOGIN_STATE_LOGGINGIN,  ///< Client has requested to log in with a username, and waiting for the server to accept
+    THORQ_LOGIN_STATE_LOGGEDIN    ///< Client is logged in with a username, and is discoverable by other online users
+} thorq_login_state_t; ///< State machine for login
 
 typedef enum
 {
-	THORQ_SESSION_STATE_NONE,
-	THORQ_SESSION_STATE_LEAVING,
-	THORQ_SESSION_STATE_DECIDING,
-	THORQ_SESSION_STATE_JOINING,
-	THORQ_SESSION_STATE_ACTIVE
-} thorq_session_state_t; ///< State machine for login and session
+    THORQ_SESSION_STATE_NONE,     ///< Host is not currently in a session
+    THORQ_SESSION_STATE_LEAVING,  ///< Host is leaving a session
+    THORQ_SESSION_STATE_DECIDING, ///< The requestee is deciding if to accept the session request
+    THORQ_SESSION_STATE_JOINING,  ///< The session has been accepted and the host is waiting for the server to start it
+    THORQ_SESSION_STATE_ACTIVE    ///< Both partners are currently in a session
+} thorq_session_state_t; ///< State machine for session
 
 #endif // ENUMS_H

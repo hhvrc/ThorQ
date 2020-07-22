@@ -35,7 +35,7 @@ std::vector<std::uint8_t> Crypto::PublicKey() const
 	return m_key->public_value();
 }
 
-bool Crypto::IsCryptoReady()
+bool Crypto::ready()
 {
 	return m_ready;
 }
