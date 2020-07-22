@@ -121,6 +121,7 @@ typedef enum {
 	ACTION_RESERVED_14    = 1 << 13,
 	ACTION_RESERVED_15    = 1 << 14,
 	ACTION_RESERVED_16    = 1 << 15,
+	ACTION_TOGGLEACTIONS  = ACTION_WantConnected
 } thorq_client_action_t; ///< Client side action flags
 
 typedef enum

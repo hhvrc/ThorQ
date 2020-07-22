@@ -283,6 +283,9 @@ void Client::Run()
 			}
 		}
 
+		// Gets the actions, and clears the actions that arent toggleables
+		uint actions = m_actionFlags.fetch_and(ACTION_TOGGLEACTIONS);
+
 		// Send stuff
 		if (ConnectionState() == THORQ_CONNECTION_STATE_CONNECTED)
 		{
@@ -292,18 +295,18 @@ void Client::Run()
 			}
 			else if (SessionState() == THORQ_SESSION_STATE_DECIDING)
 			{
-				if ((m_actionFlags.load() & ACTION_SessionAccept) != 0)
+				if ((actions & ACTION_SessionAccept) != 0)
 				{
 					SendEncrypted(THORQ_CMD_SESSION_ACCEPT, m_requestingPartner);
 					m_requestingPartner.clear();
 				}
-				else if ((m_actionFlags.load() & ACTION_SessionDeny) != 0)
+				else if ((actions & ACTION_SessionDeny) != 0)
 				{
 					SendEncrypted(THORQ_CMD_SESSION_DENY, m_requestingPartner);
 					m_requestingPartner.clear();
 				}
 			}
-			else if ((m_actionFlags.load() & ACTION_WantConnected) == 0)
+			else if ((actions & ACTION_WantConnected) == 0)
 			{
 				qDebug() << "Disconnecting!";
 				SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTING);
@@ -322,7 +325,7 @@ void Client::Run()
 		}
 		else if (ConnectionState() == THORQ_CONNECTION_STATE_DISCONNECTED)
 		{
-			if ((m_actionFlags.load() & ACTION_WantConnected) != 0)
+			if ((actions & ACTION_WantConnected) != 0)
 			{
 				qDebug() << "Connecting!";
 				m_peer = enet_host_connect(m_host, m_address, 4, 0);
