@@ -14,28 +14,28 @@ LoginWidget::LoginWidget(QWidget* parent)
 	, m_connectionState(THORQ_CONNECTION_STATE_DISCONNECTED)
 	, m_loginState(THORQ_LOGIN_STATE_LOGGEDOUT)
 	, m_ping(0)
+    , m_title(new QLabel(this))
+    , m_onlineStatus(new QLabel(this))
+    , m_usernameInput(new QLineEdit(this))
+    , m_loginButton(new QPushButton(this))
+    , m_mainLayout(new QVBoxLayout(this))
+    , m_headerLayout(new QHBoxLayout())
 {
 	setWindowTitle("ThorQ Login");
 
-	m_title = new QLabel("ThorQ", this);
+    m_title->setText("ThorQ");
 	m_title->setStyleSheet("font-size: 72px");
 
-	m_onlineStatus = new QLabel("● Offline", this);
+    m_onlineStatus->setText("● Offline");
 	m_onlineStatus->setStyleSheet("font-size: 16px; color: #FF0000");
 
-	m_headerLayout = new QHBoxLayout();
+    m_usernameInput->setText("Username");
+
+    m_loginButton->setText("Login");
+
 	m_headerLayout->addWidget(m_title);
-	m_headerLayout->addWidget(m_onlineStatus);
+    m_headerLayout->addWidget(m_onlineStatus);
 
-	m_loginButton = new QPushButton("Login", this);
-	m_usernameInput = new QLineEdit("Username", this);
-
-	//auto shadow = new QGraphicsDropShadowEffect();
-	//shadow->setXOffset(4);
-	//shadow->setYOffset(4);
-	//m_loginButton->setGraphicsEffect(shadow);
-
-	m_mainLayout = new QVBoxLayout(this);
 	m_mainLayout->addLayout(m_headerLayout);
 	m_mainLayout->addWidget(m_usernameInput);
 	m_mainLayout->addWidget(m_loginButton);
@@ -97,29 +97,40 @@ void LoginWidget::updateUiConnectionState()
 		m_onlineStatus->setText(QString("● Connecting..."));
 		break;
 	case THORQ_CONNECTION_STATE_CONNECTED:
-		m_onlineStatus->setStyleSheet("font-size: 16px; color: #FFA500");
+        m_onlineStatus->setStyleSheet("font-size: 16px; color: #00FF00");
 		m_onlineStatus->setText(QString("● Connected"));
-		m_usernameInput->show();
-		m_loginButton->show();
+        m_loginButton->show();
+        m_usernameInput->show();
 		return;
 	}
 
-	m_usernameInput->hide();
-	m_loginButton->hide();
+    m_loginButton->hide();
+    m_usernameInput->hide();
 }
 
 void LoginWidget::updateUiLoginState()
 {
 	switch (m_loginState) {
 	case THORQ_LOGIN_STATE_LOGGEDOUT:
-		break;
+        m_usernameInput->setEnabled(true);
+        m_loginButton->setEnabled(true);
+        setCursor(Qt::ArrowCursor);
+        setVisible(true);
+        return;
 	case THORQ_LOGIN_STATE_LOGGINGOUT:
+        setCursor(Qt::WaitCursor);
 		break;
 	case THORQ_LOGIN_STATE_LOGGINGIN:
+        setCursor(Qt::WaitCursor);
 		break;
 	case THORQ_LOGIN_STATE_LOGGEDIN:
+        setCursor(Qt::ArrowCursor);
+        setVisible(false);
 		break;
 	}
+
+    m_usernameInput->setEnabled(false);
+    m_loginButton->setEnabled(false);
 }
 
 void LoginWidget::updateUiPing()
