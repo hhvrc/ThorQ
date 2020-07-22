@@ -20,7 +20,7 @@ typedef struct __thorq_message
 {
 	std::uint8_t flags = 0;
 	std::uint8_t msg_id = 0; ///< THORQ_MSG_ID
-	std::uint8_t payload[THORQ_MAX_PAYLOAD_LEN]{0};
+	std::uint8_t payload[THORQ_MSG_MAX_PAYLOAD_LEN]{0};
 	std::uint8_t payload_iv[THORQ_CRYPTO_CIPHER_IV_LEN]{0};
 
 	bool operator == (const __thorq_message& other) const;
