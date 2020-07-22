@@ -60,8 +60,6 @@ add_library(${project} STATIC
 	${CMAKE_BINARY_DIR}/botan_all.h
 	${CMAKE_CURRENT_SOURCE_DIR}/enums.h
 	${CMAKE_CURRENT_SOURCE_DIR}/constants.h
-	${CMAKE_CURRENT_SOURCE_DIR}/message.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/message.h
 	${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
 
