@@ -49,7 +49,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 		return;
 	}
 
-	if (instance->ClientState() == ThorQ::ClientState::Disconnecting || instance->ClientState() == ThorQ::ClientState::Disconnected || packet->dataLength < sizeof(std::uint8_t))
+	if (instance->ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED || packet->dataLength < sizeof(std::uint8_t))
 		return;
 
 	std::uint8_t flag = static_cast<std::uint8_t>(*packet->data);
@@ -304,8 +304,6 @@ void handleNewConnection(ENetPeer* peer)
 {
 	// Dont worry, this is ok
 	Instance* instance = new Instance(peer);
-
-	instance->SetClientState(ThorQ::ClientState::Connecting);
 
 	printf("A new client connected from:\n\tIPV6: %s\n\tPORT: %u\n", enetaddr_to_str(&peer->address).c_str(), peer->address.port);
 	fflush(stdout);

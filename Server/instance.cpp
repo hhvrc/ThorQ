@@ -21,6 +21,9 @@ ThorQ::Instance::Instance(ENetPeer* peer)
 	, m_verificationData()
 {
 	peer->data = this;
+	enet_peer_ping_interval(peer, ENET_PEER_PING_INTERVAL);
+	enet_peer_get_rtt(peer);
+	peer->
 }
 
 ThorQ::Instance::~Instance()
@@ -166,124 +169,88 @@ bool ThorQ::Instance::HasCollar() const
 	return m_hasCollar;
 }
 
-int ThorQ::Instance::ClientState() const
+thorq_connection_state_t ThorQ::Instance::ConnectionState() const
 {
-	return m_clientState;
+	return m_connectionState;
 }
-
-void ThorQ::Instance::SetClientState(int state)
+void ThorQ::Instance::SetConnectionState(thorq_connection_state_t state)
 {
-	m_clientState = state;
+	if (state < m_connectionState)
+		SetCryptoState(THORQ_CRYPTO_STATE_NONE);
+	m_connectionState = state;
 }
-
-int ThorQ::Instance::CryptoState() const
+thorq_crypto_state_t ThorQ::Instance::CryptoState() const
 {
 	return m_cryptoState;
 }
-
-void ThorQ::Instance::SetCryptoState(int state)
+void ThorQ::Instance::SetCryptoState(thorq_crypto_state_t state)
 {
+	if (state < m_cryptoState)
+		SetLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
 	m_cryptoState = state;
 }
-
-void ThorQ::Instance::SendHeartbeat()
+thorq_login_state_t ThorQ::Instance::LoginState() const
 {
-	std::uint8_t flag = GetFlag(true);
-	enet_peer_send(m_peer, 1, enet_packet_create(&flag, sizeof(std::uint8_t), ENET_PACKET_FLAG_UNSEQUENCED));
+	return m_loginState;
 }
-
-void ThorQ::Instance::SendRaw(std::uint32_t meta)
+void ThorQ::Instance::SetLoginState(thorq_login_state_t state)
 {
-	SendRaw(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t));
+	if (state < m_loginState)
+		SetSessionState(THORQ_SESSION_STATE_NONE);
+	m_loginState = state;
 }
-void ThorQ::Instance::SendRaw(std::uint32_t meta, const std::string &message, bool unreliable)
+thorq_session_state_t ThorQ::Instance::SessionState() const
 {
-	std::size_t len = sizeof(std::uint32_t) + message.length();
-	std::uint8_t* data = new std::uint8_t[len];
-	memcpy(data, &meta, sizeof(std::uint32_t));
-	memcpy(data + sizeof(std::uint32_t), message.data(), message.length());
-	SendRaw(data, len, unreliable);
+	return m_sessionState;
 }
-void ThorQ::Instance::SendRaw(const std::vector<std::uint8_t>& data, bool unreliable)
+void ThorQ::Instance::SetSessionState(thorq_session_state_t state)
 {
-	std::size_t size = data.size() + 1;
-	std::uint8_t* dat = new std::uint8_t[size];
-	dat[0] = GetFlag();
-	memcpy(dat + 1, data.data(), data.size());
-
-	enet_peer_send(m_peer, unreliable ? 1 : 0, enet_packet_create(dat, size, unreliable ? ENET_PACKET_FLAG_UNSEQUENCED : ENET_PACKET_FLAG_RELIABLE));
-}
-void ThorQ::Instance::SendRaw(const std::uint8_t* data, std::size_t len, bool unreliable) { SendRaw(std::vector<std::uint8_t>(data, data + len), unreliable); }
-
-void ThorQ::Instance::SendEncrypted(uint32_t meta)
-{
-	SendEncrypted(reinterpret_cast<std::uint8_t*>(&meta), sizeof(std::uint32_t));
-}
-void ThorQ::Instance::SendEncrypted(std::uint32_t meta, const std::string &message, bool unreliable)
-{
-	std::size_t len = sizeof(std::uint32_t) + message.length();
-	std::uint8_t* data = new std::uint8_t[len];
-	memcpy(data, &meta, sizeof(std::uint32_t));
-	memcpy(data + sizeof(std::uint32_t), message.data(), message.length());
-	SendEncrypted(data, len, unreliable);
-}
-void ThorQ::Instance::SendEncrypted(const std::vector<std::uint8_t>& data, bool unreliable) { SendEncrypted(data.data(), data.size(), unreliable); }
-void ThorQ::Instance::SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable)
-{
-	std::vector<std::uint8_t> encrypted = m_crypto->Encrypt(data, len);
-
-	encrypted.insert(encrypted.begin(), GetFlag());
-
-	enet_peer_send(m_peer, unreliable ? 1 : 0, enet_packet_create(encrypted.data(), encrypted.size(), unreliable ? ENET_PACKET_FLAG_UNSEQUENCED : ENET_PACKET_FLAG_RELIABLE));
+	m_sessionState = state;
 }
 
 void ThorQ::Instance::CryptoInit()
 {
 	GetCrypto()->Reset();
-	SetClientState(ThorQ::ClientState::Connecting);
-	SetCryptoState(ThorQ::CryptoState::Establishing);
+	SetCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
 	SendRaw(GetCrypto()->PublicKey());
 }
 
-bool ThorQ::Instance::CryptoEstablish(const std::uint8_t* data, std::size_t size)
+bool ThorQ::Instance::CryptoEstablish(const std::vector<std::uint8_t>& data)
 {
-	if (CryptoState() == ThorQ::CryptoState::Establishing && size != 0)
+	if (CryptoState() == THORQ_CRYPTO_STATE_ESTABLISHING && !data.empty())
 	{
-		if (GetCrypto()->Agree(data, size))
+		if (GetCrypto()->Agree(data))
 		{
-			SetCryptoState(ThorQ::CryptoState::Verifying);
-			Crypto::RandomizeBytes(m_verificationData, MESSAGE_PAYLOAD_MAX);
-			SendEncrypted(m_verificationData, MESSAGE_PAYLOAD_MAX);
+			SetCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
+			Crypto::RandomizeBytes(m_verificationData, MESSAGE_PAYLOAD_SIZE);
+			SendEncrypted(m_verificationData, MESSAGE_PAYLOAD_SIZE);
 			return true;
 		}
 	}
 
 	GetCrypto()->Reset();
-	SetCryptoState(ThorQ::CryptoState::None);
+	SetCryptoState(THORQ_CRYPTO_STATE_NONE);
 	SendRaw(ThorQ::MessageContentEnums::ACKNOWLEDGE_Error);
 
 	return false;
 }
 
 
-bool ThorQ::Instance::CryptoVerify(const std::uint8_t* data, std::size_t size)
+bool ThorQ::Instance::CryptoVerify(const std::vector<std::uint8_t>& data)
 {
-	if (CryptoState() == ThorQ::CryptoState::Verifying && size == MESSAGE_PAYLOAD_MAX)
+	if (CryptoState() == THORQ_CRYPTO_STATE_VERIFYING && size == MESSAGE_PAYLOAD_MAX)
 	{
 		if (memcmp(m_verificationData, data, MESSAGE_PAYLOAD_MAX) == 0)
 		{
-			SetCryptoState(ThorQ::CryptoState::Ok);
+			SetCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
 			SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_OK);
-
-			if (ClientState() == ThorQ::ClientState::Connecting)
-				SetClientState(ThorQ::ClientState::Connected);
 
 			return true;
 		}
 	}
 
 	GetCrypto()->Reset();
-	SetCryptoState(ThorQ::CryptoState::None);
+	SetCryptoState(THORQ_CRYPTO_STATE_NONE);
 	SendRaw(ThorQ::MessageContentEnums::ACKNOWLEDGE_Error);
 
 	return false;
@@ -293,24 +260,4 @@ bool ThorQ::Instance::CryptoVerify(const std::uint8_t* data, std::size_t size)
 ThorQ::Crypto* ThorQ::Instance::GetCrypto()
 {
 	return m_crypto;
-}
-
-std::uint8_t ThorQ::Instance::GetFlag(bool withHeartbeat)
-{
-	if (withHeartbeat)
-		return ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT;
-
-	switch (CryptoState()) {
-	case ThorQ::CryptoState::Establishing:
-		return ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH;
-		break;
-	case ThorQ::CryptoState::Verifying:
-		return ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY;
-		break;
-	case ThorQ::CryptoState::Ok:
-		return ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK;
-		break;
-	}
-
-	return 0;
 }

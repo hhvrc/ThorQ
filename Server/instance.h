@@ -42,9 +42,12 @@ namespace ThorQ {
 
 		thorq_connection_state_t ConnectionState() const;
 		void SetConnectionState(thorq_connection_state_t state);
-
-		int CryptoState() const;
-		void SetCryptoState(int state);
+		thorq_crypto_state_t CryptoState() const;
+		void SetCryptoState(thorq_crypto_state_t state);
+		thorq_login_state_t LoginState() const;
+		void SetLoginState(thorq_login_state_t state);
+		thorq_session_state_t SessionState() const;
+		void SetSessionState(thorq_session_state_t state);
 
 		void SendHeartbeat();
 		void SendRaw(std::uint32_t meta);
@@ -57,8 +60,8 @@ namespace ThorQ {
 		void SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable = false);
 
 		void CryptoInit();
-		bool CryptoEstablish(const std::uint8_t* data, std::size_t size);
-		bool CryptoVerify(const std::uint8_t* data, std::size_t size);
+		bool CryptoEstablish(const std::vector<std::uint8_t>& data);
+		bool CryptoVerify(const std::vector<std::uint8_t>& data);
 
 		Crypto* GetCrypto();
 	private:
