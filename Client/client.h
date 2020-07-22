@@ -145,10 +145,10 @@ private:
 private:
 	ThorQ::Crypto* m_crypto;
 
-	std::atomic_int m_connectionState;
-	std::atomic_int m_cryptoState;
-	std::atomic_int m_loginState;
-    std::atomic_int m_sessionState;
+	std::atomic<thorq_connection_state_t> m_connectionState;
+	std::atomic<thorq_crypto_state_t> m_cryptoState;
+	std::atomic<thorq_login_state_t> m_loginState;
+	std::atomic<thorq_session_state_t> m_sessionState;
     std::atomic_int m_ping;
 
     std::mutex l_username;
@@ -163,15 +163,15 @@ private:
     std::mutex l_requestingPartner;
     std::string m_requestingPartner;
 
-    std::atomic_uint8_t m_actionFlags;
-    std::atomic_uint8_t m_collarFlags;
-    std::atomic_int m_shockValue;
-    std::atomic_int m_vibrateValue;
-    std::atomic_int m_beepValue;
-    std::atomic_int m_autoSensitivity;
-    std::atomic_int m_autoShock;
-    std::atomic_int m_autoVibrate;
-    std::atomic_int m_autoBeep;
+	std::atomic_uint m_actionFlags;
+	std::atomic_uint m_collarFlags;
+	std::atomic_uint m_shockValue;
+	std::atomic_uint m_vibrateValue;
+	std::atomic_uint m_beepValue;
+	std::atomic_uint m_autoSensitivity;
+	std::atomic_uint m_autoShock;
+	std::atomic_uint m_autoVibrate;
+	std::atomic_uint m_autoBeep;
 
 	QThread* m_thread;
 

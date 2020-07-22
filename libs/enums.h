@@ -105,8 +105,7 @@ typedef enum {
 } THORQ_COLLAR_STATE; ///< Collar flag to describe current user input
 
 typedef enum {
-    ACTION_Connect        = 1 << 0,
-    ACTION_Disconnect     = 1 << 1,
+	ACTION_WantConnected  = 1 << 0, ///< Flip state, client will continue to try to connect as long as this is set
     ACTION_Login          = 1 << 2,
     ACTION_Logout         = 1 << 3,
     ACTION_ListUsers      = 1 << 4,
@@ -152,6 +151,7 @@ typedef enum
 {
     THORQ_SESSION_STATE_NONE,
     THORQ_SESSION_STATE_LEAVING,
+	THORQ_SESSION_STATE_DECIDING,
     THORQ_SESSION_STATE_JOINING,
     THORQ_SESSION_STATE_ACTIVE
 } thorq_session_state_t; ///< State machine for login and session

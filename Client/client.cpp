@@ -103,83 +103,94 @@ int Client::Ping() const
     return m_ping.load();
 }
 
-int Client::ConnectionState() const
+thorq_connection_state_t Client::ConnectionState() const
 {
 	return m_connectionState.load();
 }
 
-int Client::CryptoState() const
+thorq_crypto_state_t Client::CryptoState() const
 {
     return m_cryptoState.load();
 }
 
-int Client::LoginState() const
+thorq_login_state_t Client::LoginState() const
 {
 	return m_loginState.load();
 }
 
-int Client::SessionState() const
+thorq_session_state_t Client::SessionState() const
 {
     return m_sessionState.load();
 }
 
 bool Client::Connect(const char* address, int port)
 {
-    SCOPELOCK(l_address);
-    if (enet_address_set_host(m_address, address) < 0)
-        return false;
+	if (ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED)
+		return false;
 
-    m_address->port = port;
+	{
+		SCOPELOCK(l_address);
 
-    qDebug() << "Signalizing connect!";
-    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_Connect);
-    qDebug() << "Done.";
+		if (enet_address_set_host(m_address, address) < 0)
+			return false;
+
+		m_address->port = port;
+	}
+
+	m_actionFlags.fetch_or(ACTION_Connect);
 
     return true;
 }
 
 void Client::Disconnect()
 {
-    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_Disconnect);
+	if (ConnectionState() != THORQ_CONNECTION_STATE_DISCONNECTED)
+		return;
+
+	m_actionFlags.fetch_or(ACTION_Disconnect);
 }
 
 void Client::Login(const QString &username)
 {
-    SCOPELOCK(l_username);
-
 	if (LoginState() != THORQ_LOGIN_STATE_LOGGEDOUT)
         return;
 
-    m_username = username.toStdString();
+	{
+		SCOPELOCK(l_username);
+		m_username = username.toStdString();
+	}
 
-    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_Login);
+	m_actionFlags.fetch_or(ACTION_Login);
 }
 
 void Client::Logout()
 {
-    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_Logout);
+	if (LoginState() != THORQ_LOGIN_STATE_LOGGEDIN)
+		return;
+
+	m_actionFlags.fetch_or(ACTION_Logout);
 }
 
 void Client::RequestSession(const QString &username)
 {
     SCOPELOCK(l_requestedPartner);
     m_requestedPartner = username.toStdString();
-    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_SessionRequest);
+	m_actionFlags.fetch_or(ACTION_SessionRequest);
 }
 
 void Client::AcceptRequest()
 {
-    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_SessionAccept);
+	m_actionFlags.fetch_or(ACTION_SessionAccept);
 }
 
 void Client::DenyRequest()
 {
-    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_SessionDeny);
+	m_actionFlags.fetch_or(ACTION_SessionDeny);
 }
 
 void Client::LeaveSession()
 {
-    m_actionFlags.fetch_or(ThorQ::ClientActionFlag::ACTION_SessionLeave);
+	m_actionFlags.fetch_or(ACTION_SessionLeave);
 }
 
 void Client::SetShock(bool enable, int strength)
@@ -192,7 +203,7 @@ void Client::SetShock(bool enable, int strength)
     }
     else
     {
-		m_collarFlags.fetch_and(std::uint8_t(~THORQ_COLLAR_STATE_SHOCK));
+		m_collarFlags.fetch_and(~THORQ_COLLAR_STATE_SHOCK);
     }
 }
 void Client::SetVibrate(bool enable, int strength)
@@ -205,7 +216,7 @@ void Client::SetVibrate(bool enable, int strength)
     }
     else
     {
-		m_collarFlags.fetch_and(std::uint8_t(~THORQ_COLLAR_STATE_VIBRATE));
+		m_collarFlags.fetch_and(~THORQ_COLLAR_STATE_VIBRATE);
     }
 }
 void Client::SetBeep(bool enable, int count)
@@ -218,7 +229,7 @@ void Client::SetBeep(bool enable, int count)
     }
     else
     {
-		m_collarFlags.fetch_and(std::uint8_t(~THORQ_COLLAR_STATE_BEEP));
+		m_collarFlags.fetch_and(~THORQ_COLLAR_STATE_BEEP);
     }
 }
 void Client::SetAuto(bool enable, int sensitivity, int shockStrength, int vibrateStrength, int beepCount)
@@ -233,7 +244,7 @@ void Client::SetAuto(bool enable, int sensitivity, int shockStrength, int vibrat
     }
     else
     {
-		m_collarFlags.fetch_and(std::uint8_t(~THORQ_COLLAR_STATE_AUTO));
+		m_collarFlags.fetch_and(~THORQ_COLLAR_STATE_AUTO);
     }
 }
 
@@ -277,46 +288,24 @@ void Client::Run()
         {
 			if (SessionState() == THORQ_SESSION_STATE_ACTIVE)
             {
-                if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Shock) != 0)
-                {
-                    SendEncrypted(ThorQ::MessageContentEnums::COMMAND_Shock, true);
-                }
-
-                if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Vibrate) != 0)
-                {
-                    SendEncrypted(ThorQ::MessageContentEnums::COMMAND_Vibrate, true);
-                }
-
-                if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Beep) != 0)
-                {
-                    SendEncrypted(ThorQ::MessageContentEnums::COMMAND_Beep, true);
-                }
-
-                if ((m_collarFlags.load() & ThorQ::CollarFlags::COLLAR_Auto) != 0)
-                {
-                    SendEncrypted(ThorQ::MessageContentEnums::COMMAND_Auto, false);
-                }
-
-                if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionLeave) != 0)
-                {
-                    SendEncrypted(ThorQ::MessageContentEnums::SESSION_Leave);
-                }
+				SendEncrypted(m_collarFlags.load(), true);
             }
-            else if (!m_requestingPartner.empty())
+			else if (SessionState() == THORQ_SESSION_STATE_DECIDING)
             {
-                if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionAccept) != 0)
+				if ((m_actionFlags.load() & ACTION_SessionAccept) != 0)
                 {
-                    SendEncrypted(ThorQ::MessageContentEnums::SESSION_Accept, m_requestingPartner);
+					SendEncrypted(THORQ_CMD_SESSION_ACCEPT, m_requestingPartner);
                     m_requestingPartner.clear();
                 }
-                else if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_SessionDeny) != 0)
+				else if ((m_actionFlags.load() & ACTION_SessionDeny) != 0)
                 {
-                    SendEncrypted(ThorQ::MessageContentEnums::SESSION_Deny, m_requestingPartner);
+					SendEncrypted(THORQ_CMD_SESSION_DENY, m_requestingPartner);
                     m_requestingPartner.clear();
                 }
             }
-            else if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_Disconnect) != 0)
+			else if ((m_actionFlags.load() & ACTION_WantConnected) == 0)
             {
+				qDebug() << "Disconnecting!";
 				SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTING);
                 enet_peer_disconnect(m_peer, 0);
             }
@@ -333,12 +322,11 @@ void Client::Run()
         }
 		else if (ConnectionState() == THORQ_CONNECTION_STATE_DISCONNECTED)
         {
-            if ((m_actionFlags.load() & ThorQ::ClientActionFlag::ACTION_Connect) != 0)
+			if ((m_actionFlags.load() & ACTION_WantConnected) != 0)
             {
-                qDebug() << "Connecting!";
-                m_actionFlags.fetch_and(std::uint8_t(~ThorQ::ClientActionFlag::ACTION_Connect));
+				qDebug() << "Connecting!";
                 m_peer = enet_host_connect(m_host, m_address, 4, 0);
-				SetConnectionState(ThorQ::ConnectionState::Connecting);
+				SetConnectionState(THORQ_CONNECTION_STATE_CONNECTING);
             }
 		}
     }
@@ -359,7 +347,7 @@ void Client::SetPing(int ping)
 }
 
 // Cascading setters
-void Client::SetConnectionState(int newState)
+void Client::SetConnectionState(thorq_connection_state_t newState)
 {
 	int oldState = m_connectionState.exchange(newState);
 
@@ -371,7 +359,7 @@ void Client::SetConnectionState(int newState)
 		emit ConnectionStateChanged(newState);
     }
 }
-void Client::SetCryptoState(int newState)
+void Client::SetCryptoState(thorq_crypto_state_t newState)
 {
 	int oldState = m_cryptoState.exchange(newState);
 
@@ -383,7 +371,7 @@ void Client::SetCryptoState(int newState)
 		emit CryptoStateChanged(newState);
     }
 }
-void Client::SetLoginState(int newState)
+void Client::SetLoginState(thorq_login_state_t newState)
 {
 	int oldState = m_loginState.exchange(newState);
 
@@ -395,7 +383,7 @@ void Client::SetLoginState(int newState)
 		emit LoginStateChanged(newState);
 	}
 }
-void Client::SetSessionState(int newState)
+void Client::SetSessionState(thorq_session_state_t newState)
 {
 	int oldState = m_sessionState.exchange(newState);
 
@@ -421,7 +409,7 @@ void Client::HandleMessage(ENetPacket* packet)
 {
     int time = m_pingTimer->elapsed();
 
-	if (ConnectionState() == ThorQ::ConnectionState::Disconnecting || ConnectionState() == ThorQ::ConnectionState::Disconnected || packet->dataLength < sizeof(std::uint8_t))
+	if (ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED || packet->dataLength < sizeof(std::uint8_t))
         return;
 
     std::uint8_t header = static_cast<std::uint8_t>(*packet->data);

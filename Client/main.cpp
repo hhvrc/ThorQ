@@ -42,7 +42,8 @@ int main(int argc, char** argv)
     e.show();
 
     Client* cli = Client::NewClient();
-    QObject::connect(cli, &Client::ClientStateChanged, &e, &LoginWidget::SetState);
+	QObject::connect(cli, &Client::ConnectionStateChanged, &e, &LoginWidget::SetConnectionState);
+	QObject::connect(cli, &Client::LoginStateChanged, &e, &LoginWidget::SetLoginState);
     QObject::connect(cli, &Client::PingChanged, &e, &LoginWidget::SetConnectionPing);
 
     QObject::connect(&e, &LoginWidget::LoginRequest, [&](const QString& username)
