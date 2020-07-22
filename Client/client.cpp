@@ -300,7 +300,8 @@ void Client::Run()
 					m_requestingPartner.clear();
 				}
 			}
-			else if ((actions & ACTION_ReConnect) != 0 || (actions & ACTION_WantConnected) == 0)
+
+			if ((actions & ACTION_ReConnect) != 0 || (actions & ACTION_WantConnected) == 0)
 			{
 				if ((actions & ACTION_WantConnected) == 0)
 					qDebug() << "Disconnecting!";
@@ -310,8 +311,7 @@ void Client::Run()
 				SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTING);
 				enet_peer_disconnect(m_peer, 0);
 			}
-
-			if (m_pingTimer->elapsed() > 500)
+			else if (m_pingTimer->elapsed() > 500)
 			{
 				if (m_awaitingPing)
 					qDebug() << "ping timed out!";
