@@ -57,7 +57,7 @@ namespace ThorQ {
 
 		Crypto* GetCrypto();
 
-		void SendMessage(const thorq_message_t& msg, bool reliable = true);
+        void SendMessage(const thorq_msg_t& msg, bool reliable = true);
 	private:
 		Crypto* m_crypto;
 

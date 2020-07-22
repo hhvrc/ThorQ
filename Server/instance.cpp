@@ -20,10 +20,7 @@ ThorQ::Instance::Instance(ENetPeer* peer)
 	, m_requestedPartner(nullptr)
 	, m_verificationData()
 {
-	peer->data = this;
-	enet_peer_ping_interval(peer, ENET_PEER_PING_INTERVAL);
-	enet_peer_get_rtt(peer);
-	peer->
+    peer->data = this;
 }
 
 ThorQ::Instance::~Instance()
@@ -65,7 +62,7 @@ void ThorQ::Instance::RequestOn(Instance* target)
 		return;
 
 	if (m_partner != nullptr) {
-		SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, "You are already in another session");
+        SendEncrypted(ACKNOWLEDGE_Denied, "You are already in another session");
 		return;
 	}
 

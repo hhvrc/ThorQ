@@ -13,12 +13,12 @@ typedef enum {
 } thorq_msg_flag_t; ///< Message entry flags to describe the state of a message
 
 typedef enum {
-	THORQ_MSG_TYPE_VERSION,   ///< thorq_version_t
-	THORQ_MSG_TYPE_HEARTBEAT, ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
-	THORQ_MSG_TYPE_CRYPTO,
-	THORQ_MSG_TYPE_COLLAR,
-	THORQ_MSG_TYPE_ADMIN
-} thorq_msg_type_t; ///< Message entry flags to describe the state of a message
+    THORQ_MSG_ID_VERSION,   ///< thorq_version_t
+    THORQ_MSG_ID_HEARTBEAT, ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
+    THORQ_MSG_ID_CRYPTO,
+    THORQ_MSG_ID_COLLAR,
+    THORQ_MSG_ID_ADMIN
+} thorq_msg_id_t; ///< Message entry flags to describe the state of a message
 
 typedef enum {
 	THORQ_CMD_CRYPT_REQUEST,
@@ -38,7 +38,7 @@ typedef enum {
 	THORQ_CMD_GET_LIST_USERS,
 	THORQ_CMD_GET_VERSION_SERVER,
 	THORQ_CMD_GET_VERSION_CLIENT,
-	THORQ_CMD_GET_VERSION_MESSAGE,
+    THORQ_CMD_GET_VERSION_LINK,
 } THORQ_CMD;
 
 typedef enum {

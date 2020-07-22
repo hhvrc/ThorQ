@@ -22,22 +22,29 @@ using namespace ThorQ;
 ENetHost* server;
 InstanceMap registeredInstances{};
 
-void BroadcastMessage(const thorq_announcement_t& message, bool reliable = true)
+void sendMessage(ENetPeer* peer, const thorq_msg_t& message, bool reliable = true)
 {
+    std::vector<std::uint8_t> data;
+    thorq_msg_encode(&message, &data);
 
-
-	enet_host_broadcast(server, 0, enet_packet_create());
+    enet_peer_send(peer, reliable ? 0 : 1, enet_packet_create(data.data(), data.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
 }
-void BroadcastMessage(const thorq_message_t& message, bool reliable = true)
+void broadcastMessage(const thorq_msg_t& message, bool reliable = true)
 {
-	std::vector<Instance*> instances = registeredInstances.GetInstances();
+    if (thorq_msg_is_encrypted(&message))
+        return;
 
-	for (Instance* instance : instances)
-		SendMsg(instance->Peer(), message, instance->GetCrypto(), reliable);
+    std::vector<std::uint8_t> data;
+    thorq_msg_encode(&message, &data);
+
+    enet_host_broadcast(server, reliable ? 0 : 1, enet_packet_create(data.data(), data.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
 }
 
 void handleMessage(ENetPeer* peer, ENetPacket* packet)
 {
+    printf("Got %u bytes\n", packet->dataLength);
+    fflush(stdout);
+
 	Instance* instance = reinterpret_cast<Instance*>(peer->data);
 
 	// Idk why this whould happen
@@ -48,16 +55,23 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 		return;
 	}
 
-	if (instance->ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED || packet->dataLength < sizeof(std::uint8_t))
+    if (instance->ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED || packet->dataLength < THORQ_MSG_SIZE_MIN)
 		return;
 
-	Message msg = Message::Deserialize(packet->data, packet->dataLength);
+    thorq_msg_t message;
 
-	printf("Got %lu bytes\n", msg.payloadSize());
+    if (!thorq_msg_decode(packet->data, packet->dataLength, &message))
+    {
+        // TODO: stuff
+        return;
+    }
+
+    printf("Payload is %u bytes\n", message.payload.size());
 	fflush(stdout);
 
-	if (msg.IsHeartbeat())
+    if (thorq_msg_get_msg_id(&message) == THORQ_MSG_ID_HEARTBEAT)
 	{
+        sendMessage(instance->Peer(), )
 		Message::NewHeartbeat().Send(instance->Peer(), false);
 		printf("Heartbeat\n");
 		fflush(stdout);
@@ -114,10 +128,16 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	}
 	}
 
+    if (!thorq_msg_decrypt(&message, instance->GetCrypto()))
+    {
+        // TODO: stuff
+        return;
+    }
+
 	if (!instance->GetCrypto()->ready())
         return;
 
-	std::vector<std::uint8_t> vec = instance->GetCrypto()->Decrypt(data, size);
+	std::vector<std::uint8_t> vec = instance->GetCrypto()->decrypt(data, size);
 
 	std::uint8_t meta = static_cast<std::uint8_t>(*vec.data());
 
@@ -301,7 +321,7 @@ std::string enetaddr_to_str(const ENetAddress* addr)
 void handleNewConnection(ENetPeer* peer)
 {
 	// Dont worry, this is ok
-	Instance* instance = new Instance(peer);
+    (void)new Instance(peer);
 
 	printf("A new client connected from:\n\tIPV6: %s\n\tPORT: %u\n", enetaddr_to_str(&peer->address).c_str(), peer->address.port);
 	fflush(stdout);
