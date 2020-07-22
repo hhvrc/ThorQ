@@ -1,16 +1,17 @@
 #include <iostream>
+#include <exception>
 
 #define ENET_IMPLEMENTATION
 #include <enet.h>
 
 #include <enums.h>
 #include <crypto.h>
+#include <thorq_message_announcement.h>
 
 #include "peermap.h"
 #include "instance.h"
 
-#include <botan_all.h>
-
+#define PARSE_PORT false
 #define SERVER_PORT 12345
 #define SERVER_MAX_CONNECTIONS 1024
 
@@ -18,23 +19,21 @@
 
 using namespace ThorQ;
 
+ENetHost* server;
 InstanceMap registeredInstances{};
 
-std::string ExtractString(const std::uint8_t* data, std::size_t dataSize, std::size_t startOffset = 0, std::size_t endOffset = 0)
+void BroadcastMessage(const thorq_announcement_t& message, bool reliable = true)
 {
-	return std::string(data + startOffset, data + dataSize - endOffset);
+
+
+	enet_host_broadcast(server, 0, enet_packet_create());
 }
-
-void BroadcastMessage(std::uint32_t meta, const std::string& message)
+void BroadcastMessage(const thorq_message_t& message, bool reliable = true)
 {
-	std::size_t len = sizeof(std::uint32_t) + message.length();
-	std::uint8_t* data = new std::uint8_t[len];
-	memcpy(data, &meta, sizeof(std::uint32_t));
-	memcpy(data + sizeof(std::uint32_t), message.data(), message.length());
-
 	std::vector<Instance*> instances = registeredInstances.GetInstances();
+
 	for (Instance* instance : instances)
-		instance->SendEncrypted(data, len);
+		SendMsg(instance->Peer(), message, instance->GetCrypto(), reliable);
 }
 
 void handleMessage(ENetPeer* peer, ENetPacket* packet)
@@ -52,47 +51,46 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	if (instance->ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED || packet->dataLength < sizeof(std::uint8_t))
 		return;
 
-	std::uint8_t flag = static_cast<std::uint8_t>(*packet->data);
-	std::uint8_t* data = packet->data + sizeof(std::uint8_t);
-	std::size_t size = packet->dataLength - sizeof(std::uint8_t);
+	Message msg = Message::Deserialize(packet->data, packet->dataLength);
 
-	printf("Got %lu bytes\n", size);
+	printf("Got %lu bytes\n", msg.payloadSize());
 	fflush(stdout);
 
-	switch (flag) {
-	case ThorQ::MessageHeaderEnums::HEADER_HEARTBEAT:
+	if (msg.IsHeartbeat())
 	{
-		instance->SendHeartbeat();
+		Message::NewHeartbeat().Send(instance->Peer(), false);
 		printf("Heartbeat\n");
 		fflush(stdout);
 		return;
 	}
-	case ThorQ::MessageHeaderEnums::HEADER_CRYPT_REQUEST:
+
+	switch (msg.Meta()) {
+	case ThorQ::MessageContentEnums::CRYPT_REQUEST:
 	{
 		instance->CryptoInit();
 		printf("Got request\n");
 		fflush(stdout);
 		return;
 	}
-	case ThorQ::MessageHeaderEnums::HEADER_CRYPT_ESTABLISH:
+	case ThorQ::MessageContentEnums::CRYPT_ESTABLISH:
 	{
 		printf("Got establish\n");
 		fflush(stdout);
-		if (instance->CryptoEstablish(data, size))
+		if (instance->CryptoEstablish(msg.payload()))
 		{
 			printf("Establish complete\n");
 			fflush(stdout);
 		}
 		return;
 	}
-	case ThorQ::MessageHeaderEnums::HEADER_CRYPT_VERIFY:
+	case ThorQ::MessageContentEnums::CRYPT_VERIFY:
 	{
-		if (size != 0 && instance->GetCrypto()->IsCryptoReady())
+		if (msg.payloadSize() != 0 && msg.IsEncrypted() && instance->GetCrypto()->ready())
 		{
+			msg.Decrypt(instance->GetCrypto());
 			printf("Got verify\n");
 			fflush(stdout);
-			std::vector<std::uint8_t> vec = instance->GetCrypto()->Decrypt(data, size);
-			if (instance->CryptoVerify(vec.data(), vec.size()))
+			if (instance->CryptoVerify(msg.payload()))
 			{
 				printf("HANDSHAKE COMPLETE\n");
 				fflush(stdout);
@@ -100,7 +98,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 		}
 		return;
 	}
-	case ThorQ::MessageHeaderEnums::HEADER_CRYPT_OK:
+	case ThorQ::MessageContentEnums::CRYPT_OK:
 	{
 		if (data == nullptr || size == 0)
 			return;
@@ -116,8 +114,8 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	}
 	}
 
-	if (!instance->GetCrypto()->IsCryptoReady())
-		return;
+	if (!instance->GetCrypto()->ready())
+        return;
 
 	std::vector<std::uint8_t> vec = instance->GetCrypto()->Decrypt(data, size);
 
@@ -377,12 +375,52 @@ void handleTimeout(ENetPeer* peer)
 	peer->data = nullptr;
 }
 
-int main()
+int main(int argc, char** argv)
 {
+	ENetAddress address;
+	address.host = ENET_HOST_ANY;
+#if PARSE_PORT
+	if (argc < 2)
+	{
+		printf("Please provide port!\n");
+		fflush(stdout);
+		return EXIT_FAILURE;
+	}
+	else if (argc > 3)
+	{
+		printf("Too many arguments!\n");
+		fflush(stdout);
+		return EXIT_FAILURE;
+	}
+
+	try {
+		int i = std::stoi(argv[1]);
+		if (i < 1 || i > UINT16_MAX)
+		{
+			fprintf(stderr, "Port must be in the range of 1-65535\n");
+			return EXIT_FAILURE;
+		}
+		address.port = i;
+	} catch (std::invalid_argument ex) {
+		fprintf(stderr, "Port must be a number\n");
+		return EXIT_FAILURE;
+	} catch (std::out_of_range) {
+		fprintf(stderr, "Port must be in the range of 1-65535\n");
+		return EXIT_FAILURE;
+	} catch (std::exception ex) {
+		fprintf(stderr, "Exception occured while parsing argument:\n\t%s\n", ex.what());
+		return EXIT_FAILURE;
+	} catch (int i) {
+		fprintf(stderr, "Unknown exception occured while parsing argument\n");
+		return EXIT_FAILURE;
+	}
+#else
+	address.port = SERVER_PORT;
+#endif
 	if (enet_initialize() < 0)
 	{
 		printf("Failed to initialize ENet\n");
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 	atexit(enet_deinitialize);
 
@@ -390,15 +428,12 @@ int main()
 	fflush(stdout);
 
 	// Setup server
-	ENetAddress address;
-	address.host = ENET_HOST_ANY;
-	address.port = SERVER_PORT;
-	ENetHost* server = enet_host_create(&address, SERVER_MAX_CONNECTIONS, 2, 0, 0); // two channels: communication(tcp), and commands(udp)
+	server = enet_host_create(&address, SERVER_MAX_CONNECTIONS, 2, 0, 0); // two channels: communication(tcp), and commands(udp)
 
 	if (server == nullptr)
 	{
 		printf("An error occurred while trying to create an ENet server host\n");
-		exit(EXIT_FAILURE);
+		return EXIT_FAILURE;
 	}
 
 	ENetEvent event;
@@ -428,5 +463,5 @@ int main()
 
 	enet_host_destroy(server);
 
-	exit(EXIT_SUCCESS);
+	return EXIT_SUCCESS;
 }

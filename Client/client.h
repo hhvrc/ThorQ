@@ -10,8 +10,8 @@
 class QThread;
 class QElapsedTimer;
 namespace ThorQ { class Crypto; }
-typedef struct _ENetPeer	ENetPeer;
-typedef struct _ENetHost	ENetHost;
+typedef struct _ENetPeer    ENetPeer;
+typedef struct _ENetHost    ENetHost;
 typedef struct _ENetPacket  ENetPacket;
 typedef struct _ENetAddress ENetAddress;
 
@@ -131,18 +131,6 @@ private slots:
 	void HandleMessage(ENetPacket* packet);
 
 	void requestEncryptionHandshake();
-	void SendHeartbeat();
-
-	void SendRaw(std::uint32_t meta, bool unreliable = false);
-	void SendRaw(std::uint32_t meta, const std::string& message, bool unreliable = false);
-	void SendRaw(const std::vector<std::uint8_t>& data, bool unreliable = false);
-	void SendRaw(const std::uint8_t* data, std::size_t len, bool unreliable = false);
-	void SendEncrypted(std::uint32_t meta, bool unreliable = false);
-	void SendEncrypted(std::uint32_t meta, const std::string& message, bool unreliable = false);
-	void SendEncrypted(const std::vector<std::uint8_t>& data, bool unreliable = false);
-	void SendEncrypted(const std::uint8_t* data, std::size_t len, bool unreliable = false);
-private:
-	std::uint8_t GetFlag();
 private:
 	ThorQ::Crypto* m_crypto;
 
