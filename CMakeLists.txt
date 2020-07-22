@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
 
+set(project ThorQ)
 project(
-	ThorQ
+	${project}
 	DESCRIPTION "Software to control 3rd party collars"
 )
 
@@ -82,8 +83,4 @@ include_directories(${LIB_INC_DIRS})
 add_subdirectory(Client)
 add_subdirectory(Server)
 
-if(${CMAKE_BUILD_TYPE} MATCHES "Release")
-	message("Building for ${OS_STR}, with full optimization (Release build)")
-else()
-	message("Building for ${OS_STR}, with no optimization (Debug build)")
-endif()
+message("Building ${project} in ${CMAKE_BUILD_TYPE} mode for ${OS_STR}")
