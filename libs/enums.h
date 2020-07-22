@@ -9,7 +9,7 @@ typedef enum {
     THORQ_MSG_FLAG_RESERVED_5 = 1 << 4,
     THORQ_MSG_FLAG_RESERVED_6 = 1 << 5,
     THORQ_MSG_FLAG_RESERVED_7 = 1 << 6,
-    THORQ_MSG_FLAG_DELETE_DIS = 1 << 7, ///< Deletes all online clients from their computers
+	THORQ_MSG_FLAG_RESERVED_8 = 1 << 7
 } thorq_msg_flag_t; ///< Message entry flags to describe the state of a message
 
 typedef enum {
@@ -21,21 +21,53 @@ typedef enum {
 } thorq_msg_type_t; ///< Message entry flags to describe the state of a message
 
 typedef enum {
-    CONTENT_ENCRYPTED, ///< The data youre trying to read is encrypted, decrypt it
+	THORQ_CMD_CRYPT_REQUEST,
+	THORQ_CMD_CRYPT_ESTABLISH,
+	THORQ_CMD_CRYPT_VERIFY,
 
-    CRYPT_REQUEST,
-    CRYPT_ESTABLISH,
-    CRYPT_VERIFY,
-    CRYPT_OK,
+	THORQ_CMD_DO_LOGIN,
+	THORQ_CMD_DO_LOGOUT,
 
-    USER_Login,
-    USER_Logout,
-    USER_List,
+	THORQ_CMD_SESSION_REQUEST,
+	THORQ_CMD_SESSION_ACCEPT,
+	THORQ_CMD_SESSION_DENY,
+	THORQ_CMD_SESSION_LEAVE,
 
-    SESSION_Request,
-    SESSION_Accept,
-    SESSION_Deny,
-    SESSION_Leave,
+	THORQ_CMD_SET_COMPONENT_PRESENCE,
+
+	THORQ_CMD_GET_LIST_USERS,
+	THORQ_CMD_GET_VERSION_SERVER,
+	THORQ_CMD_GET_VERSION_CLIENT,
+	THORQ_CMD_GET_VERSION_MESSAGE,
+} THORQ_CMD;
+
+typedef enum {
+	THORQ_COMPONENT_OPENVR,
+	THORQ_COMPONENT_COLLAR_NOBRAND_1,
+	THORQ_COMPONENT_COLLAR_NOBRAND_2,
+	THORQ_COMPONENT_COLLAR_AT211,
+	THORQ_COMPONENT_COLLAR_AT216,
+	THORQ_COMPONENT_COLLAR_AT918,
+	THORQ_COMPONENT_COLLAR_AT919C
+} THORQ_COMPONENT;
+
+typedef enum {
+	THORQ_CMD_ACK_OK,
+	THORQ_CMD_ACK_ERR_FAIL,
+	THORQ_CMD_ACK_ERR_ACCESS_DENIED,
+	THORQ_CMD_ACK_ERR_NOT_SUPPORTED,
+} THORQ_CMD_ACK;
+
+typedef enum {
+	THORQ_NOTIFY_USER_STATE, ///< Session state, Collar state,
+	THORQ_NOTIFY_USER_OFFLINE,
+	THORQ_NOTIFY_USER_OFFLINE_LOS,
+	THORQ_NOTIFY_USER_OFFLINE_TIMEOUT,
+	THORQ_NOTIFY_SYSTEM_BROADCAST
+} THORQ_NOTIFY;
+
+typedef enum {
+	CONTENT_ENCRYPTED, ///< The data youre trying to read is encrypted, decrypt it
 
     COLLAR_Command,
 
@@ -58,21 +90,19 @@ typedef enum {
     ACKNOWLEDGE_LoggedIn,
     ACKNOWLEDGE_LoggedOut,
 
-    ADMIN_Broadcast,
-
-    FLAG_CollarConnected = 128
+	SYSTEM_Announcement
 } mavlink_msg_content_enum_t; ///< Enum that describes what the message is
 
 typedef enum {
-    COLLAR_Shock      = 1 << 0, ///< Activate collar shock
-    COLLAR_Vibrate    = 1 << 1, ///< Activate collar vibration
-    COLLAR_Beep       = 1 << 2, ///< Activate collar speaker
-    COLLAR_Auto       = 1 << 3, ///< Auto mode
-    COLLAR_RESERVED_5 = 1 << 4,
-    COLLAR_RESERVED_6 = 1 << 5,
-    COLLAR_RESERVED_7 = 1 << 6,
-    COLLAR_Present    = 1 << 7, ///< Collar is connected
-} thorq_collar_flag_t; ///< Collar flag to describe current user input
+	THORQ_COLLAR_STATE_SHOCK      = 1 << 0, ///< Activate collar shock
+	THORQ_COLLAR_STATE_VIBRATE    = 1 << 1, ///< Activate collar vibration
+	THORQ_COLLAR_STATE_BEEP       = 1 << 2, ///< Activate collar speaker
+	THORQ_COLLAR_STATE_AUTO       = 1 << 3, ///< Auto mode
+	THORQ_COLLAR_STATE_RESERVED_5 = 1 << 4,
+	THORQ_COLLAR_STATE_RESERVED_6 = 1 << 5,
+	THORQ_COLLAR_STATE_RESERVED_7 = 1 << 6,
+	THORQ_COLLAR_STATE_PRESENT    = 1 << 7, ///< Collar is connected
+} THORQ_COLLAR_STATE; ///< Collar flag to describe current user input
 
 typedef enum {
     ACTION_Connect        = 1 << 0,
