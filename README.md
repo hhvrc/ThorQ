@@ -43,4 +43,4 @@ Then do Ctrl+Shift+B, or click "Build all" to build
 | Networking | ENet | https://github.com/zpl-c/enet |
 | Encryption | Botan | https://github.com/randombit/botan |
 | GUI | Qt | https://www.qt.io/ |
-| VR UI | GLFW | https://github.com/ValveSoftware/openvr |
+| VR UI | OpenVR | https://github.com/ValveSoftware/openvr |
