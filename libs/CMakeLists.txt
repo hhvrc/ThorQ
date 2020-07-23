@@ -64,7 +64,6 @@ add_library(${project} STATIC
 	${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
 
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_crypto.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_crypto.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_version.h
