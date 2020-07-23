@@ -55,25 +55,26 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/botan_all.h)
 	endif()
 endif()
 
-set(${project}_SOURCES
+set(${project}_INTERNAL
+	${CMAKE_BINARY_DIR}/botan_all.h
 	${CMAKE_BINARY_DIR}/botan_all.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
 
 	${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
+
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_collar.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_crypto.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_version.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_announcement.cpp
 	)
 
-set(${project}_HEADERS
-	${CMAKE_BINARY_DIR}/botan_all.h
-	${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
+set(${project}_EXTERNAL
+	${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
+	${CMAKE_CURRENT_SOURCE_DIR}/systemid.h
 
 	${CMAKE_CURRENT_SOURCE_DIR}/enums.h
-	${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
 	${CMAKE_CURRENT_SOURCE_DIR}/constants.h
-	${CMAKE_CURRENT_SOURCE_DIR}/systemid.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_collar.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_crypto.h
@@ -82,27 +83,22 @@ set(${project}_HEADERS
 	)
 
 if (WINDOWS)
-	list(APPEND ${project}_SOURCES
-		${CMAKE_CURRENT_SOURCE_DIR}/systemid_windows.cpp
-		)
+	list(APPEND ${project}_INTERNAL ${CMAKE_CURRENT_SOURCE_DIR}/systemid_windows.cpp)
 elseif(LINUX)
-	list(APPEND ${project}_SOURCES
-		${CMAKE_CURRENT_SOURCE_DIR}/systemid_linux.cpp
-		)
+	list(APPEND ${project}_INTERNAL ${CMAKE_CURRENT_SOURCE_DIR}/systemid_linux.cpp)
 endif()
 
-add_library(${project} STATIC ${${project}_SOURCES} ${${project}_HEADERS})
-
-set(LIB_INC_DIRS
-	${CMAKE_CURRENT_SOURCE_DIR}
-	${CMAKE_CURRENT_SOURCE_DIR}/enet/include
-	${CMAKE_BINARY_DIR}
-
-	CACHE PATH "List of library directories for header includes"
-)
-
-include_directories(${LIB_INC_DIRS})
+add_library(${project} STATIC ${${project}_EXTERNAL})
+target_sources(${project} PRIVATE ${${project}_INTERNAL})
+include_directories(${CMAKE_BINARY_DIR})
 
 if(WINDOWS)
 	target_link_libraries(${project} Crypt32)
 endif()
+
+set(LIB_INC_DIRS
+	${CMAKE_CURRENT_SOURCE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/enet/include
+
+	CACHE PATH "List of library directories for header includes"
+)
