@@ -17,11 +17,11 @@
 #define THORQ_VERSION_LINK_PATCH 0
 
 #define THORQ_CRYPTO_EC_ID "secp256r1"
-#define THORQ_CRYPTO_CIPHER_IV_LEN 24
+#define THORQ_CRYPTO_CIPHER_IV_LEN 24 // StreamCipher::default_iv_length()
 #define THORQ_CRYPTO_CIPHER_NAME   "ChaCha(20)"
 #define THORQ_CRYPTO_KEY_LENGTH  32
 #define THORQ_CRYPTO_KEY_DVFUNC "KDF2(SHA-256)"
 
-#define THORQ_MSG_MAX_PAYLOAD_LEN 255 ///< Maximum payload length
+#define THORQ_MSG_MAX_PAYLOAD_LEN 256 ///< Maximum payload length
 
 #endif // CONSTANTS_H
