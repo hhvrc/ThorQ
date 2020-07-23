@@ -42,20 +42,12 @@ void broadcastMessage(const thorq_msg_t& message, bool reliable = true)
 
 void handleMessage(ENetPeer* peer, ENetPacket* packet)
 {
-    printf("Got %u bytes\n", packet->dataLength);
+	printf("Got %lu bytes\n", packet->dataLength);
     fflush(stdout);
 
 	Instance* instance = reinterpret_cast<Instance*>(peer->data);
 
-	// Idk why this whould happen
-	if (instance == nullptr)
-	{
-		enet_packet_destroy(packet);
-		enet_peer_disconnect_now(peer, DISCONNECT_ERROR);
-		return;
-	}
-
-    if (instance->ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED || packet->dataLength < THORQ_MSG_SIZE_MIN)
+	if (instance->ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED || !thorq_msg_is_valid(packet->data, packet->dataLength))
 		return;
 
     thorq_msg_t message;
@@ -66,20 +58,25 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
         return;
     }
 
-    printf("Payload is %u bytes\n", message.payload.size());
+	printf("Payload is %lu bytes\n", message.payload.size());
 	fflush(stdout);
 
-    if (thorq_msg_get_msg_id(&message) == THORQ_MSG_ID_HEARTBEAT)
+	thorq_msg_id_t msg_id = thorq_msg_get_msg_id(&message);
+
+	switch (msg_id) {
+	case THORQ_MSG_ID_HEARTBEAT:
 	{
-        sendMessage(instance->Peer(), )
-		Message::NewHeartbeat().Send(instance->Peer(), false);
+		// TODO: create new message, and send that
+		sendMessage(instance->Peer(), message, false);
 		printf("Heartbeat\n");
 		fflush(stdout);
 		return;
 	}
-
-	switch (msg.Meta()) {
-	case ThorQ::MessageContentEnums::CRYPT_REQUEST:
+	case THORQ_MSG_ID_VERSION:
+	{
+		return;
+	}
+	case THORQ_MSG_ID_CRYPTO:
 	{
 		instance->CryptoInit();
 		printf("Got request\n");
@@ -112,36 +109,30 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 		}
 		return;
 	}
-	case ThorQ::MessageContentEnums::CRYPT_OK:
-	{
-		if (data == nullptr || size == 0)
-			return;
+	default:
 		break;
 	}
-	default:
+
+	if (!thorq_msg_is_encrypted(&message))
 	{
-		printf("Got unknown HeaderEnum: %i\n", flag);
-		fflush(stdout);
-		instance->SetCryptoState(ThorQ::CryptoState::None);
-		instance->SetClientState(ThorQ::ClientState::Connecting);
+		// TODO: stuff
 		return;
-	}
 	}
 
     if (!thorq_msg_decrypt(&message, instance->GetCrypto()))
     {
         // TODO: stuff
         return;
-    }
+	}
 
-	if (!instance->GetCrypto()->ready())
-        return;
+	msg_id = thorq_msg_get_msg_id(&message);
 
-	std::vector<std::uint8_t> vec = instance->GetCrypto()->decrypt(data, size);
-
-	std::uint8_t meta = static_cast<std::uint8_t>(*vec.data());
-
-	instance->SetHasCollar((meta & FLAG_CollarConnected) != 0);
+	switch (msg_id) {
+	case THORQ_MSG_ID_COLLAR:
+		break;
+	default:
+		return;
+	}
 
 	if (!instance->HasName())
 	{
@@ -357,8 +348,8 @@ void handleDisconnect(ENetPeer* peer)
 		BroadcastMessage(NOTIFY_UserLostConnection, instance->Name());
 	}
 
-	delete instance;
 	peer->data = nullptr;
+	delete instance;
 }
 
 void handleTimeout(ENetPeer* peer)
