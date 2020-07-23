@@ -55,26 +55,43 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/botan_all.h)
 	endif()
 endif()
 
-add_library(${project} STATIC
+set(${project}_SOURCES
 	${CMAKE_BINARY_DIR}/botan_all.cpp
-	${CMAKE_BINARY_DIR}/botan_all.h
-	${CMAKE_CURRENT_SOURCE_DIR}/enums.h
-	${CMAKE_CURRENT_SOURCE_DIR}/constants.h
+
 	${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
-
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_crypto.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_crypto.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_version.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_version.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_announcement.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_announcement.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_collar.h
+	${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_collar.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_crypto.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_version.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_announcement.cpp
+	)
 
+set(${project}_HEADERS
+	${CMAKE_BINARY_DIR}/botan_all.h
 	${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
-)
+
+	${CMAKE_CURRENT_SOURCE_DIR}/enums.h
+	${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
+	${CMAKE_CURRENT_SOURCE_DIR}/constants.h
+	${CMAKE_CURRENT_SOURCE_DIR}/systemid.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_collar.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_crypto.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_version.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_announcement.h
+	)
+
+if (WINDOWS)
+	list(APPEND ${project}_SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/systemid_windows.cpp
+		)
+elseif(LINUX)
+	list(APPEND ${project}_SOURCES
+		${CMAKE_CURRENT_SOURCE_DIR}/systemid_linux.cpp
+		)
+endif()
+
+add_library(${project} STATIC ${${project}_SOURCES} ${${project}_HEADERS})
 
 set(LIB_INC_DIRS
 	${CMAKE_CURRENT_SOURCE_DIR}

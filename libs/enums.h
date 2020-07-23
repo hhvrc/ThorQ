@@ -14,12 +14,13 @@ typedef enum {
 
 typedef enum {
 	THORQ_MSG_ID_INVALID = -1, ///< invalid id
-    THORQ_MSG_ID_VERSION,   ///< thorq_version_t
-    THORQ_MSG_ID_HEARTBEAT, ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
-    THORQ_MSG_ID_CRYPTO,
-	THORQ_MSG_ID_SESSION,
-    THORQ_MSG_ID_COLLAR,
-	THORQ_MSG_ID_ADMIN,
+	THORQ_MSG_ID_CRYPTO,       ///< Request cryptographic handshake
+	THORQ_MSG_ID_SYSTEMID,     ///< Upload systemID to get access to the API (SystemID needs to be whitelisted)
+	THORQ_MSG_ID_HEARTBEAT,    ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
+	THORQ_MSG_ID_VERSION,      ///< Request updated version info
+	THORQ_MSG_ID_SESSION,      ///< Request/Accept/Deny/Leave sessions
+	THORQ_MSG_ID_COLLAR,	   ///< Send collar command to session partner
+	THORQ_MSG_ID_ADMIN,        ///< Send admin message to moderate server (SystemID needs to be registered as a admin SystemID)
 } thorq_msg_id_t; ///< Message entry flags to describe the state of a message
 
 typedef enum {
@@ -59,6 +60,7 @@ typedef enum {
 	THORQ_CMD_ACK_ERR_FAIL,
 	THORQ_CMD_ACK_ERR_ACCESS_DENIED,
 	THORQ_CMD_ACK_ERR_NOT_SUPPORTED,
+	THORQ_CMD_ACK_ERR_ACCESS_DENIED_SYSID_NOT_WHITELISTED,
 } thorq_cmd_ack_t; ///< Acknowledge of command sent from client
 
 typedef enum {
