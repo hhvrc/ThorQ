@@ -6,15 +6,15 @@
 
 constexpr std::uint8_t THORQ_VERSION_SERVER_MAJOR = 0;
 constexpr std::uint8_t THORQ_VERSION_SERVER_MINOR = 0;
-constexpr std::uint8_t THORQ_VERSION_SERVER_PATCH = 125;
+constexpr std::uint8_t THORQ_VERSION_SERVER_PATCH = 126;
 
 constexpr std::uint8_t THORQ_VERSION_CLIENT_MAJOR = 0;
 constexpr std::uint8_t THORQ_VERSION_CLIENT_MINOR = 0;
-constexpr std::uint8_t THORQ_VERSION_CLIENT_PATCH = 125;
+constexpr std::uint8_t THORQ_VERSION_CLIENT_PATCH = 126;
 
 constexpr std::uint8_t THORQ_VERSION_LINK_MAJOR = 0;
 constexpr std::uint8_t THORQ_VERSION_LINK_MINOR = 0;
-constexpr std::uint8_t THORQ_VERSION_LINK_PATCH = 125;
+constexpr std::uint8_t THORQ_VERSION_LINK_PATCH = 126;
 
 constexpr const char* THORQ_CRYPTO_EC_ID = "secp256r1";
 constexpr std::size_t THORQ_CRYPTO_CIPHER_IV_LEN = 24; // StreamCipher::default_iv_length()

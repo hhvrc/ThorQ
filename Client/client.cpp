@@ -135,7 +135,7 @@ void Client::Connect(const char* address, int port)
 		m_requestedHostPort = port;
 	}
 
-	m_actionFlags.fetch_or(ACTION_WantConnected);
+	m_actionFlags.fetch_or(ACTION_Connected);
 }
 
 void Client::Reconnect()
@@ -145,7 +145,7 @@ void Client::Reconnect()
 
 void Client::Disconnect()
 {
-	m_actionFlags.fetch_and(~ACTION_WantConnected);
+	m_actionFlags.fetch_and(~ACTION_Connected);
 }
 
 void Client::Login(const QString &username)
@@ -305,9 +305,9 @@ void Client::Run()
 				}
 			}
 
-			if ((actions & ACTION_ReConnect) != 0 || (actions & ACTION_WantConnected) == 0)
+			if ((actions & ACTION_ReConnect) != 0 || (actions & ACTION_Connected) == 0)
 			{
-				if ((actions & ACTION_WantConnected) == 0)
+				if ((actions & ACTION_Connected) == 0)
 					qDebug() << "Disconnecting!";
 				else
 					qDebug() << "Reconnecting!";
@@ -327,7 +327,7 @@ void Client::Run()
 		}
 		else if (ConnectionState() == THORQ_CONNECTION_STATE_DISCONNECTED)
 		{
-			if ((actions & ACTION_WantConnected) != 0)
+			if ((actions & ACTION_Connected) != 0)
 			{
 				qDebug() << "Connecting!";
 
