@@ -1,5 +1,5 @@
-#ifndef MACHINE_ID_H
-#define MACHINE_ID_H
+#ifndef SYSTEMID_H
+#define SYSTEMID_H
 
 #include <string>
 #include <cstdint>
@@ -18,4 +18,4 @@ bool systemid_validate(const std::vector<std::uint8_t>& sys_id);
 std::string systemid_to_string(const std::vector<std::uint8_t>& sys_id);
 }
 
-#endif // MACHINE_ID_H
+#endif // SYSTEMID_H
