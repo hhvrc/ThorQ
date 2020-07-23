@@ -14,8 +14,8 @@ const char* getMachineName();
 }
 
 std::vector<std::uint8_t> systemid_generate();
-bool systemid_validate(const std::vector<std::uint8_t>& suid);
-std::string systemid_to_string(const std::vector<std::uint8_t>& suid);
+bool systemid_validate(const std::vector<std::uint8_t>& sys_id);
+std::string systemid_to_string(const std::vector<std::uint8_t>& sys_id);
 }
 
 #endif // MACHINE_ID_H

@@ -35,7 +35,7 @@ inline void unsmear(std::uint16_t* id)
 
 std::vector<std::uint8_t> systemid_generate()
 {
-	std::vector<std::uint8_t> suid;
+	std::vector<std::uint8_t> sys_id;
 
 	{
 		if (!computed)
@@ -62,8 +62,8 @@ std::vector<std::uint8_t> systemid_generate()
 			computed = true;
 		}
 
-		suid.resize(sizeof(system_id));
-		memcpy(suid.data(), system_id, sizeof(system_id));
+		sys_id.resize(sizeof(system_id));
+		memcpy(sys_id.data(), system_id, sizeof(system_id));
 	}
 
 	{
@@ -71,19 +71,19 @@ std::vector<std::uint8_t> systemid_generate()
 		std::string name = getMachineName();
 		std::transform(name.begin(), name.end(), name.begin(), ::toupper);
 
-		suid.insert(suid.begin() + 10, name.begin(), name.end());
+		sys_id.insert(sys_id.begin() + 10, name.begin(), name.end());
 	}
 
-	return suid;
+	return sys_id;
 }
 
-bool systemid_validate(const std::vector<std::uint8_t>& suid)
+bool systemid_validate(const std::vector<std::uint8_t>& sys_id)
 {
-	if (suid.size() <= 10)
+	if (sys_id.size() <= 10)
 		return false;
 
 	std::uint16_t id[5];
-	memcpy(id, suid.data(), 10);
+	memcpy(id, sys_id.data(), 10);
 
 	unsmear(id);
 
@@ -94,15 +94,15 @@ bool systemid_validate(const std::vector<std::uint8_t>& suid)
 	return checkSum == ntohs(id[4]);
 }
 
-std::string systemid_to_string(const std::vector<std::uint8_t>& suid)
+std::string systemid_to_string(const std::vector<std::uint8_t>& sys_id)
 {
 	std::uint16_t bin_id[5] = { 0, 0, 0, 0, 0 };
 	std::string str_id;
 
-	if (systemid_validate(suid))
+	if (systemid_validate(sys_id))
 	{
-		memcpy(bin_id, suid.data(), 10);
-		str_id.insert(str_id.begin(), suid.begin() + 10, suid.end());
+		memcpy(bin_id, sys_id.data(), 10);
+		str_id.insert(str_id.begin(), sys_id.begin() + 10, sys_id.end());
 	}
 	else
 	{
