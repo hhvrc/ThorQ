@@ -5,8 +5,6 @@
 #include <algorithm>
 #include <arpa/inet.h>
 
-using namespace ThorQ::SystemID_Internal;
-
 constexpr std::uint16_t mask[5] = { 0x4e25, 0xf4a1, 0x5437, 0xab41, 0x0000 };
 static std::uint16_t system_id[5] = { 0, 0, 0, 0, 0 };
 static bool computed = false;
@@ -33,7 +31,7 @@ inline void unsmear(std::uint16_t* id)
 				id[4-i] ^= id[4-j];
 }
 
-std::vector<std::uint8_t> systemid_generate()
+std::vector<std::uint8_t> ThorQ::systemid_generate()
 {
 	std::vector<std::uint8_t> sys_id;
 
@@ -42,9 +40,9 @@ std::vector<std::uint8_t> systemid_generate()
 		{
 			memset(system_id, 0, 10);
 
-			system_id[0] = getCpuHash();
-			system_id[1] = getVolumeHash();
-			getMacHash(system_id[2], system_id[3]);
+			system_id[0] = ThorQ::SystemID_Internal::getCpuHash();
+			system_id[1] = ThorQ::SystemID_Internal::getVolumeHash();
+			ThorQ::SystemID_Internal::getMacHash(system_id[2], system_id[3]);
 
 			for (int i = 0; i < 4; i++)
 			{
@@ -68,7 +66,7 @@ std::vector<std::uint8_t> systemid_generate()
 
 	{
 		// get the name of the computer
-		std::string name = getMachineName();
+		std::string name = ThorQ::SystemID_Internal::getMachineName();
 		std::transform(name.begin(), name.end(), name.begin(), ::toupper);
 
 		sys_id.insert(sys_id.begin() + 10, name.begin(), name.end());
@@ -77,7 +75,7 @@ std::vector<std::uint8_t> systemid_generate()
 	return sys_id;
 }
 
-bool systemid_validate(const std::vector<std::uint8_t>& sys_id)
+bool ThorQ::systemid_validate(const std::vector<std::uint8_t>& sys_id)
 {
 	if (sys_id.size() <= 10)
 		return false;
@@ -94,7 +92,7 @@ bool systemid_validate(const std::vector<std::uint8_t>& sys_id)
 	return checkSum == ntohs(id[4]);
 }
 
-std::string systemid_to_string(const std::vector<std::uint8_t>& sys_id)
+std::string ThorQ::systemid_to_string(const std::vector<std::uint8_t>& sys_id)
 {
 	std::uint16_t bin_id[5] = { 0, 0, 0, 0, 0 };
 	std::string str_id;
@@ -110,7 +108,7 @@ std::string systemid_to_string(const std::vector<std::uint8_t>& sys_id)
 	}
 
 	std::size_t strSize = str_id.size();
-	str_id.resize(strSize + 26);
+	str_id.resize(strSize + 25);
 	snprintf(str_id.data() + strSize, 26, "-%04X-%04X-%04X-%04X-%04X", bin_id[0], bin_id[1], bin_id[2], bin_id[3], bin_id[4]);
 
 	return str_id;
