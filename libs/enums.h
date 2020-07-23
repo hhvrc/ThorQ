@@ -13,6 +13,7 @@ typedef enum {
 } thorq_msg_flag_t; ///< Message entry flags to describe the state of a message
 
 typedef enum {
+	THORQ_MSG_ID_INVALID = -1, ///< invalid id
     THORQ_MSG_ID_VERSION,   ///< thorq_version_t
     THORQ_MSG_ID_HEARTBEAT, ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
     THORQ_MSG_ID_CRYPTO,
