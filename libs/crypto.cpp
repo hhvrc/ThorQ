@@ -105,7 +105,7 @@ bool Crypto::encrypt(std::vector<std::uint8_t>& data)
     return false;
 }
 
-bool Crypto::encrypt(std::vector<uint8_t> &data, uint8_t *iv)
+bool Crypto::encrypt(std::vector<std::uint8_t> &data, std::uint8_t* iv)
 {
     if (!data.empty())
     {
@@ -150,7 +150,7 @@ bool Crypto::decrypt(std::vector<std::uint8_t>& data)
     return false;
 }
 
-bool Crypto::decrypt(std::vector<uint8_t> &data, const uint8_t *iv)
+bool Crypto::decrypt(std::vector<std::uint8_t> &data, const std::uint8_t *iv)
 {
     if (data.size() > THORQ_CRYPTO_CIPHER_IV_LEN)
     {
