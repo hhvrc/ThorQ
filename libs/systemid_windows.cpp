@@ -1,6 +1,4 @@
-#include "machine_id.h"
-
-using namespace ThorQ;
+#include "systemid.h"
 
 #include <windows.h>
 #include <intrin.h>
@@ -18,7 +16,7 @@ std::uint16_t hashMacAddress( PIP_ADAPTER_INFO info )
 	return hash;
 }
 
-void getMacHash( std::uint16_t& mac1, std::uint16_t& mac2 )
+void ThorQ::SystemID_Internal::getMacHash( std::uint16_t& mac1, std::uint16_t& mac2 )
 {
 	IP_ADAPTER_INFO AdapterInfo[32];
 	DWORD dwBufLen = sizeof( AdapterInfo );
@@ -42,7 +40,7 @@ void getMacHash( std::uint16_t& mac1, std::uint16_t& mac2 )
 	}
 }
 
-std::uint16_t getVolumeHash()
+std::uint16_t ThorQ::SystemID_Internal::getVolumeHash()
 {
 	DWORD serialNum = 0;
 
@@ -53,7 +51,7 @@ std::uint16_t getVolumeHash()
 	return hash;
 }
 
-std::uint16_t getCpuHash()
+std::uint16_t ThorQ::SystemID_Internal::getCpuHash()
 {
 	int cpuinfo[4] = { 0, 0, 0, 0 };
 	__cpuid( cpuinfo, 0 );
@@ -65,7 +63,7 @@ std::uint16_t getCpuHash()
 	return hash;
 }
 
-const char* getMachineName()
+const char* ThorQ::SystemID_Internal::getMachineName()
 {
 	static char computerName[1024];
 	DWORD size = 1024;

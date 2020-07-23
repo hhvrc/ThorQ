@@ -93,7 +93,7 @@ target_sources(${project} PRIVATE ${${project}_INTERNAL})
 include_directories(${CMAKE_BINARY_DIR})
 
 if(WINDOWS)
-	target_link_libraries(${project} Crypt32)
+        target_link_libraries(${project} Crypt32 Ws2_32 Iphlpapi)
 endif()
 
 set(LIB_INC_DIRS

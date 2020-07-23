@@ -3,7 +3,12 @@
 #include <string>
 #include <cstring>
 #include <algorithm>
+
+#if defined(_WIN32) || defined(_WIN64)
+#include <Windows.h>
+#else
 #include <arpa/inet.h>
+#endif
 
 constexpr std::uint16_t mask[5] = { 0x4e25, 0xf4a1, 0x5437, 0xab41, 0x0000 };
 static std::uint16_t system_id[5] = { 0, 0, 0, 0, 0 };
