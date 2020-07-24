@@ -22,6 +22,6 @@ constexpr const char* THORQ_CRYPTO_CIPHER_NAME = "ChaCha(20)";
 constexpr std::size_t THORQ_CRYPTO_KEY_LENGTH = 32;
 constexpr const char* THORQ_CRYPTO_KEY_DVFUNC = "KDF2(SHA-256)";
 
-constexpr std::size_t THORQ_MSG_MAX_PAYLOAD_LEN = 256; ///< Maximum payload length
+constexpr std::size_t THORQ_MAX_PAYLOAD_LEN = 256; ///< Maximum payload length
 
 #endif // CONSTANTS_H

@@ -62,11 +62,6 @@ set(${project}_INTERNAL
 
 	${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
-
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_collar.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_crypto.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_version.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_announcement.cpp
 	)
 
 set(${project}_EXTERNAL
@@ -76,10 +71,11 @@ set(${project}_EXTERNAL
 	${CMAKE_CURRENT_SOURCE_DIR}/enums.h
 	${CMAKE_CURRENT_SOURCE_DIR}/constants.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_collar.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_crypto.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_version.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message_announcement.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_collar.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_version.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_acknowledge.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_announcement.h
 	)
 
 if (WINDOWS)

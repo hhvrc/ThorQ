@@ -13,16 +13,21 @@ typedef enum {
 } thorq_msg_flag_t; ///< Message entry flags to describe the state of a message
 
 typedef enum {
-	THORQ_MSG_ID_INVALID = -1, ///< invalid id
-    THORQ_MSG_ID_CRYPT,        ///< Cryptographic handshake messages
-    THORQ_MSG_ID_AUTH,         ///< Client authentication messages to verify that they have bought the client
-	THORQ_MSG_ID_HEARTBEAT,    ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
-	THORQ_MSG_ID_VERSION,      ///< Request updated version info
-	THORQ_MSG_ID_USER,         ///< Login/Logout/List online users
-	THORQ_MSG_ID_SESSION,      ///< Request/Accept/Deny/Leave sessions
-	THORQ_MSG_ID_COLLAR,	   ///< Send collar command to session partner
-	THORQ_MSG_ID_ADMIN,        ///< Send admin message to moderate server (SystemID needs to be registered as a admin SystemID)
-} thorq_msg_id_t; ///< Message entry flags to describe the state of a message
+	THORQ_PAYLOAD_ID_INVALID, ///< invalid id
+
+	THORQ_PAYLOAD_ID_CRYPT,        ///< Cryptographic handshake messages
+	THORQ_PAYLOAD_ID_SYSID,        ///< Client authentication messages to verify that they have bought the client
+	THORQ_PAYLOAD_ID_REGKEY,       ///< Client authentication messages to verify that they have bought the client
+
+	THORQ_PAYLOAD_ID_HEARTBEAT,    ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
+	THORQ_PAYLOAD_ID_VERSION,      ///< Request updated version info
+
+	THORQ_PAYLOAD_ID_USER,         ///< Login/Logout/List online users
+	THORQ_PAYLOAD_ID_SESSION,      ///< Request/Accept/Deny/Leave sessions
+	THORQ_PAYLOAD_ID_COLLAR,	   ///< Send collar command to session partner
+
+	THORQ_PAYLOAD_ID_ADMIN,        ///< Send admin message to moderate server (SystemID needs to be registered as a admin SystemID)
+} thorq_payload_id_t; ///< Message entry flags to describe the state of a message
 
 typedef enum {
     THORQ_CMD_CRYPT_REQUEST,
@@ -41,12 +46,6 @@ typedef enum {
     THORQ_CMD_AUTH_INVALID,
     THORQ_CMD_AUTH_VALID,
 } thorq_cmd_auth_t;
-
-typedef enum {
-	THORQ_CMD_VERSION_SERVER,
-	THORQ_CMD_VERSION_CLIENT,
-	THORQ_CMD_VERSION_LINK,
-} thorq_cmd_version_t;
 
 typedef enum {
 	THORQ_CMD_USER_LOGIN,
