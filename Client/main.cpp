@@ -51,7 +51,7 @@ int main(int argc, char** argv)
 	   qDebug() << username;
 	});
 
-	cli->Connect("localhost", 12345);
+	cli->Connect("www.potato.tech", 12345);
 #else
 	QPixmap pix(":/uwu.png");
 	QLabel lab;
