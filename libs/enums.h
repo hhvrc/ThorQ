@@ -14,8 +14,8 @@ typedef enum {
 
 typedef enum {
 	THORQ_MSG_ID_INVALID = -1, ///< invalid id
-	THORQ_MSG_ID_CRYPTO,       ///< Request cryptographic handshake
-	THORQ_MSG_ID_SYSTEMID,     ///< Upload systemID to get access to the API (SystemID needs to be whitelisted)
+    THORQ_MSG_ID_CRYPT,        ///< Cryptographic handshake messages
+    THORQ_MSG_ID_AUTH,         ///< Client authentication messages to verify that they have bought the client
 	THORQ_MSG_ID_HEARTBEAT,    ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
 	THORQ_MSG_ID_VERSION,      ///< Request updated version info
 	THORQ_MSG_ID_USER,         ///< Login/Logout/List online users
@@ -25,16 +25,28 @@ typedef enum {
 } thorq_msg_id_t; ///< Message entry flags to describe the state of a message
 
 typedef enum {
+    THORQ_CMD_CRYPT_REQUEST,
+    THORQ_CMD_CRYPT_ESTABLISH,
+    THORQ_CMD_CRYPT_VERIFY,
+    THORQ_CMD_CRYPT_OK,
+} thorq_cmd_crypto_t;
+
+typedef enum {
+    THORQ_CMD_AUTH_SYSID_REQUEST,
+    THORQ_CMD_AUTH_SYSID_SUBMIT,
+
+    THORQ_CMD_AUTH_REGKEY_REQUEST,
+    THORQ_CMD_AUTH_REGKEY_SUBMIT,
+
+    THORQ_CMD_AUTH_INVALID,
+    THORQ_CMD_AUTH_VALID,
+} thorq_cmd_auth_t;
+
+typedef enum {
 	THORQ_CMD_VERSION_SERVER,
 	THORQ_CMD_VERSION_CLIENT,
 	THORQ_CMD_VERSION_LINK,
 } thorq_cmd_version_t;
-
-typedef enum {
-	THORQ_CMD_CRYPTO_REQUEST,
-	THORQ_CMD_CRYPTO_ESTABLISH,
-	THORQ_CMD_CRYPTO_VERIFY,
-} thorq_cmd_crypto_t;
 
 typedef enum {
 	THORQ_CMD_USER_LOGIN,
@@ -70,12 +82,12 @@ typedef enum {
 } thorq_cmd_ack_t; ///< Acknowledge of command sent from client
 
 typedef enum {
-	THORQ_NOTIFY_USER_STATE, ///< Session state, Collar state,
-	THORQ_NOTIFY_USER_OFFLINE,
-	THORQ_NOTIFY_USER_OFFLINE_LOS,
-	THORQ_NOTIFY_USER_OFFLINE_TIMEOUT,
-	THORQ_NOTIFY_SYSTEM_BROADCAST,
-} thorq_notify_t;
+    THORQ_BROADCAST_USER_STATE, ///< Session state, Collar state,
+    THORQ_BROADCAST_USER_OFFLINE,
+    THORQ_BROADCAST_USER_OFFLINE_LOS,
+    THORQ_BROADCAST_USER_OFFLINE_TIMEOUT,
+    THORQ_BROADCAST_ANNOUNCEMENT,
+} thorq_broadcast_t;
 
 typedef enum {
 	THORQ_SESSION_EVENT_REQUESTED,
@@ -94,6 +106,22 @@ typedef enum {
 	THORQ_COLLAR_STATE_RESERVED_7 = 1 << 6,
 	THORQ_COLLAR_STATE_PRESENT    = 1 << 7, ///< Collar is connected
 } thorq_collar_state_t; ///< Collar flag to describe current user input
+
+typedef enum {
+    THORQ_DISCONNECT_REASON_UNKNOWN = 0,
+
+    THORQ_DISCONNECT_REASON_BANNED,
+    THORQ_DISCONNECT_REASON_TIMEDOUT,
+    THORQ_DISCONNECT_REASON_NOT_WHITELISTED,
+
+    THORQ_DISCONNECT_REASON_CRYPTO_ERROR,
+    THORQ_DISCONNECT_REASON_MESSAGE_ERROR,
+
+    THORQ_DISCONNECT_REASON_INVALID_SYSID,
+    THORQ_DISCONNECT_REASON_INVALID_REGKEY,
+    THORQ_DISCONNECT_REASON_SHUTDOWN_CRASH,
+    THORQ_DISCONNECT_REASON_SHUTDOWN_MAINTANENCE,
+} thorq_disconnect_reason_t; //
 
 ////////////////////////////////////////////////////
 /// STATE MACHINES

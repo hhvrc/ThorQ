@@ -76,7 +76,7 @@ void handleMessage(ENetPeer* peer, ENetPacket* packet)
 	{
 		return;
 	}
-	case THORQ_MSG_ID_CRYPTO:
+	case THORQ_MSG_ID_CRYPT:
 	{
 		instance->CryptoInit();
 		printf("Got request\n");
