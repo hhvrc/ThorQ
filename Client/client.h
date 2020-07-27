@@ -5,6 +5,10 @@
 #include <enums.h>
 #include <atomic>
 #include <mutex>
+#include <vector>
+
+#include <thorq_payload.h>
+#include <thorq_payload_version.h>
 
 // Forward declerations
 class QThread;
@@ -31,6 +35,7 @@ public:
 	int Ping() const;
 	thorq_connection_state_t ConnectionState() const;
 	thorq_crypto_state_t CryptoState() const;
+	thorq_auth_state_t AuthState() const;
 	thorq_login_state_t LoginState() const;
 	thorq_session_state_t SessionState() const;
 public slots:
@@ -50,6 +55,8 @@ public slots:
 	void SetVibrate(bool enable, int strength = -1);
 	void SetBeep(bool enable, int strength = -1);
 	void SetAuto(bool enable, int sensitivity, int shockStrength, int vibrateStrength, int beepCount);
+
+	void SetRegistrationKey(const QString& regKey);
 signals:
 	void AddressChanged(const QString& Address);
 	void PortChanged(int Port);
@@ -57,6 +64,7 @@ signals:
 	void PingChanged(int ping);
 	void ConnectionStateChanged(thorq_connection_state_t state);
 	void CryptoStateChanged(thorq_crypto_state_t state);
+	void AuthStateChanged(thorq_auth_state_t state);
 	void LoginStateChanged(thorq_login_state_t state);
 	void SessionStateChanged(thorq_session_state_t state);
 
@@ -71,6 +79,8 @@ signals:
 	void ReceivedBeep(int count);
 	void ReceivedAuto(int sensitivity, int shockStrength, int vibrateStrength, int beepCount);
 	void ReceivedManual();
+
+	void RequestingRegistrationKey();
 
 	void Error(const QString& what);
 private slots:
@@ -96,11 +106,23 @@ private slots:
 	 * Thread-safe
 	 *
 	 * Sets the state of the cryptographic agreement
-	 * Will affect LoginState, as a client should not be logged in on a unsecured connection
+	 * Will affect AuthState, as a client should not be sending sensitive data over a unsecured connection
 	 *
 	 * @param newState
 	 */
 	void SetCryptoState(thorq_crypto_state_t state);
+
+	/**
+	 * @brief SetAuthState
+	 *
+	 * Thread-safe
+	 *
+	 * Sets the state of the authentication
+	 * Will affect LoginState, as a client should not be able to log in without having bought the application
+	 *
+	 * @param newState
+	 */
+	void SetAuthState(thorq_auth_state_t state);
 
 	/**
 	 * @brief SetLoginState
@@ -129,6 +151,12 @@ private slots:
 	void SetPartner(const QString& username);
 
 	void HandleMessage(ENetPacket* packet);
+	void HandleMessageVersion(const thorq_payload_t& payload);
+	void HandleMessageHeartbeat(const thorq_payload_t& payload);
+	void HandleMessageCrypto(const thorq_payload_t& payload);
+	void HandleMessageAuth(const thorq_payload_t& payload);
+
+	void SendPayload(const thorq_payload_t& payload, bool encrypt = true, bool reliable = true);
 
 	void requestEncryptionHandshake();
 private:
@@ -136,6 +164,7 @@ private:
 
 	std::atomic<thorq_connection_state_t> m_connectionState;
 	std::atomic<thorq_crypto_state_t> m_cryptoState;
+	std::atomic<thorq_auth_state_t> m_authState;
 	std::atomic<thorq_login_state_t> m_loginState;
 	std::atomic<thorq_session_state_t> m_sessionState;
 	std::atomic_int m_ping;
@@ -151,6 +180,9 @@ private:
 
 	std::mutex l_requestingPartner;
 	std::string m_requestingPartner;
+
+	std::mutex l_registrationKey;
+	std::string m_registrationKey;
 
 	std::atomic_uint m_actionFlags;
 	std::atomic_uint m_collarFlags;

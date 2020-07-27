@@ -9,6 +9,14 @@
 
 #include <enums.h>
 #include <crypto.h>
+#include <systemid.h>
+#include <thorq_message.h>
+#include <thorq_payload_crypto.h>
+#include <thorq_payload_auth.h>
+#include <thorq_payload_collar.h>
+#include <thorq_payload_command.h>
+#include <thorq_payload_version.h>
+#include <thorq_payload_heartbeat.h>
 
 #define DISCONNECT_ERROR 0x00000001
 #define DISCONNECT_SHUTDOWN 0x00000002
@@ -33,6 +41,7 @@ Client::Client(ENetHost* host)
 	, m_crypto(new ThorQ::Crypto())
 	, m_connectionState(THORQ_CONNECTION_STATE_DISCONNECTED)
 	, m_cryptoState(THORQ_CRYPTO_STATE_NONE)
+	, m_authState(THORQ_AUTH_STATE_NONE)
 	, m_loginState(THORQ_LOGIN_STATE_LOGGEDOUT)
 	, m_sessionState(THORQ_SESSION_STATE_NONE)
 	, m_ping(0)
@@ -44,6 +53,8 @@ Client::Client(ENetHost* host)
 	, m_requestedPartner("")
 	, l_requestingPartner()
 	, m_requestingPartner("")
+	, l_registrationKey()
+	, m_registrationKey("")
 	, m_actionFlags(0)
 	, m_collarFlags(0)
 	, m_shockValue(0)
@@ -115,6 +126,11 @@ thorq_connection_state_t Client::ConnectionState() const
 thorq_crypto_state_t Client::CryptoState() const
 {
 	return m_cryptoState.load();
+}
+
+thorq_auth_state_t Client::AuthState() const
+{
+	return m_authState.load();
 }
 
 thorq_login_state_t Client::LoginState() const
@@ -197,11 +213,11 @@ void Client::SetShock(bool enable, int strength)
 	{
 		if (strength != -1)
 			m_shockValue.store(strength);
-		m_collarFlags.fetch_or(THORQ_COLLAR_STATE_SHOCK);
+		m_collarFlags.fetch_or(THORQ_COLLAR_FLAG_SHOCK);
 	}
 	else
 	{
-		m_collarFlags.fetch_and(~THORQ_COLLAR_STATE_SHOCK);
+		m_collarFlags.fetch_and(~THORQ_COLLAR_FLAG_SHOCK);
 	}
 }
 void Client::SetVibrate(bool enable, int strength)
@@ -210,11 +226,11 @@ void Client::SetVibrate(bool enable, int strength)
 	{
 		if (strength != -1)
 			m_vibrateValue.store(strength);
-		m_collarFlags.fetch_or(THORQ_COLLAR_STATE_VIBRATE);
+		m_collarFlags.fetch_or(THORQ_COLLAR_FLAG_VIBRATE);
 	}
 	else
 	{
-		m_collarFlags.fetch_and(~THORQ_COLLAR_STATE_VIBRATE);
+		m_collarFlags.fetch_and(~THORQ_COLLAR_FLAG_VIBRATE);
 	}
 }
 void Client::SetBeep(bool enable, int count)
@@ -223,11 +239,11 @@ void Client::SetBeep(bool enable, int count)
 	{
 		if (count != -1)
 			m_beepValue.store(count);
-		m_collarFlags.fetch_or(THORQ_COLLAR_STATE_BEEP);
+		m_collarFlags.fetch_or(THORQ_COLLAR_FLAG_BEEP);
 	}
 	else
 	{
-		m_collarFlags.fetch_and(~THORQ_COLLAR_STATE_BEEP);
+		m_collarFlags.fetch_and(~THORQ_COLLAR_FLAG_BEEP);
 	}
 }
 void Client::SetAuto(bool enable, int sensitivity, int shockStrength, int vibrateStrength, int beepCount)
@@ -238,11 +254,22 @@ void Client::SetAuto(bool enable, int sensitivity, int shockStrength, int vibrat
 		m_autoShock.store(shockStrength);
 		m_autoShock.store(vibrateStrength);
 		m_autoShock.store(beepCount);
-		m_collarFlags.fetch_or(THORQ_COLLAR_STATE_AUTO);
+		m_collarFlags.fetch_or(THORQ_COLLAR_FLAG_AUTO);
 	}
 	else
 	{
-		m_collarFlags.fetch_and(~THORQ_COLLAR_STATE_AUTO);
+		m_collarFlags.fetch_and(~THORQ_COLLAR_FLAG_AUTO);
+	}
+}
+
+void Client::SetRegistrationKey(const QString& regKey)
+{
+	if (AuthState() != THORQ_AUTH_STATE_AWAITING_INPUT)
+		return;
+
+	{
+		SCOPELOCK(l_registrationKey);
+		m_registrationKey = regKey.toStdString();
 	}
 }
 
@@ -289,21 +316,43 @@ void Client::Run()
 		{
 			if (SessionState() == THORQ_SESSION_STATE_ACTIVE)
 			{
-				SendEncrypted(m_collarFlags.load(), true);
+				thorq_payload_t payload;
+				thorq_payload_collar_pack(payload, m_collarFlags.load(), m_shockValue.load(), m_vibrateValue.load(), m_beepValue.load(), m_autoSensitivity.load());
+				SendPayload(payload, true, false);
 			}
 			else if (SessionState() == THORQ_SESSION_STATE_DECIDING)
 			{
 				if ((actions & ACTION_SessionAccept) != 0)
 				{
-					SendEncrypted(THORQ_CMD_SESSION_ACCEPT, m_requestingPartner);
+					thorq_payload_t payload;
+					thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_ACCEPT, m_requestingPartner);
+					SendPayload(payload, true, true);
 					m_requestingPartner.clear();
+					SetSessionState(THORQ_SESSION_STATE_JOINING);
 				}
 				else if ((actions & ACTION_SessionDeny) != 0)
 				{
-					SendEncrypted(THORQ_CMD_SESSION_DENY, m_requestingPartner);
+					thorq_payload_t payload;
+					thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_DENY, m_requestingPartner);
+					SendPayload(payload, true, true);
 					m_requestingPartner.clear();
+					SetSessionState(THORQ_SESSION_STATE_NONE);
 				}
 			}
+
+
+			if (AuthState() == THORQ_AUTH_STATE_AWAITING_INPUT)
+			{
+				SCOPELOCK(l_registrationKey);
+				if (!m_registrationKey.empty())
+				{
+					thorq_payload_t payload;
+					thorq_payload_auth_pack(payload, THORQ_AUTH_REGKEY);
+					SendPayload(payload, true, true);
+					SetAuthState(THORQ_AUTH_STATE_REGISTERING);
+				}
+			}
+
 
 			if ((actions & ACTION_ReConnect) != 0 || (actions & ACTION_Connected) == 0)
 			{
@@ -321,7 +370,9 @@ void Client::Run()
 					qDebug() << "ping timed out!";
 
 				m_pingTimer->start();
-				SendHeartbeat();
+				thorq_payload_t payload;
+				thorq_payload_heartbeat_pack(payload);
+				SendPayload(payload, false, false);
 				m_awaitingPing = true;
 			}
 		}
@@ -390,9 +441,26 @@ void Client::SetCryptoState(thorq_crypto_state_t newState)
 	if (newState != oldState)
 	{
 		if (newState < oldState)
-			SetLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
+			SetAuthState(THORQ_AUTH_STATE_NONE);
+		else
+			SetConnectionState(THORQ_CONNECTION_STATE_CONNECTED);
 
 		emit CryptoStateChanged(newState);
+	}
+}
+
+void Client::SetAuthState(thorq_auth_state_t newState)
+{
+	int oldState = m_authState.exchange(newState);
+
+	if (newState != oldState)
+	{
+		if (newState < oldState)
+			SetLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
+		else
+			SetCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
+
+		emit AuthStateChanged(newState);
 	}
 }
 void Client::SetLoginState(thorq_login_state_t newState)
@@ -403,6 +471,8 @@ void Client::SetLoginState(thorq_login_state_t newState)
 	{
 		if (newState < oldState)
 			SetSessionState(THORQ_SESSION_STATE_NONE);
+		else
+			SetAuthState(THORQ_AUTH_STATE_OK);
 
 		emit LoginStateChanged(newState);
 	}
@@ -413,6 +483,9 @@ void Client::SetSessionState(thorq_session_state_t newState)
 
 	if (newState != oldState)
 	{
+		if (newState > oldState)
+			SetLoginState(THORQ_LOGIN_STATE_LOGGEDIN);
+
 		emit SessionStateChanged(newState);
 	}
 }
@@ -431,90 +504,187 @@ void Client::SetPartner(const QString &username)
 
 void Client::HandleMessage(ENetPacket* packet)
 {
-	int time = m_pingTimer->elapsed();
-
-	if (ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED || packet->dataLength < sizeof(std::uint8_t))
+	if (ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED || !thorq_message_is_valid(packet->data, packet->dataLength))
 		return;
 
-	th
-    ThorQ::Message msg = ThorQ::Message::Deserialize(packet->data, packet->dataLength);
+	std::vector<std::uint8_t> message;
+	thorq_message_decode(packet->data, packet->dataLength, message, m_crypto);
 
-    if (msg.IsHeartbeat())
-    {
-        if (m_awaitingPing)
-        {
-            qDebug() << "RX!";
-            m_awaitingPing = false;
-            SetPing(time);
-        }
-        return;
-    }
+	thorq_payload_t payload;
+	thorq_payload_unpack(message, payload);
 
-    if (!msg.IsEncrypted())
-    {
-        if (msg.isEmpty() || msg.Meta() != ThorQ::MessageContentEnums::CRYPT_ESTABLISH)
-            return;
+	switch (payload.id) {
+	case THORQ_PAYLOAD_ID_INVALID:
+		qDebug() << "Got invalid payload!";
+		return;
+	case THORQ_PAYLOAD_ID_VERSION:
+		if (thorq_payload_version_is_valid(payload))
+			HandleMessageVersion(payload);
+		return;
+	case THORQ_PAYLOAD_ID_HEARTBEAT:
+		if (thorq_payload_heartbeat_is_valid(payload))
+			HandleMessageHeartbeat(payload);
+		return;
+	case THORQ_PAYLOAD_ID_CRYPTO:
+		if (thorq_payload_crypto_is_valid(payload))
+			HandleMessageCrypto(payload);
+		return;
+	case THORQ_PAYLOAD_ID_AUTH:
+		if (thorq_payload_auth_is_valid(payload))
+			HandleMessageAuth(payload);
+		return;
+	default:
+		if (AuthState() != THORQ_AUTH_STATE_OK)
+		{
+			return;
+		}
 
-        qDebug() << "Establishing!";
-
-        if (m_crypto->ready())
-            m_crypto->reset();
-
-        if (m_crypto->agree(msg.payload()))
-        {
-            SetCryptoState(ThorQ::CryptoState::Establishing);
-
-            msg.SetPayload(m_crypto->publicKey());
-            msg.Send(m_peer);
-        }
-        else
-        {
-            m_crypto->reset();
-            SetCryptoState(ThorQ::CryptoState::None);
-        }
-        return;
-    }
-    else
-    {
-        if (!m_crypto->ready() || !msg.Decrypt(m_crypto))
-            return;
-
-        if (msg.Meta() == ThorQ::MessageContentEnums::CRYPT_VERIFY)
-        {
-            qDebug() << "Verifying!";
-            SetCryptoState(ThorQ::CryptoState::Verifying);
-
-            msg.Encrypt(m_crypto);
-            msg.Send(m_peer);
-            return;
-        }
-        else if (msg.Meta() == ThorQ::MessageContentEnums::CRYPT_OK)
-        {
-            SetCryptoState(ThorQ::CryptoState::Ok);
-            SetClientState(ThorQ::ClientState::Connected);
-            return;
-        }
-
-        if (CryptoState() != ThorQ::CryptoState::Ok)
-            return;
-    }
+		break;
+	}
 
 
-    qDebug() << "uwu";
+
+	qDebug() << "uwu";
+}
+
+void Client::HandleMessageVersion(const thorq_payload_t& payload)
+{
+	std::uint8_t app;
+	thorq_version_t version;
+	thorq_payload_version_unpack(payload, app, version);
+
+	switch (app) {
+	case THORQ_APP_SERVER:
+		if (version > THORQ_VERSION_SERVER)
+			qDebug() << "Server has updated from" << THORQ_VERSION_SERVER.to_string().c_str() << "to" << version.to_string().c_str();
+		else if (version < THORQ_VERSION_SERVER)
+			qDebug() << "Server has downgraded from" << THORQ_VERSION_SERVER.to_string().c_str() << "to" << version.to_string().c_str();
+		break;
+	case THORQ_APP_CLIENT:
+		if (version > THORQ_VERSION_CLIENT)
+			qDebug() << "Client has updated from" << THORQ_VERSION_CLIENT.to_string().c_str() << "to" << version.to_string().c_str();
+		else if (version < THORQ_VERSION_CLIENT)
+			qDebug() << "Client has downgraded from" << THORQ_VERSION_CLIENT.to_string().c_str() << "to" << version.to_string().c_str();
+		break;
+	case THORQ_APP_LINK:
+		if (version > THORQ_VERSION_LINK)
+			qDebug() << "Protocol has updated from" << THORQ_VERSION_LINK.to_string().c_str() << "to" << version.to_string().c_str();
+		else if (version < THORQ_VERSION_LINK)
+			qDebug() << "Protocol has downgraded from" << THORQ_VERSION_LINK.to_string().c_str() << "to" << version.to_string().c_str();
+		break;
+	default:
+		qDebug() << "Got ivalid version" << app << version.to_string().c_str();
+		break;
+	}
+}
+void Client::HandleMessageHeartbeat(const thorq_payload_t& payload)
+{
+	Q_UNUSED(payload)
+
+	if (m_awaitingPing)
+	{
+		qDebug() << "RX!";
+		m_awaitingPing = false;
+		SetPing(m_pingTimer->elapsed());
+	}
+}
+void Client::HandleMessageCrypto(const thorq_payload_t& payload)
+{
+	switch (thorq_payload_crypto_get_cmd(payload)) {
+	case THORQ_CRYPTO_ESTABLISH:
+	{
+		qDebug() << "Establishing!";
+		std::vector<std::uint8_t> data = thorq_payload_crypto_get_data(payload);
+
+		if (m_crypto->ready())
+			m_crypto->reset();
+
+		if (m_crypto->agree(data))
+		{
+			SetCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
+
+			thorq_payload_t txPayload;
+			thorq_payload_crypto_pack(txPayload, THORQ_CRYPTO_ESTABLISH, m_crypto->publicKey());
+			SendPayload(txPayload, false, true);
+		}
+		else
+		{
+			m_crypto->reset();
+			SetCryptoState(THORQ_CRYPTO_STATE_NONE);
+		}
+	}
+		break;
+	case THORQ_CRYPTO_VERIFY:
+	{
+		qDebug() << "Verifying!";
+		SetCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
+
+		SendPayload(payload, false, true);
+	}
+		break;
+	case THORQ_CRYPTO_OK:
+	{
+		qDebug() << "CyptOk!";
+		SetCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
+	}
+		break;
+	default:
+		qDebug() << "Cypt???";
+		return;
+	}
+}
+void Client::HandleMessageAuth(const thorq_payload_t& payload)
+{
+	thorq_payload_t txPayload;
+
+	switch (thorq_payload_auth_get_cmd(payload)) {
+	case THORQ_AUTH_SYSTEMID_REQ:
+		thorq_payload_auth_pack(txPayload, THORQ_AUTH_SYSTEMID, ThorQ::systemid_generate());
+		SendPayload(txPayload);
+		SetAuthState(THORQ_AUTH_STATE_CHECKING);
+		break;
+	case THORQ_AUTH_REGKEY_REQ:
+		emit RequestingRegistrationKey();
+		thorq_payload_auth_pack(txPayload, THORQ_AUTH_REGKEY_AWAITING_INPUT);
+		SendPayload(txPayload);
+		SetAuthState(THORQ_AUTH_STATE_AWAITING_INPUT);
+		break;
+	case THORQ_AUTH_OK:
+		SetAuthState(THORQ_AUTH_STATE_OK);
+		break;
+	default:
+		qDebug() << "Unexpected message:" << thorq_payload_auth_get_cmd(payload);
+		break;
+	}
+}
+
+void Client::SendPayload(const thorq_payload_t& payload, bool encrypt, bool reliable)
+{
+	std::vector<std::uint8_t> message;
+
+	thorq_payload_pack(payload, message);
+
+	std::vector<std::uint8_t> data;
+
+	if (encrypt)
+		thorq_message_encode(message, data, m_crypto);
+	else
+		thorq_message_encode(message, data);
+
+	enet_peer_send(m_peer, reliable ? 0 : 1, enet_packet_create(data.data(), data.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
 }
 
 void Client::requestEncryptionHandshake()
 {
-    if (ClientState() != ThorQ::ClientState::Connecting)
+    if (ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED)
         return;
 
     qDebug() << "Requesting!";
 
     m_crypto->reset();
-    SetCryptoState(ThorQ::CryptoState::Requesting);
+    SetCryptoState(THORQ_CRYPTO_STATE_REQUESTING);
 
-    ThorQ::Message msg;
-    msg.SetMeta(ThorQ::MessageContentEnums::CRYPT_REQUEST);
-    msg.Send(m_peer);
+	thorq_payload_t payload;
+	thorq_payload_crypto_pack(payload, THORQ_CRYPTO_REQUEST);
+	SendPayload(payload, false, true);
 }
-
