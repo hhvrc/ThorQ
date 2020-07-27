@@ -9,10 +9,16 @@
 
 #include <QLabel>
 
+Q_DECLARE_METATYPE(thorq_connection_state_t)
+Q_DECLARE_METATYPE(thorq_login_state_t)
+
 #define COMTEST 1
 
 int main(int argc, char** argv)
 {
+	qRegisterMetaType<thorq_connection_state_t>("ThorqConnectionState");
+	qRegisterMetaType<thorq_login_state_t>("ThorqLoginState");
+
 	// TODO: make GUI the main thread, and Networking a seperate thread
 	// TODO: customize GUI
 	// TODO: enable support for SteamVR
