@@ -1,62 +1,69 @@
 #ifndef THORQ_PAYLOAD_H
 #define THORQ_PAYLOAD_H
 
-#include "thorq_message.h"
-#include "crypto.h"
+#include <vector>
+#include <cstdint>
+#include <enums.h>
+#include <cstring>
+
+// Types:
+
+// Message
+//    Payload
+//          Version
+//       Crypto
+//       Auth
+//       Heartbeat
+//          Command
+//          Command_ack
+//          Notification
+//          Collar
 
 typedef struct __thorq_payload
 {
 	thorq_payload_id_t id;
-	std::uint8_t size;
-	std::uint8_t data[THORQ_MAX_PAYLOAD_LEN - 2];
+	std::vector<std::uint8_t> data;
 
-	inline bool operator==(const __thorq_payload& other) const
+	inline bool operator==(const struct __thorq_payload& other) const
 	{
-		if (id != other.id || size != other.size)
-			return false;
-
-		if (size == 0)
-			return true;
-
-		return memcmp(data, &other.data, size) == 0;
+		return id == other.id && data == other.data;
 	}
-	inline bool operator!=(const __thorq_payload& other) const
+	inline bool operator!=(const struct __thorq_payload& other) const
 	{
 		return !(*this == other);
 	}
 } thorq_payload_t;
 
-inline thorq_payload_id_t thorq_payload_get_id(const thorq_payload_t* payload)
+inline thorq_payload_id_t thorq_payload_get_id(const thorq_payload_t& payload)
 {
-	return payload->id;
+    return payload.id;
 }
-inline void thorq_payload_pack(const thorq_payload_t* payload, thorq_message_t* msg)
+
+inline void thorq_payload_pack(const thorq_payload_t& payload, std::vector<std::uint8_t>& message)
 {
-	msg->payload.resize(THORQ_MAX_PAYLOAD_LEN);
+	message.resize(1 + payload.data.size());
 
 	// Copy the payload id
-	msg->payload[0] = (std::uint8_t)payload->id;
-
-	// Copy size
-	msg->payload[1] = payload->size;
+	message[0] = (std::uint8_t)payload.id;
 
 	// Copy the payload data
-	if (payload->size != 0)
-		memcpy(msg->payload.data() + 1, payload->data, payload->size);
-
-	std::uint16_t writtenSize = payload->size + 2;
-
-	// Make the rest of the data seem random
-	if (writtenSize < THORQ_MAX_PAYLOAD_LEN)
-		ThorQ::Crypto::RandomizeBytes(msg->payload.data() + writtenSize, THORQ_MAX_PAYLOAD_LEN - writtenSize);
+	memcpy(&message[1], &payload.data[0], payload.data.size());
 }
-inline void thorq_payload_unpack(const thorq_message_t* msg, thorq_payload_t* payload)
-{
-	payload->id = (thorq_payload_id_t)msg->payload[0];
-	payload->size = msg->payload[1];
 
-	if (payload->size != 0)
-		memcpy(payload->data, msg->payload.data(), payload->size);
+inline void thorq_payload_unpack(const std::vector<std::uint8_t>& message, thorq_payload_t& payload)
+{
+	payload.id = (thorq_payload_id_t)message[0];
+	payload.data.resize(message.size() - 1);
+
+	memcpy(&payload.data[0], &message[1], payload.data.size());
+}
+
+inline thorq_payload_id_t thorq_payload_get_id(const std::vector<std::uint8_t>& message)
+{
+	if (message.size() < 1)
+		return THORQ_PAYLOAD_ID_INVALID;
+
+	return (thorq_payload_id_t)message[0];
 }
 
 #endif // THORQ_PAYLOAD_H

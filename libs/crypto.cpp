@@ -3,8 +3,6 @@
 #include <botan_all.h>
 #include "constants.h"
 
-// REMOVEME
-#include <iostream>
 
 using namespace ThorQ;
 
@@ -110,7 +108,7 @@ bool Crypto::encrypt(std::vector<std::uint8_t> &data, std::uint8_t* iv)
     if (!data.empty())
     {
         try
-        {
+		{
             m_rng->randomize(iv, THORQ_CRYPTO_CIPHER_IV_LEN);
             m_streamCipher->set_iv(iv, THORQ_CRYPTO_CIPHER_IV_LEN);
 
@@ -152,7 +150,7 @@ bool Crypto::decrypt(std::vector<std::uint8_t>& data)
 
 bool Crypto::decrypt(std::vector<std::uint8_t> &data, const std::uint8_t *iv)
 {
-    if (data.size() > THORQ_CRYPTO_CIPHER_IV_LEN)
+	if (!data.empty())
     {
         try
         {

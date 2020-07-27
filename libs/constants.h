@@ -2,7 +2,6 @@
 #define CONSTANTS_H
 
 #include <cstdint>
-#include <cstring>
 
 constexpr std::uint8_t THORQ_VERSION_SERVER_MAJOR = 0;
 constexpr std::uint8_t THORQ_VERSION_SERVER_MINOR = 0;
@@ -21,7 +20,8 @@ constexpr std::size_t THORQ_CRYPTO_CIPHER_IV_LEN = 24; // StreamCipher::default_
 constexpr const char* THORQ_CRYPTO_CIPHER_NAME = "ChaCha(20)";
 constexpr std::size_t THORQ_CRYPTO_KEY_LENGTH = 32;
 constexpr const char* THORQ_CRYPTO_KEY_DVFUNC = "KDF2(SHA-256)";
+constexpr std::size_t THORQ_CRYPTO_VERIFICATION_DATA_LENGTH = 256;
 
-constexpr std::size_t THORQ_MAX_PAYLOAD_LEN = 256; ///< Maximum payload length
+constexpr std::size_t THORQ_MESSAGE_LEN = 512; ///< Maximum payload length
 
 #endif // CONSTANTS_H

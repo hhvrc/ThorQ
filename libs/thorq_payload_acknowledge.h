@@ -11,7 +11,13 @@ typedef enum {
 	FATAL
 } thorq_acknowledge_error_t;
 
-inline void thorq_payload_acknowledge_pack();
-inline void thorq_payload_acknowledge_get_error();
+inline void thorq_payload_acknowledge_pack()
+{
+
+}
+inline void thorq_payload_acknowledge_get_error()
+{
+
+}
 
 #endif // THORQ_PAYLOAD_ACKNOWLEDGE_H

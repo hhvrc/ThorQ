@@ -2,39 +2,10 @@
 #define ENUMS_H
 
 typedef enum {
-	THORQ_MSG_FLAG_ENCRYPTED  = 1 << 0, ///< The following data is encrypted, it needs to get decrypted to make sense
-	THORQ_MSG_FLAG_RESERVED_2 = 1 << 1,
-	THORQ_MSG_FLAG_RESERVED_3 = 1 << 2,
-	THORQ_MSG_FLAG_RESERVED_4 = 1 << 3,
-	THORQ_MSG_FLAG_RESERVED_5 = 1 << 4,
-	THORQ_MSG_FLAG_RESERVED_6 = 1 << 5,
-	THORQ_MSG_FLAG_RESERVED_7 = 1 << 6,
-	THORQ_MSG_FLAG_RESERVED_8 = 1 << 7,
-} thorq_msg_flag_t; ///< Message entry flags to describe the state of a message
-
-typedef enum {
-	THORQ_PAYLOAD_ID_INVALID, ///< invalid id
-
-	THORQ_PAYLOAD_ID_CRYPT,        ///< Cryptographic handshake messages
-	THORQ_PAYLOAD_ID_SYSID,        ///< Client authentication messages to verify that they have bought the client
-	THORQ_PAYLOAD_ID_REGKEY,       ///< Client authentication messages to verify that they have bought the client
-
-	THORQ_PAYLOAD_ID_HEARTBEAT,    ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
-	THORQ_PAYLOAD_ID_VERSION,      ///< Request updated version info
-
-	THORQ_PAYLOAD_ID_USER,         ///< Login/Logout/List online users
-	THORQ_PAYLOAD_ID_SESSION,      ///< Request/Accept/Deny/Leave sessions
-	THORQ_PAYLOAD_ID_COLLAR,	   ///< Send collar command to session partner
-
-	THORQ_PAYLOAD_ID_ADMIN,        ///< Send admin message to moderate server (SystemID needs to be registered as a admin SystemID)
-} thorq_payload_id_t; ///< Message entry flags to describe the state of a message
-
-typedef enum {
-    THORQ_CMD_CRYPT_REQUEST,
-    THORQ_CMD_CRYPT_ESTABLISH,
-    THORQ_CMD_CRYPT_VERIFY,
-    THORQ_CMD_CRYPT_OK,
-} thorq_cmd_crypto_t;
+	THORQ_APP_SERVER,
+	THORQ_APP_CLIENT,
+	THORQ_APP_LINK,
+} thorq_app_t;
 
 typedef enum {
     THORQ_CMD_AUTH_SYSID_REQUEST,
@@ -48,11 +19,21 @@ typedef enum {
 } thorq_cmd_auth_t;
 
 typedef enum {
-	THORQ_CMD_USER_LOGIN,
-	THORQ_CMD_USER_LOGOUT,
-	THORQ_CMD_USER_SET_STATE,
-	THORQ_CMD_USER_GET_LIST,
-} thorq_cmd_user_t;
+	THORQ_PAYLOAD_ID_INVALID,      ///< invalid id
+
+	THORQ_PAYLOAD_ID_VERSION,      ///< Request updated version info
+
+	THORQ_PAYLOAD_ID_CRYPTO,       ///< Cryptographic handshake messages
+	THORQ_PAYLOAD_ID_AUTH,         ///< Client authentication (SysID/RegKey) messages
+
+	THORQ_PAYLOAD_ID_HEARTBEAT,    ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
+
+	THORQ_PAYLOAD_ID_COMMAND,      ///< Commands like login/logout/session/requests
+	THORQ_PAYLOAD_ID_COMMAND_ACK,  ///< Acknowledge for commands
+	THORQ_PAYLOAD_ID_NOTIFICATION, ///< Server broadcasts
+
+	THORQ_PAYLOAD_ID_COLLAR,       ///< Collar command
+} thorq_payload_id_t; ///< Message entry flags to describe the state of a message
 
 typedef enum {
 	THORQ_CMD_SESSION_REQUEST,
@@ -96,28 +77,14 @@ typedef enum {
 } thorq_session_event_t; ///< Enum that describes what the message is
 
 typedef enum {
-	THORQ_COLLAR_STATE_SHOCK      = 1 << 0, ///< Activate collar shock
-	THORQ_COLLAR_STATE_VIBRATE    = 1 << 1, ///< Activate collar vibration
-	THORQ_COLLAR_STATE_BEEP       = 1 << 2, ///< Activate collar speaker
-	THORQ_COLLAR_STATE_AUTO       = 1 << 3, ///< Auto mode
-	THORQ_COLLAR_STATE_RESERVED_5 = 1 << 4,
-	THORQ_COLLAR_STATE_RESERVED_6 = 1 << 5,
-	THORQ_COLLAR_STATE_RESERVED_7 = 1 << 6,
-	THORQ_COLLAR_STATE_PRESENT    = 1 << 7, ///< Collar is connected
-} thorq_collar_state_t; ///< Collar flag to describe current user input
-
-typedef enum {
     THORQ_DISCONNECT_REASON_UNKNOWN = 0,
 
-    THORQ_DISCONNECT_REASON_BANNED,
-    THORQ_DISCONNECT_REASON_TIMEDOUT,
-    THORQ_DISCONNECT_REASON_NOT_WHITELISTED,
+	THORQ_DISCONNECT_REASON_KICKED,
+	THORQ_DISCONNECT_REASON_TIMEDOUT,
 
-    THORQ_DISCONNECT_REASON_CRYPTO_ERROR,
-    THORQ_DISCONNECT_REASON_MESSAGE_ERROR,
+	THORQ_DISCONNECT_REASON_CRYPT_FAILED,
+	THORQ_DISCONNECT_REASON_AUTH_INVALID,
 
-    THORQ_DISCONNECT_REASON_INVALID_SYSID,
-    THORQ_DISCONNECT_REASON_INVALID_REGKEY,
     THORQ_DISCONNECT_REASON_SHUTDOWN_CRASH,
     THORQ_DISCONNECT_REASON_SHUTDOWN_MAINTANENCE,
 } thorq_disconnect_reason_t; //
@@ -142,6 +109,15 @@ typedef enum
 	THORQ_CRYPTO_STATE_VERIFYING,    ///< Hosts are not trying to verify that they successfully agreed on a shared secret
 	THORQ_CRYPTO_STATE_ACTIVE,       ///< Hosts have a shared secret and can send encrypted data between themselves
 } thorq_crypto_state_t; ///< State machine for crypto
+
+typedef enum
+{
+	THORQ_AUTH_STATE_NONE,           ///< Client has not been authenticated yet
+	THORQ_AUTH_STATE_CHECKING,       ///< Client has sent SystemID to server and is awaiting a response
+	THORQ_AUTH_STATE_AWAITING_INPUT, ///< Client is requesting user input for a registration key
+	THORQ_AUTH_STATE_REGISTERING,    ///< Client has semt registration key to server and is awaiting a response
+	THORQ_AUTH_STATE_OK,             ///< Server authenticated client, client can now access the api
+} thorq_auth_state_t; ///< State machine for client authentication
 
 typedef enum
 {

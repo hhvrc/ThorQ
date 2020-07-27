@@ -55,16 +55,17 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/botan_all.h)
 	endif()
 endif()
 
-set(${project}_INTERNAL
-	${CMAKE_BINARY_DIR}/botan_all.h
+set(${project}_SOURCES
 	${CMAKE_BINARY_DIR}/botan_all.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
 
 	${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
 	)
 
-set(${project}_EXTERNAL
+set(${project}_HEADERS
+	${CMAKE_BINARY_DIR}/botan_all.h
+	${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
+
 	${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
 	${CMAKE_CURRENT_SOURCE_DIR}/systemid.h
 
@@ -72,20 +73,24 @@ set(${project}_EXTERNAL
 	${CMAKE_CURRENT_SOURCE_DIR}/constants.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_auth.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_collar.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_crypto.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_version.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_command.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_heartbeat.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_command_ack.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_acknowledge.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_announcement.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_notification.h
 	)
 
 if (WINDOWS)
-	list(APPEND ${project}_INTERNAL ${CMAKE_CURRENT_SOURCE_DIR}/systemid_windows.cpp)
+        list(APPEND ${project}_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/systemid_windows.cpp)
 elseif(LINUX)
-	list(APPEND ${project}_INTERNAL ${CMAKE_CURRENT_SOURCE_DIR}/systemid_linux.cpp)
+        list(APPEND ${project}_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/systemid_linux.cpp)
 endif()
 
-add_library(${project} STATIC ${${project}_EXTERNAL})
-target_sources(${project} PRIVATE ${${project}_INTERNAL})
+add_library(${project} STATIC ${${project}_SOURCES} ${${project}_HEADERS})
 include_directories(${CMAKE_BINARY_DIR})
 
 if(WINDOWS)

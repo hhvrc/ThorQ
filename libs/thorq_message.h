@@ -1,134 +1,110 @@
-#ifndef MSG_MESSAGE_H
-#define MSG_MESSAGE_H
+#ifndef THORQ_MESSAGE_H
+#define THORQ_MESSAGE_H
 
+#include <vector>
 #include <cstdint>
-#include <memory>
+#include <cstring>
+
 #include "constants.h"
 #include "crypto.h"
 #include "enums.h"
 
-/**
- * @brief The thorq_message_t struct
- */
-typedef struct __thorq_message
+typedef enum {
+    THORQ_MESSAGE_FLAG_ENCRYPTED  = 1 << 0, ///< The following data is encrypted, it needs to get decrypted to make sense
+    THORQ_MESSAGE_FLAG_RESERVED_2 = 1 << 1,
+    THORQ_MESSAGE_FLAG_RESERVED_3 = 1 << 2,
+    THORQ_MESSAGE_FLAG_RESERVED_4 = 1 << 3,
+    THORQ_MESSAGE_FLAG_RESERVED_5 = 1 << 4,
+    THORQ_MESSAGE_FLAG_RESERVED_6 = 1 << 5,
+    THORQ_MESSAGE_FLAG_RESERVED_7 = 1 << 6,
+    THORQ_MESSAGE_FLAG_RESERVED_8 = 1 << 7,
+} thorq_message_header_flag_t; ///< Message entry flags to describe the state of a message
+
+constexpr std::size_t THORQ_PAYLOAD_LEN = THORQ_MESSAGE_LEN - (2 + THORQ_CRYPTO_CIPHER_IV_LEN);
+
+inline bool thorq_message_is_valid(const std::vector<std::uint8_t>& data)
 {
-	__thorq_message(){};
-	__thorq_message(const __thorq_message& other) = delete;
-	__thorq_message& operator = (const __thorq_message& other) = delete;
-
-	std::uint8_t flags = 0;
-	std::vector<std::uint8_t> payload; ///< Is vector to decrease amount of copies from converting from arrays to vectors, and back
-	std::uint8_t              payload_iv[THORQ_CRYPTO_CIPHER_IV_LEN]{0};
-
-	inline bool operator == (const __thorq_message& other) const
-	{
-		return flags == other.flags &&
-			   payload == other.payload &&
-			   (memcmp(payload_iv, other.payload_iv, THORQ_CRYPTO_CIPHER_IV_LEN) == 0);
-	}
-	inline bool operator != (const __thorq_message& other) const
-	{
-		return !(*this == other);
-	}
-} thorq_message_t;
-
-constexpr std::size_t THORQ_MAX_MESSAGE_LEN = 1 + THORQ_MAX_PAYLOAD_LEN + THORQ_CRYPTO_CIPHER_IV_LEN;
-
+	return data.size() == THORQ_MESSAGE_LEN;
+}
 inline bool thorq_message_is_valid(const std::uint8_t* data, std::size_t size)
 {
-	if (data == nullptr || size <= 1 || size > THORQ_MAX_MESSAGE_LEN)
-		return false;
-
-	if ((data[0] & THORQ_MSG_FLAG_ENCRYPTED) == 0)
-		return true;
-
-	return size > 1 + THORQ_CRYPTO_CIPHER_IV_LEN;
+	return data != nullptr && size == THORQ_MESSAGE_LEN;
 }
-inline bool thorq_message_is_valid(const std::vector<std::uint8_t>* msg)
+inline bool thorq_message_is_encrypted(const std::uint8_t* data, std::size_t size)
 {
-	return thorq_message_is_valid(msg->data(), msg->size());
+	return thorq_message_is_valid(data, size) && (data[0] & THORQ_MESSAGE_FLAG_ENCRYPTED) != 0;
 }
-inline bool thorq_message_is_encrypted(const thorq_message_t* msg)
+inline bool thorq_message_is_encrypted(const std::vector<std::uint8_t>& data)
 {
-	return (msg->flags & THORQ_MSG_FLAG_ENCRYPTED) != 0;
+	return thorq_message_is_valid(data) && (data[0] & THORQ_MESSAGE_FLAG_ENCRYPTED) != 0;
 }
 
-inline bool thorq_message_encode(const thorq_message_t* msg, std::vector<std::uint8_t>* data)
+inline void thorq_message_encode(const std::vector<std::uint8_t>& message, std::vector<std::uint8_t>& data)
 {
-	if (msg->payload.size() == 0)
-		return false;
+	data.resize(THORQ_MESSAGE_LEN);
 
-	if (thorq_message_is_encrypted(msg))
+	// Set header
+	data[0] = 0;
+
+	std::size_t payloadSize = std::min(message.size(), THORQ_PAYLOAD_LEN);
+
+	// Set size
+	data[1] = payloadSize;
+
+	// Copy over payload
+	memcpy(&data[2], &message[0], payloadSize);
+
+	// Randomize the rest of the data
+	ThorQ::Crypto::RandomizeBytes(&data[2 + payloadSize], THORQ_MESSAGE_LEN - (2 + payloadSize));
+}
+inline void thorq_message_encode(const std::vector<std::uint8_t>& message, std::vector<std::uint8_t>& data, ThorQ::Crypto* crypto)
+{
+	data.reserve(THORQ_MESSAGE_LEN);
+	data.resize(THORQ_PAYLOAD_LEN);
+
+	std::size_t payloadSize = std::min(message.size(), THORQ_PAYLOAD_LEN);
+
+	memcpy(&data[0], &message[0], payloadSize);
+	ThorQ::Crypto::RandomizeBytes(&data[payloadSize], THORQ_PAYLOAD_LEN - payloadSize);
+
+	// Encrpytion
 	{
-		data->resize(1 + msg->payload.size() + THORQ_CRYPTO_CIPHER_IV_LEN);
+		std::uint8_t iv[THORQ_CRYPTO_CIPHER_IV_LEN];
+		ThorQ::Crypto::RandomizeBytes(&iv[0], THORQ_CRYPTO_CIPHER_IV_LEN);
 
-		memcpy(data->data() + 1 + msg->payload.size(), msg->payload_iv, THORQ_CRYPTO_CIPHER_IV_LEN);
+		crypto->encrypt(data, &iv[0]);
+
+		data.resize(THORQ_MESSAGE_LEN);
+		memcpy(&data[2], &data[0], THORQ_PAYLOAD_LEN);
+		memcpy(&data[2 + THORQ_PAYLOAD_LEN], iv, THORQ_CRYPTO_CIPHER_IV_LEN);
+	}
+
+	// Set header
+	data[0] = THORQ_MESSAGE_FLAG_ENCRYPTED;
+
+	// Set size
+	data[1] = payloadSize;
+}
+inline void thorq_message_decode(const std::uint8_t* data, std::size_t dataSize, std::vector<std::uint8_t>& message, ThorQ::Crypto* crypto)
+{
+	std::size_t payloadSize = data[1];
+
+	if ((data[0] & THORQ_MESSAGE_FLAG_ENCRYPTED) != 0)
+	{
+		std::uint8_t iv[THORQ_CRYPTO_CIPHER_IV_LEN];
+		memcpy(&iv[0], &data[2 + THORQ_PAYLOAD_LEN], THORQ_CRYPTO_CIPHER_IV_LEN);
+
+		message.resize(THORQ_PAYLOAD_LEN);
+		memcpy(&message[0], &data[2], THORQ_PAYLOAD_LEN);
+
+		crypto->decrypt(message, iv);
+		message.resize(payloadSize);
 	}
 	else
 	{
-		data->resize(1 + msg->payload.size());
+		message.resize(payloadSize);
+		memcpy(&message[0], &data[2], payloadSize);
 	}
-
-	data->data()[0] = msg->flags;
-
-	memcpy(data->data() + 1, msg->payload.data(), msg->payload.size());
-
-	return true;
-}
-inline bool thorq_message_decode(const std::uint8_t* data, std::size_t size, thorq_message_t* msg)
-{
-	if (data == nullptr || size <= 1 || size > THORQ_MAX_MESSAGE_LEN)
-		return false;
-
-	msg->flags = data[0];
-	msg->payload.clear();
-
-	if (thorq_message_is_encrypted(msg))
-	{
-		if (size <= 1 + THORQ_CRYPTO_CIPHER_IV_LEN)
-			return false;
-
-		msg->payload.resize(size - 1 + THORQ_CRYPTO_CIPHER_IV_LEN);
-		memcpy(msg->payload.data(), data + 1, msg->payload.size());
-		memcpy(msg->payload_iv, data + 1 + msg->payload.size(), THORQ_CRYPTO_CIPHER_IV_LEN);
-	}
-	else
-	{
-		msg->payload.resize(size - 1);
-		memcpy(msg->payload.data(), data + 1, msg->payload.size());
-	}
-
-	return true;
 }
 
-inline bool thorq_message_encrypt(thorq_message_t* msg, ThorQ::Crypto* crypto)
-{
-	if (!thorq_message_is_encrypted(msg))
-	{
-		if (!crypto->encrypt(msg->payload, msg->payload_iv))
-			return false;
-		msg->flags |= THORQ_MSG_FLAG_ENCRYPTED;
-	}
-	return true;
-}
-inline bool thorq_message_decrypt(thorq_message_t* msg, ThorQ::Crypto* crypto)
-{
-	if (thorq_message_is_encrypted(msg))
-	{
-		if (!crypto->ready() || !crypto->decrypt(msg->payload, msg->payload_iv))
-			return false;
-
-		msg->flags &= ~THORQ_MSG_FLAG_ENCRYPTED;
-	}
-	return true;
-}
-
-inline thorq_payload_id_t thorq_message_payload_id(const thorq_message_t* msg)
-{
-	if (msg->payload.size() < 1 || thorq_message_is_encrypted(msg))
-		return THORQ_PAYLOAD_ID_INVALID;
-
-	return (thorq_payload_id_t)msg->payload.data()[0];
-}
-
-#endif // MSG_MESSAGE_H
+#endif // THORQ_MESSAGE_H
