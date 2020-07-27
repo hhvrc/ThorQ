@@ -97,5 +97,9 @@ add_executable(${project}
 	${${project}_MOC}
 )
 
+if (CMAKE_BUILD_TYPE STREQUAL "Release")
+    set_property(TARGET ${project} PROPERTY WIN32_EXECUTABLE true)
+endif()
+
 set_target_properties(${project} PROPERTIES COMPILE_FLAGS -DBUILDER_STATIC_DEFINE)
 target_link_libraries(${project} ThorQLib ${LIBRARIES})
