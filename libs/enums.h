@@ -8,17 +8,6 @@ typedef enum {
 } thorq_app_t;
 
 typedef enum {
-    THORQ_CMD_AUTH_SYSID_REQUEST,
-    THORQ_CMD_AUTH_SYSID_SUBMIT,
-
-    THORQ_CMD_AUTH_REGKEY_REQUEST,
-    THORQ_CMD_AUTH_REGKEY_SUBMIT,
-
-    THORQ_CMD_AUTH_INVALID,
-    THORQ_CMD_AUTH_VALID,
-} thorq_cmd_auth_t;
-
-typedef enum {
 	THORQ_PAYLOAD_ID_INVALID,      ///< invalid id
 
 	THORQ_PAYLOAD_ID_VERSION,      ///< Request updated version info
@@ -34,13 +23,6 @@ typedef enum {
 
 	THORQ_PAYLOAD_ID_COLLAR,       ///< Collar command
 } thorq_payload_id_t; ///< Message entry flags to describe the state of a message
-
-typedef enum {
-	THORQ_CMD_SESSION_REQUEST,
-	THORQ_CMD_SESSION_ACCEPT,
-	THORQ_CMD_SESSION_DENY,
-	THORQ_CMD_SESSION_LEAVE,
-} thorq_cmd_session_t;
 
 typedef enum {
 	THORQ_USER_STATE_FLAG_COLLAR_PRESENT = 1 << 0, ///< User currently has a collar connected to their pc, this will show up as a [🗲] icon next to their name

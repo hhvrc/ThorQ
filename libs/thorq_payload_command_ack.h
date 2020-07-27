@@ -3,6 +3,9 @@
 
 #include "thorq_payload_command.h"
 
-
+typedef enum {
+	THORQ_COMMAND_ACK_OK,
+	THORQ_COMMAND_ACK_
+}
 
 #endif // THORQ_MESSAGE_COMMAND_ACK_H

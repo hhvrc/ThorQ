@@ -78,6 +78,7 @@ set(${project}_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_crypto.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_version.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_command.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_session.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_heartbeat.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_command_ack.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_acknowledge.h
