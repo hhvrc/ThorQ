@@ -15,6 +15,11 @@ typedef enum {
     MAINT
 } thorq_announcement_reason_t;
 
+inline bool thorq_payload_notification_is_valid(const thorq_payload_t& payload)
+{
+	return payload.id == THORQ_PAYLOAD_ID_NOTIFICATION;
+}
+
 inline void thorq_notification_pack(thorq_payload_t& msg )
 {
 
