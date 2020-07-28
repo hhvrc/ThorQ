@@ -81,7 +81,6 @@ set(${project}_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_session.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_heartbeat.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_command_ack.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_acknowledge.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_notification.h
 	)
 
@@ -91,7 +90,10 @@ elseif(LINUX)
         list(APPEND ${project}_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/systemid_linux.cpp)
 endif()
 
-add_library(${project} STATIC ${${project}_SOURCES} ${${project}_HEADERS})
+add_library(${project} STATIC
+	${${project}_SOURCES}
+	${${project}_HEADERS}
+	)
 include_directories(${CMAKE_BINARY_DIR})
 
 if(WINDOWS)
