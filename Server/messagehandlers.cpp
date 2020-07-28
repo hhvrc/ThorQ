@@ -156,7 +156,174 @@ void handleMessageHeartbeat(ThorQ::Instance* isntance, const thorq_payload_t& pa
 
 void handleMessageCommand(ThorQ::Instance* isntance, const thorq_payload_t& payload)
 {
+	if (!instance->hasName())
+	{
+		if (meta == USER_Login)
+		{
+			std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
+			if (!registeredInstances.TryAdd(name, instance))
+			{
+				instance->setName(name);
+				instance->clearPartner();
+
+				thorq_payload_t txPayload;
+				THORQ_PAYLOAD_ID_NOTIFICATION
+				BroadcastMessage(NOTIFY_UserOnline, name);
+				instance->SendEncrypted(ACKNOWLEDGE_OK, "Logged in");
+			}
+			else
+			{
+				instance->SendEncrypted(ACKNOWLEDGE_Denied, "Callname in use");
+			}
+		}
+		else
+		{
+			instance->SendEncrypted(ACKNOWLEDGE_Denied, "Please log in");
+		}
+		return;
+	}
+
+	switch (meta){
+	case USER_Login:
+	{
+		instance->SendEncrypted(ACKNOWLEDGE_Denied, "Already logged in");
+		break;
+	}
+	case USER_Logout:
+	{
+		// Remove from registered
+		registeredInstances.Remove(instance->name());
+
+		// Disconnect session if one is ongoing
+		if (instance->hasPartner())
+		{
+			instance->SendEncrypted(NOTIFY_SessionEnded, instance->partner()->name());
+			instance->partner()->SendEncrypted(NOTIFY_SessionEnded, instance->name());
+
+			BroadcastMessage(NOTIFY_UserAvailable, instance->partner()->name());
+
+			instance->clearPartner();
+		}
+
+		// Announce offline
+		if (instance->hasName())
+		{
+			BroadcastMessage(NOTIFY_UserOffline, instance->name());
+			instance->setName("");
+		}
+		instance->SendEncrypted(ACKNOWLEDGE_OK, "Logged out");
+		break;
+	}
+	case USER_List:
+	{
+		std::vector<ThorQ::Instance*> instances = registeredInstances.GetInstances();
+
+		for (ThorQ::Instance* i : instances)
+		{
+			std::uint32_t txFlag = NOTIFY_UserOnline;
+
+			txFlag |= i->hasCollar() ? FLAG_CollarConnected : 0;
+
+			instance->SendEncrypted(txFlag, i->name());
+		}
+		break;
+	}
+	case SESSION_Request:
+	{
+		std::string name = ExtractString(data, size, sizeof(std::uint32_t));
+
+		ThorQ::Instance* otherInstance = registeredInstances.GetInstance(name);
+
+		if (otherInstance == nullptr)
+		{
+			instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
+			return;
+		}
+
+		otherInstance->requestOn(instance);
+		break;
+	}
+	case SESSION_Accept:
+	{
+		std::string name = ExtractString(data, size, sizeof(std::uint32_t));
+
+		ThorQ::Instance* otherInstance = registeredInstances.GetInstance(name);
+
+		if (otherInstance == nullptr)
+		{
+			instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
+			return;
+		}
+
+		instance->requestAcceptFrom(otherInstance);
+
+		BroadcastMessage(NOTIFY_UserInSession, instance->name());
+		BroadcastMessage(NOTIFY_UserInSession, otherInstance->name());
+		break;
+	}
+	case SESSION_Deny:
+	{
+		std::string name = ExtractString(data, size, sizeof(std::uint32_t));
+
+		ThorQ::Instance* otherInstance = registeredInstances.GetInstance(name);
+
+		if (otherInstance == nullptr)
+		{
+			instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
+			return;
+		}
+
+		if (instance->requestAcceptFrom(otherInstance))
+		{
+			BroadcastMessage(NOTIFY_UserInSession, instance->name());
+			BroadcastMessage(NOTIFY_UserInSession, otherInstance->name());
+		}
+		break;
+	}
+	case SESSION_Leave:
+	{
+		ThorQ::Instance* other = instance->partner();
+		instance->clearPartner();
+
+		if (other != nullptr)
+		{
+			BroadcastMessage(NOTIFY_UserInSession, instance->name());
+			BroadcastMessage(NOTIFY_UserInSession, other->name());
+		}
+		break;
+	}
+	case COMMAND_Beep:
+	case COMMAND_Vibrate:
+	case COMMAND_Shock:
+	{
+		if (instance->hasName() && instance->hasPartner())
+			instance->partner()->SendEncrypted(data, true);
+		break;
+	}
+	case COMMAND_Auto:
+	{
+		if (instance->hasName() && instance->hasPartner())
+			instance->partner()->SendEncrypted(data, false);
+		break;
+	}
+	case ACKNOWLEDGE_OK:
+		std::cout << "Received ACK_OK" << std::endl;
+		break;
+	case ACKNOWLEDGE_Error:
+		std::cout << "Received ACK_ERR" << std::endl;
+		break;
+	case ACKNOWLEDGE_Denied:
+		std::cout << "Received ACK_DENIED" << std::endl;
+		break;
+	case ACKNOWLEDGE_Invalid:
+		std::cout << "Received ACK_INVALID" << std::endl;
+		break;
+	default:
+		std::cout << "Received unknown message id " << meta << std::endl;
+		instance->SendEncrypted(ACKNOWLEDGE_Invalid, "Invalid message");
+		break;
+	}
 }
 
 void handleMessageCommandAck(ThorQ::Instance* isntance, const thorq_payload_t& payload)
