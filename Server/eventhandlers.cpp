@@ -51,9 +51,19 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 	thorq_payload_unpack(message, payload);
 
 	switch (payload.id) {
-	case THORQ_PAYLOAD_ID_INVALID:
-		printf("Got invalid payload!\n");
-		fflush(stdout);
+	case THORQ_PAYLOAD_ID_COLLAR:
+		if (thorq_payload_collar_is_valid(payload))
+		{
+			handleMessageCollar(instance, message);
+			return;
+		}
+		break;
+	case THORQ_PAYLOAD_ID_HEARTBEAT:
+		if (thorq_payload_heartbeat_is_valid(payload))
+		{
+			handleMessageHeartbeat(instance);
+			return;
+		}
 		break;
 	case THORQ_PAYLOAD_ID_VERSION:
 		if (thorq_payload_version_is_valid(payload))
@@ -73,13 +83,6 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 		if (thorq_payload_auth_is_valid(payload))
 		{
 			handleMessageAuth(instance, payload);
-			return;
-		}
-		break;
-	case THORQ_PAYLOAD_ID_HEARTBEAT:
-		if (thorq_payload_heartbeat_is_valid(payload))
-		{
-			handleMessageHeartbeat(instance, payload);
 			return;
 		}
 		break;
@@ -104,12 +107,9 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 			return;
 		}
 		break;
-	case THORQ_PAYLOAD_ID_COLLAR:
-		if (thorq_payload_collar_is_valid(payload))
-		{
-			handleMessageCollar(instance, payload);
-			return;
-		}
+	case THORQ_PAYLOAD_ID_INVALID:
+		printf("Got invalid payload!\n");
+		fflush(stdout);
 		break;
 	default:
 		if (instance->authState() != THORQ_AUTH_STATE_OK)

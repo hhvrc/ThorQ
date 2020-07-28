@@ -1,16 +1,18 @@
 #ifndef MESSAGEHANDLERS_H
 #define MESSAGEHANDLERS_H
 
+#include <vector>
+
 #include <instance.h>
 #include <thorq_payload.h>
 
-static void handleMessageVersion(ThorQ::Instance* isntance, const thorq_payload_t& payload);
-static void handleMessageCrypto(ThorQ::Instance* isntance, const thorq_payload_t& payload);
-static void handleMessageAuth(ThorQ::Instance* isntance, const thorq_payload_t& payload);
-static void handleMessageHeartbeat(ThorQ::Instance* isntance, const thorq_payload_t& payload);
-static void handleMessageCommand(ThorQ::Instance* isntance, const thorq_payload_t& payload);
-static void handleMessageCommandAck(ThorQ::Instance* isntance, const thorq_payload_t& payload);
-static void handleMessageNotification(ThorQ::Instance* isntance, const thorq_payload_t& payload);
-static void handleMessageCollar(ThorQ::Instance* isntance, const thorq_payload_t& payload);
+void handleMessageVersion(ThorQ::Instance* instance, const thorq_payload_t& payload);
+void handleMessageCrypto(ThorQ::Instance* instance, const thorq_payload_t& payload);
+void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t& payload);
+void handleMessageHeartbeat(ThorQ::Instance* instance);
+void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t& payload);
+void handleMessageCommandAck(ThorQ::Instance* instance, const thorq_payload_t& payload);
+void handleMessageNotification(ThorQ::Instance* instance, const thorq_payload_t& payload);
+void handleMessageCollar(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
 
 #endif // MESSAGEHANDLERS_H

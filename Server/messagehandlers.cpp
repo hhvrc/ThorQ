@@ -41,7 +41,7 @@ inline bool checkSession(ThorQ::Instance* instance)
 
 }
 
-void handleMessageVersion(ThorQ::Instance* isntance, const thorq_payload_t& payload)
+void handleMessageVersion(ThorQ::Instance* instance, const thorq_payload_t& payload)
 {
 	std::uint8_t app;
 	thorq_version_t version;
@@ -74,7 +74,7 @@ void handleMessageVersion(ThorQ::Instance* isntance, const thorq_payload_t& payl
 	fflush(stdout);
 }
 
-void handleMessageCrypto(ThorQ::Instance* isntance, const thorq_payload_t& payload)
+void handleMessageCrypto(ThorQ::Instance* instance, const thorq_payload_t& payload)
 {
 	switch (thorq_payload_crypto_get_cmd(payload)) {
 	case THORQ_CRYPTO_ESTABLISH:
@@ -82,36 +82,36 @@ void handleMessageCrypto(ThorQ::Instance* isntance, const thorq_payload_t& paylo
 		qDebug() << "Establishing!";
 		std::vector<std::uint8_t> data = thorq_payload_crypto_get_data(payload);
 
-		if (m_crypto->ready())
-			m_crypto->reset();
+		if (instance->getCrypto()->ready())
+			instance->getCrypto()->reset();
 
-		if (m_crypto->agree(data))
+		if (instance->getCrypto()->agree(data))
 		{
-			SetCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
+			instance->setCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
 
 			thorq_payload_t txPayload;
-			thorq_payload_crypto_pack(txPayload, THORQ_CRYPTO_ESTABLISH, m_crypto->publicKey());
-			SendPayload(txPayload, false, true);
+			thorq_payload_crypto_pack(txPayload, THORQ_CRYPTO_ESTABLISH, instance->getCrypto()->publicKey());
+			instance->sendPayload(txPayload, false, true);
 		}
 		else
 		{
-			m_crypto->reset();
-			SetCryptoState(THORQ_CRYPTO_STATE_NONE);
+			instance->getCrypto()->reset();
+			instance->setCryptoState(THORQ_CRYPTO_STATE_NONE);
 		}
 	}
 		break;
 	case THORQ_CRYPTO_VERIFY:
 	{
 		qDebug() << "Verifying!";
-		SetCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
+		instance->setCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
 
-		SendPayload(payload, false, true);
+		instance->sendPayload(payload, false, true);
 	}
 		break;
 	case THORQ_CRYPTO_OK:
 	{
 		qDebug() << "CyptOk!";
-		SetCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
+		instance->setCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
 	}
 		break;
 	default:
@@ -120,24 +120,24 @@ void handleMessageCrypto(ThorQ::Instance* isntance, const thorq_payload_t& paylo
 	}
 }
 
-void handleMessageAuth(ThorQ::Instance* isntance, const thorq_payload_t& payload)
+void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t& payload)
 {
 	thorq_payload_t txPayload;
 
 	switch (thorq_payload_auth_get_cmd(payload)) {
 	case THORQ_AUTH_SYSTEMID_REQ:
 		thorq_payload_auth_pack(txPayload, THORQ_AUTH_SYSTEMID, ThorQ::systemid_generate());
-		SendPayload(txPayload);
-		SetAuthState(THORQ_AUTH_STATE_CHECKING);
+		instance->sendPayload(txPayload);
+		instance->setAuthState(THORQ_AUTH_STATE_CHECKING);
 		break;
 	case THORQ_AUTH_REGKEY_REQ:
 		emit RequestingRegistrationKey();
 		thorq_payload_auth_pack(txPayload, THORQ_AUTH_REGKEY_AWAITING_INPUT);
-		SendPayload(txPayload);
-		SetAuthState(THORQ_AUTH_STATE_AWAITING_INPUT);
+		instance->sendPayload(txPayload);
+		instance->setAuthState(THORQ_AUTH_STATE_AWAITING_INPUT);
 		break;
 	case THORQ_AUTH_OK:
-		SetAuthState(THORQ_AUTH_STATE_OK);
+		instance->setAuthState(THORQ_AUTH_STATE_OK);
 		break;
 	default:
 		qDebug() << "Unexpected message:" << thorq_payload_auth_get_cmd(payload);
@@ -145,24 +145,24 @@ void handleMessageAuth(ThorQ::Instance* isntance, const thorq_payload_t& payload
 	}
 }
 
-void handleMessageHeartbeat(ThorQ::Instance* isntance, const thorq_payload_t& payload)
+void handleMessageHeartbeat(ThorQ::Instance* instance)
 {
-	(void)payload;
 	// TODO: create new message, and send that
 	sendMessage(instance->peer(), message, false);
 	printf("Heartbeat\n");
 	fflush(stdout);
 }
 
-void handleMessageCommand(ThorQ::Instance* isntance, const thorq_payload_t& payload)
+void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t& payload)
 {
+	/*
 	if (!instance->hasName())
 	{
 		if (meta == USER_Login)
 		{
 			std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
-			if (!registeredInstances.TryAdd(name, instance))
+			if (!registeredInstances->TryAdd(name, instance))
 			{
 				instance->setName(name);
 				instance->clearPartner();
@@ -183,17 +183,20 @@ void handleMessageCommand(ThorQ::Instance* isntance, const thorq_payload_t& payl
 		}
 		return;
 	}
+	*/
 
-	switch (meta){
-	case USER_Login:
+	thorq_command_id_t cmd;
+
+	switch (cmd){
+	case THORQ_COMMAND_ID_LOGIN:
 	{
 		instance->SendEncrypted(ACKNOWLEDGE_Denied, "Already logged in");
 		break;
 	}
-	case USER_Logout:
+	case THORQ_COMMAND_ID_LOGOUT:
 	{
 		// Remove from registered
-		registeredInstances.Remove(instance->name());
+		registeredInstances->Remove(instance->name());
 
 		// Disconnect session if one is ongoing
 		if (instance->hasPartner())
@@ -215,9 +218,9 @@ void handleMessageCommand(ThorQ::Instance* isntance, const thorq_payload_t& payl
 		instance->SendEncrypted(ACKNOWLEDGE_OK, "Logged out");
 		break;
 	}
-	case USER_List:
+	case THORQ_COMMAND_ID_GET_USER_LIST:
 	{
-		std::vector<ThorQ::Instance*> instances = registeredInstances.GetInstances();
+		std::vector<ThorQ::Instance*> instances = registeredInstances->GetInstances();
 
 		for (ThorQ::Instance* i : instances)
 		{
@@ -229,11 +232,11 @@ void handleMessageCommand(ThorQ::Instance* isntance, const thorq_payload_t& payl
 		}
 		break;
 	}
-	case SESSION_Request:
+	case THORQ_COMMAND_ID_SESSION_REQUEST:
 	{
 		std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
-		ThorQ::Instance* otherInstance = registeredInstances.GetInstance(name);
+		ThorQ::Instance* otherInstance = registeredInstances->GetInstance(name);
 
 		if (otherInstance == nullptr)
 		{
@@ -244,11 +247,11 @@ void handleMessageCommand(ThorQ::Instance* isntance, const thorq_payload_t& payl
 		otherInstance->requestOn(instance);
 		break;
 	}
-	case SESSION_Accept:
+	case THORQ_COMMAND_ID_SESSION_ACCEPT
 	{
 		std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
-		ThorQ::Instance* otherInstance = registeredInstances.GetInstance(name);
+		ThorQ::Instance* otherInstance = registeredInstances->GetInstance(name);
 
 		if (otherInstance == nullptr)
 		{
@@ -262,11 +265,11 @@ void handleMessageCommand(ThorQ::Instance* isntance, const thorq_payload_t& payl
 		BroadcastMessage(NOTIFY_UserInSession, otherInstance->name());
 		break;
 	}
-	case SESSION_Deny:
+	case THORQ_COMMAND_ID_SESSION_DENY:
 	{
 		std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
-		ThorQ::Instance* otherInstance = registeredInstances.GetInstance(name);
+		ThorQ::Instance* otherInstance = registeredInstances->GetInstance(name);
 
 		if (otherInstance == nullptr)
 		{
@@ -274,69 +277,30 @@ void handleMessageCommand(ThorQ::Instance* isntance, const thorq_payload_t& payl
 			return;
 		}
 
-		if (instance->requestAcceptFrom(otherInstance))
-		{
-			BroadcastMessage(NOTIFY_UserInSession, instance->name());
-			BroadcastMessage(NOTIFY_UserInSession, otherInstance->name());
-		}
+		instance->partner()->setSessionState(THORQ_SESSION_STATE_NONE);
 		break;
 	}
-	case SESSION_Leave:
-	{
-		ThorQ::Instance* other = instance->partner();
-		instance->clearPartner();
-
-		if (other != nullptr)
-		{
-			BroadcastMessage(NOTIFY_UserInSession, instance->name());
-			BroadcastMessage(NOTIFY_UserInSession, other->name());
-		}
+	case THORQ_COMMAND_ID_SESSION_LEAVE:
+		instance->setSessionState(THORQ_SESSION_STATE_NONE);
 		break;
-	}
-	case COMMAND_Beep:
-	case COMMAND_Vibrate:
-	case COMMAND_Shock:
-	{
-		if (instance->hasName() && instance->hasPartner())
-			instance->partner()->SendEncrypted(data, true);
-		break;
-	}
-	case COMMAND_Auto:
-	{
-		if (instance->hasName() && instance->hasPartner())
-			instance->partner()->SendEncrypted(data, false);
-		break;
-	}
-	case ACKNOWLEDGE_OK:
-		std::cout << "Received ACK_OK" << std::endl;
-		break;
-	case ACKNOWLEDGE_Error:
-		std::cout << "Received ACK_ERR" << std::endl;
-		break;
-	case ACKNOWLEDGE_Denied:
-		std::cout << "Received ACK_DENIED" << std::endl;
-		break;
-	case ACKNOWLEDGE_Invalid:
-		std::cout << "Received ACK_INVALID" << std::endl;
-		break;
-	default:
-		std::cout << "Received unknown message id " << meta << std::endl;
-		instance->SendEncrypted(ACKNOWLEDGE_Invalid, "Invalid message");
+	case THORQ_COMMAND_ID_SET_SELF_STATE:
 		break;
 	}
 }
 
-void handleMessageCommandAck(ThorQ::Instance* isntance, const thorq_payload_t& payload)
+void handleMessageCommandAck(ThorQ::Instance* instance, const thorq_payload_t& payload)
 {
 
 }
 
-void handleMessageNotification(ThorQ::Instance* isntance, const thorq_payload_t& payload)
+void handleMessageNotification(ThorQ::Instance* instance, const thorq_payload_t& payload)
 {
 
 }
 
-void handleMessageCollar(ThorQ::Instance* isntance, const thorq_payload_t& payload)
+void handleMessageCollar(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
-
+	if (instance->sessionState() == THORQ_SESSION_STATE_ACTIVE)
+		if (instance->partner() != nullptr)
+			instance->partner()->sendMessage(message, true, false);
 }
