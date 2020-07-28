@@ -11,6 +11,9 @@
 #include <thorq_payload_crypto.h>
 #include <thorq_payload_command_ack.h>
 
+#include "utils.h"
+#include "instancemap.h"
+
 ThorQ::Instance::Instance(ENetPeer* peer)
 	: m_crypto(new Crypto())
 	, m_connectionState(THORQ_CONNECTION_STATE_DISCONNECTED)
@@ -213,9 +216,30 @@ thorq_login_state_t ThorQ::Instance::loginState() const
 }
 void ThorQ::Instance::setLoginState(thorq_login_state_t state)
 {
-	if (state < m_loginState)
-        setSessionState(THORQ_SESSION_STATE_NONE);
-	m_loginState = state;
+	if (state != m_loginState)
+	{
+		m_loginState = state;
+
+		if (state == THORQ_LOGIN_STATE_LOGGEDIN)
+		{
+			registeredInstances->TryAdd(this);
+
+			thorq_payload_t payload;
+			// TODO: notify about user_online
+			broadcastPayload(payload, true);
+		}
+		else if (state == THORQ_LOGIN_STATE_LOGGEDOUT)
+		{
+			registeredInstances->Remove(this->name());
+
+			thorq_payload_t payload;
+			// TODO: notify about user_offline
+			broadcastPayload(payload, true);
+		}
+
+		if (state < m_loginState)
+			setSessionState(THORQ_SESSION_STATE_NONE);
+	}
 }
 thorq_session_state_t ThorQ::Instance::sessionState() const
 {
@@ -223,7 +247,33 @@ thorq_session_state_t ThorQ::Instance::sessionState() const
 }
 void ThorQ::Instance::setSessionState(thorq_session_state_t state)
 {
-	m_sessionState = state;
+	if (state != m_sessionState)
+	{
+		m_sessionState = state;
+
+
+		if (state == THORQ_SESSION_STATE_NONE)
+		{
+			Instance* partner = m_partner;
+			m_partner = nullptr;
+			if (partner != nullptr)
+				m_partner->setSessionState(THORQ_SESSION_STATE_NONE);
+
+			// If we have already are notifying users that someone went offline then there is no use in telling them that they left a session, that is obvious
+			if (m_loginState != THORQ_LOGIN_STATE_LOGGEDIN)
+				return;
+
+			thorq_payload_t payload;
+			// TODO: notify about user_in_session
+			broadcastPayload(payload, true);
+		}
+		else if (state == THORQ_SESSION_STATE_ACTIVE)
+		{
+			thorq_payload_t payload;
+			// TODO: notify about user_not_in_session
+			broadcastPayload(payload, true);
+		}
+	}
 }
 
 void ThorQ::Instance::cryptoInit()
