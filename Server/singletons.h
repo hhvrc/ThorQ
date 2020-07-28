@@ -1,10 +1,10 @@
 #ifndef SINGETONS_H
 #define SINGETONS_H
 
-typedef struct _ENetHost ENetHost;
 namespace ThorQ { class InstanceMap; }
+typedef struct _ENetHost ENetHost;
 
-ENetHost* server;
-ThorQ::InstanceMap* registeredInstances{};
+ENetHost* server = nullptr;
+ThorQ::InstanceMap* registeredInstances = nullptr;
 
 #endif // SINGETONS_H
