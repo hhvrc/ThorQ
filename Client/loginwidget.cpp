@@ -72,7 +72,7 @@ void LoginWidget::SetLoginState(thorq_login_state_t state)
 	}
 }
 
-void LoginWidget::SetConnectionPing(int ping)
+void LoginWidget::SetConnectionPing(uint ping)
 {
 	if (m_ping != ping)
 	{

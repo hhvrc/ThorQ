@@ -19,8 +19,6 @@ typedef struct _ENetHost    ENetHost;
 typedef struct _ENetPacket  ENetPacket;
 typedef struct _ENetAddress ENetAddress;
 
-#include "userdata.h"
-
 class Client : public QObject
 {
 	Q_OBJECT
@@ -32,14 +30,14 @@ public:
 
 	static QString Version();
 
-	int Ping() const;
+	uint Ping() const;
 	thorq_connection_state_t ConnectionState() const;
 	thorq_crypto_state_t CryptoState() const;
 	thorq_auth_state_t AuthState() const;
 	thorq_login_state_t LoginState() const;
 	thorq_session_state_t SessionState() const;
 public slots:
-	void Connect(const char* address, int port);
+	void Connect(const char* address, std::uint16_t port);
 	void Reconnect();
 	void Disconnect();
 
@@ -51,17 +49,19 @@ public slots:
 	void DenyRequest();
 	void LeaveSession();
 
-	void SetShock(bool enable, int strength = -1);
-	void SetVibrate(bool enable, int strength = -1);
-	void SetBeep(bool enable, int strength = -1);
-	void SetAuto(bool enable, int sensitivity, int shockStrength, int vibrateStrength, int beepCount);
+	void SetShock(std::uint8_t strengt);
+	void SetVibrate(std::uint8_t strength);
+	void SetBeep(std::uint8_t strength);
+	void EnableAuto(std::uint8_t sensitivity);
+	void DisableAuto();
+	void SendImpulse();
 
 	void SetRegistrationKey(const QString& regKey);
 signals:
 	void AddressChanged(const QString& Address);
-	void PortChanged(int Port);
+	void PortChanged(std::uint16_t Port);
 
-	void PingChanged(int ping);
+	void PingChanged(uint ping);
 	void ConnectionStateChanged(thorq_connection_state_t state);
 	void CryptoStateChanged(thorq_crypto_state_t state);
 	void AuthStateChanged(thorq_auth_state_t state);
@@ -69,15 +69,15 @@ signals:
 	void SessionStateChanged(thorq_session_state_t state);
 
 	void usernameChanged(const QString& username);
-	void partnerChanged(const UserData& user);
+	void partnerChanged(const QString& username);
 
-	void userUpdate(const UserData& user);
+	void userUpdate(const QString& user, std::uint8_t state);
 	void UserOffline(const QString& user);
 
-	void ReceivedShock(int strength);
-	void ReceivedVibrate(int strength);
-	void ReceivedBeep(int count);
-	void ReceivedAuto(int sensitivity, int shockStrength, int vibrateStrength, int beepCount);
+	void ReceivedShock(std::uint8_t strength);
+	void ReceivedVibrate(std::uint8_t strength);
+	void ReceivedBeep(std::uint8_t count);
+	void ReceivedAuto(std::uint8_t sensitivity, std::uint8_t shockStrength, std::uint8_t vibrateStrength, std::uint8_t beepCount);
 	void ReceivedManual();
 
 	void RequestingRegistrationKey();
@@ -86,7 +86,7 @@ signals:
 private slots:
 	void Run();
 
-	void SetPing(int ping);
+	void SetPing(std::uint16_t ping);
 
 	/**
 	 * @brief SetConnectionState
@@ -167,7 +167,7 @@ private:
 	std::atomic<thorq_auth_state_t> m_authState;
 	std::atomic<thorq_login_state_t> m_loginState;
 	std::atomic<thorq_session_state_t> m_sessionState;
-	std::atomic_int m_ping;
+	std::atomic_uint m_ping;
 
 	std::mutex l_username;
 	std::string m_username;
@@ -184,15 +184,8 @@ private:
 	std::mutex l_registrationKey;
 	std::string m_registrationKey;
 
-	std::atomic_uint m_actionFlags;
-	std::atomic_uint m_collarFlags;
-	std::atomic_uint m_shockValue;
-	std::atomic_uint m_vibrateValue;
-	std::atomic_uint m_beepValue;
-	std::atomic_uint m_autoSensitivity;
-	std::atomic_uint m_autoShock;
-	std::atomic_uint m_autoVibrate;
-	std::atomic_uint m_autoBeep;
+	std::atomic<std::uint16_t> m_actionFlags;
+	std::atomic<std::uint32_t> m_collarState;
 
 	QThread* m_thread;
 
@@ -202,9 +195,9 @@ private:
 	ENetHost* m_host;
 	ENetPeer* m_peer;
 
-	std::mutex l_requestedHost;
-	std::string m_requestedHostName;
-	int         m_requestedHostPort;
+	std::mutex    l_requestedHost;
+	std::string   m_requestedHostName;
+	std::uint16_t m_requestedHostPort;
 
 	ENetAddress* m_address;
 };

@@ -11,7 +11,7 @@ typedef enum {
     THORQ_COLLAR_FLAG_RESERVED_5 = 1 << 4,
     THORQ_COLLAR_FLAG_RESERVED_6 = 1 << 5,
     THORQ_COLLAR_FLAG_RESERVED_7 = 1 << 6,
-    THORQ_COLLAR_FLAG_RESERVED_8 = 1 << 7,
+	THORQ_COLLAR_FLAG_IMPULSE    = 1 << 7,
 } thorq_collar_flag_t; ///< Collar flag to describe current user input
 
 inline bool thorq_payload_collar_is_valid(const thorq_payload_t& payload)

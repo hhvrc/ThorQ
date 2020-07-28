@@ -56,14 +56,7 @@ Client::Client(ENetHost* host)
 	, l_registrationKey()
 	, m_registrationKey("")
 	, m_actionFlags(0)
-	, m_collarFlags(0)
-	, m_shockValue(0)
-	, m_vibrateValue(0)
-	, m_beepValue(0)
-	, m_autoSensitivity(0)
-	, m_autoShock(0)
-	, m_autoVibrate(0)
-	, m_autoBeep(0)
+	, m_collarState(0)
 	, m_thread(new QThread())
 	, m_awaitingPing(false)
 	, m_pingTimer(new QElapsedTimer())
@@ -113,7 +106,7 @@ QString Client::Version()
 	return QString("ENet-%1.%2.%3").arg(ENET_VERSION_MAJOR).arg(ENET_VERSION_MINOR).arg(ENET_VERSION_PATCH);
 }
 
-int Client::Ping() const
+uint Client::Ping() const
 {
 	return m_ping.load();
 }
@@ -143,7 +136,7 @@ thorq_session_state_t Client::SessionState() const
 	return m_sessionState.load();
 }
 
-void Client::Connect(const char* address, int port)
+void Client::Connect(const char* address, std::uint16_t port)
 {
 	{
 		SCOPELOCK(l_requestedHost);
@@ -207,59 +200,39 @@ void Client::LeaveSession()
 	m_actionFlags.fetch_or(ACTION_SessionLeave);
 }
 
-void Client::SetShock(bool enable, int strength)
+// Pack the collar data like this so we can write everything to one atomic variable
+// SIZE   #    4 |     4 |       4 |    4 |     8
+// OFFSET #   20 |    16 |      12 |   08 |     0
+// MASK   #  0x7 |   0x7 |     0x7 |  0x7 |  0xFF
+// NAME   # AUTO | SHOCK | VIBRATE | BEEP | FLAGS
+
+void Client::SetShock(std::uint8_t value)
 {
-	if (enable)
-	{
-		if (strength != -1)
-			m_shockValue.store(strength);
-		m_collarFlags.fetch_or(THORQ_COLLAR_FLAG_SHOCK);
-	}
-	else
-	{
-		m_collarFlags.fetch_and(~THORQ_COLLAR_FLAG_SHOCK);
-	}
+	m_collarState.fetch_and(~((0xF << 16) | 0xFF));
+	m_collarState.fetch_or((std::min(value, (std::uint8_t)0x7) << 16) | THORQ_COLLAR_FLAG_SHOCK);
 }
-void Client::SetVibrate(bool enable, int strength)
+void Client::SetVibrate(std::uint8_t value)
 {
-	if (enable)
-	{
-		if (strength != -1)
-			m_vibrateValue.store(strength);
-		m_collarFlags.fetch_or(THORQ_COLLAR_FLAG_VIBRATE);
-	}
-	else
-	{
-		m_collarFlags.fetch_and(~THORQ_COLLAR_FLAG_VIBRATE);
-	}
+	m_collarState.fetch_and(~((0xF << 12) | 0xFF));
+	m_collarState.fetch_or((std::min(value, (std::uint8_t)0x7) << 12) | THORQ_COLLAR_FLAG_VIBRATE);
 }
-void Client::SetBeep(bool enable, int count)
+void Client::SetBeep(std::uint8_t value)
 {
-	if (enable)
-	{
-		if (count != -1)
-			m_beepValue.store(count);
-		m_collarFlags.fetch_or(THORQ_COLLAR_FLAG_BEEP);
-	}
-	else
-	{
-		m_collarFlags.fetch_and(~THORQ_COLLAR_FLAG_BEEP);
-	}
+	m_collarState.fetch_and(~((0xF << 8) | 0xFF));
+	m_collarState.fetch_or((std::min(value, (std::uint8_t)0x7) << 8) | THORQ_COLLAR_FLAG_BEEP);
 }
-void Client::SetAuto(bool enable, int sensitivity, int shockStrength, int vibrateStrength, int beepCount)
+void Client::EnableAuto(std::uint8_t value)
 {
-	if (enable)
-	{
-		m_autoSensitivity.store(sensitivity);
-		m_autoShock.store(shockStrength);
-		m_autoShock.store(vibrateStrength);
-		m_autoShock.store(beepCount);
-		m_collarFlags.fetch_or(THORQ_COLLAR_FLAG_AUTO);
-	}
-	else
-	{
-		m_collarFlags.fetch_and(~THORQ_COLLAR_FLAG_AUTO);
-	}
+	m_collarState.fetch_and(~((0xF << 20) | 0xFF));
+	m_collarState.fetch_or((std::min(value, (std::uint8_t)0x7) << 20) | THORQ_COLLAR_FLAG_AUTO);
+}
+void Client::DisableAuto()
+{
+	m_collarState.fetch_and(~THORQ_COLLAR_FLAG_AUTO);
+}
+void Client::SendImpulse()
+{
+	m_collarState.fetch_or(THORQ_COLLAR_FLAG_IMPULSE);
 }
 
 void Client::SetRegistrationKey(const QString& regKey)
@@ -314,10 +287,12 @@ void Client::Run()
 		// Send stuff
 		if (ConnectionState() == THORQ_CONNECTION_STATE_CONNECTED)
 		{
-			if (SessionState() == THORQ_SESSION_STATE_ACTIVE)
+			std::uint32_t collarState = m_collarState.fetch_and(~0xFF);
+
+			if (SessionState() == THORQ_SESSION_STATE_ACTIVE && ((collarState & THORQ_COLLAR_FLAG_IMPULSE) != 0))
 			{
 				thorq_payload_t payload;
-				thorq_payload_collar_pack(payload, m_collarFlags.load(), m_shockValue.load(), m_vibrateValue.load(), m_beepValue.load(), m_autoSensitivity.load());
+				thorq_payload_collar_pack(payload, collarState & 0xFF, (collarState >> 16) & 0xF, (collarState >> 12) & 0xF, (collarState >> 8) & 0xF, (collarState >> 20) & 0xF);
 				SendPayload(payload, true, false);
 			}
 			else if (SessionState() == THORQ_SESSION_STATE_DECIDING)
@@ -412,7 +387,7 @@ void Client::Run()
 	}
 }
 
-void Client::SetPing(int ping)
+void Client::SetPing(std::uint16_t ping)
 {
 	if (m_ping != ping)
 	{

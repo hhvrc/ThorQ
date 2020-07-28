@@ -22,7 +22,7 @@ public:
 public slots:
 	void SetConnectionState(thorq_connection_state_t state);
 	void SetLoginState(thorq_login_state_t state);
-	void SetConnectionPing(int ping);
+	void SetConnectionPing(uint ping);
 signals:
 	void LoginRequest(const QString& username);
 private slots:
@@ -32,7 +32,7 @@ private slots:
 private:
 	thorq_connection_state_t m_connectionState;
 	thorq_login_state_t m_loginState;
-	int m_ping;
+	uint m_ping;
 
 	QLabel* m_title;
 	QLabel* m_onlineStatus;
