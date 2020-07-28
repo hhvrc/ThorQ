@@ -17,10 +17,6 @@ Q_DECLARE_METATYPE(thorq_login_state_t)
 
 int main(int argc, char** argv)
 {
-    Serial s;
-    s.FindCollar();
-
-    /*
 	qRegisterMetaType<thorq_connection_state_t>("ThorqConnectionState");
 	qRegisterMetaType<thorq_login_state_t>("ThorqLoginState");
 
@@ -77,5 +73,4 @@ int main(int argc, char** argv)
 	enet_deinitialize();
 
 	return retval;
-    */
 }
