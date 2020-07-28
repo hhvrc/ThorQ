@@ -14,18 +14,11 @@ namespace ThorQ {
 		InstanceMap();
 		~InstanceMap();
 
-		bool TryAdd(const std::string& name, Instance* peer);
+		bool TryAdd(Instance* peer);
 
-		Instance* GetInstance(const std::string& name);
-		std::string GetName(const Instance* peer);
-
-		bool ContainsInstance(const Instance* peer) const;
-		bool ContainsName(const std::string& name) const;
-
-		std::vector<std::string> GetNames();
-		std::vector<Instance*> GetInstances();
-
-		void Remove(const Instance* peer);
+		Instance* Get(const std::string& name);
+		bool Contains(const std::string& name) const;
+		std::vector<Instance*> ToList();
 		void Remove(const std::string& name);
 
 		void Clear();
