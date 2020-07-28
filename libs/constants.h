@@ -22,6 +22,6 @@ constexpr std::size_t THORQ_CRYPTO_KEY_LENGTH = 32;
 constexpr const char* THORQ_CRYPTO_KEY_DVFUNC = "KDF2(SHA-256)";
 constexpr std::size_t THORQ_CRYPTO_VERIFICATION_DATA_LENGTH = 256;
 
-constexpr std::size_t THORQ_MESSAGE_LEN = 512; ///< Maximum payload length
+constexpr std::size_t THORQ_PAYLOAD_LEN = 512; ///< Maximum payload length
 
 #endif // CONSTANTS_H
