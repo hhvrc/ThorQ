@@ -151,10 +151,10 @@ private slots:
 	void SetPartner(const QString& username);
 
 	void HandleMessage(ENetPacket* packet);
-	void HandleMessageVersion(const thorq_payload_t& payload);
-	void HandleMessageHeartbeat(const thorq_payload_t& payload);
-	void HandleMessageCrypto(const thorq_payload_t& payload);
-	void HandleMessageAuth(const thorq_payload_t& payload);
+	void handleMessageVersion(const thorq_payload_t& payload);
+	void handleMessageHeartbeat(const thorq_payload_t& payload);
+	void handleMessageCrypto(const thorq_payload_t& payload);
+	void handleMessageAuth(const thorq_payload_t& payload);
 
 	void SendPayload(const thorq_payload_t& payload, bool encrypt = true, bool reliable = true);
 

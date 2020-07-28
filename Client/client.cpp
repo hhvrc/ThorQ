@@ -519,19 +519,19 @@ void Client::HandleMessage(ENetPacket* packet)
 		return;
 	case THORQ_PAYLOAD_ID_VERSION:
 		if (thorq_payload_version_is_valid(payload))
-			HandleMessageVersion(payload);
-		return;
-	case THORQ_PAYLOAD_ID_HEARTBEAT:
-		if (thorq_payload_heartbeat_is_valid(payload))
-			HandleMessageHeartbeat(payload);
+			handleMessageVersion(payload);
 		return;
 	case THORQ_PAYLOAD_ID_CRYPTO:
 		if (thorq_payload_crypto_is_valid(payload))
-			HandleMessageCrypto(payload);
+			handleMessageCrypto(payload);
 		return;
 	case THORQ_PAYLOAD_ID_AUTH:
 		if (thorq_payload_auth_is_valid(payload))
-			HandleMessageAuth(payload);
+			handleMessageAuth(payload);
+		return;
+	case THORQ_PAYLOAD_ID_HEARTBEAT:
+		if (thorq_payload_heartbeat_is_valid(payload))
+			handleMessageHeartbeat(payload);
 		return;
 	default:
 		if (AuthState() != THORQ_AUTH_STATE_OK)
@@ -547,7 +547,7 @@ void Client::HandleMessage(ENetPacket* packet)
 	qDebug() << "uwu";
 }
 
-void Client::HandleMessageVersion(const thorq_payload_t& payload)
+void Client::handleMessageVersion(const thorq_payload_t& payload)
 {
 	std::uint8_t app;
 	thorq_version_t version;
@@ -574,10 +574,10 @@ void Client::HandleMessageVersion(const thorq_payload_t& payload)
 		break;
 	default:
 		qDebug() << "Got ivalid version" << app << version.to_string().c_str();
-		break;
+		return;
 	}
 }
-void Client::HandleMessageHeartbeat(const thorq_payload_t& payload)
+void Client::handleMessageHeartbeat(const thorq_payload_t& payload)
 {
 	Q_UNUSED(payload)
 
@@ -588,7 +588,7 @@ void Client::HandleMessageHeartbeat(const thorq_payload_t& payload)
 		SetPing(m_pingTimer->elapsed());
 	}
 }
-void Client::HandleMessageCrypto(const thorq_payload_t& payload)
+void Client::handleMessageCrypto(const thorq_payload_t& payload)
 {
 	switch (thorq_payload_crypto_get_cmd(payload)) {
 	case THORQ_CRYPTO_ESTABLISH:
@@ -629,11 +629,11 @@ void Client::HandleMessageCrypto(const thorq_payload_t& payload)
 	}
 		break;
 	default:
-		qDebug() << "Cypt???";
+		qDebug() << "Crypt???";
 		return;
 	}
 }
-void Client::HandleMessageAuth(const thorq_payload_t& payload)
+void Client::handleMessageAuth(const thorq_payload_t& payload)
 {
 	thorq_payload_t txPayload;
 
