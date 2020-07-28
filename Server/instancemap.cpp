@@ -1,4 +1,4 @@
-#include "peermap.h"
+#include "instancemap.h"
 
 using namespace ThorQ;
 
@@ -9,7 +9,7 @@ InstanceMap::InstanceMap()
 
 InstanceMap::~InstanceMap()
 {
-
+	Clear();
 }
 
 bool InstanceMap::TryAdd(const std::string& name, Instance* peer)

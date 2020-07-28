@@ -7,19 +7,27 @@ project(
 	LANGUAGES CXX
 )
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
 message("Configuring ${project}...")
 
+set(${project}_SOURCES
+	${CMAKE_CURRENT_SOURCE_DIR}/instance.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/instancemap.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.cpp
+)
+set(${project}_HEADERS
+	${CMAKE_CURRENT_SOURCE_DIR}/utils.h
+	${CMAKE_CURRENT_SOURCE_DIR}/instance.h
+	${CMAKE_CURRENT_SOURCE_DIR}/singletons.h
+	${CMAKE_CURRENT_SOURCE_DIR}/instancemap.h
+	${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.h
+	${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.h
+)
+
 add_executable(${project}
-	instance.h
-	instance.cpp
-	peermap.h
-	peermap.cpp
 	main.cpp
+	${${project}_SOURCES}
+	${${project}_HEADERS}
 )
 
 target_link_libraries(${project} ThorQLib)
