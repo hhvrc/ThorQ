@@ -7,8 +7,9 @@
 #include <cstdint>
 
 #include <enums.h>
+#include <crypto.h>
 #include <constants.h>
-#include <thorq_message_crypto.h>
+#include <thorq_payload.h>
 
 typedef struct _ENetPeer ENetPeer;
 
@@ -25,44 +26,51 @@ namespace ThorQ {
 		Instance(ENetPeer* peer, const std::string& name);
 		~Instance();
 
-		void SetName(const std::string& newName);
-		const std::string& Name() const;
-		bool HasName();
+        void setName(const std::string& newName);
+        const std::string& name() const;
+        bool hasName();
 
-		void SetPeer(ENetPeer* peer);
-		ENetPeer* Peer() const;
+        void setPeer(ENetPeer* peer);
+        ENetPeer* peer() const;
 
-		void RequestOn(Instance* target);
-		bool RequestAcceptFrom(Instance* sender);
-		bool RequestDenyFrom(Instance* sender);
-		Instance* Partner() const;
-		void ClearPartner();
-		bool HasPartner();
+        void requestOn(Instance* target);
+        bool requestAcceptFrom(Instance* sender);
+        bool requestDenyFrom(Instance* sender);
+        Instance* partner() const;
+        void clearPartner();
+        bool hasPartner();
 
-		void SetHasCollar(bool hasCollar);
-		bool HasCollar() const;
+        void setHasCollar(bool hasCollar);
+        bool hasCollar() const;
 
-		thorq_connection_state_t ConnectionState() const;
-		void SetConnectionState(thorq_connection_state_t state);
-		thorq_crypto_state_t CryptoState() const;
-		void SetCryptoState(thorq_crypto_state_t state);
-		thorq_login_state_t LoginState() const;
-		void SetLoginState(thorq_login_state_t state);
-		thorq_session_state_t SessionState() const;
-		void SetSessionState(thorq_session_state_t state);
+        thorq_connection_state_t connectionState() const;
+        void setConnectionState(thorq_connection_state_t state);
+        thorq_crypto_state_t cryptoState() const;
+        void setCryptoState(thorq_crypto_state_t state);
+        thorq_auth_state_t authState() const;
+        void setAuthState(thorq_auth_state_t state);
+        thorq_login_state_t loginState() const;
+        void setLoginState(thorq_login_state_t state);
+        thorq_session_state_t sessionState() const;
+        void setSessionState(thorq_session_state_t state);
 
-		void CryptoInit();
-		bool CryptoEstablish(const std::vector<std::uint8_t>& data);
-		bool CryptoVerify(const std::vector<std::uint8_t>& data);
+        void cryptoInit();
+        bool cryptoEstablish(const std::vector<std::uint8_t>& data);
+        bool cryptoVerify(const std::vector<std::uint8_t>& data);
 
-		Crypto* GetCrypto();
+        Crypto* getCrypto();
 
-        void SendMessage(const thorq_msg_t& msg, bool reliable = true);
+        void sendPayload(const thorq_payload_t& payload, bool encrypt = true, bool reliable = true);
+        void sendMessage(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
+
+        void disconnect(std::uint32_t reason);
+        void disconnectForcibly(std::uint32_t reason);
 	private:
 		Crypto* m_crypto;
 
 		thorq_connection_state_t m_connectionState;
 		thorq_crypto_state_t m_cryptoState;
+        thorq_auth_state_t m_authState;
 		thorq_login_state_t m_loginState;
 		thorq_session_state_t m_sessionState;
 
@@ -73,7 +81,7 @@ namespace ThorQ {
 		Instance* m_partner;
 		Instance* m_requestedPartner;
 
-		std::uint8_t m_verificationData[THORQ_MSG_MAX_CRYPTO_DATA_LEN];
+		std::uint8_t m_verificationData[THORQ_CRYPTO_VERIFICATION_DATA_LENGTH];
 	};
 }
 

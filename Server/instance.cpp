@@ -7,6 +7,10 @@
 #include <crypto.h>
 #include <constants.h>
 
+#include <thorq_message.h>
+#include <thorq_payload_crypto.h>
+#include <thorq_payload_command_ack.h>
+
 ThorQ::Instance::Instance(ENetPeer* peer)
 	: m_crypto(new Crypto())
 	, m_connectionState(THORQ_CONNECTION_STATE_DISCONNECTED)
@@ -25,43 +29,47 @@ ThorQ::Instance::Instance(ENetPeer* peer)
 
 ThorQ::Instance::~Instance()
 {
+	if (m_peer != nullptr)
+		enet_peer_reset(m_peer);
 	delete m_crypto;
 }
 
-void ThorQ::Instance::SetName(const std::string& newName)
+void ThorQ::Instance::setName(const std::string& newName)
 {
 	m_name = newName;
 }
 
-const std::string& ThorQ::Instance::Name() const
+const std::string& ThorQ::Instance::name() const
 {
 	return m_name;
 }
 
-bool ThorQ::Instance::HasName()
+bool ThorQ::Instance::hasName()
 {
 	return !m_name.empty();
 }
 
-void ThorQ::Instance::SetPeer(ENetPeer* peer)
+void ThorQ::Instance::setPeer(ENetPeer* peer)
 {
 	m_peer->data = nullptr;
 	m_peer = peer;
 	peer->data = this;
 }
 
-ENetPeer* ThorQ::Instance::Peer() const
+ENetPeer* ThorQ::Instance::peer() const
 {
 	return m_peer;
 }
 
-void ThorQ::Instance::RequestOn(Instance* target)
+void ThorQ::Instance::requestOn(Instance* target)
 {
 	// Spam prevention
 	if (m_requestedPartner == target)
 		return;
 
 	if (m_partner != nullptr) {
+		thorq_payload_t payload;
+        thorq_payload_command_ack_pack();
         SendEncrypted(ACKNOWLEDGE_Denied, "You are already in another session");
 		return;
 	}
@@ -71,9 +79,9 @@ void ThorQ::Instance::RequestOn(Instance* target)
 		return;
 	}
 
-	if (target->HasPartner())
+    if (target->hasPartner())
 	{
-		SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, target->Name() + " is already in another session");
+        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, target->name() + " is already in another session");
 		return;
 	}
 
@@ -81,7 +89,7 @@ void ThorQ::Instance::RequestOn(Instance* target)
 	target->SendEncrypted(SESSION_Request, m_name);
 	SendEncrypted(ACKNOWLEDGE_OK, "Request sent");
 }
-bool ThorQ::Instance::RequestAcceptFrom(Instance* sender)
+bool ThorQ::Instance::requestAcceptFrom(Instance* sender)
 {
 	if (sender == this)
 	{
@@ -91,13 +99,13 @@ bool ThorQ::Instance::RequestAcceptFrom(Instance* sender)
 
 	if (sender->m_requestedPartner != this)
 	{
-		SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, " Request from " + sender->Name() + " is invalid / never got sent");
+        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, " Request from " + sender->name() + " is invalid / never got sent");
 		return false;
 	}
 
-	if (!sender->HasPartner())
+    if (!sender->hasPartner())
 	{
-		SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, sender->Name() + " is already in another session");
+        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, sender->name() + " is already in another session");
 		return false;
 	}
 
@@ -110,13 +118,13 @@ bool ThorQ::Instance::RequestAcceptFrom(Instance* sender)
 	this->m_partner = sender;
 	sender->m_partner = this;
 
-	sender->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionAccepted, this->Name());
-	this->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionAccepted, sender->Name());
+    sender->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionAccepted, this->name());
+    this->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionAccepted, sender->name());
 
 	return true;
 }
 
-bool ThorQ::Instance::RequestDenyFrom(ThorQ::Instance *sender)
+bool ThorQ::Instance::requestDenyFrom(ThorQ::Instance *sender)
 {
 	if (sender == this)
 	{
@@ -126,135 +134,186 @@ bool ThorQ::Instance::RequestDenyFrom(ThorQ::Instance *sender)
 
 	if (sender->m_requestedPartner != this)
 	{
-		SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, " Request from " + sender->Name() + " is invalid / never got sent");
+        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, " Request from " + sender->name() + " is invalid / never got sent");
 		return false;
 	}
 
-	sender->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionDenied, this->Name());
-	this->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionDenied, sender->Name());
+    sender->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionDenied, this->name());
+    this->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionDenied, sender->name());
 
 	return true;
 }
-ThorQ::Instance* ThorQ::Instance::Partner() const
+ThorQ::Instance* ThorQ::Instance::partner() const
 {
 	return m_partner;
 }
-void ThorQ::Instance::ClearPartner()
+void ThorQ::Instance::clearPartner()
 {
 	if (m_partner == nullptr)
 		return;
 
+	thorq_payload_t payload;
 	m_partner->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionEnded, m_name);
-	SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionEnded, m_partner->Name());
+    SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionEnded, m_partner->name());
 
 	m_partner->m_partner = nullptr;
 	m_partner = nullptr;
 }
 
-bool ThorQ::Instance::HasPartner()
+bool ThorQ::Instance::hasPartner()
 {
 	return m_partner != nullptr;
 }
 
-void ThorQ::Instance::SetHasCollar(bool hasCollar)
+void ThorQ::Instance::setHasCollar(bool hasCollar)
 {
 	m_hasCollar = hasCollar;
 }
 
-bool ThorQ::Instance::HasCollar() const
+bool ThorQ::Instance::hasCollar() const
 {
 	return m_hasCollar;
 }
 
-thorq_connection_state_t ThorQ::Instance::ConnectionState() const
+thorq_connection_state_t ThorQ::Instance::connectionState() const
 {
 	return m_connectionState;
 }
-void ThorQ::Instance::SetConnectionState(thorq_connection_state_t state)
+void ThorQ::Instance::setConnectionState(thorq_connection_state_t state)
 {
 	if (state < m_connectionState)
-		SetCryptoState(THORQ_CRYPTO_STATE_NONE);
+        setCryptoState(THORQ_CRYPTO_STATE_NONE);
 	m_connectionState = state;
 }
-thorq_crypto_state_t ThorQ::Instance::CryptoState() const
+thorq_crypto_state_t ThorQ::Instance::cryptoState() const
 {
 	return m_cryptoState;
 }
-void ThorQ::Instance::SetCryptoState(thorq_crypto_state_t state)
+void ThorQ::Instance::setCryptoState(thorq_crypto_state_t state)
 {
 	if (state < m_cryptoState)
-		SetLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
-	m_cryptoState = state;
+        setAuthState(THORQ_AUTH_STATE_NONE);
+    m_cryptoState = state;
 }
-thorq_login_state_t ThorQ::Instance::LoginState() const
+
+thorq_auth_state_t ThorQ::Instance::authState() const
+{
+    return m_authState;
+}
+
+void ThorQ::Instance::setAuthState(thorq_auth_state_t state)
+{
+    if (state < m_authState)
+        setLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
+    m_authState = state;
+}
+thorq_login_state_t ThorQ::Instance::loginState() const
 {
 	return m_loginState;
 }
-void ThorQ::Instance::SetLoginState(thorq_login_state_t state)
+void ThorQ::Instance::setLoginState(thorq_login_state_t state)
 {
 	if (state < m_loginState)
-		SetSessionState(THORQ_SESSION_STATE_NONE);
+        setSessionState(THORQ_SESSION_STATE_NONE);
 	m_loginState = state;
 }
-thorq_session_state_t ThorQ::Instance::SessionState() const
+thorq_session_state_t ThorQ::Instance::sessionState() const
 {
 	return m_sessionState;
 }
-void ThorQ::Instance::SetSessionState(thorq_session_state_t state)
+void ThorQ::Instance::setSessionState(thorq_session_state_t state)
 {
 	m_sessionState = state;
 }
 
-void ThorQ::Instance::CryptoInit()
+void ThorQ::Instance::cryptoInit()
 {
-    GetCrypto()->reset();
-	SetCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
-    SendRaw(GetCrypto()->publicKey());
+    getCrypto()->reset();
+
+	thorq_payload_t payload;
+    thorq_payload_crypto_pack(payload, THORQ_CRYPTO_ESTABLISH, getCrypto()->publicKey());
+    sendPayload(payload, true, true);
+    setCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
 }
 
-bool ThorQ::Instance::CryptoEstablish(const std::vector<std::uint8_t>& data)
+bool ThorQ::Instance::cryptoEstablish(const std::vector<std::uint8_t>& data)
 {
-	if (CryptoState() == THORQ_CRYPTO_STATE_ESTABLISHING && !data.empty())
+    if (cryptoState() == THORQ_CRYPTO_STATE_ESTABLISHING && !data.empty())
 	{
-        if (GetCrypto()->agree(data))
+        if (getCrypto()->agree(data))
 		{
-			SetCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
-			Crypto::RandomizeBytes(m_verificationData, MESSAGE_PAYLOAD_SIZE);
-			SendEncrypted(m_verificationData, MESSAGE_PAYLOAD_SIZE);
+			Crypto::RandomizeBytes(m_verificationData, THORQ_CRYPTO_VERIFICATION_DATA_LENGTH);
+			thorq_payload_t payload;
+			thorq_payload_crypto_pack(payload, THORQ_CRYPTO_VERIFY, m_verificationData, THORQ_CRYPTO_VERIFICATION_DATA_LENGTH);
+            sendPayload(payload, true, true);
+            setCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
 			return true;
 		}
 	}
 
-    GetCrypto()->reset();
-	SetCryptoState(THORQ_CRYPTO_STATE_NONE);
-	SendRaw(ThorQ::MessageContentEnums::ACKNOWLEDGE_Error);
+    getCrypto()->reset();
+    setCryptoState(THORQ_CRYPTO_STATE_NONE);
+    disconnect(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
 
 	return false;
 }
 
 
-bool ThorQ::Instance::CryptoVerify(const std::vector<std::uint8_t>& data)
+bool ThorQ::Instance::cryptoVerify(const std::vector<std::uint8_t>& data)
 {
-	if (CryptoState() == THORQ_CRYPTO_STATE_VERIFYING && size == MESSAGE_PAYLOAD_MAX)
+    if (cryptoState() == THORQ_CRYPTO_STATE_VERIFYING && data.size() == THORQ_CRYPTO_VERIFICATION_DATA_LENGTH)
 	{
-		if (memcmp(m_verificationData, data, MESSAGE_PAYLOAD_MAX) == 0)
+		if (memcmp(&m_verificationData[0], &data[0], THORQ_CRYPTO_VERIFICATION_DATA_LENGTH) == 0)
 		{
-			SetCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
-			SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_OK);
+			thorq_payload_t payload;
+			thorq_payload_crypto_pack(payload, THORQ_CRYPTO_OK);
+            sendPayload(payload, true, true);
+            setCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
 
 			return true;
 		}
 	}
 
-    GetCrypto()->reset();
-	SetCryptoState(THORQ_CRYPTO_STATE_NONE);
-	SendRaw(ThorQ::MessageContentEnums::ACKNOWLEDGE_Error);
+    getCrypto()->reset();
+    setCryptoState(THORQ_CRYPTO_STATE_NONE);
+    disconnect(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
 
 	return false;
 }
 
 
-ThorQ::Crypto* ThorQ::Instance::GetCrypto()
+ThorQ::Crypto* ThorQ::Instance::getCrypto()
 {
 	return m_crypto;
+}
+
+void ThorQ::Instance::sendPayload(const thorq_payload_t& payload, bool encrypt, bool reliable)
+{
+	std::vector<std::uint8_t> message;
+
+	thorq_payload_pack(payload, message);
+
+    sendMessage(message, encrypt, reliable);
+}
+
+void ThorQ::Instance::sendMessage(const std::vector<uint8_t>& message, bool encrypt, bool reliable)
+{
+	std::vector<std::uint8_t> data;
+
+	if (encrypt)
+        thorq_message_encode(message, data, getCrypto());
+	else
+		thorq_message_encode(message, data);
+
+	enet_peer_send(m_peer, reliable ? 0 : 1, enet_packet_create(data.data(), data.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
+}
+
+void ThorQ::Instance::disconnect(uint32_t reason)
+{
+	enet_peer_disconnect(m_peer, reason);
+}
+
+void ThorQ::Instance::disconnectForcibly(uint32_t reason)
+{
+	enet_peer_disconnect_now(m_peer, reason);
 }
