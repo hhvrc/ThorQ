@@ -11,12 +11,16 @@ class Serial : public QObject
 public:
 	Serial();
 
-	void SendShock(int strength);
-	void SendVibration(int strength);
-	void SendBeep(int beeps);
-	void SetAuto(int shock, int vibration, int beeps);
+    void FindCollar();
+
+    void SendShock(unsigned int strength);
+    void SendVibration(unsigned int strength);
+    void SendBeep(unsigned int beeps);
+    void SetAuto(unsigned int shock, unsigned int vibration, unsigned int beeps);
+private slots:
+    void readData();
 private:
-	QSerialPort* m_port;
+    QSerialPort* m_serial;
 };
 
 #endif // SERIAL_H
