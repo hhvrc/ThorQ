@@ -17,14 +17,27 @@
 #define SERVER_PORT 12345
 #define SERVER_MAX_CONNECTIONS 1024
 
-std::atomic_bool exiting = false;
+bool enet_was_initialized = false;
+std::atomic_bool runServer = true;
 
 void exit_handler(int s)
 {
 	printf("Caught signal %i!\n", s);
 	fflush(stdout);
 
-	exiting.store(true);
+	runServer.store(false);
+}
+
+void exitCleanup()
+{
+	if (enet_was_initialized)
+		enet_deinitialize();
+
+	if (registeredInstances != nullptr)
+		delete registeredInstances;
+
+	if (server != nullptr)
+		enet_host_destroy(server);
 }
 
 int main(int argc, char** argv)
@@ -36,6 +49,8 @@ int main(int argc, char** argv)
    sigIntHandler.sa_flags = 0;
 
    sigaction(SIGINT, &sigIntHandler, NULL);
+
+   atexit(exitCleanup);
 
 	registeredInstances = new ThorQ::InstanceMap();
 
@@ -84,7 +99,7 @@ int main(int argc, char** argv)
 		printf("Failed to initialize ENet\n");
 		return EXIT_FAILURE;
 	}
-	atexit(enet_deinitialize);
+	enet_was_initialized = true;
 
 	printf("Using ENet-%i.%i.%i\n", ENET_VERSION_MAJOR, ENET_VERSION_MINOR, ENET_VERSION_PATCH);
 	fflush(stdout);
@@ -99,7 +114,7 @@ int main(int argc, char** argv)
 	}
 
 	ENetEvent event;
-	while (!exiting.load()) {
+	while (runServer.load()) {
 		while (enet_host_service(server, &event, 0) > 0)
 		{
 			switch (event.type)
@@ -122,9 +137,6 @@ int main(int argc, char** argv)
 			}
 		}
 	}
-
-	enet_host_destroy(server);
-	delete registeredInstances;
 
 	return EXIT_SUCCESS;
 }
