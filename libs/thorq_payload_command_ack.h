@@ -11,6 +11,6 @@ inline bool thorq_payload_command_ack_is_valid(const thorq_payload_t& payload)
 typedef enum {
 	THORQ_COMMAND_ACK_OK,
 	THORQ_COMMAND_ACK_
-};
+} thorq_command_ack_id_t;
 
 #endif // THORQ_MESSAGE_COMMAND_ACK_H
