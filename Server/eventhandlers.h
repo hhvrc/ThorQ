@@ -1,8 +1,7 @@
 #ifndef EVENTHANDLERS_H
 #define EVENTHANDLERS_H
 
-typedef struct _ENetPeer ENetPeer;
-typedef struct _ENetPacket ENetPacket;
+#include "typedefs.h"
 
 void handleEventNewConnection(ENetPeer* peer);
 void handleEventMessage(ENetPeer* peer, ENetPacket* packet);

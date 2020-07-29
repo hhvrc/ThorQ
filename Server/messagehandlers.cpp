@@ -13,6 +13,7 @@
 #include <thorq_payload_notification.h>
 #include <thorq_payload_collar.h>
 
+#include "instance.h"
 #include "singletons.h"
 #include "instancemap.h"
 
@@ -90,7 +91,7 @@ void handleMessageCrypto(ThorQ::Instance* instance, const thorq_payload_t& paylo
 
 			thorq_payload_t txPayload;
 			thorq_payload_crypto_pack(txPayload, THORQ_CRYPTO_ESTABLISH, instance->getCrypto()->publicKey());
-			instance->sendPayload(txPayload, false, true);
+			instance->sendPayload(&txPayload, false, true);
 		}
 		else
 		{
@@ -126,13 +127,13 @@ void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t& payload
 	switch (thorq_payload_auth_get_cmd(payload)) {
 	case THORQ_AUTH_SYSTEMID_REQ:
 		thorq_payload_auth_pack(txPayload, THORQ_AUTH_SYSTEMID, ThorQ::systemid_generate());
-		instance->sendPayload(txPayload);
+		instance->sendPayload(&txPayload);
 		instance->setAuthState(THORQ_AUTH_STATE_CHECKING);
 		break;
 	case THORQ_AUTH_REGKEY_REQ:
 		emit RequestingRegistrationKey();
 		thorq_payload_auth_pack(txPayload, THORQ_AUTH_REGKEY_AWAITING_INPUT);
-		instance->sendPayload(txPayload);
+		instance->sendPayload(&txPayload);
 		instance->setAuthState(THORQ_AUTH_STATE_AWAITING_INPUT);
 		break;
 	case THORQ_AUTH_OK:

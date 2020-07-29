@@ -11,6 +11,7 @@
 #include <thorq_payload_crypto.h>
 #include <thorq_payload_command_ack.h>
 
+#include "singletons.h"
 #include "utils.h"
 #include "instancemap.h"
 
@@ -226,7 +227,7 @@ void ThorQ::Instance::setLoginState(thorq_login_state_t state)
 
 			thorq_payload_t payload;
 			// TODO: notify about user_online
-			broadcastPayload(payload, true);
+			broadcastPayload(&payload, true);
 		}
 		else if (state == THORQ_LOGIN_STATE_LOGGEDOUT)
 		{
@@ -234,7 +235,7 @@ void ThorQ::Instance::setLoginState(thorq_login_state_t state)
 
 			thorq_payload_t payload;
 			// TODO: notify about user_offline
-			broadcastPayload(payload, true);
+			broadcastPayload(&payload, true);
 		}
 
 		if (state < m_loginState)
@@ -265,13 +266,13 @@ void ThorQ::Instance::setSessionState(thorq_session_state_t state)
 
 			thorq_payload_t payload;
 			// TODO: notify about user_in_session
-			broadcastPayload(payload, true);
+			broadcastPayload(&payload, true);
 		}
 		else if (state == THORQ_SESSION_STATE_ACTIVE)
 		{
 			thorq_payload_t payload;
 			// TODO: notify about user_not_in_session
-			broadcastPayload(payload, true);
+			broadcastPayload(&payload, true);
 		}
 	}
 }
@@ -282,7 +283,7 @@ void ThorQ::Instance::cryptoInit()
 
 	thorq_payload_t payload;
     thorq_payload_crypto_pack(payload, THORQ_CRYPTO_ESTABLISH, getCrypto()->publicKey());
-    sendPayload(payload, true, true);
+	sendPayload(&payload, true, true);
     setCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
 }
 
@@ -295,7 +296,7 @@ bool ThorQ::Instance::cryptoEstablish(const std::vector<std::uint8_t>& data)
 			Crypto::RandomizeBytes(m_verificationData, THORQ_CRYPTO_VERIFICATION_DATA_LENGTH);
 			thorq_payload_t payload;
 			thorq_payload_crypto_pack(payload, THORQ_CRYPTO_VERIFY, m_verificationData, THORQ_CRYPTO_VERIFICATION_DATA_LENGTH);
-            sendPayload(payload, true, true);
+			sendPayload(&payload, true, true);
             setCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
 			return true;
 		}
@@ -317,7 +318,7 @@ bool ThorQ::Instance::cryptoVerify(const std::vector<std::uint8_t>& data)
 		{
 			thorq_payload_t payload;
 			thorq_payload_crypto_pack(payload, THORQ_CRYPTO_OK);
-            sendPayload(payload, true, true);
+			sendPayload(&payload, true, true);
             setCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
 
 			return true;
@@ -337,11 +338,11 @@ ThorQ::Crypto* ThorQ::Instance::getCrypto()
 	return m_crypto;
 }
 
-void ThorQ::Instance::sendPayload(const thorq_payload_t& payload, bool encrypt, bool reliable)
+void ThorQ::Instance::sendPayload(const thorq_payload_t* payload, bool encrypt, bool reliable)
 {
 	std::vector<std::uint8_t> message;
 
-	thorq_payload_pack(payload, message);
+	thorq_payload_pack(*payload, message);
 
     sendMessage(message, encrypt, reliable);
 }

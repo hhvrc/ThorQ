@@ -4,8 +4,9 @@
 #include <map>
 #include <vector>
 
+#include "typedefs.h"
+
 namespace ThorQ {
-class Instance;
 class InstanceMap
 {
 	std::map<std::string, Instance*> m_internal;

@@ -5,13 +5,12 @@
 #include <vector>
 #include <cstdint>
 
+#include <enums.h>
 #include <constants.h>
-#include <thorq_payload.h>
 
-typedef struct _ENetPeer ENetPeer;
+#include "typedefs.h"
 
 namespace ThorQ {
-class Crypto;
 class Instance
 {
 	Instance(const Instance&) = delete;
@@ -55,7 +54,7 @@ public:
 
 	Crypto* getCrypto();
 
-	void sendPayload(const thorq_payload_t& payload, bool encrypt = true, bool reliable = true);
+	void sendPayload(const thorq_payload_t* payload, bool encrypt = true, bool reliable = true);
 	void sendMessage(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
 
 	void disconnect(std::uint32_t reason);

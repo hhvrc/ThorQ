@@ -14,6 +14,7 @@
 #include <thorq_payload_collar.h>
 
 #include "utils.h"
+#include "instance.h"
 #include "instancemap.h"
 #include "messagehandlers.h"
 
@@ -66,42 +67,42 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 	case THORQ_PAYLOAD_ID_VERSION:
 		if (thorq_payload_version_is_valid(payload))
 		{
-			handleMessageVersion(instance, payload);
+			handleMessageVersion(instance, &payload);
 			return;
 		}
 		break;
 	case THORQ_PAYLOAD_ID_CRYPTO:
 		if (thorq_payload_crypto_is_valid(payload))
 		{
-			handleMessageCrypto(instance, payload);
+			handleMessageCrypto(instance, &payload);
 			return;
 		}
 		break;
 	case THORQ_PAYLOAD_ID_AUTH:
 		if (thorq_payload_auth_is_valid(payload))
 		{
-			handleMessageAuth(instance, payload);
+			handleMessageAuth(instance, &payload);
 			return;
 		}
 		break;
 	case THORQ_PAYLOAD_ID_COMMAND:
 		if (thorq_payload_command_is_valid(payload))
 		{
-			handleMessageCommand(instance, payload);
+			handleMessageCommand(instance, &payload);
 			return;
 		}
 		break;
 	case THORQ_PAYLOAD_ID_COMMAND_ACK:
 		if (thorq_payload_command_ack_is_valid(payload))
 		{
-			handleMessageCommandAck(instance, payload);
+			handleMessageCommandAck(instance, &payload);
 			return;
 		}
 		break;
 	case THORQ_PAYLOAD_ID_NOTIFICATION:
 		if (thorq_payload_notification_is_valid(payload))
 		{
-			handleMessageNotification(instance, payload);
+			handleMessageNotification(instance, &payload);
 			return;
 		}
 		break;

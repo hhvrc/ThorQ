@@ -10,6 +10,7 @@ project(
 message("Configuring ${project}...")
 
 set(${project}_SOURCES
+	${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/instance.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/instancemap.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.cpp
@@ -18,6 +19,7 @@ set(${project}_SOURCES
 set(${project}_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/utils.h
 	${CMAKE_CURRENT_SOURCE_DIR}/instance.h
+	${CMAKE_CURRENT_SOURCE_DIR}/typedefs.h
 	${CMAKE_CURRENT_SOURCE_DIR}/singletons.h
 	${CMAKE_CURRENT_SOURCE_DIR}/instancemap.h
 	${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.h
