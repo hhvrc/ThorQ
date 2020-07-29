@@ -92,6 +92,8 @@ int main(int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 #else
+	(void)argc;
+	(void)argv;
 	address.port = SERVER_PORT;
 #endif
 	if (enet_initialize() < 0)

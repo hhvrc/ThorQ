@@ -101,6 +101,8 @@ inline void thorq_message_encode(const std::vector<std::uint8_t>& message, std::
 }
 inline void thorq_message_decode(const std::uint8_t* data, std::size_t dataSize, std::vector<std::uint8_t>& message, ThorQ::Crypto* crypto)
 {
+	(void)dataSize;
+
 	std::uint16_t payloadSize = 0;
 	payloadSize |= data[1] << 8;
 	payloadSize |= data[2] << 0;
