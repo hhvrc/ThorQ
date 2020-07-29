@@ -1,0 +1,9 @@
+/*
+    resources.Rc
+
+    Contains the resource definitions for the application.
+*/
+
+#include "resources.h"
+
+/* exeIcon ICON "yellowShockIcon.ico" */
