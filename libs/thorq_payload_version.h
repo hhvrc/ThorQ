@@ -16,9 +16,9 @@ typedef struct __thorq_version {
 	{
 		char buffer[12];
 		memset(buffer, 0, 12);
-		snprintf(buffer, 11, "%u.%u.%u", major, minor, patch);
+		int cx = snprintf(buffer, 12, "%u.%u.%u", major, minor, patch);
 
-		return std::string(buffer);
+		return std::string(buffer, cx);
 	}
 
 	__thorq_version operator- (const __thorq_version& other)
