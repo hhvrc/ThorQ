@@ -20,28 +20,24 @@ void Dbg(vr::VROverlayError err, int line)
 		qDebug() << "Error:" << err << "line:"<< line;
 }
 
-QMatrix4x4 ToQMatrix(const vr::HmdMatrix34_t& mat)
+inline void ToQMatrix(const vr::HmdMatrix34_t& mat, QMatrix4x4& out)
 {
-	return QMatrix4x4(
-				mat.m[0][0], mat.m[0][1], mat.m[0][2], mat.m[0][3],
-				mat.m[1][0], mat.m[1][1], mat.m[1][2], mat.m[1][3],
-				mat.m[2][0], mat.m[2][1], mat.m[2][2], mat.m[2][3],
-				0.f,		 0.f,		 0.f,		 1.f
-		   );
+    for (int i = 0; i < 3; i++)
+        out.setRow(i, QVector4D(mat.m[i][0], mat.m[i][1], mat.m[i][2], mat.m[i][3]));
 }
-vr::HmdMatrix34_t ToHmdMatrix34(const QMatrix4x4& mat)
+inline void ToHmdMatrix34(const QMatrix4x4& mat, vr::HmdMatrix34_t& out)
 {
-	vr::HmdMatrix34_t ret;
 	for (int i = 0; i < 3; i++)
 	{
 		QVector4D row = mat.row(i);
-		ret.m[i][0] = row.x();
-		ret.m[i][1] = row.y();
-		ret.m[i][2] = row.z();
-		ret.m[i][3] = row.w();
-	}
-	return ret;
+        out.m[i][0] = row.x();
+        out.m[i][1] = row.y();
+        out.m[i][2] = row.z();
+        out.m[i][3] = row.w();
+    }
 }
+constexpr float deg2rad = (float)M_PI / 180.f;
+constexpr float rad2deg = 180.f / (float)M_PI;
 
 bool OpenVROverlayController::IsSteamVRRunning()
 {
@@ -74,6 +70,8 @@ OpenVROverlayController::OpenVROverlayController(QObject* parent)
 	, m_ivrSystem(nullptr)
 	, m_handle(vr::k_ulOverlayHandleInvalid)
 	, m_deviceOffset()
+    , m_L_deviceOffset()
+    , m_R_deviceOffset()
 	, m_deviceIndex(vr::k_unTrackedDeviceIndexInvalid)
 	, m_scene(nullptr)
 	, m_glContext(nullptr)
@@ -91,12 +89,23 @@ OpenVROverlayController::OpenVROverlayController(QObject* parent)
 	m_visibilityTimer->setSingleShot(true);
 
 	// Calculate offset
-	QMatrix4x4 mat;
-	mat.scale(0.25f);
-	mat.translate(0, -0.03f, -0.15f);
-	mat.rotate(-90, -1, 1);
-	mat.optimize();
-	m_deviceOffset = ToHmdMatrix34(mat);
+    {
+        QMatrix4x4 mat;
+        mat.scale(0.25f);
+        mat.rotate(90.f, -90.f, 90.f);
+        mat.translate(-0.07f, -0.05f, 0.06f);
+        mat.optimize();
+        ToHmdMatrix34(mat, m_L_deviceOffset);
+    }
+    {
+        QMatrix4x4 mat;
+        mat.scale(0.25f);
+        mat.rotate(-90.f, 90.f, 90.f);
+        mat.translate(0.4f, -0.05f, 0.06f);
+        mat.optimize();
+        ToHmdMatrix34(mat, m_R_deviceOffset);
+    }
+    m_deviceOffset = &m_L_deviceOffset;
 }
 
 OpenVROverlayController::~OpenVROverlayController()
@@ -327,33 +336,52 @@ void OpenVROverlayController::PollEvents()
 		{
 		case vr::VREvent_ButtonPress:
 		{
-			vr::VRControllerState_t state;
-			vr::VRSystem()->GetControllerState(event.trackedDeviceIndex, &state, sizeof(state));
+            vr::ETrackedDeviceClass devClass = vr::VRSystem()->GetTrackedDeviceClass(event.trackedDeviceIndex);
 
-			if ((state.ulButtonPressed & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_ApplicationMenu)) != 0)
-			{
-				if (GetIsVisible())
-				{
-					if (GetTrackedDevice() == event.trackedDeviceIndex)
-					{
-						SetIsVisible(false);
-						m_visibilityTimer->stop();
-					}
-					else
-					{
-						SetTrackedDevice(event.trackedDeviceIndex);
-					}
-				}
-				else
-				{
-					SetTrackedDevice(event.trackedDeviceIndex);
-					SetIsVisible(true);
-					m_visibilityTimer->start();
-				}
-			}
-		}
-			break;
+            if (devClass == vr::ETrackedDeviceClass::TrackedDeviceClass_Controller)
+            {
+                bool isOculus = false;
 
+                {
+                    std::string buffer;
+                    buffer.resize(256);
+                    vr::ETrackedPropertyError err;
+                    vr::VRSystem()->GetStringTrackedDeviceProperty(event.trackedDeviceIndex, vr::ETrackedDeviceProperty::Prop_TrackingSystemName_String, buffer.data(), 256, &err);
+                    std::transform(buffer.begin(), buffer.end(), buffer.begin(), ::tolower);
+                    isOculus = buffer.find("oculus") != std::string::npos;
+                }
+
+                // Oculus : B/Y, Bit 1, Mask 2
+                // Oculus : A/X, Bit 7, Mask 128
+                // Vive : Menu, Bit 1, Mask 2,
+                // Vive : Grip, Bit 2, Mask 4
+                vr::VRControllerState_t state;
+                vr::VRSystem()->GetControllerState(event.trackedDeviceIndex, &state, sizeof(state));
+
+                if ((state.ulButtonPressed & (isOculus ? 0x2 : 0x4)) != 0)
+                {
+                    if (GetIsVisible())
+                    {
+                        if (GetTrackedDevice() == event.trackedDeviceIndex)
+                        {
+                            SetIsVisible(false);
+                            m_visibilityTimer->stop();
+                        }
+                        else
+                        {
+                            SetTrackedDevice(event.trackedDeviceIndex);
+                        }
+                    }
+                    else
+                    {
+                        SetTrackedDevice(event.trackedDeviceIndex);
+                        SetIsVisible(true);
+                        m_visibilityTimer->start();
+                    }
+                }
+            }
+            break;
+        }
 		case vr::VREvent_OverlayShown:
 		{
 			m_widget->repaint();
@@ -581,6 +609,18 @@ void OpenVROverlayController::OverlayTransform()
 
 	qDebug() << "Position";
 
+    switch (vr::VRSystem()->GetControllerRoleForTrackedDeviceIndex(m_deviceIndex))
+    {
+    case vr::ETrackedControllerRole::TrackedControllerRole_LeftHand:
+        m_deviceOffset = &m_L_deviceOffset;
+        break;
+    case vr::ETrackedControllerRole::TrackedControllerRole_RightHand:
+        m_deviceOffset = &m_R_deviceOffset;
+        break;
+    default:
+        return;
+    }
+
 	// Position
-	Dbg(vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_handle, m_deviceIndex, &m_deviceOffset), __LINE__);
+    Dbg(vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_handle, m_deviceIndex, m_deviceOffset), __LINE__);
 }

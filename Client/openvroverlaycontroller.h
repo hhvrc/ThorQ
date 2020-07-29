@@ -88,7 +88,9 @@ private:
 	// Overlay stuff
 	vr::IVRSystem* m_ivrSystem;
 	vr::VROverlayHandle_t m_handle;
-	vr::HmdMatrix34_t m_deviceOffset;
+    vr::HmdMatrix34_t* m_deviceOffset;
+    vr::HmdMatrix34_t m_L_deviceOffset;
+    vr::HmdMatrix34_t m_R_deviceOffset;
 	vr::TrackedDeviceIndex_t m_deviceIndex;
 
 	// Graphics
