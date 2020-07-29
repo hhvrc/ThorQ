@@ -1,12 +1,12 @@
 #include "instancemap.h"
 
-using namespace ThorQ;
+#include "instance.h"
 
-InstanceMap::InstanceMap() : m_internal() {}
+ThorQ::InstanceMap::InstanceMap() : m_internal() {}
 
-InstanceMap::~InstanceMap() { m_internal.clear(); }
+ThorQ::InstanceMap::~InstanceMap() { m_internal.clear(); }
 
-bool InstanceMap::TryAdd(Instance* peer)
+bool ThorQ::InstanceMap::TryAdd(Instance* peer)
 {
 	if (!peer->hasName())
 		return false;
@@ -22,7 +22,7 @@ bool InstanceMap::TryAdd(Instance* peer)
 	return true;
 }
 
-Instance* InstanceMap::Get(const std::string& name)
+ThorQ::Instance* ThorQ::InstanceMap::Get(const std::string& name)
 {
 	auto it = m_internal.find(name);
 
@@ -31,12 +31,12 @@ Instance* InstanceMap::Get(const std::string& name)
 	return nullptr;
 }
 
-bool InstanceMap::Contains(const std::string& name) const
+bool ThorQ::InstanceMap::Contains(const std::string& name) const
 {
 	return m_internal.find(name) != m_internal.end();
 }
 
-std::vector<Instance*> InstanceMap::ToList()
+std::vector<ThorQ::Instance*> ThorQ::InstanceMap::ToList()
 {
 	std::vector<Instance*> peers;
 	peers.reserve(m_internal.size());
@@ -45,7 +45,7 @@ std::vector<Instance*> InstanceMap::ToList()
 	return peers;
 }
 
-void InstanceMap::Remove(const std::string& name)
+void ThorQ::InstanceMap::Remove(const std::string& name)
 {
 	auto it = m_internal.find(name);
 
@@ -53,7 +53,7 @@ void InstanceMap::Remove(const std::string& name)
 		m_internal.erase(it);
 }
 
-void InstanceMap::Clear()
+void ThorQ::InstanceMap::Clear()
 {
 	m_internal.clear();
 }

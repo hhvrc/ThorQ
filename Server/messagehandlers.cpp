@@ -15,7 +15,6 @@
 
 #include "singletons.h"
 #include "instancemap.h"
-#include "instance.h"
 
 inline bool checkCryptography(ThorQ::Instance* instance)
 {

@@ -11,7 +11,7 @@
 #include <thorq_payload_crypto.h>
 #include <thorq_payload_command_ack.h>
 
-#include "utils.h"
+#include "singletons.h"
 #include "instancemap.h"
 
 ThorQ::Instance::Instance(ENetPeer* peer)

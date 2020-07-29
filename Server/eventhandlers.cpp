@@ -14,8 +14,6 @@
 #include <thorq_payload_collar.h>
 
 #include "utils.h"
-#include "instance.h"
-#include "singletons.h"
 #include "instancemap.h"
 #include "messagehandlers.h"
 

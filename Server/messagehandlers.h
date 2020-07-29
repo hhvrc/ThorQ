@@ -3,8 +3,9 @@
 
 #include <vector>
 
-#include <instance.h>
 #include <thorq_payload.h>
+
+#include "instance.h"
 
 void handleMessageVersion(ThorQ::Instance* instance, const thorq_payload_t& payload);
 void handleMessageCrypto(ThorQ::Instance* instance, const thorq_payload_t& payload);

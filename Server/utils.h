@@ -3,9 +3,9 @@
 
 #include <string>
 
-#include "enet.h"
-#include "thorq_message.h"
-#include "thorq_payload.h"
+#include <enet.h>
+#include <thorq_message.h>
+#include <thorq_payload.h>
 
 #include "singletons.h"
 
