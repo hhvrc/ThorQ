@@ -97,7 +97,7 @@ add_library(${project} STATIC
 include_directories(${CMAKE_BINARY_DIR})
 
 if(WINDOWS)
-        target_link_libraries(${project} Crypt32 Ws2_32 Iphlpapi)
+	    target_link_libraries(${project} Crypt32 winmm ws2_32 Iphlpapi)
 endif()
 
 set(LIB_INC_DIRS
