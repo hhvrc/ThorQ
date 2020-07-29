@@ -87,12 +87,17 @@ set(${project}_MOC
 	${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.h
 	${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.h
 )
+set(${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc)
+
+if (WINDOWS)
+	list(APPEND ${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
+endif()
 
 include_directories(${INCLUDE_DIRS})
 
 add_executable(${project}
 	main.cpp
-	qml.qrc
+	${${project}_RESOURCES}
 	${${project}_SOURCES}
 	${${project}_MOC}
 )
