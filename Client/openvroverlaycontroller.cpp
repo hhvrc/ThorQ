@@ -36,6 +36,7 @@ inline void ToHmdMatrix34(const QMatrix4x4& mat, vr::HmdMatrix34_t& out)
         out.m[i][3] = row.w();
     }
 }
+// TODO: unused
 constexpr float deg2rad = (float)M_PI / 180.f;
 constexpr float rad2deg = 180.f / (float)M_PI;
 
@@ -305,7 +306,9 @@ void OpenVROverlayController::ToggleIsVisible()
 }
 void OpenVROverlayController::SetIsVisibleTimeout(bool enabled, int msec)
 {
-
+	// TODO: unused
+	(void)enabled;
+	(void)msec;
 }
 
 
