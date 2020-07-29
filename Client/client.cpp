@@ -1,7 +1,16 @@
 #include "client.h"
 
+#if defined(__GCC__) || defined(__GNUC__) || defined(__clang__)
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wunknown-pragmas"
+#endif
+
 #define ENET_IMPLEMENTATION
 #include <enet.h>
+
+#if defined(__GCC__) || defined(__GNUC__) || defined(__clang__)
+	#pragma GCC diagnostic pop
+#endif
 
 #include <QDebug>
 #include <QThread>
