@@ -2,6 +2,8 @@
 
 #if defined(__GCC__) || defined(__GNUC__) || defined(__clang__)
 	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wextra"
+	#pragma GCC diagnostic ignored "-Wpedantic"
 	#pragma GCC diagnostic ignored "-Wunknown-pragmas"
 #endif
 
