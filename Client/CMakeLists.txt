@@ -127,13 +127,14 @@ if (WINDOWS)
 	    OUTPUT_VARIABLE rc_output
     )
 
-    # Print the output
-    #message("BUILD OUTPUT:\n${rc_output}")
+    if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/resources.res)
+	file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/resources.res ${CMAKE_CURRENT_BINARY_DIR}/resources.res)
+    endif()
 
     # If it returned something else than 0 it probably didnt succeed
-    if (NOT ${rc_result} EQUAL 0 OR NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/resources.res)
+    if (NOT ${rc_result} EQUAL 0 OR NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/resources.res)
 	    message(FATAL_ERROR "Failed to build windows reources")
     endif()
 
-    SET_TARGET_PROPERTIES(${project} PROPERTIES LINK_FLAGS ${CMAKE_CURRENT_SOURCE_DIR}/resources.res)
+    SET_TARGET_PROPERTIES(${project} PROPERTIES LINK_FLAGS ${CMAKE_CURRENT_BINARY_DIR}/resources.res)
 endif()
