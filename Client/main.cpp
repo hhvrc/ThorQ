@@ -1,14 +1,14 @@
 #include <QDebug>
 #include <QApplication>
 #include <QCoreApplication>
+#include <QLabel>
+#include <QIcon>
 
 #include <enet.h>
 #include "client.h"
 #include "serial.h"
 #include "loginwidget.h"
 #include "openvroverlaycontroller.h"
-
-#include <QLabel>
 
 Q_DECLARE_METATYPE(thorq_connection_state_t)
 Q_DECLARE_METATYPE(thorq_login_state_t)
@@ -36,6 +36,10 @@ int main(int argc, char** argv)
 		stylesheet = stream.readAll();
 	}
 	app.setStyleSheet(stylesheet);
+    app.setApplicationName("ThorQ");
+    app.setDesktopFileName("ThorQ");
+    app.setApplicationVersion(THORQ_VERSION_CLIENT.to_string().c_str());
+    app.setWindowIcon(QIcon(":/shockGrey.ico"));
 
 	// Initialize ENet
 	if (enet_initialize() < 0)
