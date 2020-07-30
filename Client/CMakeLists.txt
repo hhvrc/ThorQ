@@ -123,15 +123,15 @@ if (WINDOWS)
     execute_process(
 	    COMMAND ${RC_EXE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc
 	    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	    RESULT_VARIABLE py_result
-	    OUTPUT_VARIABLE py_output
+	    RESULT_VARIABLE rc_result
+	    OUTPUT_VARIABLE rc_output
     )
 
     # Print the output
-    #message("BUILD OUTPUT:\n${py_output}")
+    #message("BUILD OUTPUT:\n${rc_output}")
 
     # If it returned something else than 0 it probably didnt succeed
-    if (NOT ${py_result} EQUAL 0)
+    if (NOT ${rc_result} EQUAL 0 OR NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/resources.res)
 	    message(FATAL_ERROR "Failed to build windows reources")
     endif()
 
