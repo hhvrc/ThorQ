@@ -9,7 +9,7 @@ project(
 
 message("Configuring ${project}...")
 
-if (NOT EXISTS ${CMAKE_BINARY_DIR}/botan_all.h)
+if (NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/botan_all.h)
 	# Set OS specific arguments
 	if(LINUX)
 		set(BUILD_OS "linux")
@@ -41,7 +41,7 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/botan_all.h)
 	# Crossing fingers....
 	execute_process(
 		COMMAND "python" ${PYTHON_ARGS}
-		WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 		RESULT_VARIABLE py_result
 		OUTPUT_VARIABLE py_output
 	)
@@ -56,14 +56,14 @@ if (NOT EXISTS ${CMAKE_BINARY_DIR}/botan_all.h)
 endif()
 
 set(${project}_SOURCES
-	${CMAKE_BINARY_DIR}/botan_all.cpp
+	${CMAKE_CURRENT_BINARY_DIR}/botan_all.cpp
 
 	${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
-	)
+)
 
 set(${project}_HEADERS
-	${CMAKE_BINARY_DIR}/botan_all.h
+    ${CMAKE_CURRENT_BINARY_DIR}/botan_all.h
 	${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
 
 	${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
@@ -82,22 +82,22 @@ set(${project}_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_heartbeat.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_command_ack.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_notification.h
-	)
+)
 
 if (WINDOWS)
-        list(APPEND ${project}_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/systemid_windows.cpp)
+	list(APPEND ${project}_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/systemid_windows.cpp)
 elseif(LINUX)
-        list(APPEND ${project}_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/systemid_linux.cpp)
+	list(APPEND ${project}_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/systemid_linux.cpp)
 endif()
 
 add_library(${project} STATIC
 	${${project}_SOURCES}
 	${${project}_HEADERS}
-	)
-include_directories(${CMAKE_BINARY_DIR})
+)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 if(WINDOWS)
-	    target_link_libraries(${project} Crypt32 winmm ws2_32 Iphlpapi)
+	target_link_libraries(${project} Crypt32 winmm ws2_32 Iphlpapi)
 endif()
 
 set(LIB_INC_DIRS
