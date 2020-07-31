@@ -89,6 +89,10 @@ set(${project}_MOC
 )
 set(${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc)
 
+if (WINDOWS)
+    list(APPEND ${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
+endif()
+
 include_directories(${INCLUDE_DIRS})
 
 add_executable(${project}
@@ -104,37 +108,3 @@ endif()
 
 set_target_properties(${project} PROPERTIES COMPILE_FLAGS -DBUILDER_STATIC_DEFINE)
 target_link_libraries(${project} ThorQLib ${LIBRARIES})
-
-# Pure cancer
-if (WINDOWS)
-    if (EXISTS "C:\\Program Files (x86)\\Windows Kits\\8.1\\bin\\x64\\rc.exe")
-	set(RC_EXE_PATH "C:\\Program Files (x86)\\Windows Kits\\8.1\\bin\\x64\\rc.exe")
-    else()
-	set(KNOWN_WIN_VERSIONS "10.0.18362.0" "10.0.17763.0" "10.0.17134.0" "10.0.16299.0" "10.0.15063.0" "10.0.14393.0" "10.0.13393.0")
-	foreach(x ${KNOWN_WIN_VERSIONS})
-	    if (EXISTS "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\${x}\\x64\\rc.exe")
-		set(RC_EXE_PATH "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\${x}\\x64\\rc.exe")
-		break()
-	    endif()
-	endforeach()
-    endif()
-
-    # Crossing fingers....
-    execute_process(
-	    COMMAND ${RC_EXE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc
-	    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-	    RESULT_VARIABLE rc_result
-	    OUTPUT_VARIABLE rc_output
-    )
-
-    if (EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/resources.res)
-	file(RENAME ${CMAKE_CURRENT_SOURCE_DIR}/resources.res ${CMAKE_CURRENT_BINARY_DIR}/resources.res)
-    endif()
-
-    # If it returned something else than 0 it probably didnt succeed
-    if (NOT ${rc_result} EQUAL 0 OR NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/resources.res)
-	    message(FATAL_ERROR "Failed to build windows reources")
-    endif()
-
-    SET_TARGET_PROPERTIES(${project} PROPERTIES LINK_FLAGS ${CMAKE_CURRENT_BINARY_DIR}/resources.res)
-endif()
