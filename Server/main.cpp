@@ -3,8 +3,10 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <atomic>
+#if __linux__
+#include <unistd.h>
+#endif
 
 #if defined(__GCC__) || defined(__GNUC__) || defined(__clang__)
 	#pragma GCC diagnostic push
@@ -53,13 +55,7 @@ void exitCleanup()
 
 int main(int argc, char** argv)
 {
-	struct sigaction sigIntHandler;
-
-   sigIntHandler.sa_handler = exit_handler;
-   sigemptyset(&sigIntHandler.sa_mask);
-   sigIntHandler.sa_flags = 0;
-
-   sigaction(SIGINT, &sigIntHandler, NULL);
+   signal(SIGINT, exit_handler);
 
    atexit(exitCleanup);
 
