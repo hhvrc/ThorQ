@@ -1,10 +1,21 @@
 #include "crypto.h"
 
+#include <fstream>
+
+#include <log.h>
 #include <botan_all.h>
 #include "constants.h"
 
 
 using namespace ThorQ;
+
+Crypto::Crypto(Botan::Private_Key *key)
+    : m_ready(false)
+    , m_rng(new Botan::AutoSeeded_RNG())
+    , m_key(key)
+    , m_streamCipher(Botan::StreamCipher::create(THORQ_CRYPTO_CIPHER_NAME))
+{
+}
 
 void Crypto::RandomizeBytes(std::uint8_t* data, std::size_t len)
 {
@@ -12,6 +23,51 @@ void Crypto::RandomizeBytes(std::uint8_t* data, std::size_t len)
 		return;
 
 	Botan::AutoSeeded_RNG().randomize(data, len);
+}
+
+Crypto* Crypto::load(const std::string &keyName, const std::string &password)
+{
+    try
+    {
+        Botan::AutoSeeded_RNG rng = Botan::AutoSeeded_RNG();
+
+        Botan::Private_Key* pk = Botan::PKCS8::load_key(keyName + ".sk", rng, password);
+
+        return new Crypto(pk);
+    }
+    catch (Botan::Exception ex)
+    {
+        thorq_error("Error while decoding key: %s\n", ex.what())
+    }
+    catch (std::exception ex)
+    {
+        thorq_error("Error while loading key: %s\n", ex.what())
+    }
+
+    return nullptr;
+}
+
+bool Crypto::save(const std::string &keyName, const std::string &password) const
+{
+    try
+    {
+        std::string encoded = Botan::PKCS8::PEM_encode(*m_key, *m_rng, password);
+        std::ofstream out(keyName + ".sk");
+        out << encoded;
+        out.close();
+    }
+    catch (Botan::Exception ex)
+    {
+        thorq_error("Error while encoding key: %s\n", ex.what())
+        return false;
+    }
+    catch (std::exception ex)
+    {
+        thorq_error("Error while saving key: %s\n", ex.what())
+        return false;
+    }
+
+    return true;
 }
 
 Crypto::Crypto()
@@ -33,7 +89,7 @@ std::vector<std::uint8_t> Crypto::publicKey() const
 	return m_key->public_value();
 }
 
-bool Crypto::ready()
+bool Crypto::ready() const
 {
 	return m_ready;
 }

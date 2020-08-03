@@ -8,7 +8,7 @@
 namespace Botan {
 class StreamCipher;
 class AutoSeeded_RNG;
-class ECDH_PrivateKey;
+class Private_Key;
 }
 
 namespace ThorQ {
@@ -18,14 +18,30 @@ class Crypto
 {
 	bool m_ready;
 	Botan::AutoSeeded_RNG* m_rng;
-	Botan::ECDH_PrivateKey* m_key;
+    Botan::Private_Key* m_key;
 	std::unique_ptr<Botan::StreamCipher> m_streamCipher;
+
+    Crypto(Botan::Private_Key* key);
 public:
     /** Randomizes data using cryptographic functions
      * @param data Pointer to data to randomize
      * @param len Length of data to randomize
      */
 	static void RandomizeBytes(std::uint8_t* data, std::size_t len);
+
+    /** Loads a cryptographic key pair, from disk (requires a password)
+      * @param keyName Name of the file of the key pair (without the file extension)
+      * @param password Passord to decrypt the key pair
+      * @retval Returns a cryptoclass containing the key pair upon success, returns nullptr upon failure
+      */
+    static Crypto* load(const std::string& keyName, const std::string& password);
+
+    /** Saves a cryptographic key pair, to disk (requires a password)
+      * @param keyName Name of the file of the key pair (without the file extension)
+      * @param password Passord to encrypt the key pair
+      * @retval Returns if saving the key pair was a success
+      */
+    bool save(const std::string& keyName, const std::string& password) const;
 
 	Crypto();
 	~Crypto();
@@ -38,7 +54,7 @@ public:
     /** Checks if shared secret has been established
      * @returns if shared secret is established
      */
-    bool ready();
+    bool ready() const;
 
     /** Establish secret key with foreign friend
      * @param data public key of foreign friend
