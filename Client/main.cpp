@@ -52,10 +52,10 @@ int main(int argc, char** argv)
 	}
 
 	app.setStyleSheet(stylesheet);
-    app.setApplicationName("ThorQ");
-    app.setDesktopFileName("ThorQ");
-    app.setApplicationVersion(THORQ_VERSION_CLIENT.to_string().c_str());
-    app.setWindowIcon(QIcon(":/shockGrey.ico"));
+	app.setApplicationName(THORQ_APPLICATION_NAME);
+	app.setDesktopFileName(THORQ_APPLICATION_NAME);
+	app.setApplicationVersion(THORQ_VERSION_CLIENT.to_string().c_str());
+	app.setWindowIcon(QIcon(":/shockGrey.ico"));
 
 	// Initialize ENet
 	if (enet_initialize() < 0)
@@ -83,7 +83,7 @@ int main(int argc, char** argv)
     {
     });
 
-    cli->Connect("www.dededededede.de", 12345);
+	cli->Connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT);
 #else
 	QPixmap pix(":/uwu.png");
 	QLabel lab;
@@ -95,7 +95,7 @@ int main(int argc, char** argv)
     QObject::connect(ovr, &OpenVROverlayController::VrExited, ovr, &QObject::deleteLater);
 #endif
 
-    int retval = app.exec();
+	int retval = app.exec();
 #if COMTEST
     delete cli;
     enet_deinitialize();
