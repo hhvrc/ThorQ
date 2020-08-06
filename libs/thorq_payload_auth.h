@@ -60,7 +60,7 @@ inline void thorq_payload_auth_get_cmd(const thorq_payload_t& payload, thorq_aut
 inline void thorq_payload_auth_get_data(const thorq_payload_t& payload, std::vector<std::uint8_t>& data)
 {
     data.resize(payload.data.size() - 1);
-    if (payload.data.size() != 0)
+	if (payload.data.size() > 1)
         memcpy(&data[0], &payload.data[1], payload.data.size());
 }
 
