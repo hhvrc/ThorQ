@@ -5,6 +5,9 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 
+/**
+ * @brief The MainWidget class
+ */
 class MainWidget
 {
 public:

@@ -2,8 +2,9 @@
 
 #include <fstream>
 
-#include <log.h>
 #include <botan_all.h>
+
+#include "log.h"
 #include "constants.h"
 
 
@@ -22,26 +23,26 @@ void Crypto::RandomizeBytes(std::uint8_t* data, std::size_t len)
 	if (data == nullptr || len == 0)
 		return;
 
-	Botan::AutoSeeded_RNG().randomize(data, len);
+    Botan::AutoSeeded_RNG().randomize(data, len);
 }
 
 Crypto* Crypto::load(const std::string &keyName, const std::string &password)
 {
     try
     {
-        Botan::AutoSeeded_RNG rng = Botan::AutoSeeded_RNG();
+        std::unique_ptr<Botan::AutoSeeded_RNG> rng = std::make_unique<Botan::AutoSeeded_RNG>();
 
-        Botan::Private_Key* pk = Botan::PKCS8::load_key(keyName + ".sk", rng, password);
+        Botan::Private_Key* pk = Botan::PKCS8::load_key(keyName + ".sk", *rng, password);
 
         return new Crypto(pk);
     }
-    catch (Botan::Exception ex)
+    catch (const Botan::Exception& ex)
     {
-        thorq_error("Error while decoding key: %s\n", ex.what())
+		thorq_error_fmt("Error while decoding key: %s\n", ex.what())
     }
-    catch (std::exception ex)
+    catch (const std::exception& ex)
     {
-        thorq_error("Error while loading key: %s\n", ex.what())
+		thorq_error_fmt("Error while loading key: %s\n", ex.what())
     }
 
     return nullptr;
@@ -56,14 +57,14 @@ bool Crypto::save(const std::string &keyName, const std::string &password) const
         out << encoded;
         out.close();
     }
-    catch (Botan::Exception ex)
+    catch (const Botan::Exception& ex)
     {
-        thorq_error("Error while encoding key: %s\n", ex.what())
+		thorq_error_fmt("Error while encoding key: %s\n", ex.what())
         return false;
     }
-    catch (std::exception ex)
+    catch (const std::exception& ex)
     {
-        thorq_error("Error while saving key: %s\n", ex.what())
+		thorq_error_fmt("Error while saving key: %s\n", ex.what())
         return false;
     }
 
@@ -86,29 +87,28 @@ Crypto::~Crypto()
 
 std::vector<std::uint8_t> Crypto::publicKey() const
 {
-	return m_key->public_value();
+    return m_key->public_key_bits();
 }
 
 bool Crypto::ready() const
 {
-	return m_ready;
+    return m_ready;
 }
 
 bool Crypto::agree(const std::vector<std::uint8_t>& data)
 {
-	if (data.size() == m_key->public_value().size())
+    if (data.size() == m_key->public_key_bits().size())
 	{
 		try
 		{
-			Botan::PK_Key_Agreement ecdh(*m_key, *m_rng, THORQ_CRYPTO_KEY_DVFUNC);
-			m_streamCipher->set_key(ecdh.derive_key(THORQ_CRYPTO_KEY_LENGTH, data));
+            Botan::PK_Key_Agreement ecdh(*m_key, *m_rng, THORQ_CRYPTO_KEY_DVFUNC);
+            m_streamCipher->set_key(ecdh.derive_key(THORQ_CRYPTO_KEY_LENGTH, data));
 			m_ready = true;
 			return true;
-		}
-		catch (Botan::Exception ex)
+        }
+        catch (const std::exception& ex)
 		{
-			fprintf(stderr, "Error while doing key agreement: %s\n", ex.what());
-			fflush(stderr);
+			thorq_error_fmt("Error while doing key agreement: %s\n", ex.what())
 		}
 	}
 
@@ -120,15 +120,14 @@ void Crypto::reset()
 	try
 	{
 		m_ready = false;
-		Botan::ECDH_PrivateKey* oldKey = m_key;
+        Botan::Private_Key* oldKey = m_key;
 		m_key = new Botan::ECDH_PrivateKey(*m_rng, Botan::EC_Group(THORQ_CRYPTO_EC_ID));
 		delete oldKey;
 		m_streamCipher->clear();
-	}
-	catch (Botan::Exception ex)
+    }
+    catch (const std::exception& ex)
 	{
-		fprintf(stderr, "Error while resetting encryption: %s\n", ex.what());
-		fflush(stderr);
+		thorq_error_fmt("Error while resetting encryption: %s\n", ex.what())
 	}
 }
 
@@ -149,11 +148,10 @@ bool Crypto::encrypt(std::vector<std::uint8_t>& data)
 			data.insert(data.end(), iv, iv + THORQ_CRYPTO_CIPHER_IV_LEN);
 
 			return true;
-		}
-		catch (Botan::Exception ex)
+        }
+        catch (const std::exception& ex)
 		{
-			fprintf(stderr, "Error while doing encryption: %s\n", ex.what());
-			fflush(stderr);
+			thorq_error_fmt("Error while doing encryption: %s\n", ex.what())
 		}
 	}
     return false;
@@ -171,10 +169,9 @@ bool Crypto::encrypt(std::vector<std::uint8_t> &data, std::uint8_t* iv)
             m_streamCipher->encrypt(data);
             return true;
         }
-        catch (Botan::Exception ex)
+        catch (const std::exception& ex)
         {
-            fprintf(stderr, "Error while doing encryption: %s\n", ex.what());
-            fflush(stderr);
+			thorq_error_fmt("Error while doing encryption: %s\n", ex.what())
         }
     }
     return false;
@@ -194,11 +191,10 @@ bool Crypto::decrypt(std::vector<std::uint8_t>& data)
 
 			m_streamCipher->decrypt(data);
 			return true;
-		}
-		catch (Botan::Exception ex)
+        }
+        catch (const std::exception& ex)
 		{
-			fprintf(stderr, "Error while doing decryption: %s\n", ex.what());
-			fflush(stderr);
+			thorq_error_fmt("Error while doing decryption: %s\n", ex.what())
 		}
 	}
     return false;
@@ -215,10 +211,9 @@ bool Crypto::decrypt(std::vector<std::uint8_t> &data, const std::uint8_t *iv)
             m_streamCipher->decrypt(data);
             return true;
         }
-        catch (Botan::Exception ex)
+        catch (const std::exception& ex)
         {
-            fprintf(stderr, "Error while doing decryption: %s\n", ex.what());
-            fflush(stderr);
+			thorq_error_fmt("Error while doing decryption: %s\n", ex.what())
         }
     }
     return false;

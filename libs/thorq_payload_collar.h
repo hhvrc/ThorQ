@@ -3,6 +3,9 @@
 
 #include "thorq_payload.h"
 
+/** @typedef thorq_collar_flag_t
+ *
+ */
 typedef enum {
     THORQ_COLLAR_FLAG_SHOCK      = 1 << 0, ///< Activate collar shock
     THORQ_COLLAR_FLAG_VIBRATE    = 1 << 1, ///< Activate collar vibration
@@ -14,11 +17,25 @@ typedef enum {
 	THORQ_COLLAR_FLAG_IMPULSE    = 1 << 7,
 } thorq_collar_flag_t; ///< Collar flag to describe current user input
 
+/**
+ * @brief thorq_payload_collar_is_valid
+ * @param payload
+ * @return
+ */
 inline bool thorq_payload_collar_is_valid(const thorq_payload_t& payload)
 {
 	return payload.id == THORQ_PAYLOAD_ID_COLLAR && payload.data.size() == 5;
 }
 
+/**
+ * @brief thorq_payload_collar_pack
+ * @param payload
+ * @param flags
+ * @param shock_value
+ * @param vibration_value
+ * @param beep_value
+ * @param auto_value
+ */
 inline void thorq_payload_collar_pack(thorq_payload_t& payload, const std::uint8_t& flags, const std::uint8_t& shock_value, const std::uint8_t& vibration_value, const std::uint8_t& beep_value, const std::uint8_t& auto_value)
 {
 	payload.id = THORQ_PAYLOAD_ID_COLLAR;
@@ -30,6 +47,15 @@ inline void thorq_payload_collar_pack(thorq_payload_t& payload, const std::uint8
 	payload.data[4] = auto_value;
 }
 
+/**
+ * @brief thorq_payload_collar_unpack
+ * @param payload
+ * @param flags
+ * @param shock_value
+ * @param vibration_value
+ * @param beep_value
+ * @param auto_value
+ */
 inline void thorq_payload_collar_unpack(const thorq_payload_t& payload, std::uint8_t& flags, std::uint8_t& shock_value, std::uint8_t& vibration_value, std::uint8_t& beep_value, std::uint8_t& auto_value)
 {
     flags = payload.data[0];

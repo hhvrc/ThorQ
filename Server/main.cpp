@@ -22,6 +22,7 @@
 	#pragma GCC diagnostic pop
 #endif
 
+#define SINGLETON_BASE
 #include "singletons.h"
 #include "instancemap.h"
 #include "eventhandlers.h"

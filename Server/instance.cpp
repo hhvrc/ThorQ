@@ -8,6 +8,7 @@
 #include <constants.h>
 
 #include <thorq_message.h>
+#include <thorq_payload_event.h>
 #include <thorq_payload_crypto.h>
 #include <thorq_payload_command_ack.h>
 
@@ -21,8 +22,7 @@ ThorQ::Instance::Instance(ENetPeer* peer)
 	, m_cryptoState(THORQ_CRYPTO_STATE_NONE)
 	, m_loginState(THORQ_LOGIN_STATE_LOGGEDOUT)
 	, m_sessionState(THORQ_SESSION_STATE_NONE)
-	, m_name("")
-	, m_hasCollar(false)
+    , m_name("")
 	, m_peer(peer)
 	, m_partner(nullptr)
 	, m_requestedPartner(nullptr)
@@ -36,6 +36,21 @@ ThorQ::Instance::~Instance()
 	if (m_peer != nullptr)
 		enet_peer_reset(m_peer);
 	delete m_crypto;
+}
+
+void ThorQ::Instance::setHwid(const std::string& hwid)
+{
+    m_hwid = hwid;
+}
+
+const std::string& ThorQ::Instance::hwid() const
+{
+    return m_hwid;
+}
+
+bool ThorQ::Instance::hasHwid()
+{
+    return !m_hwid.empty();
 }
 
 void ThorQ::Instance::setName(const std::string& newName)
@@ -67,83 +82,116 @@ ENetPeer* ThorQ::Instance::peer() const
 
 void ThorQ::Instance::requestOn(Instance* target)
 {
+    thorq_payload_t response;
+
 	// Spam prevention
 	if (m_requestedPartner == target)
+    {
+        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_NO_CHANGE);
+        sendPayload(&response, true, true);
 		return;
+    }
 
-	if (m_partner != nullptr) {
-		thorq_payload_t payload;
-        thorq_payload_command_ack_pack();
-        SendEncrypted(ACKNOWLEDGE_Denied, "You are already in another session");
+    if (m_partner != nullptr)
+    {
+        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, "You are already in another session");
+        sendPayload(&response, true, true);
 		return;
 	}
 
-	if (target == this) {
-		SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, "Cannot request on self");
+    if (target == this)
+    {
+        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, "Cannot request on self");
+        sendPayload(&response, true, true);
 		return;
 	}
 
-    if (target->hasPartner())
-	{
-        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, target->name() + " is already in another session");
+    if (target->isInSession())
+    {
+        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, target->name() + " is already in another session");
+        sendPayload(&response, true, true);
 		return;
 	}
 
 	m_requestedPartner = target;
-	target->SendEncrypted(SESSION_Request, m_name);
-	SendEncrypted(ACKNOWLEDGE_OK, "Request sent");
+
+    thorq_payload_event_pack(response, THORQ_EVENT_SESSION_REQUESTED, name());
+    sendPayload(&response, true, true);
+
+    thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_IN_PROGRESS, "Request sent");
+    sendPayload(&response, true, true);
 }
 bool ThorQ::Instance::requestAcceptFrom(Instance* sender)
 {
+    thorq_payload_t response;
+
 	if (sender == this)
 	{
-		SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, "Cannot start session with self");
+        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_DENIED, "Cannot start session with self");
+        sendPayload(&response, true, true);
 		return false;
 	}
 
 	if (sender->m_requestedPartner != this)
 	{
-        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, " Request from " + sender->name() + " is invalid / never got sent");
+        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_DENIED, " Request from " + sender->name() + " is invalid / never got sent");
+        sendPayload(&response, true, true);
 		return false;
 	}
 
-    if (!sender->hasPartner())
+    if (!sender->isInSession())
 	{
-        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, sender->name() + " is already in another session");
+        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_DENIED, sender->name() + " is already in another session");
+        sendPayload(&response, true, true);
 		return false;
 	}
 
 	if (m_partner != nullptr)
 	{
-		SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, "You are already in another session");
+        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_DENIED, "You are already in another session");
+        sendPayload(&response, true, true);
 		return false;
 	}
 
 	this->m_partner = sender;
 	sender->m_partner = this;
 
-    sender->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionAccepted, this->name());
-    this->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionAccepted, sender->name());
+    thorq_payload_event_pack(response, THORQ_EVENT_SESSION_STARTED, m_partner->name());
+    sendPayload(&response, true, true);
+
+    thorq_payload_event_pack(response, THORQ_EVENT_SESSION_STARTED, this->name());
+    m_partner->sendPayload(&response, true, true);
+
+    thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_OK, "Request accepted");
+    m_partner->sendPayload(&response, true, true);
+    thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_OK, "Session started");
+    this->sendPayload(&response, true, true);
 
 	return true;
 }
 
 bool ThorQ::Instance::requestDenyFrom(ThorQ::Instance *sender)
 {
+    thorq_payload_t response;
+
 	if (sender == this)
 	{
-		SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, "Cannot deny session with self");
+        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_DENY, THORQ_COMMAND_ACK_RESULT_DENIED, "Cannot deny session with self");
+        sendPayload(&response, true, true);
 		return false;
 	}
 
 	if (sender->m_requestedPartner != this)
 	{
-        SendEncrypted(ThorQ::MessageContentEnums::ACKNOWLEDGE_Denied, " Request from " + sender->name() + " is invalid / never got sent");
+        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_DENY, THORQ_COMMAND_ACK_RESULT_DENIED, " Request from " + sender->name() + " is invalid / never got sent");
+        sendPayload(&response, true, true);
 		return false;
 	}
 
-    sender->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionDenied, this->name());
-    this->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionDenied, sender->name());
+    thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, "Request denied");
+    sender->sendPayload(&response, true, true);
+    thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_DENY, THORQ_COMMAND_ACK_RESULT_OK, "Session denied");
+    this->sendPayload(&response, true, true);
 
 	return true;
 }
@@ -153,46 +201,75 @@ ThorQ::Instance* ThorQ::Instance::partner() const
 }
 void ThorQ::Instance::clearPartner()
 {
+    thorq_payload_t response;
+
 	if (m_partner == nullptr)
 		return;
 
-	thorq_payload_t payload;
-	m_partner->SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionEnded, m_name);
-    SendEncrypted(ThorQ::MessageContentEnums::NOTIFY_SessionEnded, m_partner->name());
+    thorq_payload_event_pack(response, THORQ_EVENT_SESSION_STOPPED, m_partner->name());
+    this->sendPayload(&response, true, true);
 
-	m_partner->m_partner = nullptr;
-	m_partner = nullptr;
+    thorq_payload_event_pack(response, THORQ_EVENT_SESSION_STOPPED, this->name());
+    m_partner->sendPayload(&response, true, true);
+
+    this->m_partner = nullptr;
+    m_partner->m_partner = nullptr;
 }
 
-bool ThorQ::Instance::hasPartner()
+void ThorQ::Instance::setIsInSteamVR(bool value)
 {
-	return m_partner != nullptr;
+    if (isInSteamVR() != value)
+    {
+        if (value)
+            m_activityState |= THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT;
+        else
+            m_activityState &= ~THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT;
+    }
 }
 
-void ThorQ::Instance::setHasCollar(bool hasCollar)
+void ThorQ::Instance::setHasCollar(bool value)
 {
-	m_hasCollar = hasCollar;
+    if (hasCollar() != value)
+    {
+        if (value)
+            m_activityState |= THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT;
+        else
+            m_activityState &= ~THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT;
+    }
+}
+
+bool ThorQ::Instance::isInSession() const
+{
+    return (m_activityState & THORQ_USER_ACTIVITY_FLAG_IN_SESSION) != 0;
+}
+
+bool ThorQ::Instance::isInSteamVR() const
+{
+    return (m_activityState & THORQ_USER_ACTIVITY_FLAG_OPENVR_RUNNING) != 0;
 }
 
 bool ThorQ::Instance::hasCollar() const
 {
-	return m_hasCollar;
+    return (m_activityState & THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT) != 0;
 }
 
 thorq_connection_state_t ThorQ::Instance::connectionState() const
 {
 	return m_connectionState;
 }
+
 void ThorQ::Instance::setConnectionState(thorq_connection_state_t state)
 {
 	if (state < m_connectionState)
         setCryptoState(THORQ_CRYPTO_STATE_NONE);
 	m_connectionState = state;
 }
+
 thorq_crypto_state_t ThorQ::Instance::cryptoState() const
 {
 	return m_cryptoState;
 }
+
 void ThorQ::Instance::setCryptoState(thorq_crypto_state_t state)
 {
 	if (state < m_cryptoState)
@@ -222,17 +299,13 @@ void ThorQ::Instance::setLoginState(thorq_login_state_t state)
 		m_loginState = state;
 
 		if (state == THORQ_LOGIN_STATE_LOGGEDIN)
-		{
-			registeredInstances->TryAdd(this);
-
+        {
 			thorq_payload_t payload;
 			// TODO: notify about user_online
 			broadcastPayload(&payload, true);
 		}
 		else if (state == THORQ_LOGIN_STATE_LOGGEDOUT)
-		{
-			registeredInstances->Remove(this->name());
-
+        {
 			thorq_payload_t payload;
 			// TODO: notify about user_offline
 			broadcastPayload(&payload, true);
@@ -252,7 +325,6 @@ void ThorQ::Instance::setSessionState(thorq_session_state_t state)
 	{
 		m_sessionState = state;
 
-
 		if (state == THORQ_SESSION_STATE_NONE)
 		{
 			Instance* partner = m_partner;
@@ -261,18 +333,18 @@ void ThorQ::Instance::setSessionState(thorq_session_state_t state)
 				m_partner->setSessionState(THORQ_SESSION_STATE_NONE);
 
 			// If we have already are notifying users that someone went offline then there is no use in telling them that they left a session, that is obvious
-			if (m_loginState != THORQ_LOGIN_STATE_LOGGEDIN)
-				return;
-
-			thorq_payload_t payload;
-			// TODO: notify about user_in_session
-			broadcastPayload(&payload, true);
+            if (m_loginState == THORQ_LOGIN_STATE_LOGGEDIN)
+            {
+                thorq_payload_t payload;
+                thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STARTED, name());
+                broadcastPayload(&payload, true);
+            }
 		}
 		else if (state == THORQ_SESSION_STATE_ACTIVE)
 		{
-			thorq_payload_t payload;
-			// TODO: notify about user_not_in_session
-			broadcastPayload(&payload, true);
+            thorq_payload_t payload;
+            thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STOPPED, name());
+            broadcastPayload(&payload, true);
 		}
 	}
 }
@@ -281,10 +353,11 @@ void ThorQ::Instance::cryptoInit()
 {
     getCrypto()->reset();
 
+    setCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
+
 	thorq_payload_t payload;
     thorq_payload_crypto_pack(payload, THORQ_CRYPTO_ESTABLISH, getCrypto()->publicKey());
-	sendPayload(&payload, true, true);
-    setCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
+    sendPayload(&payload, false, true);
 }
 
 bool ThorQ::Instance::cryptoEstablish(const std::vector<std::uint8_t>& data)
@@ -292,11 +365,11 @@ bool ThorQ::Instance::cryptoEstablish(const std::vector<std::uint8_t>& data)
     if (cryptoState() == THORQ_CRYPTO_STATE_ESTABLISHING && !data.empty())
 	{
         if (getCrypto()->agree(data))
-		{
+        {
 			Crypto::RandomizeBytes(m_verificationData, THORQ_CRYPTO_VERIFICATION_DATA_LENGTH);
 			thorq_payload_t payload;
 			thorq_payload_crypto_pack(payload, THORQ_CRYPTO_VERIFY, m_verificationData, THORQ_CRYPTO_VERIFICATION_DATA_LENGTH);
-			sendPayload(&payload, true, true);
+            sendPayload(&payload, true, true);
             setCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
 			return true;
 		}

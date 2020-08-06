@@ -13,11 +13,18 @@ namespace Ui {
 class ControlWidget;
 }
 
+/**
+ * @brief The OverlayWidget class
+ */
 class OverlayWidget : public QWidget
 {
 	Q_OBJECT
 
 public:
+    /**
+     * @brief OverlayWidget
+     * @param parent
+     */
 	OverlayWidget(QWidget *parent = nullptr);
 	~OverlayWidget();
 private:

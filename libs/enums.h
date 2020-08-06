@@ -17,46 +17,31 @@ typedef enum {
 
 	THORQ_PAYLOAD_ID_HEARTBEAT,    ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
 
-	THORQ_PAYLOAD_ID_COMMAND,      ///< Commands like login/logout/session/requests
+    THORQ_PAYLOAD_ID_EVENT,        ///< Server events (user statuses)
+    THORQ_PAYLOAD_ID_COMMAND,      ///< Commands like login/logout/session/requests
 	THORQ_PAYLOAD_ID_COMMAND_ACK,  ///< Acknowledge for commands
-	THORQ_PAYLOAD_ID_NOTIFICATION, ///< Server broadcasts
+    THORQ_PAYLOAD_ID_ANNOUNCEMENT, ///< Server announcement (doesnt need any sort of authentication)
 
 	THORQ_PAYLOAD_ID_COLLAR,       ///< Collar command
 } thorq_payload_id_t; ///< Message entry flags to describe the state of a message
 
 typedef enum {
-	THORQ_USER_STATE_FLAG_COLLAR_PRESENT = 1 << 0, ///< User currently has a collar connected to their pc, this will show up as a [🗲] icon next to their name
-	THORQ_USER_STATE_FLAG_OPENVR_RUNNING = 1 << 1, ///< User is currently in Virtual Reality, this will show up as a [VR] icon next to their name
-	THORQ_USER_STATE_FLAG_RESERVED_3     = 1 << 2,
-	THORQ_USER_STATE_FLAG_RESERVED_4     = 1 << 3,
-	THORQ_USER_STATE_FLAG_RESERVED_5     = 1 << 4,
-	THORQ_USER_STATE_FLAG_RESERVED_6     = 1 << 5,
-	THORQ_USER_STATE_FLAG_RESERVED_7     = 1 << 6,
-	THORQ_USER_STATE_FLAG_RESERVED_8     = 1 << 7,
-} thorq_user_state_flag_t; ///< Id of a device or service that client has
+    THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT = 1 << 0, ///< User currently has a collar connected to their pc, this will show up as a [🗲] icon next to their name
+    THORQ_USER_ACTIVITY_FLAG_OPENVR_RUNNING = 1 << 1, ///< User is currently in Virtual Reality, this will show up as a [VR] icon next to their name
+    THORQ_USER_ACTIVITY_FLAG_IN_SESSION     = 1 << 2, ///< User is currently in a session
+    THORQ_USER_ACTIVITY_FLAG_RESERVED_4     = 1 << 3,
+    THORQ_USER_ACTIVITY_FLAG_RESERVED_5     = 1 << 4,
+    THORQ_USER_ACTIVITY_FLAG_RESERVED_6     = 1 << 5,
+    THORQ_USER_ACTIVITY_FLAG_RESERVED_7     = 1 << 6,
+    THORQ_USER_ACTIVITY_FLAG_RESERVED_8     = 1 << 7,
+} thorq_user_activity_flag_t; ///< Id of a device or service that client has
 
 typedef enum {
-	THORQ_CMD_ACK_OK,
-	THORQ_CMD_ACK_ERR_FAIL,
-	THORQ_CMD_ACK_ERR_ACCESS_DENIED,
-	THORQ_CMD_ACK_ERR_NOT_SUPPORTED,
-	THORQ_CMD_ACK_ERR_ACCESS_DENIED_SYSID_NOT_WHITELISTED,
-} thorq_cmd_ack_t; ///< Acknowledge of command sent from client
-
-typedef enum {
-    THORQ_BROADCAST_USER_STATE, ///< Session state, Collar state,
-    THORQ_BROADCAST_USER_OFFLINE,
-    THORQ_BROADCAST_USER_OFFLINE_LOS,
-    THORQ_BROADCAST_USER_OFFLINE_TIMEOUT,
-    THORQ_BROADCAST_ANNOUNCEMENT,
-} thorq_broadcast_t;
-
-typedef enum {
-	THORQ_SESSION_EVENT_REQUESTED,
-	THORQ_SESSION_EVENT_ACCEPTED,
-	THORQ_SESSION_EVENT_DENIED,
-	THORQ_SESSION_EVENT_ENDED,
-} thorq_session_event_t; ///< Enum that describes what the message is
+    THORQ_CMD_SESSION_REQUEST,
+    THORQ_CMD_SESSION_ACCEPT,
+    THORQ_CMD_SESSION_DENY,
+    THORQ_CMD_SESSION_LEAVE,
+} thorq_command_session_t;
 
 typedef enum {
     THORQ_DISCONNECT_REASON_UNKNOWN = 0,
@@ -85,28 +70,33 @@ typedef enum
 
 typedef enum
 {
-	THORQ_CRYPTO_STATE_NONE,         ///< The cryptographic link with the other host has not been established yet
-	THORQ_CRYPTO_STATE_REQUESTING,   ///< A request has been sent to the other host, requesting to begin a handshake
-	THORQ_CRYPTO_STATE_ESTABLISHING, ///< Hosts are now attempting to establish a shared secret
-	THORQ_CRYPTO_STATE_VERIFYING,    ///< Hosts are not trying to verify that they successfully agreed on a shared secret
-	THORQ_CRYPTO_STATE_ACTIVE,       ///< Hosts have a shared secret and can send encrypted data between themselves
+    THORQ_CRYPTO_STATE_NONE = THORQ_CONNECTION_STATE_CONNECTED, ///< The cryptographic link with the other host has not been established yet
+    THORQ_CRYPTO_STATE_REQUESTED,                               ///< A request has been sent to the other host, requesting to begin a handshake
+    THORQ_CRYPTO_STATE_ESTABLISHING,                            ///< Hosts are now attempting to establish a shared secret
+    THORQ_CRYPTO_STATE_VERIFYING,                               ///< Hosts are not trying to verify that they successfully agreed on a shared secret
+    THORQ_CRYPTO_STATE_ACTIVE,                                  ///< Hosts have a shared secret and can send encrypted data between themselves
 } thorq_crypto_state_t; ///< State machine for crypto
 
 typedef enum
 {
-	THORQ_AUTH_STATE_NONE,           ///< Client has not been authenticated yet
-	THORQ_AUTH_STATE_CHECKING,       ///< Client has sent SystemID to server and is awaiting a response
-	THORQ_AUTH_STATE_AWAITING_INPUT, ///< Client is requesting user input for a registration key
-	THORQ_AUTH_STATE_REGISTERING,    ///< Client has semt registration key to server and is awaiting a response
-	THORQ_AUTH_STATE_OK,             ///< Server authenticated client, client can now access the api
+    THORQ_AUTH_STATE_NONE = THORQ_CRYPTO_STATE_ACTIVE,                           ///< Client has not been authenticated yet
+
+    THORQ_AUTH_STATE_HWID_REQUESTING,                                            ///< Server has requested hardwareID from client
+    THORQ_AUTH_STATE_HWID_CHECKING = THORQ_AUTH_STATE_HWID_REQUESTING,           ///< Client has sent SystemID to server and is awaiting a response
+
+    THORQ_AUTH_STATE_REGKEY_REQUESTING,                                          ///< Server has requested registration key from client
+    THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT = THORQ_AUTH_STATE_REGKEY_REQUESTING, ///< Client is requesting user input for a registration key
+    THORQ_AUTH_STATE_REGKEY_CHECKING,                                            ///< Client has semt registration key to server and is awaiting a response
+
+    THORQ_AUTH_STATE_OK,                                                         ///< Server authenticated client, client can now access the api
 } thorq_auth_state_t; ///< State machine for client authentication
 
 typedef enum
 {
-	THORQ_LOGIN_STATE_LOGGEDOUT,  ///< Client is logged out
-	THORQ_LOGIN_STATE_LOGGINGOUT, ///< Client has requested the server to log it out gracefully
-	THORQ_LOGIN_STATE_LOGGINGIN,  ///< Client has requested to log in with a username, and waiting for the server to accept
-	THORQ_LOGIN_STATE_LOGGEDIN,   ///< Client is logged in with a username, and is discoverable by other online users
+    THORQ_LOGIN_STATE_LOGGEDOUT = THORQ_AUTH_STATE_OK,          ///< Client is logged out
+    THORQ_LOGIN_STATE_LOGGINGOUT,                               ///< Client has requested the server to log it out gracefully
+    THORQ_LOGIN_STATE_LOGGINGIN,                                ///< Client has requested to log in with a username, and waiting for the server to accept
+    THORQ_LOGIN_STATE_LOGGEDIN,                                 ///< Client is logged in with a username, and is discoverable by other online users
 } thorq_login_state_t; ///< State machine for login
 
 typedef enum
@@ -132,7 +122,7 @@ typedef enum {
 	ACTION_SessionAccept  = 1 << 6,  ///< [Signal] Tell server to accept an given incoming request
 	ACTION_SessionDeny    = 1 << 7,  ///< [Signal] Tell server to deny an given incoming request
 	ACTION_SessionLeave   = 1 << 8,  ///< [Signal] Tell server to stop an ongoing session
-	ACTION_RESERVED_10    = 1 << 9,
+    ACTION_SendRegKey     = 1 << 9,
 	ACTION_RESERVED_11    = 1 << 10,
 	ACTION_RESERVED_12    = 1 << 11,
 	ACTION_RESERVED_13    = 1 << 12,

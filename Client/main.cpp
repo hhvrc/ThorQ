@@ -1,29 +1,37 @@
-#include <QDebug>
 #include <QApplication>
 #include <QCoreApplication>
 #include <QLabel>
 #include <QIcon>
 
+#include <log.h>
 #include <enet.h>
+
 #include "client.h"
 #include "serial.h"
 #include "loginwidget.h"
 #include "openvroverlaycontroller.h"
 
 Q_DECLARE_METATYPE(thorq_connection_state_t)
+Q_DECLARE_METATYPE(thorq_crypto_state_t)
+Q_DECLARE_METATYPE(thorq_auth_state_t)
 Q_DECLARE_METATYPE(thorq_login_state_t)
 
 #define COMTEST 1
 
+#include <crypto.h>
+#include <thorq_message.h>
+#include <thorq_payload.h>
+#include <thorq_payload_crypto.h>
+
 int main(int argc, char** argv)
 {
 	qRegisterMetaType<thorq_connection_state_t>("ThorqConnectionState");
+    qRegisterMetaType<thorq_crypto_state_t>("ThorqCryptoState");
+    qRegisterMetaType<thorq_auth_state_t>("ThorqAuthState");
 	qRegisterMetaType<thorq_login_state_t>("ThorqLoginState");
 
-	// TODO: make GUI the main thread, and Networking a seperate thread
 	// TODO: customize GUI
-	// TODO: enable support for SteamVR
-	// TODO: Add pre-encryption flag that signalises if connection is encrypted or not so clients can re-authenticate
+    // TODO: enable support for SteamVR
 
 	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 	QApplication app(argc, argv);
@@ -53,15 +61,17 @@ int main(int argc, char** argv)
 	if (enet_initialize() < 0)
 	{
 		printf("Failed to initialize ENet");
-		exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
 	}
-	qDebug().noquote() << "Using" << Client::Version();
+	thorq_debug_fmt("Using %s", Client::Version().toStdString().c_str())
 
-	LoginWidget e;
-	e.show();
+    LoginWidget e;
+    e.show();
 
-	Client* cli = Client::NewClient();
+    Client* cli = Client::NewClient();
 	QObject::connect(cli, &Client::ConnectionStateChanged, &e, &LoginWidget::SetConnectionState);
+    QObject::connect(cli, &Client::CryptoStateChanged, &e, &LoginWidget::SetCryptoState);
+    QObject::connect(cli, &Client::AuthStateChanged, &e, &LoginWidget::SetAuthState);
 	QObject::connect(cli, &Client::LoginStateChanged, &e, &LoginWidget::SetLoginState);
 	QObject::connect(cli, &Client::PingChanged, &e, &LoginWidget::SetConnectionPing);
 
@@ -69,20 +79,26 @@ int main(int argc, char** argv)
 	{
 	   qDebug() << username;
 	});
+    QObject::connect(cli, &Client::RequestingRegistrationKey, [&]()
+    {
+    });
 
-	cli->Connect("www.potato.tech", 12345);
+    cli->Connect("www.dededededede.de", 12345);
 #else
 	QPixmap pix(":/uwu.png");
 	QLabel lab;
 	lab.setPixmap(pix);
 
-	OpenVROverlayController::SharedInstance()->Init();
-	OpenVROverlayController::SharedInstance()->SetWidget(&lab);
+    OpenVROverlayController* ovr = new OpenVROverlayController(&app);
+    ovr->Init();
+    ovr->SetWidget(&lab);
+    QObject::connect(ovr, &OpenVROverlayController::VrExited, ovr, &QObject::deleteLater);
 #endif
 
-	int retval = app.exec();
-
-	enet_deinitialize();
-
-	return retval;
+    int retval = app.exec();
+#if COMTEST
+    delete cli;
+    enet_deinitialize();
+#endif
+    return retval;
 }

@@ -14,7 +14,7 @@ public:
 	InstanceMap();
 	~InstanceMap();
 
-	bool TryAdd(Instance* peer);
+    bool TryAdd(Instance* peer, const std::string& name);
 
 	Instance* Get(const std::string& name);
 	bool Contains(const std::string& name) const;

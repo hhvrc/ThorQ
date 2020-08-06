@@ -5,6 +5,8 @@
 
 #include "thorq_payload.h"
 
+/** @typedef thorq_command_id_t
+ */
 typedef enum {
     THORQ_COMMAND_ID_LOGIN,
     THORQ_COMMAND_ID_LOGOUT,
@@ -16,45 +18,63 @@ typedef enum {
     THORQ_COMMAND_ID_SESSION_LEAVE,
 } thorq_command_id_t;
 
+/**
+ * @brief thorq_payload_command_is_valid
+ * @param payload
+ * @return
+ */
 inline bool thorq_payload_command_is_valid(const thorq_payload_t& payload)
 {
     return payload.id == THORQ_PAYLOAD_ID_COMMAND;
 }
 
+/**
+ * @brief thorq_payload_command_pack
+ * @param payload
+ * @param cmd_id
+ */
 inline void thorq_payload_command_pack(thorq_payload_t& payload, const thorq_command_id_t& cmd_id)
 {
     payload.id = THORQ_PAYLOAD_ID_COMMAND;
-	payload.data.resize(1);
-    payload.data[0] = cmd_id;
+    payload.data.resize(1);
+    payload.data[0] = static_cast<std::uint8_t>(cmd_id);
 }
-inline void thorq_payload_command_pack(thorq_payload_t& payload, const thorq_command_id_t& cmd_id, const std::uint8_t& data)
+
+/**
+ * @brief thorq_payload_command_pack
+ * @param payload
+ * @param cmd_id
+ * @param data
+ */
+inline void thorq_payload_command_pack(thorq_payload_t& payload, const thorq_command_id_t& cmd_id, const std::string& data)
 {
 	payload.id = THORQ_PAYLOAD_ID_COMMAND;
-	payload.data.resize(2);
-    payload.data[0] = cmd_id;
-    payload.data[1] = data;
-}
-inline void thorq_payload_command_pack(thorq_payload_t& payload, const thorq_command_id_t& cmd_id, const std::string& str)
-{
-	payload.id = THORQ_PAYLOAD_ID_COMMAND;
-	payload.data.resize(1 + str.length());
-    payload.data[0] = cmd_id;
-	memcpy(&payload.data[1], str.data(), str.length());
+    payload.data.resize(1 + data.length());
+    payload.data[0] = static_cast<std::uint8_t>(cmd_id);
+    if (data.size() != 0)
+        memcpy(&payload.data[1], &data[0], data.size());
 }
 
-inline thorq_command_id_t thorq_payload_command_get_id(const thorq_payload_t& payload)
+/**
+ * @brief thorq_payload_command_get_id
+ * @param payload
+ * @param id
+ */
+inline void thorq_payload_command_get_id(const thorq_payload_t& payload, thorq_command_id_t& id)
 {
-	return (thorq_command_id_t)payload.data[0];
+    id = static_cast<thorq_command_id_t>(payload.data[0]);
 }
 
-inline std::uint8_t thorq_payload_command_get_data(const thorq_payload_t& payload)
+/**
+ * @brief thorq_payload_command_get_data
+ * @param payload
+ * @param data
+ */
+inline void thorq_payload_command_get_data(const thorq_payload_t& payload, std::string& data)
 {
-	return payload.data[1];
-}
-
-inline std::string thorq_payload_command_get_string(const thorq_payload_t& payload)
-{
-	return std::string(payload.data.begin() + 1, payload.data.end());
+    data.resize(payload.data.size() - 1);
+    if (data.size() != 0)
+        memcpy(&data[0], &payload.data[1], payload.data.size() - 1);
 }
 
 #endif // THORQ_PAYLOAD_COMMAND_H

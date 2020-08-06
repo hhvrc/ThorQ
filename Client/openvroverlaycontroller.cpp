@@ -3,7 +3,6 @@
 
 #include "openvroverlaycontroller.h"
 
-
 #include <QOpenGLFramebufferObjectFormat>
 #include <QOpenGLPaintDevice>
 #include <QPainter>
@@ -14,10 +13,12 @@
 #include <QtWidgets/QGraphicsEllipseItem>
 #include <QCursor>
 
+#include <log.h>
+
 void Dbg(vr::VROverlayError err, int line)
 {
 	if (err != vr::VROverlayError_None)
-		qDebug() << "Error:" << err << "line:"<< line;
+		thorq_debug_fmt("Error: %i Line: %i", err, line);
 }
 
 inline void ToQMatrix(const vr::HmdMatrix34_t& mat, QMatrix4x4& out)
@@ -53,14 +54,6 @@ bool OpenVROverlayController::IsHmdPresent()
 
 OpenVROverlayController* s_pSharedVRController = nullptr;
 
-OpenVROverlayController *OpenVROverlayController::SharedInstance()
-{
-	if (s_pSharedVRController == nullptr)
-	{
-		s_pSharedVRController = new OpenVROverlayController();
-	}
-	return s_pSharedVRController;
-}
 
 OpenVROverlayController::OpenVROverlayController(QObject* parent)
 	: QObject(parent)
@@ -111,6 +104,14 @@ OpenVROverlayController::OpenVROverlayController(QObject* parent)
 
 OpenVROverlayController::~OpenVROverlayController()
 {
+    Shutdown();
+
+    if (m_frameBuffer != nullptr)
+    {
+        thorq_debug("Deleting framebuffer...")
+        delete m_frameBuffer;
+        m_frameBuffer = nullptr;
+    }
 }
 
 bool OpenVROverlayController::Init()
@@ -123,21 +124,21 @@ bool OpenVROverlayController::Init()
 	format.setMinorVersion(1);
 	format.setProfile(QSurfaceFormat::CompatibilityProfile);
 
-	m_glContext = new QOpenGLContext();
+    m_glContext = new QOpenGLContext(this);
 	m_glContext->setFormat(format);
 	if(!m_glContext->create())
 		return false;
 
 	// create an offscreen surface to attach the context and FBO to
 	m_surface = new QOffscreenSurface();
-	m_surface->create();
+    m_surface->create();
 	m_glContext->makeCurrent(m_surface);
 
-	m_scene = new QGraphicsScene();
+    m_scene = new QGraphicsScene(this);
 	connect(m_scene, &QGraphicsScene::changed, this, &OpenVROverlayController::OverlayDraw);
 
-	// Loading the OpenVR Runtime
-	if (!ConnectToVRRuntime() || vr::VRCompositor() == nullptr || vr::VROverlay() == nullptr)
+    // Loading the OpenVR Runtime
+    if (!ConnectToVRRuntime() || vr::VRCompositor() == nullptr || vr::VROverlay() == nullptr)
 		return false;
 
 	OverlayCreate();
@@ -149,51 +150,31 @@ bool OpenVROverlayController::Init()
 }
 void OpenVROverlayController::Shutdown()
 {
+    thorq_debug("Overlay shutting down...")
+
 	if (!m_isInitialized)
 		return;
 	m_isInitialized = false;
 
+    thorq_debug("Stopping timers...")
 	m_visibilityTimer->stop();
-	m_pumpEventsTimer->stop();
+    m_pumpEventsTimer->stop();
 
-	if (m_frameBuffer != nullptr)
-	{
-		delete m_frameBuffer;
-		m_frameBuffer = nullptr;
-	}
+    thorq_debug("Disconnecting VR runtime...")
+    DisconnectFromVRRuntime();
 
-	DisconnectFromVRRuntime();
-
-	m_handle = vr::k_ulOverlayHandleInvalid;
-
-	if (m_scene != nullptr)
-	{
-		delete m_scene;
-		m_scene = nullptr;
-	}
-
-	if (m_surface != nullptr)
-	{
-		delete m_surface;
-		m_surface = nullptr;
-	}
-
-	if(m_glContext != nullptr)
-	{
-		delete m_glContext;
-		m_glContext = nullptr;
-	}
+    m_handle = vr::k_ulOverlayHandleInvalid;
 }
 
 bool OpenVROverlayController::ConnectToVRRuntime()
 {
-	vr::EVRInitError err = vr::VRInitError_None;
-	m_ivrSystem = vr::VR_Init(&err, vr::VRApplication_Overlay);
-	return err == vr::VRInitError_None;
+    vr::EVRInitError err = vr::VRInitError_None;
+    m_ivrSystem = vr::VR_Init(&err, vr::VRApplication_Overlay);
+    return err == vr::VRInitError_None;
 }
 void OpenVROverlayController::DisconnectFromVRRuntime()
 {
-	vr::VR_Shutdown();
+    vr::VR_Shutdown();
 }
 
 void OpenVROverlayController::SetWidget(QWidget* widget)
@@ -206,9 +187,9 @@ void OpenVROverlayController::SetWidget(QWidget* widget)
 		m_widget = widget;
 
 		// all of the mouse handling stuff requires that the widget be at 0,0
-		m_widget->move(0, 0);
+        m_widget->move(0, 0);
 
-		m_scene->addWidget(m_widget);
+        m_scene->addWidget(m_widget);
 
 		SetOverlayResolution(m_widget->width(), m_widget->height());
 
@@ -231,10 +212,10 @@ void OpenVROverlayController::SetIsVisible(bool visible)
 		m_isVisible = visible;
 
 		if (visible) {
-			qDebug() << "Show";
+            thorq_debug("Show");
 			Dbg(vr::VROverlay()->ShowOverlay(m_handle), __LINE__);
 		} else {
-			qDebug() << "Hide";
+            thorq_debug("Hide")
 			Dbg(vr::VROverlay()->HideOverlay(m_handle), __LINE__);
 		}
 
@@ -391,14 +372,14 @@ void OpenVROverlayController::PollEvents()
 		}
 			break;
 
-		case vr::VREvent_Quit:
-			QApplication::exit();
+        case vr::VREvent_Quit:
+            emit VrExited();
 			break;
 
 		case vr::VREvent_MouseMove:
 		case vr::VREvent_MouseButtonDown:
 		case vr::VREvent_MouseButtonUp:
-			qDebug() << "Please dont say that this captures these events...";
+            thorq_debug("Please dont say that this captures these events...")
 			break;
 		}
 	}
@@ -409,7 +390,7 @@ void OpenVROverlayController::PollEvents()
 		{
 		case vr::VREvent_MouseMove:
 		{
-			qDebug() << "MouseMove!";
+            thorq_debug("MouseMove!")
 			QPointF ptNewMouse(event.data.mouse.x, event.data.mouse.y);
 			QPoint ptGlobal = ptNewMouse.toPoint();
 			QGraphicsSceneMouseEvent mouseEvent(QEvent::GraphicsSceneMouseMove);
@@ -435,7 +416,7 @@ void OpenVROverlayController::PollEvents()
 
 		case vr::VREvent_MouseButtonDown:
 		{
-			qDebug() << "MouseDown!";
+            thorq_debug("MouseDown!")
 			Qt::MouseButton button = event.data.mouse.button == vr::VRMouseButton_Right ? Qt::RightButton : Qt::LeftButton;
 
 			m_lastMouseButtons |= button;
@@ -463,7 +444,7 @@ void OpenVROverlayController::PollEvents()
 
 		case vr::VREvent_MouseButtonUp:
 		{
-			qDebug() << "MouseUp!";
+            thorq_debug("MouseUp!")
 			Qt::MouseButton button = event.data.mouse.button == vr::VRMouseButton_Right ? Qt::RightButton : Qt::LeftButton;
 			m_lastMouseButtons &= ~button;
 
@@ -490,22 +471,31 @@ void OpenVROverlayController::PollEvents()
 
 void OpenVROverlayController::SetOverlayResolution(int width, int height)
 {
-	QOpenGLFramebufferObject* oldBuff = m_frameBuffer;
+    if (m_isInitialized)
+    {
+        if (m_windowSize.v[0] != width || m_windowSize.v[1] != height)
+        {
+            vr::HmdVector2_t vecWindowSize;
+            vecWindowSize.v[0] = width;
+            vecWindowSize.v[1] = height;
 
-	m_frameBuffer = new QOpenGLFramebufferObject(m_widget->width(), m_widget->height(), GL_TEXTURE_2D);
+            QOpenGLFramebufferObject* oldBuff = m_frameBuffer;
 
-	if (oldBuff != nullptr)
-		delete oldBuff;
+            m_frameBuffer = new QOpenGLFramebufferObject(m_widget->width(), m_widget->height(), GL_TEXTURE_2D);
 
-	vr::HmdVector2_t vecWindowSize = { float(width), float(height) };
-	vr::VROverlay()->SetOverlayMouseScale(m_handle, &vecWindowSize);
+            if (oldBuff != nullptr)
+                delete oldBuff;
+
+            vr::VROverlay()->SetOverlayMouseScale(m_handle, &vecWindowSize);
+        }
+    }
 }
 
 void OpenVROverlayController::OverlayCreate()
 {
 	vr::EVROverlayError err = vr::VROverlayError_None;
 
-	qDebug() << "Find";
+    thorq_debug("Find")
 	err = vr::VROverlay()->FindOverlay("ThorQ", &m_handle);
 	if (err != vr::VROverlayError_None)
 	{
@@ -515,7 +505,7 @@ void OpenVROverlayController::OverlayCreate()
 			return;
 		}
 
-		qDebug() << "Create";
+        thorq_debug("Create")
 		Dbg(vr::VROverlay()->CreateOverlay("ThorQ", "ThorQ", &m_handle), __LINE__);
 
 		OverlayInit();
@@ -567,17 +557,17 @@ void OpenVROverlayController::OverlayDraw()
 {
 	if (m_handle == vr::k_ulOverlayHandleInvalid)
 	{
-		qDebug() << "Handle is invalid" << __LINE__;
+        thorq_debug("Handle is invalid")
 		return;
 	}
 
 	if (m_frameBuffer == nullptr)
 	{
-		qDebug() << "Framebuffer is nullptr" << __LINE__;
+        thorq_debug("Framebuffer is nullptr")
 		return;
 	}
 
-	qDebug() << "Draw";
+    thorq_debug("Draw")
 
 	m_glContext->makeCurrent(m_surface);
 	m_frameBuffer->bind();
@@ -601,16 +591,16 @@ void OpenVROverlayController::OverlayTransform()
 {
 	if (m_handle == vr::k_ulOverlayHandleInvalid)
 	{
-		qDebug() << "Handle is invalid" << __LINE__;
+        thorq_debug("Handle is invalid")
 		return;
 	}
 	if (m_deviceIndex == vr::k_unTrackedDeviceIndexInvalid)
 	{
-		qDebug() << "Device is invalid" << __LINE__;
+        thorq_debug("Device is invalid")
 		return;
 	}
 
-	qDebug() << "Position";
+    thorq_debug("Position")
 
     switch (vr::VRSystem()->GetControllerRoleForTrackedDeviceIndex(m_deviceIndex))
     {

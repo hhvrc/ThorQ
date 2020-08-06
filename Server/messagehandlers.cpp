@@ -1,51 +1,31 @@
 #include "messagehandlers.h"
 
+#include <log.h>
 #include <enums.h>
 #include <crypto.h>
+#include <systemid.h>
 #include <thorq_message.h>
 #include <thorq_payload.h>
 #include <thorq_payload_version.h>
 #include <thorq_payload_heartbeat.h>
 #include <thorq_payload_crypto.h>
 #include <thorq_payload_auth.h>
+#include <thorq_payload_event.h>
 #include <thorq_payload_command.h>
 #include <thorq_payload_command_ack.h>
-#include <thorq_payload_notification.h>
+#include <thorq_payload_announcement.h>
 #include <thorq_payload_collar.h>
 
 #include "instance.h"
 #include "singletons.h"
 #include "instancemap.h"
+#include "authhandler.h"
 
-inline bool checkCryptography(ThorQ::Instance* instance)
-{
-
-}
-inline bool checkAuthority(ThorQ::Instance* instance)
-{
-	if (!checkCryptography(instance))
-		return false;
-
-}
-inline bool checkLogin(ThorQ::Instance* instance)
-{
-	if (!checkAuthority(instance))
-		return false;
-
-}
-inline bool checkSession(ThorQ::Instance* instance)
-{
-	if (!checkLogin(instance))
-		return false;
-
-
-}
-
-void handleMessageVersion(ThorQ::Instance* instance, const thorq_payload_t& payload)
+void handleMessageVersion(ThorQ::Instance* instance, const thorq_payload_t* payload)
 {
 	std::uint8_t app;
 	thorq_version_t version;
-	thorq_payload_version_unpack(payload, app, version);
+    thorq_payload_version_unpack(*payload, app, version);
 
 	thorq_version_t currentVersion;
 
@@ -65,235 +45,354 @@ void handleMessageVersion(ThorQ::Instance* instance, const thorq_payload_t& payl
 		currentVersion = THORQ_VERSION_LINK;
 		break;
 	default:
-		printf("Got invalid version %i[%s]\n", app, version.to_string().c_str());
+		thorq_debug_fmt("Got invalid version %i[%s]\n", app, version.to_string().c_str());
 		fflush(stdout);
 		return;
 	}
 
-	printf("Client expects %s[%s], current is %s[%s]\n", name, version.to_string().c_str(), name, currentVersion.to_string().c_str());
+	thorq_debug_fmt("Client expects %s[%s], current is %s[%s]\n", name, version.to_string().c_str(), name, currentVersion.to_string().c_str());
 	fflush(stdout);
 }
 
-void handleMessageCrypto(ThorQ::Instance* instance, const thorq_payload_t& payload)
+void handleMessageCrypto(ThorQ::Instance* instance, const thorq_payload_t* payload)
 {
-	switch (thorq_payload_crypto_get_cmd(payload)) {
+    thorq_payload_t response;
+
+    thorq_crypto_cmd_t cmd;
+    thorq_payload_crypto_get_cmd(*payload, cmd);
+
+    switch (cmd) {
+    case THORQ_CRYPTO_REQUEST:
+    {
+        thorq_debug("Got request!")
+        instance->cryptoInit();
+
+        thorq_debug("Sent public key!")
+        break;
+    }
 	case THORQ_CRYPTO_ESTABLISH:
 	{
-		qDebug() << "Establishing!";
-		std::vector<std::uint8_t> data = thorq_payload_crypto_get_data(payload);
+        thorq_debug("Got public key!")
 
-		if (instance->getCrypto()->ready())
-			instance->getCrypto()->reset();
+        std::vector<std::uint8_t> data;
+        thorq_payload_crypto_get_data(*payload, data);
 
-		if (instance->getCrypto()->agree(data))
-		{
-			instance->setCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
-
-			thorq_payload_t txPayload;
-			thorq_payload_crypto_pack(txPayload, THORQ_CRYPTO_ESTABLISH, instance->getCrypto()->publicKey());
-			instance->sendPayload(&txPayload, false, true);
-		}
-		else
-		{
-			instance->getCrypto()->reset();
-			instance->setCryptoState(THORQ_CRYPTO_STATE_NONE);
-		}
-	}
-		break;
+        if (instance->cryptoEstablish(data))
+        {
+            thorq_debug("Created shared secret!")
+        }
+        else
+        {
+            thorq_debug("Failed to create shared secret!")
+            instance->disconnect(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
+        }
+        break;
+    }
 	case THORQ_CRYPTO_VERIFY:
 	{
-		qDebug() << "Verifying!";
-		instance->setCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
+        thorq_debug("Verifying!")
 
-		instance->sendPayload(payload, false, true);
-	}
-		break;
-	case THORQ_CRYPTO_OK:
-	{
-		qDebug() << "CyptOk!";
-		instance->setCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
-	}
-		break;
+        std::vector<std::uint8_t> data;
+        thorq_payload_crypto_get_data(*payload, data);
+
+        if (instance->cryptoVerify(data))
+        {
+            thorq_debug("Verified with client!")
+            thorq_payload_auth_pack(response, THORQ_AUTH_SYSTEMID_REQ);
+            instance->sendPayload(&response, true, true);
+            instance->setAuthState(THORQ_AUTH_STATE_HWID_REQUESTING);
+        }
+        else
+        {
+            thorq_debug("Failed verify with client!")
+            instance->disconnect(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
+        }
+        break;
+    }
 	default:
-		qDebug() << "Crypt???";
+        thorq_debug("Crypt???")
 		return;
-	}
+    }
 }
 
-void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t& payload)
+void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t* payload)
 {
-	thorq_payload_t txPayload;
+    thorq_payload_t response;
 
-	switch (thorq_payload_auth_get_cmd(payload)) {
-	case THORQ_AUTH_SYSTEMID_REQ:
-		thorq_payload_auth_pack(txPayload, THORQ_AUTH_SYSTEMID, ThorQ::systemid_generate());
-		instance->sendPayload(&txPayload);
-		instance->setAuthState(THORQ_AUTH_STATE_CHECKING);
+    thorq_auth_cmd_t cmd;
+    thorq_payload_auth_get_cmd(*payload, cmd);
+
+    switch (cmd) {
+    case THORQ_AUTH_SYSTEMID:
+    {
+        thorq_debug("SystemID!")
+
+        std::vector<std::uint8_t> data;
+        thorq_payload_auth_get_data(*payload, data);
+
+        instance->setHwid(ThorQ::systemid_to_string(data));
+
+        thorq_debug_fmt("SystemID: %s\n", instance->hwid().c_str())
+
+        if (ThorQ::AuthHandler::CheckSystemID(instance->hwid()))
+        {
+            thorq_payload_auth_pack(response, THORQ_AUTH_OK);
+            instance->sendPayload(&response, true, true);
+            instance->setAuthState(THORQ_AUTH_STATE_OK);
+        }
+        else
+        {
+            thorq_payload_auth_pack(response, THORQ_AUTH_REGKEY_REQ);
+            instance->sendPayload(&response, true, true);
+            instance->setAuthState(THORQ_AUTH_STATE_REGKEY_REQUESTING);
+        }
 		break;
-	case THORQ_AUTH_REGKEY_REQ:
-		emit RequestingRegistrationKey();
-		thorq_payload_auth_pack(txPayload, THORQ_AUTH_REGKEY_AWAITING_INPUT);
-		instance->sendPayload(&txPayload);
-		instance->setAuthState(THORQ_AUTH_STATE_AWAITING_INPUT);
-		break;
-	case THORQ_AUTH_OK:
-		instance->setAuthState(THORQ_AUTH_STATE_OK);
-		break;
+    }
+    case THORQ_AUTH_REGKEY_AWAITING_INPUT:
+    {
+        thorq_debug("Input?")
+        instance->setAuthState(THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT);
+        break;
+    }
+    case THORQ_AUTH_REGKEY:
+    {
+        thorq_debug("RegKey!")
+
+        std::vector<std::uint8_t> data;
+        thorq_payload_auth_get_data(*payload, data);
+
+        if (ThorQ::AuthHandler::TryRegisterHwid(instance->hwid(), data))
+        {
+            thorq_payload_auth_pack(response, THORQ_AUTH_OK);
+            instance->sendPayload(&response, true, true);
+            instance->setAuthState(THORQ_AUTH_STATE_OK);
+        }
+        else
+        {
+            instance->disconnect(THORQ_DISCONNECT_REASON_AUTH_INVALID);
+        }
+        break;
+    }
 	default:
-		qDebug() << "Unexpected message:" << thorq_payload_auth_get_cmd(payload);
+        thorq_debug_fmt("Unexpected message: %i", cmd)
 		break;
 	}
 }
 
 void handleMessageHeartbeat(ThorQ::Instance* instance)
 {
-	// TODO: create new message, and send that
-	sendMessage(instance->peer(), message, false);
-	printf("Heartbeat\n");
-	fflush(stdout);
+    thorq_payload_t payload;
+    thorq_payload_heartbeat_pack(payload);
+    instance->sendPayload(&payload, false, true);
 }
 
-void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t& payload)
+void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payload)
 {
-	/*
-	if (!instance->hasName())
-	{
-		if (meta == USER_Login)
-		{
-			std::string name = ExtractString(data, size, sizeof(std::uint32_t));
+    /*
+    thorq_payload_t response;
 
-			if (!registeredInstances->TryAdd(name, instance))
-			{
-				instance->setName(name);
-				instance->clearPartner();
+    thorq_command_id_t cmd;
+    thorq_payload_command_get_id(payload, cmd);
 
-				thorq_payload_t txPayload;
-				THORQ_PAYLOAD_ID_NOTIFICATION
-				BroadcastMessage(NOTIFY_UserOnline, name);
-				instance->SendEncrypted(ACKNOWLEDGE_OK, "Logged in");
-			}
-			else
-			{
-				instance->SendEncrypted(ACKNOWLEDGE_Denied, "Callname in use");
-			}
-		}
-		else
-		{
-			instance->SendEncrypted(ACKNOWLEDGE_Denied, "Please log in");
-		}
-		return;
-	}
-	*/
-
-	thorq_command_id_t cmd;
+    if (instance->authState() != THORQ_AUTH_STATE_OK)
+    {
+        thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED);
+        instance->sendPayload(&response, false, true);
+        return;
+    }
 
 	switch (cmd){
 	case THORQ_COMMAND_ID_LOGIN:
-	{
-		instance->SendEncrypted(ACKNOWLEDGE_Denied, "Already logged in");
+    {
+        std::string name;
+
+        thorq_payload_command_get_data(payload, name);
+
+        if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDOUT)
+        {
+            if (registeredInstances->TryAdd(instance, name))
+            {
+                instance->setName(name);
+
+
+                thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK, name);
+                instance->sendPayload(&response, true, true);
+            }
+            else
+            {
+                thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, "Username taken");
+                instance->sendPayload(&response, true, true);
+            }
+        }
+        else
+        {
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_NO_CHANGE, name);
+            instance->sendPayload(&response, true, true);
+        }
 		break;
 	}
 	case THORQ_COMMAND_ID_LOGOUT:
 	{
-		// Remove from registered
-		registeredInstances->Remove(instance->name());
+        if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
+        {
+            // Remove from registered
+            registeredInstances->Remove(instance->name());
 
-		// Disconnect session if one is ongoing
-		if (instance->hasPartner())
-		{
-			instance->SendEncrypted(NOTIFY_SessionEnded, instance->partner()->name());
-			instance->partner()->SendEncrypted(NOTIFY_SessionEnded, instance->name());
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_NO_CHANGE);
+            instance->sendPayload(&response, true, true);
 
-			BroadcastMessage(NOTIFY_UserAvailable, instance->partner()->name());
+            // Disconnect session if one is ongoing
+            if (instance->hasPartner())
+            {
+                thorq_payload_session_pack(txPayload, THORQ_PAYLOAD_)
+                instance->SendEncrypted(NOTIFY_SessionEnded, instance->partner()->name());
+                instance->partner()->SendEncrypted(NOTIFY_SessionEnded, instance->name());
 
-			instance->clearPartner();
-		}
+                BroadcastMessage(NOTIFY_UserAvailable, instance->partner()->name());
 
-		// Announce offline
-		if (instance->hasName())
-		{
-			BroadcastMessage(NOTIFY_UserOffline, instance->name());
-			instance->setName("");
-		}
-		instance->SendEncrypted(ACKNOWLEDGE_OK, "Logged out");
+                instance->clearPartner();
+            }
+
+            // Announce offline
+            if (instance->hasName())
+            {
+                BroadcastMessage(NOTIFY_UserOffline, instance->name());
+                instance->setName("");
+            }
+            instance->SendEncrypted(ACKNOWLEDGE_OK, "Logged out");
+        }
+        else
+        {
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_NO_CHANGE);
+            instance->sendPayload(&response, true, true);
+        }
 		break;
 	}
 	case THORQ_COMMAND_ID_GET_USER_LIST:
 	{
-		std::vector<ThorQ::Instance*> instances = registeredInstances->GetInstances();
+        if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
+        {
+            std::vector<ThorQ::Instance*> instances = registeredInstances->GetInstances();
 
-		for (ThorQ::Instance* i : instances)
-		{
-			std::uint32_t txFlag = NOTIFY_UserOnline;
+            for (ThorQ::Instance* i : instances)
+            {
+                std::uint32_t txFlag = NOTIFY_UserOnline;
 
-			txFlag |= i->hasCollar() ? FLAG_CollarConnected : 0;
+                txFlag |= i->hasCollar() ? FLAG_CollarConnected : 0;
 
-			instance->SendEncrypted(txFlag, i->name());
-		}
+                instance->SendEncrypted(txFlag, i->name());
+            }
+        }
+        else
+        {
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, "Please log in");
+            instance->sendPayload(&response, true, true);
+        }
 		break;
 	}
 	case THORQ_COMMAND_ID_SESSION_REQUEST:
 	{
-		std::string name = ExtractString(data, size, sizeof(std::uint32_t));
+        if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
+        {
+            std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
-		ThorQ::Instance* otherInstance = registeredInstances->GetInstance(name);
+            ThorQ::Instance* otherInstance = registeredInstances->GetInstance(name);
 
-		if (otherInstance == nullptr)
-		{
-			instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
-			return;
-		}
+            if (otherInstance == nullptr)
+            {
+                instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
+                return;
+            }
 
-		otherInstance->requestOn(instance);
+            otherInstance->requestOn(instance);
+        }
+        else
+        {
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, "Please log in");
+            instance->sendPayload(&response, true, true);
+        }
 		break;
 	}
-	case THORQ_COMMAND_ID_SESSION_ACCEPT
+    case THORQ_COMMAND_ID_SESSION_ACCEPT:
 	{
-		std::string name = ExtractString(data, size, sizeof(std::uint32_t));
+        if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
+        {
+            std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
-		ThorQ::Instance* otherInstance = registeredInstances->GetInstance(name);
+            ThorQ::Instance* otherInstance = registeredInstances->GetInstance(name);
 
-		if (otherInstance == nullptr)
-		{
-			instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
-			return;
-		}
+            if (otherInstance == nullptr)
+            {
+                instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
+                return;
+            }
 
-		instance->requestAcceptFrom(otherInstance);
-
-		BroadcastMessage(NOTIFY_UserInSession, instance->name());
-		BroadcastMessage(NOTIFY_UserInSession, otherInstance->name());
+            if (instance->requestAcceptFrom(otherInstance))
+            {
+                thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STARTED, THORQ_EVENT_SCOPE_GLOBAL, instance->name());
+                BroadcastMessage(NOTIFY_UserInSession, instance->name());
+                BroadcastMessage(NOTIFY_UserInSession, otherInstance->name());
+            }
+        }
+        else
+        {
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, "Please log in");
+            instance->sendPayload(&response, true, true);
+        }
 		break;
 	}
 	case THORQ_COMMAND_ID_SESSION_DENY:
 	{
-		std::string name = ExtractString(data, size, sizeof(std::uint32_t));
+        if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
+        {
+            std::string name = ExtractString(data, size, sizeof(std::uint32_t));
 
-		ThorQ::Instance* otherInstance = registeredInstances->GetInstance(name);
+            ThorQ::Instance* otherInstance = registeredInstances->GetInstance(name);
 
-		if (otherInstance == nullptr)
-		{
-			instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
-			return;
-		}
+            if (otherInstance == nullptr)
+            {
+                instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
+                return;
+            }
 
-		instance->partner()->setSessionState(THORQ_SESSION_STATE_NONE);
-		break;
+            instance->partner()->setSessionState(THORQ_SESSION_STATE_NONE);
+        }
+        else
+        {
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, "Please log in");
+            instance->sendPayload(&response, true, true);
+        }
+        break;
 	}
 	case THORQ_COMMAND_ID_SESSION_LEAVE:
-		instance->setSessionState(THORQ_SESSION_STATE_NONE);
+    {
+        if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
+        {
+            instance->setSessionState(THORQ_SESSION_STATE_NONE);
+        }
+        else
+        {
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, "Please log in");
+            instance->sendPayload(&response, true, true);
+        }
 		break;
+    }
 	case THORQ_COMMAND_ID_SET_SELF_STATE:
+
+        if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
+        {
+        }
+        else
+        {
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, "Please log in");
+            instance->sendPayload(&response, true, true);
+        }
 		break;
-	}
+    }
+*/
 }
 
-void handleMessageCommandAck(ThorQ::Instance* instance, const thorq_payload_t& payload)
-{
-
-}
-
-void handleMessageNotification(ThorQ::Instance* instance, const thorq_payload_t& payload)
+void handleMessageCommandAck(ThorQ::Instance* instance, const thorq_payload_t* payload)
 {
 
 }

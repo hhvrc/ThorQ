@@ -1,18 +1,36 @@
 #include "loginwidget.h"
 
-#include <QDebug>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QGraphicsDropShadowEffect>
 
-quint64 ddd = 0;
+const char* uiStatusList[15][2]
+{
+    { "● Offline",                  "font-size: 16px; color: #FF0000" }, // THORQ_CONNECTION_STATE_DISCONNECTED
+    { "● Disconnecting...",         "font-size: 16px; color: #FF0000" }, // THORQ_CONNECTION_STATE_DISCONNECTING
+    { "● Connecting..."   ,         "font-size: 16px; color: #FFA500" }, // THORQ_CONNECTION_STATE_CONNECTING
+    { "● Connected\n%1 ms",         "font-size: 16px; color: #00FF00" }, // THORQ_CONNECTION_STATE_CONNECTED
+
+    { "● Requesting...\n%1 ms",     "font-size: 16px; color: #FFA500" }, // THORQ_CRYPTO_STATE_REQUESTED
+    { "● Encrypting...\n%1 ms",     "font-size: 16px; color: #FFA500" }, // THORQ_CRYPTO_STATE_ESTABLISHING
+    { "● Verifying...\n%1 ms",      "font-size: 16px; color: #FFA500" }, // THORQ_CRYPTO_STATE_VERIFYING
+    { "● Encryped\n%1 ms",          "font-size: 16px; color: #00FF00" }, // THORQ_AUTH_STATE_NONE
+
+    { "● Authenticating...\n%1 ms", "font-size: 16px; color: #FFA500" }, // THORQ_AUTH_STATE_HWID_CHECKING
+    { "● Awaiting key...\n%1 ms",   "font-size: 16px; color: #FFA500" }, // THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT
+    { "● Registering...\n%1 ms",    "font-size: 16px; color: #FFA500" }, // THORQ_AUTH_STATE_REGKEY_CHECKING
+    { "● Authenticated\n%1 ms",     "font-size: 16px; color: #00FF00" }, // THORQ_AUTH_STATE_OK
+
+    { "● Logging out...\n%1 ms",    "font-size: 16px; color: #FFA500" }, // THORQ_LOGIN_STATE_LOGGINGOUT
+    { "● Logging in...\n%1 ms",     "font-size: 16px; color: #FFA500" }, // THORQ_LOGIN_STATE_LOGGINGIN
+    { "● Logged in\n%1 ms",         "font-size: 16px; color: #00FF00" }, // THORQ_LOGIN_STATE_LOGGEDIN
+};
 
 LoginWidget::LoginWidget(QWidget* parent)
 	: QWidget(parent)
-	, m_connectionState(THORQ_CONNECTION_STATE_DISCONNECTED)
-	, m_loginState(THORQ_LOGIN_STATE_LOGGEDOUT)
+    , m_state(0)
 	, m_ping(0)
     , m_title(new QLabel(this))
     , m_onlineStatus(new QLabel(this))
@@ -46,7 +64,7 @@ LoginWidget::LoginWidget(QWidget* parent)
 
 	connect(m_loginButton, &QPushButton::clicked, [this](){ emit LoginRequest(m_usernameInput->text()); });
 
-	updateUiConnectionState();
+    updateUiState();
 }
 
 LoginWidget::~LoginWidget()
@@ -56,20 +74,38 @@ LoginWidget::~LoginWidget()
 
 void LoginWidget::SetConnectionState(thorq_connection_state_t state)
 {
-	if (m_connectionState != state)
+    if (m_state != state)
 	{
-		m_connectionState = state;
-		updateUiConnectionState();
-	}
+        m_state = state;
+        updateUiState();
+    }
+}
+
+void LoginWidget::SetCryptoState(thorq_crypto_state_t state)
+{
+    if (m_state != state)
+    {
+        m_state = state;
+        updateUiState();
+    }
+}
+
+void LoginWidget::SetAuthState(thorq_auth_state_t state)
+{
+    if (m_state != state)
+    {
+        m_state = state;
+        updateUiState();
+    }
 }
 
 void LoginWidget::SetLoginState(thorq_login_state_t state)
 {
-	if (m_loginState != state)
-	{
-		m_loginState = state;
-		updateUiLoginState();
-	}
+    if (m_state != state)
+    {
+        m_state = state;
+        updateUiState();
+    }
 }
 
 void LoginWidget::SetConnectionPing(uint ping)
@@ -81,62 +117,35 @@ void LoginWidget::SetConnectionPing(uint ping)
 	}
 }
 
-void LoginWidget::updateUiConnectionState()
+void LoginWidget::updateUiState()
 {
-	switch (m_connectionState) {
-	case THORQ_CONNECTION_STATE_DISCONNECTED:
-		m_onlineStatus->setStyleSheet("font-size: 16px; color: #FF0000");
-		m_onlineStatus->setText(QString("● Offline"));
-		break;
-	case THORQ_CONNECTION_STATE_DISCONNECTING:
-		m_onlineStatus->setStyleSheet("font-size: 16px; color: #FF0000");
-		m_onlineStatus->setText(QString("● Disconnecting..."));
-		break;
-	case THORQ_CONNECTION_STATE_CONNECTING:
-		m_onlineStatus->setStyleSheet("font-size: 16px; color: #FFA500");
-		m_onlineStatus->setText(QString("● Connecting..."));
-		break;
-	case THORQ_CONNECTION_STATE_CONNECTED:
-        m_onlineStatus->setStyleSheet("font-size: 16px; color: #00FF00");
-		m_onlineStatus->setText(QString("● Connected"));
+    m_onlineStatus->setStyleSheet(uiStatusList[m_state][1]);
+
+    if (m_state < THORQ_CONNECTION_STATE_CONNECTED)
+    {
+        m_onlineStatus->setText(QString(uiStatusList[m_state][0]));
+    }
+    else
+    {
+        m_onlineStatus->setText(QString(uiStatusList[m_state][0]).arg(m_ping));
+    }
+
+    if (m_state == THORQ_LOGIN_STATE_LOGGEDOUT)
+    {
         m_loginButton->show();
         m_usernameInput->show();
-		return;
-	}
-
-    m_loginButton->hide();
-    m_usernameInput->hide();
-}
-
-void LoginWidget::updateUiLoginState()
-{
-	switch (m_loginState) {
-	case THORQ_LOGIN_STATE_LOGGEDOUT:
-        m_usernameInput->setEnabled(true);
-        m_loginButton->setEnabled(true);
-        setCursor(Qt::ArrowCursor);
-        setVisible(true);
-        return;
-	case THORQ_LOGIN_STATE_LOGGINGOUT:
-        setCursor(Qt::WaitCursor);
-		break;
-	case THORQ_LOGIN_STATE_LOGGINGIN:
-        setCursor(Qt::WaitCursor);
-		break;
-	case THORQ_LOGIN_STATE_LOGGEDIN:
-        setCursor(Qt::ArrowCursor);
-        setVisible(false);
-		break;
-	}
-
-    m_usernameInput->setEnabled(false);
-    m_loginButton->setEnabled(false);
+    }
+    else
+    {
+        m_loginButton->hide();
+        m_usernameInput->hide();
+    }
 }
 
 void LoginWidget::updateUiPing()
 {
-	if (m_connectionState != THORQ_CONNECTION_STATE_CONNECTED)
-		return;
-
-	m_onlineStatus->setText(QString("● Connected\n%1 ms").arg(m_ping));
+    if (m_state >= THORQ_CONNECTION_STATE_CONNECTED)
+    {
+        m_onlineStatus->setText(QString(uiStatusList[m_state][0]).arg(m_ping));
+    }
 }

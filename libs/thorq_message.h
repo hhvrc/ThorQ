@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstdint>
 #include <cstring>
+#include <algorithm>
 
 #include "constants.h"
 #include "crypto.h"
@@ -74,21 +75,31 @@ inline void thorq_message_encode(const std::vector<std::uint8_t>& message, std::
 }
 inline void thorq_message_encode(const std::vector<std::uint8_t>& message, std::vector<std::uint8_t>& data, ThorQ::Crypto* crypto)
 {
-	data.reserve(THORQ_MESSAGE_LEN);
+    // Reserve space for the entire message, but keep the size as payload size for now
+    data.reserve(THORQ_MESSAGE_LEN);
 	data.resize(THORQ_PAYLOAD_LEN);
 
+    // Cap message size
 	std::uint16_t payloadSize = std::min(message.size(), THORQ_PAYLOAD_LEN);
 
-	memcpy(&data[0], &message[0], payloadSize);
-	ThorQ::Crypto::RandomizeBytes(&data[payloadSize], THORQ_PAYLOAD_LEN - payloadSize);
+    //copy message over to data
+    memcpy(&data[0], &message[0], payloadSize);
 
-	// Encrpytion
+    //Randomize all data after the message
+    ThorQ::Crypto::RandomizeBytes(data.data() + payloadSize, THORQ_PAYLOAD_LEN - payloadSize);
+
 	{
-		std::uint8_t iv[THORQ_CRYPTO_CIPHER_IV_LEN];
-		crypto->encrypt(data, &iv[0]);
+        // Encrpyt the data, this will copy the iv into the "iv" array
+        std::uint8_t iv[THORQ_CRYPTO_CIPHER_IV_LEN];
+        crypto->encrypt(data, &iv[0]);
 
+        // resize data to the full message length after encryption
 		data.resize(THORQ_MESSAGE_LEN);
-		memcpy(&data[3], &data[0], THORQ_PAYLOAD_LEN);
+
+        // Reposition the data to the correct position
+        memmove(&data[3], &data[0], THORQ_PAYLOAD_LEN);
+
+        // Copy the iv to the end of the message
 		memcpy(&data[3 + THORQ_PAYLOAD_LEN], iv, THORQ_CRYPTO_CIPHER_IV_LEN);
 	}
 
@@ -97,26 +108,27 @@ inline void thorq_message_encode(const std::vector<std::uint8_t>& message, std::
 
 	// Set size
 	data[1] = payloadSize >> 8;
-	data[2] = payloadSize >> 0;
+    data[2] = payloadSize >> 0;
 }
 inline void thorq_message_decode(const std::uint8_t* data, std::size_t dataSize, std::vector<std::uint8_t>& message, ThorQ::Crypto* crypto)
 {
-	(void)dataSize;
+    if (data == nullptr || dataSize != THORQ_MESSAGE_LEN)
+        return;
 
 	std::uint16_t payloadSize = 0;
 	payloadSize |= data[1] << 8;
 	payloadSize |= data[2] << 0;
 
 	if ((data[0] & THORQ_MESSAGE_FLAG_ENCRYPTED) != 0)
-	{
+    {
 		std::uint8_t iv[THORQ_CRYPTO_CIPHER_IV_LEN];
-		memcpy(&iv[0], &data[3 + THORQ_PAYLOAD_LEN], THORQ_CRYPTO_CIPHER_IV_LEN);
+        memcpy(&iv[0], &data[3 + THORQ_PAYLOAD_LEN], THORQ_CRYPTO_CIPHER_IV_LEN);
 
 		message.resize(THORQ_PAYLOAD_LEN);
-		memcpy(&message[0], &data[3], THORQ_PAYLOAD_LEN);
+        memcpy(&message[0], &data[3], THORQ_PAYLOAD_LEN);
 
-		crypto->decrypt(message, iv);
-		message.resize(payloadSize);
+        crypto->decrypt(message, iv);
+        message.resize(payloadSize);
 	}
 	else
 	{

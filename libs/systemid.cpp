@@ -113,7 +113,7 @@ std::string ThorQ::systemid_to_string(const std::vector<std::uint8_t>& sys_id)
 
 	std::size_t strSize = str_id.size();
 	str_id.resize(strSize + 25);
-	snprintf(str_id.data() + strSize, 26, "-%04X-%04X-%04X-%04X-%04X", bin_id[0], bin_id[1], bin_id[2], bin_id[3], bin_id[4]);
+    snprintf(&str_id[strSize], 26, "-%04X-%04X-%04X-%04X-%04X", bin_id[0], bin_id[1], bin_id[2], bin_id[3], bin_id[4]);
 
 	return str_id;
 }

@@ -6,17 +6,12 @@ ThorQ::InstanceMap::InstanceMap() : m_internal() {}
 
 ThorQ::InstanceMap::~InstanceMap() { m_internal.clear(); }
 
-bool ThorQ::InstanceMap::TryAdd(Instance* peer)
+bool ThorQ::InstanceMap::TryAdd(Instance* peer, const std::string& name)
 {
-	if (!peer->hasName())
-		return false;
+    auto it = m_internal.find(name);
 
-	auto it = m_internal.find(peer->name());
-
-	if (it != m_internal.end())
-	{
-		return false;
-	}
+    if (it != m_internal.end())
+        return false;
 
 	m_internal.insert(std::pair<std::string, Instance*>(peer->name(), peer));
 	return true;

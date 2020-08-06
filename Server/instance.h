@@ -20,9 +20,13 @@ public:
 	Instance(ENetPeer* peer, const std::string& name);
 	~Instance();
 
-	void setName(const std::string& newName);
-	const std::string& name() const;
-	bool hasName();
+    void setHwid(const std::string& hwid);
+    const std::string& hwid() const;
+    bool hasHwid();
+
+    void setName(const std::string& newName);
+    const std::string& name() const;
+    bool hasName();
 
 	void setPeer(ENetPeer* peer);
 	ENetPeer* peer() const;
@@ -31,11 +35,14 @@ public:
 	bool requestAcceptFrom(Instance* sender);
 	bool requestDenyFrom(Instance* sender);
 	Instance* partner() const;
-	void clearPartner();
-	bool hasPartner();
+    void clearPartner();
 
-	void setHasCollar(bool hasCollar);
-	bool hasCollar() const;
+    void setIsInSteamVR(bool hasCollar);
+    void setHasCollar(bool hasCollar);
+
+    bool isInSession() const;
+    bool isInSteamVR() const;
+    bool hasCollar() const;
 
 	thorq_connection_state_t connectionState() const;
 	void setConnectionState(thorq_connection_state_t state);
@@ -62,14 +69,16 @@ public:
 private:
 	Crypto* m_crypto;
 
+    std::uint8_t m_activityState; // enum: thorq_user_activity_flag
+
 	thorq_connection_state_t m_connectionState;
 	thorq_crypto_state_t m_cryptoState;
 	thorq_auth_state_t m_authState;
 	thorq_login_state_t m_loginState;
 	thorq_session_state_t m_sessionState;
 
-	std::string m_name;
-	bool m_hasCollar;
+    std::string m_hwid;
+    std::string m_name;
 
 	ENetPeer* m_peer;
 	Instance* m_partner;

@@ -2,7 +2,6 @@
 #define COMBINEWIDGET_H
 
 #include <QWidget>
-#include <QDebug>
 
 #include "enums.h"
 
@@ -12,6 +11,9 @@ class QLabel;
 class QLineEdit;
 class QPushButton;
 
+/**
+ * @brief The LoginWidget class
+ */
 class LoginWidget : public QWidget
 {
 	Q_OBJECT
@@ -21,17 +23,18 @@ public:
 	~LoginWidget();
 public slots:
 	void SetConnectionState(thorq_connection_state_t state);
+    void SetCryptoState(thorq_crypto_state_t state);
+    void SetAuthState(thorq_auth_state_t state);
+
 	void SetLoginState(thorq_login_state_t state);
 	void SetConnectionPing(uint ping);
 signals:
 	void LoginRequest(const QString& username);
 private slots:
-	void updateUiConnectionState();
-	void updateUiLoginState();
+    void updateUiState();
 	void updateUiPing();
 private:
-	thorq_connection_state_t m_connectionState;
-	thorq_login_state_t m_loginState;
+    int m_state;
 	uint m_ping;
 
 	QLabel* m_title;

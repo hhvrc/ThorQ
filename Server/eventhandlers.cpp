@@ -1,5 +1,6 @@
 #include "eventhandlers.h"
 
+#include <log.h>
 #include <enet.h>
 
 #include <thorq_message.h>
@@ -10,7 +11,8 @@
 #include <thorq_payload_auth.h>
 #include <thorq_payload_command.h>
 #include <thorq_payload_command_ack.h>
-#include <thorq_payload_notification.h>
+#include <thorq_payload_event.h>
+#include <thorq_payload_announcement.h>
 #include <thorq_payload_collar.h>
 
 #include "utils.h"
@@ -21,9 +23,10 @@
 void handleEventNewConnection(ENetPeer* peer)
 {
 	// Dont worry, this is ok
-	(void)new ThorQ::Instance(peer);
+	ThorQ::Instance* instance = new ThorQ::Instance(peer);
+	instance->setConnectionState(THORQ_CONNECTION_STATE_CONNECTED);
 
-	printf("A new client connected from:\n\tIPV6: %s\n\tPORT: %u\n", enetaddr_to_str(&peer->address).c_str(), peer->address.port);
+	thorq_debug_fmt("A new client connected from:\n\tIPV6: %s\n\tPORT: %u\n", enetaddr_to_str(&peer->address).c_str(), peer->address.port)
 	fflush(stdout);
 }
 
@@ -32,9 +35,6 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 	if (peer->data == nullptr)
 		return;
 
-	printf("Got %lu bytes\n", packet->dataLength);
-	fflush(stdout);
-
 	ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
 	if (instance->connectionState() != THORQ_CONNECTION_STATE_CONNECTED || !thorq_message_is_valid(packet->data, packet->dataLength))
@@ -42,9 +42,6 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 
 	std::vector<std::uint8_t> message;
 	thorq_message_decode(packet->data, packet->dataLength, message, instance->getCrypto());
-
-	printf("Payload is %lu bytes\n", message.size());
-	fflush(stdout);
 
 	thorq_payload_t payload;
 	thorq_payload_unpack(message, payload);
@@ -81,6 +78,7 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 	case THORQ_PAYLOAD_ID_AUTH:
 		if (thorq_payload_auth_is_valid(payload))
 		{
+            thorq_debug("Auth!")
 			handleMessageAuth(instance, &payload);
 			return;
 		}
@@ -98,18 +96,16 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 			handleMessageCommandAck(instance, &payload);
 			return;
 		}
-		break;
-	case THORQ_PAYLOAD_ID_NOTIFICATION:
-		if (thorq_payload_notification_is_valid(payload))
-		{
-			handleMessageNotification(instance, &payload);
-			return;
-		}
-		break;
+        break;
+    case THORQ_PAYLOAD_ID_EVENT:
+    case THORQ_PAYLOAD_ID_ANNOUNCEMENT:
+        thorq_debug("These messages can only be sent by the server!\n");
+        fflush(stdout);
+        break;
 	case THORQ_PAYLOAD_ID_INVALID:
-		printf("Got invalid payload!\n");
+        thorq_debug("Got invalid payload!\n");
 		fflush(stdout);
-		break;
+        break;
 	default:
 		if (instance->authState() != THORQ_AUTH_STATE_OK)
 		{
@@ -132,11 +128,11 @@ void handleEventDisconnect(ENetPeer* peer)
 
 	if (!instance->hasName())
 	{
-		printf("Unnamed client connected from [%s] disconnected", enetaddr_to_str(&peer->address).c_str());
+		thorq_debug_fmt("Unnamed client connected from [%s] disconnected", enetaddr_to_str(&peer->address).c_str());
 	}
 	else
 	{
-		printf("Client \"%s\" connected from [%s] disconnected", instance->name().c_str(), enetaddr_to_str(&peer->address).c_str());
+		thorq_debug_fmt("Client \"%s\" connected from [%s] disconnected", instance->name().c_str(), enetaddr_to_str(&peer->address).c_str());
 	}
 	fflush(stdout);
 
@@ -158,11 +154,11 @@ void handleEventTimeout(ENetPeer* peer)
 
 	if (!instance->hasName())
 	{
-		printf("Unnamed client connected from [%s] timed out", enetaddr_to_str(&peer->address).c_str());
+		thorq_debug_fmt("Unnamed client connected from [%s] timed out", enetaddr_to_str(&peer->address).c_str());
 	}
 	else
 	{
-		printf("Client \"%s\" connected from [%s] timed out", instance->name().c_str(), enetaddr_to_str(&peer->address).c_str());
+		thorq_debug_fmt("Client \"%s\" connected from [%s] timed out", instance->name().c_str(), enetaddr_to_str(&peer->address).c_str());
 	}
 	fflush(stdout);
 
