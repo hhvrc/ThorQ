@@ -99,6 +99,9 @@ add_library(${project} STATIC
 )
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
+# Disable "deprecated header" messages
+target_compile_definitions(${project} PRIVATE BOTAN_NO_DEPRECATED_WARNINGS)
+
 if(WINDOWS)
 	target_link_libraries(${project} Crypt32 winmm ws2_32 Iphlpapi)
 endif()
