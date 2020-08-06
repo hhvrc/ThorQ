@@ -29,12 +29,20 @@ int main(int argc, char** argv)
 	QApplication app(argc, argv);
 #if COMTEST
 	QString stylesheet;
-	QFile file("stylesheet.css");
+
+    const char* fileName;
+    if (QFile::exists("stylesheet.css"))
+    { fileName = "stylesheet.css"; }
+    else
+    { fileName = ":/stylesheet.css"; }
+
+    QFile file(fileName);
 	if (file.open(QFile::ReadOnly | QFile::Text))
 	{
 		QTextStream stream(&file);
 		stylesheet = stream.readAll();
 	}
+
 	app.setStyleSheet(stylesheet);
     app.setApplicationName("ThorQ");
     app.setDesktopFileName("ThorQ");

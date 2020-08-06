@@ -2,5 +2,6 @@
     <qresource prefix="/">
         <file>uwu.png</file>
         <file>shockGrey.ico</file>
+        <file>stylesheet.css</file>
     </qresource>
 </RCC>
