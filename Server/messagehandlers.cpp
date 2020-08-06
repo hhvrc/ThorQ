@@ -52,6 +52,8 @@ void handleMessageVersion(ThorQ::Instance* instance, const thorq_payload_t* payl
 
 	thorq_debug_fmt("Client expects %s[%s], current is %s[%s]\n", name, version.to_string().c_str(), name, currentVersion.to_string().c_str());
 	fflush(stdout);
+
+	instance->disconnect(THORQ_DISCONNECT_REASON_VERSION_INCOMPATIBLE);
 }
 
 void handleMessageCrypto(ThorQ::Instance* instance, const thorq_payload_t* payload)
