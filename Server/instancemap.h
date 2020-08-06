@@ -11,7 +11,7 @@ class InstanceMap
 {
 	std::map<std::string, Instance*> m_internal;
 public:
-	InstanceMap();
+	InstanceMap() = default;
 	~InstanceMap();
 
     bool TryAdd(Instance* peer, const std::string& name);

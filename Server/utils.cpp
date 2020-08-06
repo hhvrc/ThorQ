@@ -11,7 +11,7 @@
 std::string enetaddr_to_str(const ENetAddress* addr)
 {
 	char buffer[50];
-	if (enet_address_get_host_ip(addr, buffer, 50) < 0)
+	if (enet_address_get_host_ip(addr, buffer, sizeof(buffer)) < 0)
 		return "ERROR";
 	return std::string(buffer);
 }

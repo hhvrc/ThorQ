@@ -58,6 +58,9 @@ OpenVROverlayController* s_pSharedVRController = nullptr;
 OpenVROverlayController::OpenVROverlayController(QObject* parent)
 	: QObject(parent)
 	, m_isInitialized(false)
+	, m_isVisible(false)
+	, m_alpha(0.f)
+	, m_width(0.f)
 	, m_widget(nullptr)
 	, m_pumpEventsTimer(new QTimer(this))
 	, m_visibilityTimer(new QTimer(this))
@@ -66,13 +69,14 @@ OpenVROverlayController::OpenVROverlayController(QObject* parent)
 	, m_deviceOffset()
     , m_L_deviceOffset()
     , m_R_deviceOffset()
+	, m_windowSize()
 	, m_deviceIndex(vr::k_unTrackedDeviceIndexInvalid)
 	, m_scene(nullptr)
 	, m_glContext(nullptr)
 	, m_surface(nullptr)
 	, m_frameBuffer(nullptr)
 	, m_lastMousePoint()
-	, m_lastMouseButtons(0)
+	, m_lastMouseButtons(Qt::NoButton)
 {
 	connect(m_pumpEventsTimer, &QTimer::timeout, this, &OpenVROverlayController::PollEvents);
 	connect(m_visibilityTimer, &QTimer::timeout, [this](){ SetIsVisible(false); });
@@ -191,7 +195,7 @@ void OpenVROverlayController::SetWidget(QWidget* widget)
 
         m_scene->addWidget(m_widget);
 
-		SetOverlayResolution(m_widget->width(), m_widget->height());
+		SetOverlayResolution((float)m_widget->width(), (float)m_widget->height());
 
 		OverlayProcess();
 		emit WidgetChanged(widget);
@@ -313,7 +317,7 @@ void OpenVROverlayController::PollEvents()
 	if(vr::VRSystem() == nullptr)
 		return;
 
-	vr::VREvent_t event;
+	vr::VREvent_t event{};
 	while (vr::VRSystem()->PollNextEvent(&event, sizeof(event)))
 	{
 		switch(event.eventType)
@@ -403,7 +407,7 @@ void OpenVROverlayController::PollEvents()
 			mouseEvent.setLastScreenPos(m_widget->mapToGlobal(m_lastMousePoint.toPoint()));
 			mouseEvent.setButtons(m_lastMouseButtons);
 			mouseEvent.setButton(Qt::NoButton);
-			mouseEvent.setModifiers(0);
+			mouseEvent.setModifiers(Qt::NoModifier);
 			mouseEvent.setAccepted(false);
 
 			m_lastMousePoint = ptNewMouse;
@@ -435,7 +439,7 @@ void OpenVROverlayController::PollEvents()
 			mouseEvent.setLastScreenPos(ptGlobal);
 			mouseEvent.setButtons(m_lastMouseButtons);
 			mouseEvent.setButton(button);
-			mouseEvent.setModifiers(0);
+			mouseEvent.setModifiers(Qt::NoModifier);
 			mouseEvent.setAccepted(false);
 
 			QApplication::sendEvent(m_scene, &mouseEvent);
@@ -450,7 +454,7 @@ void OpenVROverlayController::PollEvents()
 
 			QPoint ptGlobal = m_lastMousePoint.toPoint();
 			QGraphicsSceneMouseEvent mouseEvent(QEvent::GraphicsSceneMouseRelease);
-			mouseEvent.setWidget(NULL);
+			mouseEvent.setWidget(nullptr);
 			mouseEvent.setPos(m_lastMousePoint);
 			mouseEvent.setScenePos(ptGlobal);
 			mouseEvent.setScreenPos(ptGlobal);
@@ -459,7 +463,7 @@ void OpenVROverlayController::PollEvents()
 			mouseEvent.setLastScreenPos(ptGlobal);
 			mouseEvent.setButtons(m_lastMouseButtons);
 			mouseEvent.setButton(button);
-			mouseEvent.setModifiers(0);
+			mouseEvent.setModifiers(Qt::NoModifier);
 			mouseEvent.setAccepted(false);
 
 			QApplication::sendEvent(m_scene, &mouseEvent);
@@ -469,13 +473,13 @@ void OpenVROverlayController::PollEvents()
 	}
 }
 
-void OpenVROverlayController::SetOverlayResolution(int width, int height)
+void OpenVROverlayController::SetOverlayResolution(float width, float height)
 {
     if (m_isInitialized)
     {
         if (m_windowSize.v[0] != width || m_windowSize.v[1] != height)
         {
-            vr::HmdVector2_t vecWindowSize;
+			vr::HmdVector2_t vecWindowSize{};
             vecWindowSize.v[0] = width;
             vecWindowSize.v[1] = height;
 
@@ -483,8 +487,7 @@ void OpenVROverlayController::SetOverlayResolution(int width, int height)
 
             m_frameBuffer = new QOpenGLFramebufferObject(m_widget->width(), m_widget->height(), GL_TEXTURE_2D);
 
-            if (oldBuff != nullptr)
-                delete oldBuff;
+			delete oldBuff;
 
             vr::VROverlay()->SetOverlayMouseScale(m_handle, &vecWindowSize);
         }
@@ -582,7 +585,7 @@ void OpenVROverlayController::OverlayDraw()
 	GLuint glTexture = m_frameBuffer->texture();
 	if (glTexture != 0)
 	{
-		vr::Texture_t texture = {(void*)(uintptr_t)glTexture, vr::TextureType_OpenGL, vr::ColorSpace_Auto };
+		vr::Texture_t texture = {reinterpret_cast<void*>(glTexture), vr::TextureType_OpenGL, vr::ColorSpace_Auto };
 		Dbg(vr::VROverlay()->SetOverlayTexture(m_handle, &texture), __LINE__);
 	}
 }

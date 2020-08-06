@@ -6,7 +6,7 @@
 #include <QVBoxLayout>
 #include <QGraphicsDropShadowEffect>
 
-const char* uiStatusList[15][2]
+const char* uiStatusList[THORQ_LOGIN_STATE_LOGGEDIN + 1][2]
 {
     { "● Offline",                  "font-size: 16px; color: #FF0000" }, // THORQ_CONNECTION_STATE_DISCONNECTED
     { "● Disconnecting...",         "font-size: 16px; color: #FF0000" }, // THORQ_CONNECTION_STATE_DISCONNECTING
@@ -65,11 +65,6 @@ LoginWidget::LoginWidget(QWidget* parent)
 	connect(m_loginButton, &QPushButton::clicked, [this](){ emit LoginRequest(m_usernameInput->text()); });
 
     updateUiState();
-}
-
-LoginWidget::~LoginWidget()
-{
-
 }
 
 void LoginWidget::SetConnectionState(thorq_connection_state_t state)

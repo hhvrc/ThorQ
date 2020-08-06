@@ -14,7 +14,7 @@ Serial::Serial()
 
 void Serial::FindCollar()
 {
-    for (auto port : QSerialPortInfo::availablePorts())
+	for (auto &port : QSerialPortInfo::availablePorts())
     {
         if (!port.isNull() && port.vendorIdentifier() == 9025)
         {

@@ -203,7 +203,7 @@ protected:
      * @param width
      * @param height
      */
-	void SetOverlayResolution(int width, int height);
+	void SetOverlayResolution(float width, float height);
 
     /**
      * @brief OverlayCreate

@@ -98,7 +98,7 @@ bool ThorQ::systemid_validate(const std::vector<std::uint8_t>& sys_id)
 
 std::string ThorQ::systemid_to_string(const std::vector<std::uint8_t>& sys_id)
 {
-	std::uint16_t bin_id[5] = { 0, 0, 0, 0, 0 };
+	std::uint16_t bin_id[5];
 	std::string str_id;
 
 	if (systemid_validate(sys_id))

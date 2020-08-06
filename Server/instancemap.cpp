@@ -2,8 +2,6 @@
 
 #include "instance.h"
 
-ThorQ::InstanceMap::InstanceMap() : m_internal() {}
-
 ThorQ::InstanceMap::~InstanceMap() { m_internal.clear(); }
 
 bool ThorQ::InstanceMap::TryAdd(Instance* peer, const std::string& name)
@@ -35,8 +33,8 @@ std::vector<ThorQ::Instance*> ThorQ::InstanceMap::ToList()
 {
 	std::vector<Instance*> peers;
 	peers.reserve(m_internal.size());
-	for (auto it = m_internal.begin(); it != m_internal.end(); it++)
-		peers.push_back(it->second);
+	for (auto &peer : m_internal)
+		peers.push_back(peer.second);
 	return peers;
 }
 

@@ -112,6 +112,7 @@ Client::~Client()
 	delete m_address;
 	delete m_pingTimer;
 	delete m_crypto;
+	delete m_thread;
 }
 
 QString Client::Version()

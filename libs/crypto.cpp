@@ -145,7 +145,7 @@ bool Crypto::encrypt(std::vector<std::uint8_t>& data)
 
 			m_streamCipher->encrypt(data);
 
-			data.insert(data.end(), iv, iv + THORQ_CRYPTO_CIPHER_IV_LEN);
+			data.insert(data.end(), iv, &iv[THORQ_CRYPTO_CIPHER_IV_LEN]);
 
 			return true;
         }
@@ -185,7 +185,7 @@ bool Crypto::decrypt(std::vector<std::uint8_t>& data)
 		{
 			std::size_t newSize = data.size() - THORQ_CRYPTO_CIPHER_IV_LEN;
 
-			m_streamCipher->set_iv(data.data() + newSize, THORQ_CRYPTO_CIPHER_IV_LEN);
+			m_streamCipher->set_iv(&data[newSize], THORQ_CRYPTO_CIPHER_IV_LEN);
 
 			data.resize(newSize);
 

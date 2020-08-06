@@ -20,7 +20,7 @@ class LoginWidget : public QWidget
 	Q_DISABLE_COPY(LoginWidget)
 public:
 	LoginWidget(QWidget* parent = nullptr);
-	~LoginWidget();
+	~LoginWidget() = default;
 public slots:
 	void SetConnectionState(thorq_connection_state_t state);
     void SetCryptoState(thorq_crypto_state_t state);

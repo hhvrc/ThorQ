@@ -4,9 +4,9 @@
 #if __linux__
 #include <sys/param.h>
 #include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-#include <errno.h>
+#include <cstring>
+#include <cstdio>
+#include <cerrno>
 #include <cstdlib>
 #elif _WIN32
 #include <Windows.h>
@@ -15,14 +15,15 @@
 void DelMe()
 {
 #if __linux__
-	// TODO: unused
-	char path[MAXPATHLEN];
-	if (readlink("/proc/self/exe", path, MAXPATHLEN) == -1)
+	char cmd[sizeof("rm ") + MAXPATHLEN];
+
+	strcpy(&cmd[0], "rm ");
+
+	if (readlink("/proc/self/exe", &cmd[3], MAXPATHLEN) == -1)
 	{
 		fprintf(stderr, "Error getting path to self: %s\n", strerror(errno));
 	}
-	char cmd[MAXPATHLEN];
-    sprintf(cmd, "rm %s", path);
+
 	printf("System call %s\n", system(cmd) == EXIT_SUCCESS ? "succeeded" : "failed");
 #elif _WIN32
     TCHAR szModuleName[MAX_PATH];

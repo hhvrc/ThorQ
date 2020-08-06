@@ -12,9 +12,9 @@
 bool ProcessIsRuning(const char* processName)
 {
 #if __linux__
-	char buf[128]{0};
+	char buf[128];
 
-	snprintf(buf, 128, "ps | grep %s > /dev/null", processName);
+	snprintf(buf, sizeof(buf), "ps | grep %s > /dev/null", processName);
 
 	return system(buf) == 0;
 #elif _WIN32

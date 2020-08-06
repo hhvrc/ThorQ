@@ -23,8 +23,7 @@
 void handleEventNewConnection(ENetPeer* peer)
 {
 	// Dont worry, this is ok
-	ThorQ::Instance* instance = new ThorQ::Instance(peer);
-	instance->setConnectionState(THORQ_CONNECTION_STATE_CONNECTED);
+	(new ThorQ::Instance(peer))->setConnectionState(THORQ_CONNECTION_STATE_CONNECTED);
 
 	thorq_debug_fmt("A new client connected from:\n\tIPV6: %s\n\tPORT: %u\n", enetaddr_to_str(&peer->address).c_str(), peer->address.port)
 	fflush(stdout);
@@ -35,7 +34,7 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 	if (peer->data == nullptr)
 		return;
 
-	ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
+	auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
 	if (instance->connectionState() != THORQ_CONNECTION_STATE_CONNECTED || !thorq_message_is_valid(packet->data, packet->dataLength))
 		return;
@@ -121,7 +120,7 @@ void handleEventDisconnect(ENetPeer* peer)
 	if (peer->data == nullptr)
 		return;
 
-	ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
+	auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
 	// Automatically notifies and handles disconnection
 	instance->setConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
@@ -145,7 +144,7 @@ void handleEventTimeout(ENetPeer* peer)
 	if (peer->data == nullptr)
 		return;
 
-	ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
+	auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
 	// TODO: broadcast client timeout
 
