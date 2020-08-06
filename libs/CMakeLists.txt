@@ -58,6 +58,7 @@ endif()
 set(${project}_SOURCES
 	${CMAKE_CURRENT_BINARY_DIR}/botan_all.cpp
 
+	${CMAKE_CURRENT_SOURCE_DIR}/log.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
 )
@@ -66,6 +67,7 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_BINARY_DIR}/botan_all.h
 	${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
 
+	${CMAKE_CURRENT_SOURCE_DIR}/log.h
 	${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
 	${CMAKE_CURRENT_SOURCE_DIR}/systemid.h
 
@@ -74,14 +76,15 @@ set(${project}_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_auth.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_event.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_collar.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_crypto.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_version.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_command.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_session.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_heartbeat.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_command_ack.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_notification.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_announcement.h
 )
 
 if (WINDOWS)
