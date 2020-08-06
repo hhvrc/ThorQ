@@ -153,14 +153,9 @@ bool ThorQ::Instance::requestAcceptFrom(Instance* sender)
 		return false;
 	}
 
-	this->m_partner = sender;
-	sender->m_partner = this;
+	m_partner = sender;
 
-    thorq_payload_event_pack(response, THORQ_EVENT_SESSION_STARTED, m_partner->name());
-    sendPayload(&response, true, true);
-
-    thorq_payload_event_pack(response, THORQ_EVENT_SESSION_STARTED, this->name());
-    m_partner->sendPayload(&response, true, true);
+	setSessionState(THORQ_SESSION_STATE_ACTIVE);
 
     thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_OK, "Request accepted");
     m_partner->sendPayload(&response, true, true);
@@ -198,22 +193,6 @@ bool ThorQ::Instance::requestDenyFrom(ThorQ::Instance *sender)
 ThorQ::Instance* ThorQ::Instance::partner() const
 {
 	return m_partner;
-}
-void ThorQ::Instance::clearPartner()
-{
-    thorq_payload_t response;
-
-	if (m_partner == nullptr)
-		return;
-
-    thorq_payload_event_pack(response, THORQ_EVENT_SESSION_STOPPED, m_partner->name());
-    this->sendPayload(&response, true, true);
-
-    thorq_payload_event_pack(response, THORQ_EVENT_SESSION_STOPPED, this->name());
-    m_partner->sendPayload(&response, true, true);
-
-    this->m_partner = nullptr;
-    m_partner->m_partner = nullptr;
 }
 
 void ThorQ::Instance::setIsInSteamVR(bool value)
@@ -328,23 +307,51 @@ void ThorQ::Instance::setSessionState(thorq_session_state_t state)
 		if (state == THORQ_SESSION_STATE_NONE)
 		{
 			Instance* partner = m_partner;
-			m_partner = nullptr;
+
 			if (partner != nullptr)
+			{
+				// Clear self from partner, so that it doesnt call recursivley
+				m_partner->m_partner = nullptr;
+
+				// clear partner
+				m_partner = nullptr;
+
+				// Run partner session disconnection
 				m_partner->setSessionState(THORQ_SESSION_STATE_NONE);
+			}
 
 			// If we have already are notifying users that someone went offline then there is no use in telling them that they left a session, that is obvious
             if (m_loginState == THORQ_LOGIN_STATE_LOGGEDIN)
-            {
-                thorq_payload_t payload;
-                thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STARTED, name());
+			{
+				thorq_payload_t payload;
+
+				thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STOPPED, name());
+				sendPayload(&payload, true, true);
+
+				thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STOPPED, name());
                 broadcastPayload(&payload, true);
             }
 		}
 		else if (state == THORQ_SESSION_STATE_ACTIVE)
 		{
-            thorq_payload_t payload;
-            thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STOPPED, name());
-            broadcastPayload(&payload, true);
+			if (m_partner != nullptr)
+			{
+				m_partner->m_partner = this;
+
+				m_partner->setSessionState(THORQ_SESSION_STATE_ACTIVE);
+
+				thorq_payload_t payload;
+
+				thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STARTED, name());
+				sendPayload(&payload, true, true);
+
+				thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STARTED, name());
+				broadcastPayload(&payload, true);
+			}
+			else
+			{
+				setSessionState(THORQ_SESSION_STATE_NONE);
+			}
 		}
 	}
 }

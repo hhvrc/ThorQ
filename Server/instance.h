@@ -35,7 +35,6 @@ public:
 	bool requestAcceptFrom(Instance* sender);
 	bool requestDenyFrom(Instance* sender);
 	Instance* partner() const;
-    void clearPartner();
 
     void setIsInSteamVR(bool hasCollar);
     void setHasCollar(bool hasCollar);
