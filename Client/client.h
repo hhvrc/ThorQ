@@ -11,6 +11,7 @@
 #include <thorq_payload_version.h>
 
 // Forward declerations
+class QTimer;
 class QThread;
 class QElapsedTimer;
 namespace ThorQ { class Crypto; }
@@ -257,7 +258,7 @@ private slots:
     /**
      * @brief blah blah blah
      */
-	void Run();
+	void Service();
 
 	void SetPing(std::uint16_t ping);
 
@@ -383,6 +384,7 @@ private:
 	std::atomic<std::uint32_t> m_collarState;
 
 	QThread* m_thread;
+	QTimer* m_serviceTimer;
 
 	bool m_awaitingPing;
     std::uint64_t m_lastPing;

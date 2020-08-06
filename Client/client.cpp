@@ -1,5 +1,8 @@
 #include "client.h"
 
+#include <thread>
+#include <chrono>
+
 #if defined(__GCC__) || defined(__GNUC__) || defined(__clang__)
 	#pragma GCC diagnostic push
 	#pragma GCC diagnostic ignored "-Wextra"
@@ -15,6 +18,7 @@
 #endif
 
 #include <QTime>
+#include <QTimer>
 #include <QThread>
 #include <QElapsedTimer>
 
@@ -70,6 +74,7 @@ Client::Client(ENetHost* host)
 	, m_actionFlags(0)
 	, m_collarState(0)
 	, m_thread(new QThread())
+	, m_serviceTimer(new QTimer())
 	, m_awaitingPing(false)
     , m_lastPing(0)
 	, m_pingTimer(new QElapsedTimer())
@@ -80,11 +85,16 @@ Client::Client(ENetHost* host)
 	, m_requestedHostPort(0)
 	, m_address(new ENetAddress())
 {
-	QObject::connect(this, &Client::PortChanged, this, &Client::Disconnect);
-	QObject::connect(this, &Client::AddressChanged, this, &Client::Disconnect);
-	QObject::connect(m_thread, &QThread::started, this, &Client::Run);
+	QObject::connect(this, &Client::PortChanged, this, &Client::Reconnect);
+	QObject::connect(this, &Client::AddressChanged, this, &Client::Reconnect);
 
 	reinterpret_cast<QObject*>(this)->moveToThread(m_thread);
+
+	connect(m_serviceTimer, &QTimer::timeout, this, &Client::Service);
+	m_serviceTimer->setSingleShot(false);
+	m_serviceTimer->setInterval(20);
+	m_serviceTimer->start();
+
 	m_thread->start();
 }
 
@@ -103,6 +113,13 @@ Client::~Client()
 	m_thread->quit();
 	m_thread->requestInterruption();
 	m_thread->wait();
+
+	if (ConnectionState() != THORQ_CONNECTION_STATE_DISCONNECTED)
+	{
+		Disconnect();
+		do { Service(); }
+		while (ConnectionState() != THORQ_CONNECTION_STATE_DISCONNECTED);
+	}
 
 	if (m_host != nullptr)
 	{
@@ -163,7 +180,7 @@ void Client::Connect(const char* address, std::uint16_t port)
 
 void Client::Reconnect()
 {
-
+	m_actionFlags.fetch_or(ACTION_ReConnect);
 }
 
 void Client::Disconnect()
@@ -251,164 +268,157 @@ void Client::SendImpulse()
 
 void Client::SetRegistrationKey(const QString& regKey)
 {
+	thorq_debug("setRegistrationKey()")
+	thorq_debug_fmt("Entered key: %s\n", regKey.toStdString().c_str())
 	{
 		SCOPELOCK(l_registrationKey);
 		m_registrationKey = regKey.toStdString();
 	}
 }
 
-void Client::Run()
+void Client::Service()
 {
 	ENetEvent event;
-
-	while (!m_thread->isInterruptionRequested())
+	while (enet_host_service(m_host, &event, 0) > 0)
 	{
-		while (enet_host_service(m_host, &event, 0) > 0)
+		switch (event.type)
 		{
-			switch (event.type)
-			{
-			case ENET_EVENT_TYPE_CONNECT:
-                thorq_debug("Connected!")
-                SetConnectionState(THORQ_CONNECTION_STATE_CONNECTED);
-				requestEncryptionHandshake();
-				break;
-			case ENET_EVENT_TYPE_RECEIVE:
-				HandleMessage(event.packet);
-				enet_packet_destroy(event.packet);
-				break;
-			case ENET_EVENT_TYPE_DISCONNECT:
-				m_peer = nullptr;
-				if (ConnectionState() != THORQ_CONNECTION_STATE_DISCONNECTING)
-					emit Error("Unexpected disconnect!");
-				SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
-                thorq_debug_fmt("Disconnected: %u", event.data);
-				break;
-			case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-				m_peer = nullptr;
-				emit Error("Timed out!");
-				SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
-				break;
-			case ENET_EVENT_TYPE_NONE:
-				break;
-			}
-		}
-
-		// Gets the actions, and clears the actions that arent toggleables
-		uint actions = m_actionFlags.fetch_and(ACTION_TOGGLEACTIONS);
-
-		// Send stuff
-		if (ConnectionState() == THORQ_CONNECTION_STATE_CONNECTED)
-		{
-			std::uint32_t collarState = m_collarState.fetch_and(~0xFF);
-
-			if (SessionState() == THORQ_SESSION_STATE_ACTIVE && ((collarState & THORQ_COLLAR_FLAG_IMPULSE) != 0))
-			{
-				thorq_payload_t payload;
-				thorq_payload_collar_pack(payload, collarState & 0xFF, (collarState >> 16) & 0xF, (collarState >> 12) & 0xF, (collarState >> 8) & 0xF, (collarState >> 20) & 0xF);
-				SendPayload(payload, true, false);
-			}
-			else if (SessionState() == THORQ_SESSION_STATE_DECIDING)
-			{
-				if ((actions & ACTION_SessionAccept) != 0)
-				{
-					thorq_payload_t payload;
-					thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_ACCEPT, m_requestingPartner);
-					SendPayload(payload, true, true);
-					m_requestingPartner.clear();
-					SetSessionState(THORQ_SESSION_STATE_JOINING);
-				}
-				else if ((actions & ACTION_SessionDeny) != 0)
-				{
-					thorq_payload_t payload;
-					thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_DENY, m_requestingPartner);
-					SendPayload(payload, true, true);
-					m_requestingPartner.clear();
-					SetSessionState(THORQ_SESSION_STATE_NONE);
-				}
-			}
-
-
-            if (AuthState() == THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT)
-            {
-                SCOPELOCK(l_registrationKey);
-                if (!m_registrationKey.empty())
-                {
-                    thorq_payload_t payload;
-                    thorq_payload_auth_pack(payload, THORQ_AUTH_REGKEY);
-                    SendPayload(payload, true, true);
-                    SetAuthState(THORQ_AUTH_STATE_REGKEY_CHECKING);
-                }
-            }
-
-
-			if ((actions & ACTION_ReConnect) != 0 || (actions & ACTION_Connected) == 0)
-			{
-                if ((actions & ACTION_Connected) == 0)
-                { thorq_debug("Disconnecting!") }
-				else
-                { thorq_debug("Reconnecting!") }
-
-				SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTING);
-				enet_peer_disconnect(m_peer, 0);
-			}
-            else
-            {
-                std::uint64_t elapsed = m_pingTimer->elapsed();
-
-                if ((elapsed - m_lastPing) > 500)
-                {
-
-                    if (m_awaitingPing)
-                    {
-                        SetPing(elapsed);
-                        m_lastPing = elapsed;
-                    }
-                    else
-                    {
-                        m_pingTimer->start();
-                        m_lastPing = 0;
-                    }
-
-                    thorq_payload_t payload;
-                    thorq_payload_heartbeat_pack(payload);
-                    SendPayload(payload, false, false);
-                    m_awaitingPing = true;
-                }
-            }
-		}
-		else if (ConnectionState() == THORQ_CONNECTION_STATE_DISCONNECTED)
-		{
-			if ((actions & ACTION_Connected) != 0)
-			{
-                thorq_debug("Connecting!")
-
-				bool success = false;
-
-				{
-					SCOPELOCK(l_requestedHost);
-                    if (enet_address_set_host(m_address, m_requestedHostName.c_str()) == 0)
-					{
-						m_address->port = m_requestedHostPort;
-						success = true;
-					}
-				}
-
-				if (success)
-				{
-					m_peer = enet_host_connect(m_host, m_address, 4, 0);
-					SetConnectionState(THORQ_CONNECTION_STATE_CONNECTING);
-				}
-				else
-				{
-					// TODO: something
-				}
-			}
+		case ENET_EVENT_TYPE_CONNECT:
+			thorq_debug("Connected!")
+			SetConnectionState(THORQ_CONNECTION_STATE_CONNECTED);
+			requestEncryptionHandshake();
+			break;
+		case ENET_EVENT_TYPE_RECEIVE:
+			HandleMessage(event.packet);
+			enet_packet_destroy(event.packet);
+			break;
+		case ENET_EVENT_TYPE_DISCONNECT:
+			if (ConnectionState() != THORQ_CONNECTION_STATE_DISCONNECTING)
+				emit Error("Unexpected disconnect!");
+			SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
+			m_peer = nullptr;
+			thorq_debug_fmt("Disconnected: %u", event.data);
+			break;
+		case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
+			m_peer = nullptr;
+			emit Error("Timed out!");
+			SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
+			break;
+		case ENET_EVENT_TYPE_NONE:
+			break;
 		}
 	}
 
-	if (m_peer != nullptr)
+	// Gets the actions, and clears the actions that arent toggleables
+	uint actions = m_actionFlags.fetch_and(ACTION_TOGGLEACTIONS);
+
+	// Send stuff
+	if (ConnectionState() == THORQ_CONNECTION_STATE_CONNECTED)
 	{
-		enet_peer_disconnect_now(m_peer, DISCONNECT_SHUTDOWN);
+		std::uint32_t collarState = m_collarState.fetch_and(~0xFF);
+
+		if (SessionState() == THORQ_SESSION_STATE_ACTIVE && ((collarState & THORQ_COLLAR_FLAG_IMPULSE) != 0))
+		{
+			thorq_payload_t payload;
+			thorq_payload_collar_pack(payload, collarState & 0xFF, (collarState >> 16) & 0xF, (collarState >> 12) & 0xF, (collarState >> 8) & 0xF, (collarState >> 20) & 0xF);
+			SendPayload(payload, true, false);
+		}
+		else if (SessionState() == THORQ_SESSION_STATE_DECIDING)
+		{
+			if ((actions & ACTION_SessionAccept) != 0)
+			{
+				thorq_payload_t payload;
+				thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_ACCEPT, m_requestingPartner);
+				SendPayload(payload, true, true);
+				m_requestingPartner.clear();
+				SetSessionState(THORQ_SESSION_STATE_JOINING);
+			}
+			else if ((actions & ACTION_SessionDeny) != 0)
+			{
+				thorq_payload_t payload;
+				thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_DENY, m_requestingPartner);
+				SendPayload(payload, true, true);
+				m_requestingPartner.clear();
+				SetSessionState(THORQ_SESSION_STATE_NONE);
+			}
+		}
+
+
+		if (AuthState() == THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT)
+		{
+			SCOPELOCK(l_registrationKey);
+			if (!m_registrationKey.empty())
+			{
+				thorq_payload_t payload;
+				thorq_payload_auth_pack(payload, THORQ_AUTH_REGKEY);
+				SendPayload(payload, true, true);
+				SetAuthState(THORQ_AUTH_STATE_REGKEY_CHECKING);
+			}
+		}
+
+
+		if ((actions & ACTION_ReConnect) != 0 || (actions & ACTION_Connected) == 0)
+		{
+			if ((actions & ACTION_Connected) == 0)
+			{ thorq_debug("Disconnecting!") }
+			else
+			{ thorq_debug("Reconnecting!") }
+
+			SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTING);
+			enet_peer_disconnect(m_peer, 0);
+		}
+		else
+		{
+			std::uint64_t elapsed = m_pingTimer->elapsed();
+
+			if ((elapsed - m_lastPing) > 500)
+			{
+
+				if (m_awaitingPing)
+				{
+					SetPing(elapsed);
+					m_lastPing = elapsed;
+				}
+				else
+				{
+					m_pingTimer->start();
+					m_lastPing = 0;
+				}
+
+				thorq_payload_t payload;
+				thorq_payload_heartbeat_pack(payload);
+				SendPayload(payload, false, false);
+				m_awaitingPing = true;
+			}
+		}
+	}
+	else if (ConnectionState() == THORQ_CONNECTION_STATE_DISCONNECTED)
+	{
+		if ((actions & ACTION_Connected) != 0)
+		{
+			thorq_debug("Connecting!")
+
+			bool success = false;
+
+			{
+				SCOPELOCK(l_requestedHost);
+				if (enet_address_set_host(m_address, m_requestedHostName.c_str()) == 0)
+				{
+					m_address->port = m_requestedHostPort;
+					success = true;
+				}
+			}
+
+			if (success)
+			{
+				m_peer = enet_host_connect(m_host, m_address, 4, 0);
+				SetConnectionState(THORQ_CONNECTION_STATE_CONNECTING);
+			}
+			else
+			{
+				// TODO: something
+			}
+		}
 	}
 }
 
@@ -659,11 +669,11 @@ void Client::handleMessageAuth(const thorq_payload_t& payload)
         SetAuthState(THORQ_AUTH_STATE_HWID_CHECKING);
 		break;
 	case THORQ_AUTH_REGKEY_REQ:
-        thorq_debug("REQ RegistrationKey")
-		emit RequestingRegistrationKey();
+		thorq_debug("REQ RegistrationKey")
         thorq_payload_auth_pack(response, THORQ_AUTH_REGKEY_AWAITING_INPUT);
-        SendPayload(response);
+		SendPayload(response);
         SetAuthState(THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT);
+		emit RequestingRegistrationKey();
 		break;
 	case THORQ_AUTH_OK:
 		SetAuthState(THORQ_AUTH_STATE_OK);
