@@ -683,9 +683,13 @@ void Client::SendPayload(const thorq_payload_t& payload, bool encrypt, bool reli
 	std::vector<std::uint8_t> data;
 
     if (encrypt)
+	{
         thorq_message_encode(message, data, m_crypto);
+	}
     else
+	{
         thorq_message_encode(message, data);
+	}
 
 	enet_peer_send(m_peer, reliable ? 0 : 1, enet_packet_create(data.data(), data.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
 }

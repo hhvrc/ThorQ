@@ -103,11 +103,12 @@ std::string ThorQ::systemid_to_string(const std::vector<std::uint8_t>& sys_id)
 
 	if (systemid_validate(sys_id))
 	{
-		memcpy(bin_id, sys_id.data(), 10);
+		memcpy(bin_id, sys_id.data(), sizeof(bin_id));
 		str_id.insert(str_id.begin(), sys_id.begin() + 10, sys_id.end());
 	}
 	else
 	{
+		memset(bin_id, 0, sizeof(bin_id));
 		str_id = "INVALID";
 	}
 

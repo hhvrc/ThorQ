@@ -8,20 +8,25 @@ bool ThorQ::InstanceMap::TryAdd(Instance* peer, const std::string& name)
 {
     auto it = m_internal.find(name);
 
-    if (it != m_internal.end())
-        return false;
+	if (it == m_internal.end())
+	{
+		m_internal.insert(std::pair<std::string, Instance*>(peer->name(), peer));
+		return true;
+	}
 
-	m_internal.insert(std::pair<std::string, Instance*>(peer->name(), peer));
-	return true;
+	return false;
 }
 
 ThorQ::Instance* ThorQ::InstanceMap::Get(const std::string& name)
 {
 	auto it = m_internal.find(name);
 
-	if (it != m_internal.end())
-		return it->second;
-	return nullptr;
+	if (it == m_internal.end())
+	{
+		return nullptr;
+	}
+
+	return it->second;
 }
 
 bool ThorQ::InstanceMap::Contains(const std::string& name) const
@@ -33,8 +38,10 @@ std::vector<ThorQ::Instance*> ThorQ::InstanceMap::ToList()
 {
 	std::vector<Instance*> peers;
 	peers.reserve(m_internal.size());
+
 	for (auto &peer : m_internal)
 		peers.push_back(peer.second);
+
 	return peers;
 }
 
