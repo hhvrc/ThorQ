@@ -4,8 +4,9 @@
 #include <QIcon>
 #include <QInputDialog>
 #include <QRegExp>
+#include <QDebug>
+#include <QTranslator>
 
-#include <log.h>
 #include <enet.h>
 
 #include "client.h"
@@ -66,7 +67,7 @@ int main(int argc, char** argv)
 		printf("Failed to initialize ENet");
         return EXIT_FAILURE;
 	}
-	thorq_debug_fmt("Using %s", Client::Version().toStdString().c_str())
+	qDebug() << "Using" << Client::Version();
 
 	LoginWidget loginWidget;
 	loginWidget.moveToThread(app.thread());

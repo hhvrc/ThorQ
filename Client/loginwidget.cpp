@@ -1,5 +1,6 @@
 #include "loginwidget.h"
 
+#include <QDebug>
 #include <QLabel>
 #include <QLineEdit>
 #include <QPushButton>

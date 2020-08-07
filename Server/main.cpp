@@ -86,17 +86,14 @@ int main(int argc, char** argv)
 			return EXIT_FAILURE;
 		}
 		address.port = i;
-	} catch (std::invalid_argument ex) {
+	} catch (std::invalid_argument) {
 		fprintf(stderr, "Port must be a number\n");
 		return EXIT_FAILURE;
 	} catch (std::out_of_range) {
 		fprintf(stderr, "Port must be in the range of 1-65535\n");
 		return EXIT_FAILURE;
-	} catch (std::exception ex) {
+	} catch (const std::exception& ex) {
 		fprintf(stderr, "Exception occured while parsing argument:\n\t%s\n", ex.what());
-		return EXIT_FAILURE;
-	} catch (int i) {
-		fprintf(stderr, "Unknown exception occured while parsing argument\n");
 		return EXIT_FAILURE;
 	}
 #else

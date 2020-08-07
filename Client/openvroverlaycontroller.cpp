@@ -12,14 +12,7 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QGraphicsEllipseItem>
 #include <QCursor>
-
-#include <log.h>
-
-void Dbg(vr::VROverlayError err, int line)
-{
-	if (err != vr::VROverlayError_None)
-		thorq_debug_fmt("Error: %i Line: %i", err, line);
-}
+#include <QDebug>
 
 inline void ToQMatrix(const vr::HmdMatrix34_t& mat, QMatrix4x4& out)
 {
@@ -112,7 +105,7 @@ OpenVROverlayController::~OpenVROverlayController()
 
     if (m_frameBuffer != nullptr)
     {
-        thorq_debug("Deleting framebuffer...")
+		qDebug() << "Deleting framebuffer";
         delete m_frameBuffer;
         m_frameBuffer = nullptr;
     }
@@ -154,17 +147,17 @@ bool OpenVROverlayController::Init()
 }
 void OpenVROverlayController::Shutdown()
 {
-    thorq_debug("Overlay shutting down...")
+	qDebug() << tr("Shutting down overlay");
 
 	if (!m_isInitialized)
 		return;
 	m_isInitialized = false;
 
-    thorq_debug("Stopping timers...")
+	qDebug() << tr("Stopping timers");
 	m_visibilityTimer->stop();
     m_pumpEventsTimer->stop();
 
-    thorq_debug("Disconnecting VR runtime...")
+	qDebug() << tr("Disconnecting VR runtime");
     DisconnectFromVRRuntime();
 
     m_handle = vr::k_ulOverlayHandleInvalid;
@@ -215,12 +208,26 @@ void OpenVROverlayController::SetIsVisible(bool visible)
 	{
 		m_isVisible = visible;
 
-		if (visible) {
-            thorq_debug("Show");
-			Dbg(vr::VROverlay()->ShowOverlay(m_handle), __LINE__);
-		} else {
-            thorq_debug("Hide")
-			Dbg(vr::VROverlay()->HideOverlay(m_handle), __LINE__);
+		vr::EVROverlayError err = vr::VROverlayError_None;
+
+		if (visible)
+		{
+			qDebug() << tr("Show overlay");
+
+			err = vr::VROverlay()->ShowOverlay(m_handle);
+
+			if (err != vr::VROverlayError_None)
+				qDebug() << tr("Error showing overlay:") << err;
+
+		}
+		else
+		{
+			qDebug() << tr("Hide overlay");
+
+			err = vr::VROverlay()->HideOverlay(m_handle);
+
+			if (err != vr::VROverlayError_None)
+				qDebug() << tr("Error hiding overlay:") << err;
 		}
 
 		emit IsVisibleChanged(visible);
@@ -239,7 +246,12 @@ void OpenVROverlayController::SetWidth(float width)
 	if (m_width != width)
 	{
 		m_width = width;
-		Dbg(vr::VROverlay()->SetOverlayWidthInMeters(m_handle, m_width), __LINE__);
+
+		vr::EVROverlayError err = vr::VROverlay()->SetOverlayWidthInMeters(m_handle, m_width);
+
+		if (err != vr::VROverlayError_None)
+			qDebug() << tr("Error setting overlay width:") << err;
+
 		emit WidthChanged(width);
 	}
 }
@@ -256,7 +268,12 @@ void OpenVROverlayController::SetAlpha(float alpha)
 	if (m_alpha != alpha)
 	{
 		m_alpha = alpha;
-		Dbg(vr::VROverlay()->SetOverlayAlpha(m_handle, alpha), __LINE__);
+
+		vr::EVROverlayError err = vr::VROverlay()->SetOverlayAlpha(m_handle, alpha);
+
+		if (err != vr::VROverlayError_None)
+			qDebug() << tr("Error setting overlay alpha:") << err;
+
 		emit AlphaChanged(alpha);
 	}
 }
@@ -276,7 +293,12 @@ void OpenVROverlayController::SetTint(const QColor& color)
 	if (m_tint != color)
 	{
 		m_tint = color;
-		Dbg(vr::VROverlay()->SetOverlayColor(m_handle, m_tint.redF(), m_tint.greenF(), m_tint.blueF()), __LINE__);
+
+		vr::EVROverlayError err = vr::VROverlay()->SetOverlayColor(m_handle, m_tint.redF(), m_tint.greenF(), m_tint.blueF());
+
+		if (err != vr::VROverlayError_None)
+			qDebug() << tr("Error setting overlay tint:") << err;
+
 		emit TintChanged(color);
 	}
 }
@@ -383,7 +405,7 @@ void OpenVROverlayController::PollEvents()
 		case vr::VREvent_MouseMove:
 		case vr::VREvent_MouseButtonDown:
 		case vr::VREvent_MouseButtonUp:
-            thorq_debug("Please dont say that this captures these events...")
+			qDebug() << tr("Please dont say that this captures these events...");
 			break;
 		}
 	}
@@ -394,7 +416,7 @@ void OpenVROverlayController::PollEvents()
 		{
 		case vr::VREvent_MouseMove:
 		{
-            thorq_debug("MouseMove!")
+			qDebug() << tr("Mouse moved");
 			QPointF ptNewMouse(event.data.mouse.x, event.data.mouse.y);
 			QPoint ptGlobal = ptNewMouse.toPoint();
 			QGraphicsSceneMouseEvent mouseEvent(QEvent::GraphicsSceneMouseMove);
@@ -420,7 +442,7 @@ void OpenVROverlayController::PollEvents()
 
 		case vr::VREvent_MouseButtonDown:
 		{
-            thorq_debug("MouseDown!")
+			qDebug() << tr("Mouse press");
 			Qt::MouseButton button = event.data.mouse.button == vr::VRMouseButton_Right ? Qt::RightButton : Qt::LeftButton;
 
 			m_lastMouseButtons |= button;
@@ -448,7 +470,7 @@ void OpenVROverlayController::PollEvents()
 
 		case vr::VREvent_MouseButtonUp:
 		{
-            thorq_debug("MouseUp!")
+			qDebug() << tr("Mouse release");
 			Qt::MouseButton button = event.data.mouse.button == vr::VRMouseButton_Right ? Qt::RightButton : Qt::LeftButton;
 			m_lastMouseButtons &= ~button;
 
@@ -496,20 +518,27 @@ void OpenVROverlayController::SetOverlayResolution(float width, float height)
 
 void OpenVROverlayController::OverlayCreate()
 {
-	vr::EVROverlayError err = vr::VROverlayError_None;
+	qDebug() << tr("Finding overlay");
 
-    thorq_debug("Find")
-	err = vr::VROverlay()->FindOverlay("ThorQ", &m_handle);
+	vr::EVROverlayError err = vr::VROverlay()->FindOverlay("ThorQ", &m_handle);
+
 	if (err != vr::VROverlayError_None)
 	{
 		if (err != vr::VROverlayError_UnknownOverlay)
 		{
-			Dbg(err, __LINE__);
+			qDebug() << tr("Error finding overlay:") << err;
 			return;
 		}
 
-        thorq_debug("Create")
-		Dbg(vr::VROverlay()->CreateOverlay("ThorQ", "ThorQ", &m_handle), __LINE__);
+		qDebug() << tr("Creating overlay");
+
+		err = vr::VROverlay()->CreateOverlay("ThorQ", "ThorQ", &m_handle);
+
+		if (err != vr::VROverlayError_None)
+		{
+			qDebug() << tr("Error creating overlay:") << err;
+			return;
+		}
 
 		OverlayInit();
 	}
@@ -520,23 +549,40 @@ void OpenVROverlayController::OverlayInit()
 	if (m_handle == vr::k_ulOverlayHandleInvalid)
 		return;
 
+
 	// Alpha
 	m_alpha = 0.9f;
-	Dbg(vr::VROverlay()->SetOverlayAlpha(m_handle, m_alpha), __LINE__);
+	vr::EVROverlayError err = vr::VROverlay()->SetOverlayAlpha(m_handle, m_alpha);
+	if (err != vr::VROverlayError_None)
+		qDebug() << tr("Error setting overlay alpha:") << err;
+
 
 	// Tint
 	// Makes overlay black for some reason?
 	//m_tint = QColor(0, 0, 0, 0);
 	//Dbg(vr::VROverlay()->SetOverlayColor(m_handle, m_tint.redF(), m_tint.greenF(), m_tint.blueF()), __LINE__);
 
+
 	// Visibility
 	m_isVisible = false;
-	Dbg(vr::VROverlay()->HideOverlay(m_handle), __LINE__);
+	err = vr::VROverlay()->HideOverlay(m_handle);
+	if (err != vr::VROverlayError_None)
+		qDebug() << tr("Error setting overlay visibility:") << err;
+
+
+	// Input method
+	err = vr::VROverlay()->SetOverlayInputMethod(m_handle, vr::VROverlayInputMethod_Mouse);
+	if (err != vr::VROverlayError_None)
+		qDebug() << tr("Error setting overlay input method:") << err;
+
 
 	// Flags
-	Dbg(vr::VROverlay()->SetOverlayInputMethod(m_handle, vr::VROverlayInputMethod_Mouse), __LINE__);
-	Dbg(vr::VROverlay()->SetOverlayFlag(m_handle, vr::VROverlayFlags_VisibleInDashboard, false), __LINE__);
+	err = vr::VROverlay()->SetOverlayFlag(m_handle, vr::VROverlayFlags_VisibleInDashboard, false);
+	if (err != vr::VROverlayError_None)
+		qDebug() << tr("Error setting overlay flag:") << err;
 
+
+	// Interaction
 	// I want this, but it blocks user input :c
 	//Dbg(vr::VROverlay()->SetOverlayFlag(m_handle, vr::VROverlayFlags_MakeOverlaysInteractiveIfVisible, true), __LINE__);
 
@@ -560,17 +606,17 @@ void OpenVROverlayController::OverlayDraw()
 {
 	if (m_handle == vr::k_ulOverlayHandleInvalid)
 	{
-        thorq_debug("Handle is invalid")
+		qDebug() << "Handle is invalid!";
 		return;
 	}
 
 	if (m_frameBuffer == nullptr)
 	{
-        thorq_debug("Framebuffer is nullptr")
+		qDebug() << "Framebuffer is nullptr";
 		return;
 	}
 
-    thorq_debug("Draw")
+	qDebug() << tr("Drawing overlay");
 
 	m_glContext->makeCurrent(m_surface);
 	m_frameBuffer->bind();
@@ -582,11 +628,17 @@ void OpenVROverlayController::OverlayDraw()
 
 	m_frameBuffer->release();
 
+	// Get framebuffer id
 	GLuint glTexture = m_frameBuffer->texture();
 	if (glTexture != 0)
 	{
+		// Construct OpenVR framebuffer container
 		vr::Texture_t texture = {reinterpret_cast<void*>(glTexture), vr::TextureType_OpenGL, vr::ColorSpace_Auto };
-		Dbg(vr::VROverlay()->SetOverlayTexture(m_handle, &texture), __LINE__);
+
+		// Give framebuffer id to OpenVR
+		vr::EVROverlayError err = vr::VROverlay()->SetOverlayTexture(m_handle, &texture);
+		if (err != vr::VROverlayError_None)
+			qDebug() << tr("Error setting overlay texture:") << err;
 	}
 }
 
@@ -594,16 +646,16 @@ void OpenVROverlayController::OverlayTransform()
 {
 	if (m_handle == vr::k_ulOverlayHandleInvalid)
 	{
-        thorq_debug("Handle is invalid")
+		qDebug() << "Handle is invalid";
 		return;
 	}
 	if (m_deviceIndex == vr::k_unTrackedDeviceIndexInvalid)
 	{
-        thorq_debug("Device is invalid")
+		qDebug() << "Device is invalid";
 		return;
 	}
 
-    thorq_debug("Position")
+	qDebug() << tr("Transforming overlay");
 
     switch (vr::VRSystem()->GetControllerRoleForTrackedDeviceIndex(m_deviceIndex))
     {
@@ -618,5 +670,8 @@ void OpenVROverlayController::OverlayTransform()
     }
 
 	// Position
-    Dbg(vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_handle, m_deviceIndex, m_deviceOffset), __LINE__);
+	vr::EVROverlayError err = vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_handle, m_deviceIndex, m_deviceOffset);
+
+	if (err != vr::VROverlayError_None)
+		qDebug() << tr("Error transforming overlay:") << err;
 }

@@ -32,7 +32,7 @@ void eeeee()
 
         file.close();
     }
-    catch (std::exception ex)
+	catch (const std::exception& ex)
     {
         printf("Oppsie!");
     }

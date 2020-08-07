@@ -20,9 +20,9 @@
 #include <QTime>
 #include <QTimer>
 #include <QThread>
+#include <QDebug>
 #include <QElapsedTimer>
 
-#include <log.h>
 #include <enums.h>
 #include <crypto.h>
 #include <systemid.h>
@@ -268,8 +268,8 @@ void Client::SendImpulse()
 
 void Client::SetRegistrationKey(const QString& regKey)
 {
-	thorq_debug("setRegistrationKey()")
-	thorq_debug_fmt("Entered key: %s\n", regKey.toStdString().c_str())
+	qDebug() << tr("Setting registration key to:") << regKey;
+
 	{
 		SCOPELOCK(l_registrationKey);
 		m_registrationKey = regKey.toStdString();
@@ -284,7 +284,7 @@ void Client::Service()
 		switch (event.type)
 		{
 		case ENET_EVENT_TYPE_CONNECT:
-			thorq_debug("Connected!")
+			qDebug() << "Connected!";
 			SetConnectionState(THORQ_CONNECTION_STATE_CONNECTED);
 			requestEncryptionHandshake();
 			break;
@@ -294,14 +294,14 @@ void Client::Service()
 			break;
 		case ENET_EVENT_TYPE_DISCONNECT:
 			if (ConnectionState() != THORQ_CONNECTION_STATE_DISCONNECTING)
-				emit Error("Unexpected disconnect!");
+				emit Error(tr("Unexpected disconnection"));
 			SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
 			m_peer = nullptr;
-			thorq_debug_fmt("Disconnected: %u", event.data);
+			qDebug() << "Disconnected:" << event.data;
 			break;
 		case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
 			m_peer = nullptr;
-			emit Error("Timed out!");
+			emit Error(tr("Connection timeout"));
 			SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
 			break;
 		case ENET_EVENT_TYPE_NONE:
@@ -360,9 +360,9 @@ void Client::Service()
 		if ((actions & ACTION_ReConnect) != 0 || (actions & ACTION_Connected) == 0)
 		{
 			if ((actions & ACTION_Connected) == 0)
-			{ thorq_debug("Disconnecting!") }
+			{ qDebug() << tr("Disconnecting"); }
 			else
-			{ thorq_debug("Reconnecting!") }
+			{ qDebug() << tr("Reconnecting"); }
 
 			SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTING);
 			enet_peer_disconnect(m_peer, 0);
@@ -396,7 +396,7 @@ void Client::Service()
 	{
 		if ((actions & ACTION_Connected) != 0)
 		{
-			thorq_debug("Connecting!")
+			qDebug() << "Connecting!";
 
 			bool success = false;
 
@@ -529,7 +529,7 @@ void Client::HandleMessage(ENetPacket* packet)
 
 	switch (payload.id) {
 	case THORQ_PAYLOAD_ID_INVALID:
-        thorq_debug("Got invalid payload!")
+		qDebug() << "Got invalid payload";
 		return;
 	case THORQ_PAYLOAD_ID_VERSION:
 		if (thorq_payload_version_is_valid(payload))
@@ -557,8 +557,7 @@ void Client::HandleMessage(ENetPacket* packet)
 	}
 
 
-
-    thorq_debug("uwu")
+	qDebug() << "UwU";
 }
 
 void Client::handleMessageVersion(const thorq_payload_t& payload)
@@ -570,24 +569,24 @@ void Client::handleMessageVersion(const thorq_payload_t& payload)
 	switch (app) {
 	case THORQ_APP_SERVER:
 		if (version > THORQ_VERSION_SERVER)
-		{ thorq_debug_fmt("Server has updated from %s to %s", THORQ_VERSION_SERVER.to_string().c_str(), version.to_string().c_str()) }
+		{ qDebug() << tr("Server has updated from %1 to %2").arg(THORQ_VERSION_SERVER.to_string().c_str()).arg(version.to_string().c_str()); }
 		else if (version < THORQ_VERSION_SERVER)
-		{ thorq_debug_fmt("Server has downgraded from %s to %s", THORQ_VERSION_SERVER.to_string().c_str(), version.to_string().c_str()) }
+		{ qDebug() << tr("Server had downdated from %1 to %2").arg(THORQ_VERSION_SERVER.to_string().c_str()).arg(version.to_string().c_str()); }
 		break;
 	case THORQ_APP_CLIENT:
 		if (version > THORQ_VERSION_CLIENT)
-		{ thorq_debug_fmt("Client has updated from %s to %s", THORQ_VERSION_CLIENT.to_string().c_str(), version.to_string().c_str()) }
+		{ qDebug() << tr("Client has updated from %1 to %2").arg(THORQ_VERSION_CLIENT.to_string().c_str()).arg(version.to_string().c_str()); }
 		else if (version < THORQ_VERSION_CLIENT)
-		{ thorq_debug_fmt("Client has downgraded from %s to %s", THORQ_VERSION_CLIENT.to_string().c_str(), version.to_string().c_str()) }
+		{ qDebug() << tr("Client has downgraded from %1 to %2").arg(THORQ_VERSION_CLIENT.to_string().c_str()).arg(version.to_string().c_str()); }
 		break;
 	case THORQ_APP_LINK:
 		if (version > THORQ_VERSION_LINK)
-		{ thorq_debug_fmt("Protocol has updated from %s to %s", THORQ_VERSION_LINK.to_string().c_str(), version.to_string().c_str()) }
+		{ qDebug() << tr("Protocol has updated from %1 to %2").arg(THORQ_VERSION_LINK.to_string().c_str()).arg(version.to_string().c_str()); }
 		else if (version < THORQ_VERSION_LINK)
-		{ thorq_debug_fmt("Protocol has downgraded from %s to %s", THORQ_VERSION_LINK.to_string().c_str(), version.to_string().c_str()) }
+		{ qDebug() << tr("Protocol has downgraded from %1 to %2").arg(THORQ_VERSION_LINK.to_string().c_str()).arg(version.to_string().c_str()); }
 		break;
 	default:
-		thorq_debug_fmt("Got ivalid version %i[%s]", app, version.to_string().c_str())
+		qDebug() << tr("Got ivalid version %1[%2]").arg(app).arg(version.to_string().c_str());
 		return;
 	}
 }
@@ -611,7 +610,7 @@ void Client::handleMessageCrypto(const thorq_payload_t& payload)
     switch (cmd) {
 	case THORQ_CRYPTO_ESTABLISH:
 	{
-        thorq_debug("Establishing!")
+		qDebug() << tr("Establishing crypto");
         SetCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
 
         std::vector<std::uint8_t> data;
@@ -621,7 +620,7 @@ void Client::handleMessageCrypto(const thorq_payload_t& payload)
 
         if (m_crypto->agree(data))
         {
-            thorq_debug("Sending public key!")
+			qDebug() << "Sending public key";
 
             thorq_payload_crypto_pack(response, THORQ_CRYPTO_ESTABLISH, m_crypto->publicKey());
             SendPayload(response, false, true);
@@ -635,7 +634,7 @@ void Client::handleMessageCrypto(const thorq_payload_t& payload)
 		break;
 	case THORQ_CRYPTO_VERIFY:
 	{
-        thorq_debug("Verifying!")
+		qDebug() << "Verifying";
         SetCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
 
         SendPayload(payload, true, true);
@@ -643,12 +642,12 @@ void Client::handleMessageCrypto(const thorq_payload_t& payload)
 		break;
 	case THORQ_CRYPTO_OK:
 	{
-        thorq_debug("CyptOk!")
+		qDebug() << "CryptOk";
 		SetCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
 	}
 		break;
 	default:
-        thorq_debug("Crypt???")
+		qDebug() << "Crypt???";
 		return;
 	}
 }
@@ -656,20 +655,20 @@ void Client::handleMessageAuth(const thorq_payload_t& payload)
 {
     thorq_payload_t response;
 
-    thorq_debug("Auth!")
+	qDebug() << "Auth";
 
     thorq_auth_cmd_t cmd;
     thorq_payload_auth_get_cmd(payload, cmd);
 
     switch (cmd) {
 	case THORQ_AUTH_SYSTEMID_REQ:
-        thorq_debug("REQ SystemID")
+		qDebug() << "REQ SystemID";
         thorq_payload_auth_pack(response, THORQ_AUTH_SYSTEMID, ThorQ::systemid_generate());
         SendPayload(response);
         SetAuthState(THORQ_AUTH_STATE_HWID_CHECKING);
 		break;
 	case THORQ_AUTH_REGKEY_REQ:
-		thorq_debug("REQ RegistrationKey")
+		qDebug() << "REQ RegistrationKey";
         thorq_payload_auth_pack(response, THORQ_AUTH_REGKEY_AWAITING_INPUT);
 		SendPayload(response);
         SetAuthState(THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT);
@@ -679,7 +678,7 @@ void Client::handleMessageAuth(const thorq_payload_t& payload)
 		SetAuthState(THORQ_AUTH_STATE_OK);
 		break;
 	default:
-		thorq_debug_fmt("Unexpected message: %i", cmd)
+		qDebug() << "Unexpected message:" << cmd;
 		break;
 	}
 }
@@ -709,7 +708,7 @@ void Client::requestEncryptionHandshake()
     if (ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED)
         return;
 
-    thorq_debug("Requesting!")
+	qDebug() << "Requesting";
 
     m_crypto->reset();
     SetCryptoState(THORQ_CRYPTO_STATE_REQUESTED);
