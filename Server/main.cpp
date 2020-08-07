@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <atomic>
+#include <algorithm>
 #if __linux__
 #include <unistd.h>
 #endif
@@ -62,34 +63,42 @@ void exitCleanup()
 			{
 			case ENET_EVENT_TYPE_CONNECT:
 				event.peer->data = nullptr;
-				peers.push_back(event.peer);
-				enet_peer_disconnect(event.peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
+				enet_peer_disconnect_now(event.peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
 				break;
 			case ENET_EVENT_TYPE_RECEIVE:
 				enet_packet_destroy(event.packet);
 				break;
 			case ENET_EVENT_TYPE_DISCONNECT:
 			case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
+			{
 				if (event.peer->data != nullptr)
-				{
-					ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
-					registeredInstances->remove(instance->name());
-					delete reinterpret_cast<ThorQ::Instance*>(event.peer->data);
-				}
-				else
-				{
-					enet_peer_reset(event.peer);
-				}
+					(reinterpret_cast<ThorQ::Instance*>(event.peer->data))->setPeer(nullptr);
+				enet_peer_reset(event.peer);
+				auto it = std::find(peers.begin(), peers.end(), event.peer);
+				if (it != peers.end())
+					peers.erase(it);
 				break;
+			}
 			case ENET_EVENT_TYPE_NONE:
 				break;
 			}
 		}
 	}
 
-	delete registeredInstances;
 	enet_host_destroy(server);
 	enet_deinitialize();
+
+	std::vector<ThorQ::Instance*> instances = registeredInstances->instances();
+
+	delete registeredInstances;
+
+	printf("All clients are disconnected,\n");
+	printf("If i crash now, that is totally ok!\n");
+	fflush(stdout);
+
+	// This is very likely to crash the server, so do this last
+	for (ThorQ::Instance* instance : instances)
+		delete instance;
 }
 
 int main(int argc, char** argv)
