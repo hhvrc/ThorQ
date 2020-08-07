@@ -575,18 +575,24 @@ void Client::handleMessageVersion(const thorq_payload_t& payload)
 		{ qDebug() << tr("Server has updated from %1 to %2").arg(THORQ_VERSION_SERVER.to_string().c_str()).arg(version.to_string().c_str()); }
 		else if (version < THORQ_VERSION_SERVER)
 		{ qDebug() << tr("Server had downdated from %1 to %2").arg(THORQ_VERSION_SERVER.to_string().c_str()).arg(version.to_string().c_str()); }
+		else
+		{ qDebug() << tr("Server version compatible"); }
 		break;
 	case THORQ_APP_CLIENT:
 		if (version > THORQ_VERSION_CLIENT)
 		{ qDebug() << tr("Client has updated from %1 to %2").arg(THORQ_VERSION_CLIENT.to_string().c_str()).arg(version.to_string().c_str()); }
 		else if (version < THORQ_VERSION_CLIENT)
 		{ qDebug() << tr("Client has downgraded from %1 to %2").arg(THORQ_VERSION_CLIENT.to_string().c_str()).arg(version.to_string().c_str()); }
+		else
+		{ qDebug() << tr("Client version compatible"); }
 		break;
 	case THORQ_APP_LINK:
 		if (version > THORQ_VERSION_LINK)
 		{ qDebug() << tr("Protocol has updated from %1 to %2").arg(THORQ_VERSION_LINK.to_string().c_str()).arg(version.to_string().c_str()); }
 		else if (version < THORQ_VERSION_LINK)
 		{ qDebug() << tr("Protocol has downgraded from %1 to %2").arg(THORQ_VERSION_LINK.to_string().c_str()).arg(version.to_string().c_str()); }
+		else
+		{ qDebug() << tr("Protocol version compatible"); }
 		break;
 	default:
 		qDebug() << tr("Got ivalid version %1[%2]").arg(app).arg(version.to_string().c_str());
