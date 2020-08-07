@@ -92,6 +92,9 @@ void exitCleanup()
 
 	enet_deinitialize();
 
+    if (registeredInstances == nullptr)
+        return;
+
 	std::vector<ThorQ::Instance*> instances = registeredInstances->instances();
 
 	delete registeredInstances;
