@@ -329,7 +329,7 @@ private slots:
      * @brief handleMessageHeartbeat
      * @param payload
      */
-	void handleMessageHeartbeat(const thorq_payload_t& payload);
+    void handleMessageHeartbeat();
 
     /**
      * @brief handleMessageCrypto

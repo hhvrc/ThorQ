@@ -92,7 +92,7 @@ Client::Client(ENetHost* host)
 
 	connect(m_serviceTimer, &QTimer::timeout, this, &Client::Service);
 	m_serviceTimer->setSingleShot(false);
-	m_serviceTimer->setInterval(20);
+    m_serviceTimer->setInterval(10);
 	m_serviceTimer->start();
 
 	m_thread->start();
@@ -169,11 +169,9 @@ thorq_session_state_t Client::SessionState() const
 
 void Client::Connect(const char* address, std::uint16_t port)
 {
-	{
-		SCOPELOCK(l_requestedHost);
-		m_requestedHostName = address;
-		m_requestedHostPort = port;
-	}
+    SCOPELOCK(l_requestedHost);
+    m_requestedHostName = address;
+    m_requestedHostPort = port;
 
 	m_actionFlags.fetch_or(ACTION_Connected);
 }
@@ -194,10 +192,8 @@ void Client::Login(const QString &username)
 	if (LoginState() != THORQ_LOGIN_STATE_LOGGEDOUT)
 		return;
 
-	{
-		SCOPELOCK(l_username);
-		m_username = username.toStdString();
-	}
+    SCOPELOCK(l_username);
+    m_username = username.toStdString();
 
 	m_actionFlags.fetch_or(ACTION_Login);
 }
@@ -269,12 +265,8 @@ void Client::SendImpulse()
 
 void Client::SetRegistrationKey(const QString& regKey)
 {
-	qDebug() << tr("Setting registration key to:") << regKey;
-
-	{
-		SCOPELOCK(l_registrationKey);
-		m_registrationKey = regKey.toStdString();
-	}
+    SCOPELOCK(l_registrationKey);
+    m_registrationKey = regKey.toStdString();
 
 	m_actionFlags.fetch_or(ACTION_SendRegKey);
 }
@@ -286,8 +278,7 @@ void Client::Service()
 	{
 		switch (event.type)
 		{
-		case ENET_EVENT_TYPE_CONNECT:
-			qDebug() << "Connected!";
+        case ENET_EVENT_TYPE_CONNECT:
 			SetConnectionState(THORQ_CONNECTION_STATE_CONNECTED);
 			requestEncryptionHandshake();
 			break;
@@ -345,23 +336,22 @@ void Client::Service()
 			if (AuthState() == THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT)
 			{
 				thorq_payload_t payload;
-				{
-					SCOPELOCK(l_registrationKey);
-					thorq_payload_auth_pack(payload, THORQ_AUTH_REGKEY, std::vector<std::uint8_t>(m_registrationKey.begin(), m_registrationKey.end()));
-				}
+
+                SCOPELOCK(l_registrationKey);
+                thorq_payload_auth_pack(payload, THORQ_AUTH_REGKEY, std::vector<std::uint8_t>(m_registrationKey.begin(), m_registrationKey.end()));
+
 				SendPayload(payload, true, true);
 				SetAuthState(THORQ_AUTH_STATE_REGKEY_CHECKING);
 			}
 		}
 
 
+        /** Disconnects client gracefully
+          * If [STATE] ACTION_Connected is not set, then the clients should not be connected
+          * If [FLAG]  ACTION_ReConnect is set, then the client should disconnect, and will naturally reconnect again (i love state machines)
+          */
 		if ((actions & ACTION_ReConnect) != 0 || (actions & ACTION_Connected) == 0)
-		{
-			if ((actions & ACTION_Connected) == 0)
-			{ qDebug() << tr("Disconnecting"); }
-			else
-			{ qDebug() << tr("Reconnecting"); }
-
+        {
 			SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTING);
 			enet_peer_disconnect(m_peer, 0);
 		}
@@ -393,21 +383,19 @@ void Client::Service()
 	else if (ConnectionState() == THORQ_CONNECTION_STATE_DISCONNECTED)
 	{
 		if ((actions & ACTION_Connected) != 0)
-		{
-			qDebug() << "Connecting!";
-
-			bool success = false;
+        {
+            bool addressFound = false;
 
 			{
 				SCOPELOCK(l_requestedHost);
 				if (enet_address_set_host(m_address, m_requestedHostName.c_str()) == 0)
 				{
 					m_address->port = m_requestedHostPort;
-					success = true;
+                    addressFound = true;
 				}
 			}
 
-			if (success)
+            if (addressFound)
 			{
 				m_peer = enet_host_connect(m_host, m_address, 4, 0);
 				SetConnectionState(THORQ_CONNECTION_STATE_CONNECTING);
@@ -423,11 +411,7 @@ void Client::Service()
 void Client::SetPing(std::uint16_t ping)
 {
 	if (m_ping != ping)
-	{
-        if (ping < 10)
-        {
-            ping += 10;
-        }
+    {
         m_ping = ping;
 		emit PingChanged(ping);
 	}
@@ -526,8 +510,7 @@ void Client::HandleMessage(ENetPacket* packet)
 	thorq_payload_unpack(message, payload);
 
 	switch (payload.id) {
-	case THORQ_PAYLOAD_ID_INVALID:
-		qDebug() << "Got invalid payload";
+    case THORQ_PAYLOAD_ID_INVALID:
 		return;
 	case THORQ_PAYLOAD_ID_VERSION:
 		if (thorq_payload_version_is_valid(payload))
@@ -543,7 +526,7 @@ void Client::HandleMessage(ENetPacket* packet)
 		return;
 	case THORQ_PAYLOAD_ID_HEARTBEAT:
 		if (thorq_payload_heartbeat_is_valid(payload))
-			handleMessageHeartbeat(payload);
+            handleMessageHeartbeat();
 		return;
 	default:
 		if (AuthState() != THORQ_AUTH_STATE_OK)
@@ -553,7 +536,6 @@ void Client::HandleMessage(ENetPacket* packet)
 
 		break;
 	}
-
 
 	qDebug() << "UwU";
 }
@@ -594,10 +576,8 @@ void Client::handleMessageVersion(const thorq_payload_t& payload)
 		return;
 	}
 }
-void Client::handleMessageHeartbeat(const thorq_payload_t& payload)
+void Client::handleMessageHeartbeat()
 {
-	Q_UNUSED(payload)
-
 	if (m_awaitingPing)
 	{
 		m_awaitingPing = false;
@@ -613,8 +593,7 @@ void Client::handleMessageCrypto(const thorq_payload_t& payload)
 
     switch (cmd) {
 	case THORQ_CRYPTO_ESTABLISH:
-	{
-		qDebug() << tr("Establishing crypto");
+    {
         SetCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
 
         std::vector<std::uint8_t> data;
@@ -624,8 +603,6 @@ void Client::handleMessageCrypto(const thorq_payload_t& payload)
 
         if (m_crypto->agree(data))
         {
-			qDebug() << "Sending public key";
-
             thorq_payload_crypto_pack(response, THORQ_CRYPTO_ESTABLISH, m_crypto->publicKey());
             SendPayload(response, false, true);
 		}
@@ -634,24 +611,17 @@ void Client::handleMessageCrypto(const thorq_payload_t& payload)
 			m_crypto->reset();
 			SetCryptoState(THORQ_CRYPTO_STATE_NONE);
 		}
-	}
-		break;
-	case THORQ_CRYPTO_VERIFY:
-	{
-		qDebug() << "Verifying";
+        break;
+    }
+    case THORQ_CRYPTO_VERIFY:
         SetCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
-
         SendPayload(payload, true, true);
-	}
 		break;
-	case THORQ_CRYPTO_OK:
-	{
-		qDebug() << "CryptOk";
-		SetCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
-	}
+    case THORQ_CRYPTO_OK:
+        SetCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
 		break;
 	default:
-		qDebug() << "Crypt???";
+        qDebug() << "CRYPT: Unexpected message:" << cmd;
 		return;
 	}
 }
@@ -659,20 +629,16 @@ void Client::handleMessageAuth(const thorq_payload_t& payload)
 {
     thorq_payload_t response;
 
-	qDebug() << "Auth";
-
     thorq_auth_cmd_t cmd;
     thorq_payload_auth_get_cmd(payload, cmd);
 
     switch (cmd) {
-	case THORQ_AUTH_SYSTEMID_REQ:
-		qDebug() << "REQ SystemID";
+    case THORQ_AUTH_SYSTEMID_REQ:
         thorq_payload_auth_pack(response, THORQ_AUTH_SYSTEMID, ThorQ::systemid_generate());
         SendPayload(response);
         SetAuthState(THORQ_AUTH_STATE_HWID_CHECKING);
 		break;
-	case THORQ_AUTH_REGKEY_REQ:
-		qDebug() << "REQ RegistrationKey";
+    case THORQ_AUTH_REGKEY_REQ:
         thorq_payload_auth_pack(response, THORQ_AUTH_REGKEY_AWAITING_INPUT);
 		SendPayload(response);
         SetAuthState(THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT);
@@ -682,7 +648,7 @@ void Client::handleMessageAuth(const thorq_payload_t& payload)
 		SetAuthState(THORQ_AUTH_STATE_OK);
 		break;
 	default:
-		qDebug() << "Unexpected message:" << cmd;
+        qDebug() << "AUTH: Unexpected message:" << cmd;
 		break;
 	}
 }
@@ -711,8 +677,6 @@ void Client::requestEncryptionHandshake()
 {
     if (ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED)
         return;
-
-	qDebug() << "Requesting";
 
     m_crypto->reset();
     SetCryptoState(THORQ_CRYPTO_STATE_REQUESTED);
