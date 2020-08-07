@@ -72,7 +72,8 @@ void ThorQ::Instance::setPeer(ENetPeer* peer)
 {
 	m_peer->data = nullptr;
 	m_peer = peer;
-	peer->data = this;
+	if (peer != nullptr)
+		peer->data = this;
 }
 
 ENetPeer* ThorQ::Instance::peer() const
