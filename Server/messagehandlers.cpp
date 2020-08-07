@@ -171,7 +171,9 @@ void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t* payload
         }
         else
         {
-            instance->disconnect(THORQ_DISCONNECT_REASON_AUTH_INVALID);
+            thorq_payload_auth_pack(response, THORQ_AUTH_REGKEY_REQ);
+            instance->sendPayload(&response, true, true);
+            instance->setAuthState(THORQ_AUTH_STATE_REGKEY_REQUESTING);
         }
         break;
     }
