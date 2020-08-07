@@ -32,11 +32,11 @@ const char* uiStatusList[THORQ_LOGIN_STATE_LOGGEDIN + 1][2]
 LoginWidget::LoginWidget(QWidget* parent)
 	: QWidget(parent)
     , m_state(0)
-	, m_ping(0)
+    , m_ping(0)
     , m_title(new QLabel(this))
     , m_onlineStatus(new QLabel(this))
-    , m_usernameInput(new QLineEdit(this))
-    , m_loginButton(new QPushButton(this))
+    , m_textInput(new QLineEdit(this))
+    , m_acceptButton(new QPushButton(this))
     , m_mainLayout(new QVBoxLayout(this))
     , m_headerLayout(new QHBoxLayout())
 {
@@ -46,29 +46,39 @@ LoginWidget::LoginWidget(QWidget* parent)
 	m_title->setStyleSheet("font-size: 72px");
 
     m_onlineStatus->setText("● Offline");
-	m_onlineStatus->setStyleSheet("font-size: 16px; color: #FF0000");
-
-    m_usernameInput->setText("Username");
-
-    m_loginButton->setText("Login");
+    m_onlineStatus->setStyleSheet("font-size: 16px; color: #FF0000");
 
 	m_headerLayout->addWidget(m_title);
     m_headerLayout->addWidget(m_onlineStatus);
 
 	m_mainLayout->addLayout(m_headerLayout);
-	m_mainLayout->addWidget(m_usernameInput);
-	m_mainLayout->addWidget(m_loginButton);
+    m_mainLayout->addWidget(m_textInput);
+    m_mainLayout->addWidget(m_acceptButton);
 	setLayout(m_mainLayout);
 
 	setFixedSize(m_mainLayout->geometry().size());
 	setWindowFlags(Qt::MSWindowsFixedSizeDialogHint);
 
-	connect(m_loginButton, &QPushButton::clicked, [this](){ emit LoginRequest(m_usernameInput->text()); });
+    QObject::connect(m_acceptButton, &QPushButton::pressed, [this]()
+    {
+        m_acceptButton->setText("");
+    });
+    QObject::connect(m_acceptButton, &QPushButton::clicked, [this]()
+    {
+        if (m_state == THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT)
+        {
+            emit regkeyEntered(m_textInput->text());
+        }
+        else
+        {
+            emit usernameEntered(m_textInput->text());
+        }
+    });
 
     updateUiState();
 }
 
-void LoginWidget::SetConnectionState(thorq_connection_state_t state)
+void LoginWidget::setConnectionState(thorq_connection_state_t state)
 {
     if (m_state != state)
 	{
@@ -77,7 +87,7 @@ void LoginWidget::SetConnectionState(thorq_connection_state_t state)
     }
 }
 
-void LoginWidget::SetCryptoState(thorq_crypto_state_t state)
+void LoginWidget::setCryptoState(thorq_crypto_state_t state)
 {
     if (m_state != state)
     {
@@ -86,7 +96,7 @@ void LoginWidget::SetCryptoState(thorq_crypto_state_t state)
     }
 }
 
-void LoginWidget::SetAuthState(thorq_auth_state_t state)
+void LoginWidget::setAuthState(thorq_auth_state_t state)
 {
     if (m_state != state)
     {
@@ -95,7 +105,7 @@ void LoginWidget::SetAuthState(thorq_auth_state_t state)
     }
 }
 
-void LoginWidget::SetLoginState(thorq_login_state_t state)
+void LoginWidget::setLoginState(thorq_login_state_t state)
 {
     if (m_state != state)
     {
@@ -104,13 +114,13 @@ void LoginWidget::SetLoginState(thorq_login_state_t state)
     }
 }
 
-void LoginWidget::SetConnectionPing(uint ping)
+void LoginWidget::setConnectionPing(uint ping)
 {
 	if (m_ping != ping)
 	{
 		m_ping = ping;
 		updateUiPing();
-	}
+    }
 }
 
 void LoginWidget::updateUiState()
@@ -126,15 +136,26 @@ void LoginWidget::updateUiState()
         m_onlineStatus->setText(QString(uiStatusList[m_state][0]).arg(m_ping));
     }
 
-    if (m_state == THORQ_LOGIN_STATE_LOGGEDOUT)
+    if (m_state == THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT)
     {
-        m_loginButton->show();
-        m_usernameInput->show();
+        m_textInput->setText("");
+        m_textInput->show();
+
+        m_acceptButton->setText("Submit");
+        m_acceptButton->show();
+    }
+    else if (m_state == THORQ_LOGIN_STATE_LOGGEDOUT)
+    {
+        m_textInput->setText("");
+        m_textInput->show();
+
+        m_acceptButton->setText("Login");
+        m_acceptButton->show();
     }
     else
     {
-        m_loginButton->hide();
-        m_usernameInput->hide();
+        m_acceptButton->hide();
+        m_textInput->hide();
     }
 }
 

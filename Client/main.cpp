@@ -61,7 +61,7 @@ int main(int argc, char** argv)
 	app.setDesktopFileName(THORQ_APPLICATION_NAME);
 	app.setApplicationVersion(THORQ_VERSION_CLIENT.to_string().c_str());
 	app.setWindowIcon(QIcon(":/shockGrey.ico"));
-	app.setQuitOnLastWindowClosed(false);
+    //app.setQuitOnLastWindowClosed(false);
 
 	// Initialize ENet
 	if (enet_initialize() < 0)
@@ -76,33 +76,21 @@ int main(int argc, char** argv)
 	loginWidget.show();
 
 	Client* cli = Client::NewClient();
-	QObject::connect(cli, &Client::ConnectionStateChanged, &loginWidget, &LoginWidget::SetConnectionState);
-	QObject::connect(cli, &Client::CryptoStateChanged, &loginWidget, &LoginWidget::SetCryptoState);
-	QObject::connect(cli, &Client::AuthStateChanged, &loginWidget, &LoginWidget::SetAuthState);
-	QObject::connect(cli, &Client::LoginStateChanged, &loginWidget, &LoginWidget::SetLoginState);
-	QObject::connect(cli, &Client::PingChanged, &loginWidget, &LoginWidget::SetConnectionPing);
+    QObject::connect(cli, &Client::ConnectionStateChanged, &loginWidget, &LoginWidget::setConnectionState);
+    QObject::connect(cli, &Client::CryptoStateChanged, &loginWidget, &LoginWidget::setCryptoState);
+    QObject::connect(cli, &Client::AuthStateChanged, &loginWidget, &LoginWidget::setAuthState);
+    QObject::connect(cli, &Client::LoginStateChanged, &loginWidget, &LoginWidget::setLoginState);
+    QObject::connect(cli, &Client::PingChanged, &loginWidget, &LoginWidget::setConnectionPing);
 
-	QInputDialog* dialog = new QInputDialog(&loginWidget);
-	dialog->setWindowTitle("please provide a registration key");
-	dialog->setLabelText("Registration key:");
+    QMessageBox errorBox(&loginWidget);
+    errorBox.setIcon(QMessageBox::Warning);
+    errorBox.setWindowTitle("error");
 
-	QMessageBox* errorBox = new QMessageBox(&loginWidget);
-	errorBox->setIcon(QMessageBox::Warning);
-	errorBox->setWindowTitle("error");
+    //QObject::connect(cli, &Client::Error, &errorBox, &QMessageBox::setText);
+    //QObject::connect(cli, &Client::Error, &errorBox, &QMessageBox::exec);
 
-	QObject::connect(cli, &Client::ConnectionStateChanged,    dialog,       &QWidget::hide);
-
-	QObject::connect(cli, &Client::RequestingRegistrationKey, dialog,       &QWidget::show);
-	QObject::connect(cli, &Client::RequestingRegistrationKey, &loginWidget, &QWidget::hide);
-
-	QObject::connect(dialog, &QInputDialog::textValueSelected, &loginWidget, &QWidget::show);
-	QObject::connect(dialog, &QInputDialog::textValueSelected, cli, &Client::SetRegistrationKey);
-	QObject::connect(dialog, &QInputDialog::textValueSelected, [dialog](){ dialog->setTextValue(""); });
-
-	QObject::connect(cli, &Client::Error, errorBox, &QMessageBox::setText);
-	QObject::connect(cli, &Client::Error, errorBox, &QMessageBox::show);
-
-	QObject::connect(&loginWidget, &LoginWidget::LoginRequest, [](const QString& username) { qDebug() << username; });
+    QObject::connect(&loginWidget, &LoginWidget::regkeyEntered, cli, &Client::SetRegistrationKey);
+    QObject::connect(&loginWidget, &LoginWidget::usernameEntered, cli, &Client::Login);
 
 	cli->Connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT);
 

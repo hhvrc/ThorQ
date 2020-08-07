@@ -190,6 +190,7 @@ void Client::Disconnect()
 
 void Client::Login(const QString &username)
 {
+    qDebug() << "Login:" << username;
 	if (LoginState() != THORQ_LOGIN_STATE_LOGGEDOUT)
 		return;
 
