@@ -23,7 +23,19 @@
 void handleEventNewConnection(ENetPeer* peer)
 {
 	// Dont worry, this is ok
-	(new ThorQ::Instance(peer))->setConnectionState(THORQ_CONNECTION_STATE_CONNECTED);
+	ThorQ::Instance* instance = new ThorQ::Instance(peer);
+	instance->setConnectionState(THORQ_CONNECTION_STATE_CONNECTED);
+
+	thorq_payload_t payload;
+
+	thorq_payload_version_pack(payload, THORQ_APP_LINK,   THORQ_VERSION_LINK);
+	instance->sendPayload(&payload, true, true);
+
+	thorq_payload_version_pack(payload, THORQ_APP_CLIENT, THORQ_VERSION_CLIENT);
+	instance->sendPayload(&payload, true, true);
+
+	thorq_payload_version_pack(payload, THORQ_APP_SERVER, THORQ_VERSION_SERVER);
+	instance->sendPayload(&payload, true, true);
 
 	thorq_debug_fmt("A new client connected from:\n\tIPV6: %s\n\tPORT: %u\n", enetaddr_to_str(&peer->address).c_str(), peer->address.port)
 	fflush(stdout);
