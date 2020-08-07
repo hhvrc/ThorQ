@@ -14,14 +14,14 @@ public:
 	InstanceMap() = default;
 	~InstanceMap();
 
-    bool TryAdd(Instance* peer, const std::string& name);
+	bool tryAdd(Instance* peer, const std::string& name);
 
-	Instance* Get(const std::string& name);
-	bool Contains(const std::string& name) const;
-	std::vector<Instance*> ToList();
-	void Remove(const std::string& name);
+	Instance* get(const std::string& name);
+	bool contains(const std::string& name) const;
+	std::vector<Instance*> instances();
+	void remove(const std::string& name);
 
-	void Clear();
+	void clear();
 };
 }
 

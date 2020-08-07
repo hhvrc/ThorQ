@@ -24,6 +24,7 @@
 
 #define SINGLETON_BASE
 #include "singletons.h"
+#include "instance.h"
 #include "instancemap.h"
 #include "eventhandlers.h"
 
@@ -33,6 +34,8 @@
 
 bool enet_was_initialized = false;
 std::atomic_bool runServer = true;
+
+std::vector<ENetPeer*> peers;
 
 void exit_handler(int s)
 {
@@ -44,14 +47,49 @@ void exit_handler(int s)
 
 void exitCleanup()
 {
-	if (enet_was_initialized)
-		enet_deinitialize();
+	if (!enet_was_initialized)
+		return;
 
-	if (registeredInstances != nullptr)
-		delete registeredInstances;
+	for (ENetPeer* peer : peers)
+		enet_peer_disconnect(peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
 
-	if (server != nullptr)
-		enet_host_destroy(server);
+	ENetEvent event;
+	while (peers.size() != 0)
+	{
+		if (enet_host_service(server, &event, 0) > 0)
+		{
+			switch (event.type)
+			{
+			case ENET_EVENT_TYPE_CONNECT:
+				event.peer->data = nullptr;
+				peers.push_back(event.peer);
+				enet_peer_disconnect(event.peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
+				break;
+			case ENET_EVENT_TYPE_RECEIVE:
+				enet_packet_destroy(event.packet);
+				break;
+			case ENET_EVENT_TYPE_DISCONNECT:
+			case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
+				if (event.peer->data != nullptr)
+				{
+					ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
+					registeredInstances->remove(instance->name());
+					delete reinterpret_cast<ThorQ::Instance*>(event.peer->data);
+				}
+				else
+				{
+					enet_peer_reset(event.peer);
+				}
+				break;
+			case ENET_EVENT_TYPE_NONE:
+				break;
+			}
+		}
+	}
+
+	delete registeredInstances;
+	enet_host_destroy(server);
+	enet_deinitialize();
 }
 
 int main(int argc, char** argv)
@@ -59,8 +97,6 @@ int main(int argc, char** argv)
    signal(SIGINT, exit_handler);
 
    atexit(exitCleanup);
-
-	registeredInstances = new ThorQ::InstanceMap();
 
 	ENetAddress address;
 	address.host = ENET_HOST_ANY;
@@ -120,6 +156,8 @@ int main(int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 
+	registeredInstances = new ThorQ::InstanceMap();
+
 	ENetEvent event;
 	while (runServer.load()) {
 		while (enet_host_service(server, &event, 0) > 0)
@@ -127,6 +165,7 @@ int main(int argc, char** argv)
 			switch (event.type)
 			{
 			case ENET_EVENT_TYPE_CONNECT:
+				peers.push_back(event.peer);
 				handleEventNewConnection(event.peer);
 				break;
 			case ENET_EVENT_TYPE_RECEIVE:
