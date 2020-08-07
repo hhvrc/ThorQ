@@ -274,6 +274,8 @@ void Client::SetRegistrationKey(const QString& regKey)
 		SCOPELOCK(l_registrationKey);
 		m_registrationKey = regKey.toStdString();
 	}
+
+	m_actionFlags.fetch_or(ACTION_SendRegKey);
 }
 
 void Client::Service()
@@ -343,14 +345,15 @@ void Client::Service()
 			}
 		}
 
-
-		if (AuthState() == THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT)
+		if ((actions & ACTION_SendRegKey) != 0)
 		{
-			SCOPELOCK(l_registrationKey);
-			if (!m_registrationKey.empty())
+			if (AuthState() == THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT)
 			{
 				thorq_payload_t payload;
-				thorq_payload_auth_pack(payload, THORQ_AUTH_REGKEY);
+				{
+					SCOPELOCK(l_registrationKey);
+					thorq_payload_auth_pack(payload, THORQ_AUTH_REGKEY, std::vector<std::uint8_t>(m_registrationKey.begin(), m_registrationKey.end()));
+				}
 				SendPayload(payload, true, true);
 				SetAuthState(THORQ_AUTH_STATE_REGKEY_CHECKING);
 			}
