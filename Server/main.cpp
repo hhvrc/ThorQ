@@ -51,41 +51,45 @@ void exitCleanup()
 	if (!enet_was_initialized)
 		return;
 
-	for (ENetPeer* peer : peers)
-		enet_peer_disconnect(peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
+    if (server != nullptr)
+    {
+        for (ENetPeer* peer : peers)
+            enet_peer_disconnect(peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
 
-	ENetEvent event;
-	while (peers.size() != 0)
-	{
-		if (enet_host_service(server, &event, 0) > 0)
-		{
-			switch (event.type)
-			{
-			case ENET_EVENT_TYPE_CONNECT:
-				event.peer->data = nullptr;
-				enet_peer_disconnect_now(event.peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
-				break;
-			case ENET_EVENT_TYPE_RECEIVE:
-				enet_packet_destroy(event.packet);
-				break;
-			case ENET_EVENT_TYPE_DISCONNECT:
-			case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-			{
-				if (event.peer->data != nullptr)
-					(reinterpret_cast<ThorQ::Instance*>(event.peer->data))->setPeer(nullptr);
-				enet_peer_reset(event.peer);
-				auto it = std::find(peers.begin(), peers.end(), event.peer);
-				if (it != peers.end())
-					peers.erase(it);
-				break;
-			}
-			case ENET_EVENT_TYPE_NONE:
-				break;
-			}
-		}
-	}
+        ENetEvent event;
+        while (peers.size() != 0)
+        {
+            if (enet_host_service(server, &event, 0) > 0)
+            {
+                switch (event.type)
+                {
+                case ENET_EVENT_TYPE_CONNECT:
+                    event.peer->data = nullptr;
+                    enet_peer_disconnect_now(event.peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
+                    break;
+                case ENET_EVENT_TYPE_RECEIVE:
+                    enet_packet_destroy(event.packet);
+                    break;
+                case ENET_EVENT_TYPE_DISCONNECT:
+                case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
+                {
+                    if (event.peer->data != nullptr)
+                        (reinterpret_cast<ThorQ::Instance*>(event.peer->data))->setPeer(nullptr);
+                    enet_peer_reset(event.peer);
+                    auto it = std::find(peers.begin(), peers.end(), event.peer);
+                    if (it != peers.end())
+                        peers.erase(it);
+                    break;
+                }
+                case ENET_EVENT_TYPE_NONE:
+                    break;
+                }
+            }
+        }
 
-	enet_host_destroy(server);
+        enet_host_destroy(server);
+    }
+
 	enet_deinitialize();
 
 	std::vector<ThorQ::Instance*> instances = registeredInstances->instances();
