@@ -295,16 +295,10 @@ void Client::Service()
 			enet_packet_destroy(event.packet);
 			break;
 		case ENET_EVENT_TYPE_DISCONNECT:
-			if (ConnectionState() != THORQ_CONNECTION_STATE_DISCONNECTING)
-				emit Error(tr("Unexpected disconnection"));
-			SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
-			m_peer = nullptr;
-			qDebug() << "Disconnected:" << event.data;
+			handleDisconnect(event.data);
 			break;
 		case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-			m_peer = nullptr;
-			emit Error(tr("Connection timeout"));
-			SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
+			handleDisconnect(THORQ_DISCONNECT_REASON_TIMEDOUT);
 			break;
 		case ENET_EVENT_TYPE_NONE:
 			break;
@@ -580,17 +574,17 @@ void Client::handleMessageVersion(const thorq_payload_t& payload)
 		break;
 	case THORQ_APP_CLIENT:
 		if (version > THORQ_VERSION_CLIENT)
-		{ qDebug() << tr("Client has updated from %1 to %2").arg(THORQ_VERSION_CLIENT.to_string().c_str()).arg(version.to_string().c_str()); }
+		{ qDebug() << tr("Client has updated from %1 to %2").arg(THORQ_VERSION_CLIENT.to_string().c_str()).arg(version.to_string().c_str()); emit Error(tr("New update available!\nClient v%1").arg(version.to_string().c_str())); }
 		else if (version < THORQ_VERSION_CLIENT)
-		{ qDebug() << tr("Client has downgraded from %1 to %2").arg(THORQ_VERSION_CLIENT.to_string().c_str()).arg(version.to_string().c_str()); }
+		{ qDebug() << tr("Client has downgraded from %1 to %2").arg(THORQ_VERSION_CLIENT.to_string().c_str()).arg(version.to_string().c_str()); emit Error(tr("Hello future-person!\nServer expects: Client v%1\nYou have: Client v%2").arg(version.to_string().c_str()).arg(THORQ_VERSION_CLIENT.to_string().c_str())); }
 		else
 		{ qDebug() << tr("Client version compatible"); }
 		break;
 	case THORQ_APP_LINK:
 		if (version > THORQ_VERSION_LINK)
-		{ qDebug() << tr("Protocol has updated from %1 to %2").arg(THORQ_VERSION_LINK.to_string().c_str()).arg(version.to_string().c_str()); }
+		{ qDebug() << tr("Protocol has updated from %1 to %2").arg(THORQ_VERSION_LINK.to_string().c_str()).arg(version.to_string().c_str()); emit Error(tr("Version incompatible!\nPlease upgrade")); }
 		else if (version < THORQ_VERSION_LINK)
-		{ qDebug() << tr("Protocol has downgraded from %1 to %2").arg(THORQ_VERSION_LINK.to_string().c_str()).arg(version.to_string().c_str()); }
+		{ qDebug() << tr("Protocol has downgraded from %1 to %2").arg(THORQ_VERSION_LINK.to_string().c_str()).arg(version.to_string().c_str()); emit Error(tr("Version inompatible!\nPlease downgrade")); }
 		else
 		{ qDebug() << tr("Protocol version compatible"); }
 		break;
@@ -724,5 +718,42 @@ void Client::requestEncryptionHandshake()
 
 	thorq_payload_t payload;
 	thorq_payload_crypto_pack(payload, THORQ_CRYPTO_REQUEST);
-    SendPayload(payload, false, true);
+	SendPayload(payload, false, true);
+}
+
+void Client::handleDisconnect(std::uint32_t reason)
+{
+	m_peer = nullptr;
+	SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
+
+	if (reason != 0)
+	{
+		switch (reason)
+		{
+		case THORQ_DISCONNECT_REASON_TIMEDOUT:
+			emit Error(tr("Connection timed out"));
+			return;
+		case THORQ_DISCONNECT_REASON_VERSION_INCOMPATIBLE:
+			emit Error(tr("Please update you application\nDiscord: YameroDev#9058"));
+			break;
+		case THORQ_DISCONNECT_REASON_CRYPT_FAILED:
+			emit Error(tr("Encryption failed"));
+			break;
+		case THORQ_DISCONNECT_REASON_AUTH_INVALID:
+			emit Error(tr("Authentication failed"));
+			break;
+		case THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED:
+			emit Error(tr("Server shut down"));
+			break;
+		case THORQ_DISCONNECT_REASON_SHUTDOWN_MAINTANENCE:
+			emit Error(tr("Server is undergoing maintenance"));
+			break;
+		case THORQ_DISCONNECT_REASON_KICKED:
+			emit Error(tr("You have been kicked"));
+			break;
+		default:
+			emit Error(tr("Disconnected for unknown reason"));
+			break;
+		}
+	}
 }

@@ -6,6 +6,7 @@
 #include <QRegExp>
 #include <QDebug>
 #include <QTranslator>
+#include <QMessageBox>
 
 #include <enet.h>
 
@@ -60,6 +61,7 @@ int main(int argc, char** argv)
 	app.setDesktopFileName(THORQ_APPLICATION_NAME);
 	app.setApplicationVersion(THORQ_VERSION_CLIENT.to_string().c_str());
 	app.setWindowIcon(QIcon(":/shockGrey.ico"));
+	app.setQuitOnLastWindowClosed(false);
 
 	// Initialize ENet
 	if (enet_initialize() < 0)
@@ -81,15 +83,26 @@ int main(int argc, char** argv)
 	QObject::connect(cli, &Client::PingChanged, &loginWidget, &LoginWidget::SetConnectionPing);
 
 	QInputDialog* dialog = new QInputDialog(&loginWidget);
-	dialog->setWindowTitle("Please provide a registration key");
+	dialog->setWindowTitle("please provide a registration key");
 	dialog->setLabelText("Registration key:");
-	QObject::connect(cli, &Client::RequestingRegistrationKey, dialog, &QWidget::show);
-	QObject::connect(dialog, &QInputDialog::textValueSelected, [&](const QString& input){ cli->SetRegistrationKey(input); });
 
-	QObject::connect(&loginWidget, &LoginWidget::LoginRequest, [&](const QString& username)
-	{
-	   qDebug() << username;
-	});
+	QMessageBox* errorBox = new QMessageBox(&loginWidget);
+	errorBox->setIcon(QMessageBox::Warning);
+	errorBox->setWindowTitle("error");
+
+	QObject::connect(cli, &Client::ConnectionStateChanged,    dialog,       &QWidget::hide);
+
+	QObject::connect(cli, &Client::RequestingRegistrationKey, dialog,       &QWidget::show);
+	QObject::connect(cli, &Client::RequestingRegistrationKey, &loginWidget, &QWidget::hide);
+
+	QObject::connect(dialog, &QInputDialog::textValueSelected, &loginWidget, &QWidget::show);
+	QObject::connect(dialog, &QInputDialog::textValueSelected, cli, &Client::SetRegistrationKey);
+	QObject::connect(dialog, &QInputDialog::textValueSelected, [dialog](){ dialog->setTextValue(""); });
+
+	QObject::connect(cli, &Client::Error, errorBox, &QMessageBox::setText);
+	QObject::connect(cli, &Client::Error, errorBox, &QMessageBox::show);
+
+	QObject::connect(&loginWidget, &LoginWidget::LoginRequest, [](const QString& username) { qDebug() << username; });
 
 	cli->Connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT);
 

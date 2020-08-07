@@ -355,6 +355,8 @@ private slots:
      * @brief requestEncryptionHandshake
      */
 	void requestEncryptionHandshake();
+
+	void handleDisconnect(std::uint32_t reason);
 private:
 	ThorQ::Crypto* m_crypto;
 
