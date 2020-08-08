@@ -59,10 +59,6 @@ LoginWidget::LoginWidget(QWidget* parent)
 	setFixedSize(m_mainLayout->geometry().size());
 	setWindowFlags(Qt::MSWindowsFixedSizeDialogHint);
 
-    QObject::connect(m_acceptButton, &QPushButton::pressed, [this]()
-    {
-        m_acceptButton->setText("");
-    });
     QObject::connect(m_acceptButton, &QPushButton::clicked, [this]()
     {
         if (m_state == THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT)

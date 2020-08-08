@@ -633,7 +633,7 @@ void OpenVROverlayController::OverlayDraw()
 	if (glTexture != 0)
 	{
 		// Construct OpenVR framebuffer container
-		vr::Texture_t texture = {reinterpret_cast<void*>(glTexture), vr::TextureType_OpenGL, vr::ColorSpace_Auto };
+        vr::Texture_t texture = { reinterpret_cast<void*>((std::uintptr_t)glTexture), vr::TextureType_OpenGL, vr::ColorSpace_Auto };
 
 		// Give framebuffer id to OpenVR
 		vr::EVROverlayError err = vr::VROverlay()->SetOverlayTexture(m_handle, &texture);
