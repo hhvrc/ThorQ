@@ -92,7 +92,7 @@ Client::Client(ENetHost* host)
 
 	connect(m_serviceTimer, &QTimer::timeout, this, &Client::Service);
 	m_serviceTimer->setSingleShot(false);
-    m_serviceTimer->setInterval(10);
+    m_serviceTimer->setInterval(5);
 	m_serviceTimer->start();
 
 	m_thread->start();
