@@ -72,7 +72,6 @@ int main(int argc, char** argv)
 	qDebug() << "Using" << Client::Version();
 
 	LoginWidget loginWidget;
-	loginWidget.moveToThread(app.thread());
 	loginWidget.show();
 
 	Client* cli = Client::NewClient();
