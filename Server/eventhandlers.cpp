@@ -89,7 +89,6 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 	case THORQ_PAYLOAD_ID_AUTH:
 		if (thorq_payload_auth_is_valid(payload))
 		{
-            thorq_debug("Auth!")
 			handleMessageAuth(instance, &payload);
 			return;
 		}
@@ -110,11 +109,8 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
         break;
     case THORQ_PAYLOAD_ID_EVENT:
     case THORQ_PAYLOAD_ID_ANNOUNCEMENT:
-        thorq_debug("These messages can only be sent by the server!\n");
-        fflush(stdout);
-        break;
 	case THORQ_PAYLOAD_ID_INVALID:
-        thorq_debug("Got invalid payload!\n");
+        thorq_debug_fmt("Got invalid payload: %i\n", payload.id);
 		fflush(stdout);
         break;
 	default:
