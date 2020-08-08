@@ -30,7 +30,6 @@
 #include "eventhandlers.h"
 
 #define PARSE_PORT false
-#define SERVER_PORT 12345
 #define SERVER_MAX_CONNECTIONS 1024
 
 bool enet_was_initialized = false;
@@ -151,7 +150,7 @@ int main(int argc, char** argv)
 #else
 	(void)argc;
 	(void)argv;
-	address.port = SERVER_PORT;
+    address.port = THORQ_SERVER_PORT;
 #endif
 	if (enet_initialize() < 0)
 	{
