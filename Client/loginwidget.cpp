@@ -43,7 +43,7 @@ LoginWidget::LoginWidget(QWidget* parent)
 	setWindowTitle("ThorQ Login");
 
     m_title->setText("ThorQ");
-	m_title->setStyleSheet("font-size: 72px");
+    m_title->setStyleSheet("font-size: 72px; color: #FFFFFF");
 
     m_onlineStatus->setText("● Offline");
     m_onlineStatus->setStyleSheet("font-size: 16px; color: #FF0000");
@@ -139,6 +139,8 @@ void LoginWidget::updateUiState()
 
         m_acceptButton->setText("Submit");
         m_acceptButton->show();
+
+        adjustSize();
     }
     else if (m_state == THORQ_LOGIN_STATE_LOGGEDOUT)
     {
@@ -147,11 +149,14 @@ void LoginWidget::updateUiState()
 
         m_acceptButton->setText("Login");
         m_acceptButton->show();
+
+        adjustSize();
     }
     else
     {
         m_acceptButton->hide();
         m_textInput->hide();
+        adjustSize();
     }
 }
 
