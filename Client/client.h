@@ -383,7 +383,7 @@ private:
 	std::string m_registrationKey;
 
 	std::atomic<std::uint16_t> m_actionFlags;
-	std::atomic<std::uint32_t> m_collarState;
+    std::atomic<std::uint64_t> m_collarState;
 
 	QThread* m_thread;
 	QTimer* m_serviceTimer;

@@ -229,30 +229,30 @@ void Client::LeaveSession()
 }
 
 // Pack the collar data like this so we can write everything to one atomic variable
-// SIZE   #    4 |     4 |       4 |    4 |     8
-// OFFSET #   20 |    16 |      12 |   08 |     0
-// MASK   #  0x7 |   0x7 |     0x7 |  0x7 |  0xFF
+// SIZE   #    8 |     8 |       8 |    8 |     8
+// OFFSET #   56 |    48 |      40 |   32 |     0
+// MASK   # 0xFF |  0xFF |    0xFF | 0xFF |  0xFF
 // NAME   # AUTO | SHOCK | VIBRATE | BEEP | FLAGS
 
 void Client::SetShock(std::uint8_t value)
 {
-	m_collarState.fetch_and(~((0xF << 16) | 0xFF));
-    m_collarState.fetch_or((std::min(value, std::uint8_t(0x7)) << 16) | THORQ_COLLAR_FLAG_SHOCK);
+    m_collarState.fetch_and(~((0xFFull << 56) | 0xFFull));
+    m_collarState.fetch_or(((std::uint64_t)value << 56) | THORQ_COLLAR_FLAG_SHOCK);
 }
 void Client::SetVibrate(std::uint8_t value)
 {
-	m_collarState.fetch_and(~((0xF << 12) | 0xFF));
-    m_collarState.fetch_or((std::min(value, std::uint8_t(0x7)) << 12) | THORQ_COLLAR_FLAG_VIBRATE);
+    m_collarState.fetch_and(~((0xFFull << 48) | 0xFFull));
+    m_collarState.fetch_or((std::uint64_t(value) << 48) | THORQ_COLLAR_FLAG_VIBRATE);
 }
 void Client::SetBeep(std::uint8_t value)
 {
-	m_collarState.fetch_and(~((0xF << 8) | 0xFF));
-    m_collarState.fetch_or((std::min(value, std::uint8_t(0x7)) << 8) | THORQ_COLLAR_FLAG_BEEP);
+    m_collarState.fetch_and(~((0xFFull << 40) | 0xFFull));
+    m_collarState.fetch_or((std::uint64_t(value) << 40) | THORQ_COLLAR_FLAG_BEEP);
 }
 void Client::EnableAuto(std::uint8_t value)
 {
-	m_collarState.fetch_and(~((0xF << 20) | 0xFF));
-    m_collarState.fetch_or((std::min(value, std::uint8_t(0x7)) << 20) | THORQ_COLLAR_FLAG_AUTO);
+    m_collarState.fetch_and(~((0xFFull << 32) | 0xFFull));
+    m_collarState.fetch_or((std::uint64_t(value) << 32) | THORQ_COLLAR_FLAG_AUTO);
 }
 void Client::DisableAuto()
 {
@@ -302,48 +302,88 @@ void Client::Service()
 
 	// Send stuff
 	if (ConnectionState() == THORQ_CONNECTION_STATE_CONNECTED)
-	{
-		std::uint32_t collarState = m_collarState.fetch_and(~0xFF);
+    {
+        if (LoginState() == THORQ_LOGIN_STATE_LOGGEDIN)
+        {
+            if ((actions & ACTION_Logout) != 0)
+            {
+                thorq_payload_t payload;
 
-		if (SessionState() == THORQ_SESSION_STATE_ACTIVE && ((collarState & THORQ_COLLAR_FLAG_IMPULSE) != 0))
-		{
-			thorq_payload_t payload;
-			thorq_payload_collar_pack(payload, collarState & 0xFF, (collarState >> 16) & 0xF, (collarState >> 12) & 0xF, (collarState >> 8) & 0xF, (collarState >> 20) & 0xF);
-			SendPayload(payload, true, false);
-		}
-		else if (SessionState() == THORQ_SESSION_STATE_DECIDING)
-		{
-			if ((actions & ACTION_SessionAccept) != 0)
-			{
-				thorq_payload_t payload;
-				thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_ACCEPT, m_requestingPartner);
-				SendPayload(payload, true, true);
-				m_requestingPartner.clear();
-				SetSessionState(THORQ_SESSION_STATE_JOINING);
-			}
-			else if ((actions & ACTION_SessionDeny) != 0)
-			{
-				thorq_payload_t payload;
-				thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_DENY, m_requestingPartner);
-				SendPayload(payload, true, true);
-				m_requestingPartner.clear();
-				SetSessionState(THORQ_SESSION_STATE_NONE);
-			}
-		}
+                SCOPELOCK(l_username);
+                thorq_payload_command_pack(payload, THORQ_COMMAND_ID_LOGIN, m_username);
+                SendPayload(payload, true, true);
 
-		if ((actions & ACTION_SendRegKey) != 0)
-		{
-			if (AuthState() == THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT)
-			{
-				thorq_payload_t payload;
+                SetLoginState(THORQ_LOGIN_STATE_LOGGINGIN);
+            }
+            else
+            {
+                std::uint64_t collarState = m_collarState.fetch_and(~0xFF);
 
-                SCOPELOCK(l_registrationKey);
-                thorq_payload_auth_pack(payload, THORQ_AUTH_REGKEY, std::vector<std::uint8_t>(m_registrationKey.begin(), m_registrationKey.end()));
+                if (SessionState() == THORQ_SESSION_STATE_ACTIVE && ((collarState & THORQ_COLLAR_FLAG_IMPULSE) != 0))
+                {
+                    thorq_payload_t payload;
+                    thorq_payload_collar_pack(payload, collarState & 0xFF, (collarState >> 56) & 0xFF, (collarState >> 48) & 0xFF, (collarState >> 40) & 0xFF, (collarState >> 32) & 0xFF);
+                    SendPayload(payload, true, false);
+                }
+                else
+                {
+                    if ((actions & ACTION_SessionRequest) != 0)
+                    {
+                        thorq_payload_t payload;
+                        thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_DENY, m_requestedPartner);
+                        SendPayload(payload, true, true);
+                        SetSessionState(THORQ_SESSION_STATE_REQUESTING);
+                    }
 
-				SendPayload(payload, true, true);
-				SetAuthState(THORQ_AUTH_STATE_REGKEY_CHECKING);
-			}
-		}
+                    if (SessionState() == THORQ_SESSION_STATE_DECIDING)
+                    {
+                        if ((actions & ACTION_SessionAccept) != 0)
+                        {
+                            thorq_payload_t payload;
+                            thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_ACCEPT, m_requestingPartner);
+                            SendPayload(payload, true, true);
+                            m_requestingPartner.clear();
+                            SetSessionState(THORQ_SESSION_STATE_JOINING);
+                        }
+                        else if ((actions & ACTION_SessionDeny) != 0)
+                        {
+                            thorq_payload_t payload;
+                            thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_DENY, m_requestingPartner);
+                            SendPayload(payload, true, true);
+                            m_requestingPartner.clear();
+                            SetSessionState(THORQ_SESSION_STATE_NONE);
+                        }
+                    }
+                }
+            }
+        }
+        else if (LoginState() == THORQ_LOGIN_STATE_LOGGEDOUT)
+        {
+            if ((actions & ACTION_SendRegKey) != 0)
+            {
+                if (AuthState() == THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT)
+                {
+                    thorq_payload_t payload;
+
+                    SCOPELOCK(l_registrationKey);
+                    thorq_payload_auth_pack(payload, THORQ_AUTH_REGKEY, std::vector<std::uint8_t>(m_registrationKey.begin(), m_registrationKey.end()));
+
+                    SendPayload(payload, true, true);
+                    SetAuthState(THORQ_AUTH_STATE_REGKEY_CHECKING);
+                }
+            }
+            else if ((actions & ACTION_Login) != 0)
+            {
+                thorq_payload_t payload;
+
+                SCOPELOCK(l_username);
+                thorq_payload_command_pack(payload, THORQ_COMMAND_ID_LOGIN, m_username);
+                SendPayload(payload, true, true);
+
+                SetLoginState(THORQ_LOGIN_STATE_LOGGINGIN);
+            }
+
+        }
 
 
         /** Disconnects client gracefully
