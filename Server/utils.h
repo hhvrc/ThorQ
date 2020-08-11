@@ -6,6 +6,7 @@
 #include "singletons.h"
 
 std::string enetaddr_to_str(const ENetAddress* addr);
-void broadcastPayload(const thorq_payload_t* payload, bool reliable = true);
+void broadcastNotification(const thorq_payload_t* payload, bool reliable = true);
+void broadcastAnnouncement(const thorq_payload_t* payload, bool reliable = true);
 
 #endif // UTILS_H

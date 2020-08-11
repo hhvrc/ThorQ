@@ -282,13 +282,13 @@ void ThorQ::Instance::setLoginState(thorq_login_state_t state)
         {
 			thorq_payload_t payload;
 			// TODO: notify about user_online
-			broadcastPayload(&payload, true);
+            broadcastAnnouncement(&payload, true);
 		}
 		else if (state == THORQ_LOGIN_STATE_LOGGEDOUT)
         {
 			thorq_payload_t payload;
 			// TODO: notify about user_offline
-			broadcastPayload(&payload, true);
+            broadcastAnnouncement(&payload, true);
 		}
 
 		if (state < m_loginState)
@@ -330,7 +330,7 @@ void ThorQ::Instance::setSessionState(thorq_session_state_t state)
 				sendPayload(&payload, true, true);
 
 				thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STOPPED, name());
-                broadcastPayload(&payload, true);
+                broadcastAnnouncement(&payload, true);
             }
 		}
 		else if (state == THORQ_SESSION_STATE_ACTIVE)
@@ -347,7 +347,7 @@ void ThorQ::Instance::setSessionState(thorq_session_state_t state)
 				sendPayload(&payload, true, true);
 
 				thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STARTED, name());
-				broadcastPayload(&payload, true);
+                broadcastAnnouncement(&payload, true);
 			}
 			else
 			{

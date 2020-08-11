@@ -20,6 +20,7 @@ typedef enum {
     THORQ_PAYLOAD_ID_EVENT,        ///< Server events (user statuses)
     THORQ_PAYLOAD_ID_COMMAND,      ///< Commands like login/logout/session/requests
 	THORQ_PAYLOAD_ID_COMMAND_ACK,  ///< Acknowledge for commands
+    THORQ_PAYLOAD_ID_NOTIFICATION, ///< Server notification (requires the receiver to be logged in)
     THORQ_PAYLOAD_ID_ANNOUNCEMENT, ///< Server announcement (doesnt need any sort of authentication)
 
 	THORQ_PAYLOAD_ID_COLLAR,       ///< Collar command
@@ -102,11 +103,12 @@ typedef enum
 
 typedef enum
 {
-	THORQ_SESSION_STATE_NONE,     ///< Host is not currently in a session
-	THORQ_SESSION_STATE_LEAVING,  ///< Host is leaving a session
-	THORQ_SESSION_STATE_DECIDING, ///< The requestee is deciding if to accept the session request
-	THORQ_SESSION_STATE_JOINING,  ///< The session has been accepted and the host is waiting for the server to start it
-	THORQ_SESSION_STATE_ACTIVE,   ///< Both partners are currently in a session
+    THORQ_SESSION_STATE_NONE,       ///< Host is not currently in a session
+    THORQ_SESSION_STATE_LEAVING,    ///< Host is leaving a session
+    THORQ_SESSION_STATE_REQUESTING, ///< The request has been sent, and requerter is awaiting an answer
+    THORQ_SESSION_STATE_DECIDING,   ///< The requestee is deciding if to accept the session request
+    THORQ_SESSION_STATE_JOINING,    ///< The session has been accepted and the host is waiting for the server to start it
+    THORQ_SESSION_STATE_ACTIVE,     ///< Both partners are currently in a session
 } thorq_session_state_t; ///< State machine for session
 
 ////////////////////////////////////////////////////

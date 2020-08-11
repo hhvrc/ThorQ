@@ -14,6 +14,7 @@
 #include <thorq_payload_command.h>
 #include <thorq_payload_command_ack.h>
 #include <thorq_payload_announcement.h>
+#include <thorq_payload_notification.h>
 #include <thorq_payload_collar.h>
 
 #include "instance.h"
@@ -192,11 +193,10 @@ void handleMessageHeartbeat(ThorQ::Instance* instance)
 
 void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payload)
 {
-    /*
     thorq_payload_t response;
 
     thorq_command_id_t cmd;
-    thorq_payload_command_get_id(payload, cmd);
+    thorq_payload_command_get_id(*payload, cmd);
 
     if (instance->authState() != THORQ_AUTH_STATE_OK)
     {
@@ -210,11 +210,11 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
     {
         std::string name;
 
-        thorq_payload_command_get_data(payload, name);
+        thorq_payload_command_get_data(*payload, name);
 
         if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDOUT)
         {
-            if (registeredInstances->TryAdd(instance, name))
+            if (registeredInstances->tryAdd(instance, name))
             {
                 instance->setName(name);
 
@@ -240,21 +240,29 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
         {
             // Remove from registered
-            registeredInstances->Remove(instance->name());
-
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_NO_CHANGE);
-            instance->sendPayload(&response, true, true);
+            registeredInstances->remove(instance->name());
 
             // Disconnect session if one is ongoing
-            if (instance->hasPartner())
+            if (instance->sessionState() == THORQ_SESSION_STATE_ACTIVE)
             {
-                thorq_payload_session_pack(txPayload, THORQ_PAYLOAD_)
-                instance->SendEncrypted(NOTIFY_SessionEnded, instance->partner()->name());
-                instance->partner()->SendEncrypted(NOTIFY_SessionEnded, instance->name());
+                instance->setLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
+                instance->partner()->setSessionState(THORQ_SESSION_STATE_NONE);
 
-                BroadcastMessage(NOTIFY_UserAvailable, instance->partner()->name());
+                thorq_payload_event_pack(response, THORQ_EVENT_SESSION_DENIED, instance->partner()->name());
+                instance->sendPayload(payload, true, true);
+
+                thorq_payload_event_pack(response, THORQ_EVENT_SESSION_DENIED, instance->name());
+                instance->partner()->sendPayload(payload, true, true);
+
+                thorq_payload_notification_pack(response, THORQ_NOTIFICATION_USER_OFFLINE, instance->name());
+
 
                 instance->clearPartner();
+            }
+            else if (instance->sessionState() == THORQ_SESSION_STATE_REQUESTING)
+            {
+                thorq_payload_command_pack(response, THORQ_COMMAND_ID_SESSION_DENY);
+                instance->sendPayload(payload, true, true);
             }
 
             // Announce offline

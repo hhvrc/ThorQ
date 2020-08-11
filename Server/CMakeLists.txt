@@ -28,8 +28,6 @@ set(${project}_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.h
 )
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/json/single_include/nlohmann)
-
 add_executable(${project}
 	main.cpp
 	${${project}_SOURCES}

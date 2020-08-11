@@ -7,6 +7,3 @@
 [submodule "Client/openvr"]
 	path = Client/openvr
 	url = https://github.com/ValveSoftware/openvr.git
-[submodule "Server/json"]
-	path = Server/json
-	url = https://github.com/nlohmann/json.git

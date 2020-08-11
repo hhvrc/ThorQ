@@ -7,6 +7,8 @@
 #include <thorq_payload.h>
 
 #include "singletons.h"
+#include "instance.h"
+#include "instancemap.h"
 
 std::string enetaddr_to_str(const ENetAddress* addr)
 {
@@ -16,13 +18,26 @@ std::string enetaddr_to_str(const ENetAddress* addr)
 	return std::string(buffer);
 }
 
-void broadcastPayload(const thorq_payload_t* payload, bool reliable)
+void broadcastNotification(const thorq_payload_t* payload, bool reliable)
 {
-	std::vector<std::uint8_t> message;
-	thorq_payload_pack(*payload, message);
+    std::vector<std::uint8_t> message;
+    thorq_payload_pack(*payload, message);
+
+    std::vector<ThorQ::Instance*> instances = registeredInstances->instances();
 
 	std::vector<std::uint8_t> data;
 	thorq_message_encode(message, data);
 
-	enet_host_broadcast(server, reliable ? 0 : 1, enet_packet_create(data.data(), data.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
+    for (ThorQ::Instance* instance : instances)
+        instance->sendMessage(message, false, reliable);
+}
+void broadcastAnnouncement(const thorq_payload_t* payload, bool reliable)
+{
+    std::vector<std::uint8_t> message;
+    thorq_payload_pack(*payload, message);
+
+    std::vector<std::uint8_t> data;
+    thorq_message_encode(message, data);
+
+    enet_host_broadcast(server, reliable ? 0 : 1, enet_packet_create(data.data(), data.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
 }
