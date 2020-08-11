@@ -110,12 +110,12 @@ public slots:
     /**
      * @brief blah blah blah
      */
-	void AcceptRequest();
+    void AcceptRequest();
 
     /**
      * @brief blah blah blah
      */
-	void DenyRequest();
+    void DenyRequest();
 
     /**
      * @brief LeaveSession
@@ -217,6 +217,16 @@ signals:
 	void UserOffline(const QString& user);
 
     /**
+     * @param user
+     */
+    void SessionRequested(const QString& user);
+
+    /**
+     * @param user
+     */
+    void SessionStarted(const QString& user);
+
+    /**
      * @param strength
      */
 	void ReceivedShock(std::uint8_t strength);
@@ -254,6 +264,12 @@ signals:
      * @param what
      */
 	void Error(const QString& what);
+
+    /**
+     * @brief Announcement
+     * @param what
+     */
+    void Announcement(const QString& what);
 private slots:
     /**
      * @brief blah blah blah
@@ -313,35 +329,18 @@ private slots:
      */
 	void SetPartner(const QString& username);
 
-    /**
-     * @brief HandleMessage
-     * @param packet
-     */
-	void HandleMessage(ENetPacket* packet);
-
-    /**
-     * @brief handleMessageVersion
-     * @param payload
-     */
-	void handleMessageVersion(const thorq_payload_t& payload);
-
-    /**
-     * @brief handleMessageHeartbeat
-     * @param payload
-     */
+    /// These should be self-explanatory
+    void HandleMessage(ENetPacket* packet);
+    void handleMessageVersion(const thorq_payload_t& payload);
+    void handleMessageCrypto(const thorq_payload_t& payload);
+    void handleMessageAuth(const thorq_payload_t& payload);
+    void handleMessageAnnouncement(const thorq_payload_t& payload);
     void handleMessageHeartbeat();
-
-    /**
-     * @brief handleMessageCrypto
-     * @param payload
-     */
-	void handleMessageCrypto(const thorq_payload_t& payload);
-
-    /**
-     * @brief handleMessageAuth
-     * @param payload
-     */
-	void handleMessageAuth(const thorq_payload_t& payload);
+    void handleMessageEvent(const thorq_payload_t& payload);
+    void handleMessageCommand(const thorq_payload_t& payload);
+    void handleMessageCommandAck(const thorq_payload_t& payload);
+    void handleMessageNotification(const thorq_payload_t& payload);
+    void handleMessageCollar(const thorq_payload_t& payload);
 
     /**
      * @brief SendPayload

@@ -27,12 +27,16 @@
 #include <crypto.h>
 #include <systemid.h>
 #include <thorq_message.h>
-#include <thorq_payload_crypto.h>
 #include <thorq_payload_auth.h>
+#include <thorq_payload_event.h>
+#include <thorq_payload_crypto.h>
 #include <thorq_payload_collar.h>
-#include <thorq_payload_command.h>
 #include <thorq_payload_version.h>
+#include <thorq_payload_command.h>
 #include <thorq_payload_heartbeat.h>
+#include <thorq_payload_command_ack.h>
+#include <thorq_payload_notification.h>
+#include <thorq_payload_announcement.h>
 
 #define DISCONNECT_ERROR 0x00000001
 #define DISCONNECT_SHUTDOWN 0x00000002
@@ -330,29 +334,24 @@ void Client::Service()
                     if ((actions & ACTION_SessionRequest) != 0)
                     {
                         thorq_payload_t payload;
-                        thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_DENY, m_requestedPartner);
+                        thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_REQUEST, m_requestedPartner);
                         SendPayload(payload, true, true);
-                        SetSessionState(THORQ_SESSION_STATE_REQUESTING);
                     }
-
-                    if (SessionState() == THORQ_SESSION_STATE_DECIDING)
+                    else if ((actions & ACTION_SessionAccept) != 0)
                     {
-                        if ((actions & ACTION_SessionAccept) != 0)
-                        {
-                            thorq_payload_t payload;
-                            thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_ACCEPT, m_requestingPartner);
-                            SendPayload(payload, true, true);
-                            m_requestingPartner.clear();
-                            SetSessionState(THORQ_SESSION_STATE_JOINING);
-                        }
-                        else if ((actions & ACTION_SessionDeny) != 0)
-                        {
-                            thorq_payload_t payload;
-                            thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_DENY, m_requestingPartner);
-                            SendPayload(payload, true, true);
-                            m_requestingPartner.clear();
-                            SetSessionState(THORQ_SESSION_STATE_NONE);
-                        }
+                        thorq_payload_t payload;
+                        thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_ACCEPT, m_requestingPartner);
+                        SendPayload(payload, true, true);
+                        m_requestingPartner.clear();
+                        SetSessionState(THORQ_SESSION_STATE_JOINING);
+                    }
+                    else if ((actions & ACTION_SessionDeny) != 0)
+                    {
+                        thorq_payload_t payload;
+                        thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_DENY, m_requestingPartner);
+                        SendPayload(payload, true, true);
+                        m_requestingPartner.clear();
+                        SetSessionState(THORQ_SESSION_STATE_NONE);
                     }
                 }
             }
@@ -564,6 +563,10 @@ void Client::HandleMessage(ENetPacket* packet)
 		if (thorq_payload_auth_is_valid(payload))
 			handleMessageAuth(payload);
 		return;
+    case THORQ_PAYLOAD_ID_ANNOUNCEMENT:
+        if (thorq_payload_announcement_is_valid(payload))
+            handleMessageAnnouncement(payload);
+        return;
 	case THORQ_PAYLOAD_ID_HEARTBEAT:
 		if (thorq_payload_heartbeat_is_valid(payload))
             handleMessageHeartbeat();
@@ -577,7 +580,30 @@ void Client::HandleMessage(ENetPacket* packet)
 		break;
 	}
 
-	qDebug() << "UwU";
+    switch (payload.id) {
+    case THORQ_PAYLOAD_ID_EVENT:
+        if (thorq_payload_event_is_valid(payload))
+            handleMessageEvent(payload);
+        break;
+    case THORQ_PAYLOAD_ID_COMMAND:
+        if (thorq_payload_command_is_valid(payload))
+            handleMessageCommand(payload);
+        break;
+    case THORQ_PAYLOAD_ID_COMMAND_ACK:
+        if (thorq_payload_command_ack_is_valid(payload))
+            handleMessageCommandAck(payload);
+        break;
+    case THORQ_PAYLOAD_ID_NOTIFICATION:
+        if (thorq_payload_notification_is_valid(payload))
+            handleMessageNotification(payload);
+        break;
+    case THORQ_PAYLOAD_ID_COLLAR:
+        if (thorq_payload_collar_is_valid(payload))
+            handleMessageEvent(payload);
+        break;
+    default:
+        break;
+    }
 }
 
 void Client::handleMessageVersion(const thorq_payload_t& payload)
@@ -614,14 +640,6 @@ void Client::handleMessageVersion(const thorq_payload_t& payload)
 	default:
 		qDebug() << tr("Got ivalid version %1[%2]").arg(app).arg(version.to_string().c_str());
 		return;
-	}
-}
-void Client::handleMessageHeartbeat()
-{
-	if (m_awaitingPing)
-	{
-		m_awaitingPing = false;
-		SetPing(m_pingTimer->elapsed());
 	}
 }
 void Client::handleMessageCrypto(const thorq_payload_t& payload)
@@ -690,8 +708,89 @@ void Client::handleMessageAuth(const thorq_payload_t& payload)
 	default:
         qDebug() << "AUTH: Unexpected message:" << cmd;
 		break;
+    }
+}
+void Client::handleMessageAnnouncement(const thorq_payload_t &payload)
+{
+    std::string message;
+    thorq_announcement_type_t type;
+    thorq_announcement_reason_t reason;
+
+    thorq_payload_announcement_get_type(payload, type);
+    thorq_payload_announcement_get_reason(payload, reason);
+    thorq_payload_announcement_get_message(payload, message);
+
+    const char* type_str;
+    const char* reason_str;
+
+    switch (type) {
+    case ADMIN:
+        type_str = "admin";
+        break;
+    case SYSTEM:
+        type_str = "system";
+        break;
+    }
+
+    switch (reason) {
+    case ALERT:
+        reason_str = "alert";
+        break;
+    case NOTICE:
+        reason_str = "notice";
+        break;
+    case MAINTANENCE:
+        reason_str = "maintanence";
+        break;
+    }
+
+    emit Announcement("Announcement!");
+}
+void Client::handleMessageHeartbeat()
+{
+	if (m_awaitingPing)
+	{
+		m_awaitingPing = false;
+		SetPing(m_pingTimer->elapsed());
 	}
 }
+void Client::handleMessageEvent(const thorq_payload_t &payload)
+{
+    std::string message;
+    thorq_event_type_t type;
+
+    thorq_payload_event_get_type(payload, type);
+    thorq_payload_event_get_message(payload, message);
+
+    switch (type) {
+    case THORQ_EVENT_SESSION_REQUESTED:
+        emit SessionRequested(message.c_str());
+        break;
+    case THORQ_EVENT_SESSION_STARTED:
+        SetSessionState(THORQ_SESSION_STATE_ACTIVE);
+        break;
+    case THORQ_EVENT_SESSION_STOPPED:
+        SetSessionState(THORQ_SESSION_STATE_NONE);
+        break;
+    }
+}
+void Client::handleMessageCommand(const thorq_payload_t &payload)
+{
+
+}
+void Client::handleMessageCommandAck(const thorq_payload_t &payload)
+{
+
+}
+void Client::handleMessageNotification(const thorq_payload_t &payload)
+{
+
+}
+void Client::handleMessageCollar(const thorq_payload_t &payload)
+{
+
+}
+
 
 void Client::SendPayload(const thorq_payload_t& payload, bool encrypt, bool reliable)
 {
