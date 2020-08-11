@@ -85,8 +85,8 @@ int main(int argc, char** argv)
     errorBox.setIcon(QMessageBox::Warning);
     errorBox.setWindowTitle("error");
 
-    //QObject::connect(cli, &Client::Error, &errorBox, &QMessageBox::setText);
-    //QObject::connect(cli, &Client::Error, &errorBox, &QMessageBox::exec);
+    QObject::connect(cli, &Client::Error, &errorBox, &QMessageBox::setText);
+    QObject::connect(cli, &Client::Error, &errorBox, &QMessageBox::show);
 
     QObject::connect(&loginWidget, &LoginWidget::regkeyEntered, cli, &Client::SetRegistrationKey);
     QObject::connect(&loginWidget, &LoginWidget::usernameEntered, cli, &Client::Login);
