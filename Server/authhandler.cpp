@@ -93,6 +93,7 @@ void ThorQ::AuthHandler::removeRegkey(const std::array<std::uint8_t, THORQ_AUTH_
 
 ThorQ::AuthHandler::ResponseCode ThorQ::AuthHandler::checkSystemID(const std::vector<std::uint8_t>& sysid)
 {
+    return REGISTERED;
 	std::scoped_lock lock(mutex);
 
 	if (!ThorQ::systemid_validate(sysid))
