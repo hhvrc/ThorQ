@@ -4,44 +4,70 @@
 #include <set>
 #include <ctime>
 #include <string>
-#include <json.hpp>
+#include <mutex>
 
 struct UserAuth
 {
-    std::string hwid;
-    std::string authToken;
-    std::int64_t lastLogin;
+    const std::string* hwid;
+    const std::string* regkey;
+    time_t lastLogin;
 };
 
-static std::set<UserAuth> authUsers;
-static std::map<std::string, UserAuth> hwids;
-
-void eeeee()
+struct Redirect
 {
-    try
+    const std::string string;
+    const UserAuth* userAuth;
+
+    inline int  operator <  (const Redirect& other) const { return string <  other.string; };
+    inline int  operator >  (const Redirect& other) const { return string >  other.string; };
+    inline int  operator <= (const Redirect& other) const { return string <= other.string; };
+    inline int  operator >= (const Redirect& other) const { return string >= other.string; };
+    inline bool operator == (const Redirect& other) const { return string == other.string; };
+    inline bool operator != (const Redirect& other) const { return string != other.string; };
+};
+
+static std::mutex mutex{};
+static std::set<UserAuth> set_users{};
+static std::set<Redirect> set_hwid{};
+static std::set<Redirect> set_regkey{};
+
+void insert(const std::string& hwid, const std::string& regkey)
+{
+    std::scoped_lock<std::mutex> lock(mutex);
+
+    // create pairs
+    auto it_hwid = set_hwid.insert({ hwid, nullptr });
+    auto it_regkey = set_regkey.insert({ regkey, nullptr });
+
+    if (it_hwid.second)
     {
-        nlohmann::json j;
-
-        std::fstream file("auth.json", std::fstream::binary | std::fstream::in | std::fstream::ate);
-
-        std::string content;
-        content.resize(file.tellg());
-        file.seekg(0, std::fstream::beg);
-
-        file.read(&content[0], content.size());
-
-        file.close();
+        // HWID was available
     }
-	catch (const std::exception& ex)
+
+    if (it_regkey.second)
     {
-        printf("Oppsie!");
+        // Regkey was available
     }
+
+    auto it_user = set_users.insert({ &it_hwid.first->string, &it_regkey.first->string, time(nullptr) });
+
+    if (it_user.second)
+    {
+        // User was inserted
+    }
+}
+
+void Init()
+{
 }
 
 bool ThorQ::AuthHandler::CheckSystemID(const std::string& hwid)
 {
-    (void)hwid;
-    return false;
+    std::scoped_lock<std::mutex> lock(mutex);
+
+    auto it = set_hwid.insert({ hwid, nullptr });
+
+    return !it.second && it.first->userAuth != nullptr;
 }
 
 bool ThorQ::AuthHandler::TryRegisterHwid(const std::string& hwid, const std::vector<uint8_t>& key)
