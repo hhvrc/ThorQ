@@ -744,9 +744,15 @@ void Client::handleDisconnect(std::uint32_t reason)
 		case THORQ_DISCONNECT_REASON_CRYPT_FAILED:
 			emit Error(tr("Encryption failed"));
 			break;
-		case THORQ_DISCONNECT_REASON_AUTH_INVALID:
+        case THORQ_DISCONNECT_REASON_AUTH_TIMEOUT:
+            emit Error(tr("Authentication failed"));
+            break;
+        case THORQ_DISCONNECT_REASON_AUTH_INVALID_REGKEY:
 			emit Error(tr("Authentication failed"));
 			break;
+        case THORQ_DISCONNECT_REASON_AUTH_INVALID_SYSTEMID:
+            emit Error(tr("Authentication failed"));
+            break;
 		case THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED:
 			emit Error(tr("Server shut down"));
 			break;
