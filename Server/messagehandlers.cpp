@@ -138,19 +138,31 @@ void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t* payload
 
 		thorq_debug_fmt("SystemID: %s\n", ThorQ::systemid_to_string(data).c_str())
 
-		if (ThorQ::AuthHandler::checkSystemID(instance->hwid()))
-        {
-            thorq_payload_auth_pack(response, THORQ_AUTH_OK);
-            instance->sendPayload(&response, true, true);
-            instance->setAuthState(THORQ_AUTH_STATE_OK);
+        switch (ThorQ::AuthHandler::checkSystemID(instance->hwid())) {
+        case ThorQ::AuthHandler::REGISTERED:
+            {
+                thorq_payload_auth_pack(response, THORQ_AUTH_OK);
+                instance->sendPayload(&response, true, true);
+                instance->setAuthState(THORQ_AUTH_STATE_OK);
+                break;
+            }
+        case ThorQ::AuthHandler::NOT_REGISTERED:
+            {
+                thorq_payload_auth_pack(response, THORQ_AUTH_REGKEY_REQ);
+                instance->sendPayload(&response, true, true);
+                instance->setAuthState(THORQ_AUTH_STATE_REGKEY_REQUESTING);
+                break;
+            }
+        case ThorQ::AuthHandler::INVALID_SYSTEMID:
+            {
+                instance->setAuthState(THORQ_AUTH_STATE_NONE);
+                instance->disconnect(THORQ_DISCONNECT_REASON_AUTH_INVALID_SYSTEMID);
+                break;
+            }
+        default:
+            break;
         }
-        else
-        {
-            thorq_payload_auth_pack(response, THORQ_AUTH_REGKEY_REQ);
-            instance->sendPayload(&response, true, true);
-            instance->setAuthState(THORQ_AUTH_STATE_REGKEY_REQUESTING);
-        }
-		break;
+        break;
     }
     case THORQ_AUTH_REGKEY_AWAITING_INPUT:
     {
@@ -165,17 +177,36 @@ void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t* payload
 		std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN> data;
         thorq_payload_auth_get_data(*payload, data);
 
-		if (ThorQ::AuthHandler::tryRegisterSystemID(instance->hwid(), data))
-        {
-            thorq_payload_auth_pack(response, THORQ_AUTH_OK);
-            instance->sendPayload(&response, true, true);
-            instance->setAuthState(THORQ_AUTH_STATE_OK);
-        }
-        else
-        {
-            thorq_payload_auth_pack(response, THORQ_AUTH_REGKEY_REQ);
-            instance->sendPayload(&response, true, true);
-            instance->setAuthState(THORQ_AUTH_STATE_REGKEY_REQUESTING);
+        switch (ThorQ::AuthHandler::tryRegisterSystemID(instance->hwid(), data)) {
+        case ThorQ::AuthHandler::REGISTERED:
+        case ThorQ::AuthHandler::RE_REGISTERED:
+            {
+                thorq_payload_auth_pack(response, THORQ_AUTH_OK);
+                instance->sendPayload(&response, true, true);
+                instance->setAuthState(THORQ_AUTH_STATE_OK);
+                break;
+            }
+        case ThorQ::AuthHandler::INVALID_REGKEY:
+            {
+                thorq_payload_auth_pack(response, THORQ_AUTH_REGKEY_REQ);
+                instance->sendPayload(&response, true, true);
+                instance->setAuthState(THORQ_AUTH_STATE_REGKEY_REQUESTING);
+                break;
+            }
+        case ThorQ::AuthHandler::TIMEOUT:
+            {
+            instance->setAuthState(THORQ_AUTH_STATE_NONE);
+            instance->disconnect(THORQ_DISCONNECT_REASON_AUTH_TIMEOUT);
+                break;
+            }
+        case ThorQ::AuthHandler::INVALID_SYSTEMID:
+            {
+                instance->setAuthState(THORQ_AUTH_STATE_NONE);
+                instance->disconnect(THORQ_DISCONNECT_REASON_AUTH_INVALID_SYSTEMID);
+                break;
+            }
+        default:
+            break;
         }
         break;
     }
@@ -380,7 +411,9 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
 
 void handleMessageCommandAck(ThorQ::Instance* instance, const thorq_payload_t* payload)
 {
-
+    (void)instance;
+    (void)payload;
+    thorq_debug_fmt("Unexpected ack message...")
 }
 
 void handleMessageCollar(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
