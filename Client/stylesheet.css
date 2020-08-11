@@ -2,7 +2,7 @@
 Main color for all widgets
 */
 QWidget {
-	background-color: #222222;
+        background-color: #212121;
 	font-family: 'Calibri';
 }
 
