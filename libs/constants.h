@@ -23,6 +23,7 @@ constexpr const char* THORQ_CRYPTO_KEY_DVFUNC = "KDF2(SHA-256)";
 constexpr std::size_t THORQ_CRYPTO_VERIFICATION_DATA_LENGTH = 256;
 
 constexpr std::size_t THORQ_PAYLOAD_LEN = 512; ///< Maximum payload length
+constexpr std::size_t THORQ_AUTH_REGKEY_LEN = 256; ///< Maximum payload length
 
 constexpr const char*   THORQ_APPLICATION_NAME = "ThorQ";
 constexpr const char*   THORQ_SERVER_HOSTNAME = "www.dededededede.de";

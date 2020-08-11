@@ -18,11 +18,14 @@
 
 ThorQ::Instance::Instance(ENetPeer* peer)
 	: m_crypto(new Crypto())
+	, m_activityState(0)
 	, m_connectionState(THORQ_CONNECTION_STATE_DISCONNECTED)
 	, m_cryptoState(THORQ_CRYPTO_STATE_NONE)
+	, m_authState(THORQ_AUTH_STATE_NONE)
 	, m_loginState(THORQ_LOGIN_STATE_LOGGEDOUT)
 	, m_sessionState(THORQ_SESSION_STATE_NONE)
-    , m_name("")
+	, m_name()
+	, m_hwid()
 	, m_peer(peer)
 	, m_partner(nullptr)
 	, m_requestedPartner(nullptr)
@@ -38,24 +41,9 @@ ThorQ::Instance::~Instance()
 	delete m_crypto;
 }
 
-void ThorQ::Instance::setHwid(const std::string& hwid)
+std::string& ThorQ::Instance::name()
 {
-    m_hwid = hwid;
-}
-
-const std::string& ThorQ::Instance::hwid() const
-{
-    return m_hwid;
-}
-
-bool ThorQ::Instance::hasHwid()
-{
-    return !m_hwid.empty();
-}
-
-void ThorQ::Instance::setName(const std::string& newName)
-{
-	m_name = newName;
+	return m_name;
 }
 
 const std::string& ThorQ::Instance::name() const
@@ -63,9 +51,14 @@ const std::string& ThorQ::Instance::name() const
 	return m_name;
 }
 
-bool ThorQ::Instance::hasName()
+std::vector<std::uint8_t>& ThorQ::Instance::hwid()
 {
-	return !m_name.empty();
+	return m_hwid;
+}
+
+const std::vector<uint8_t>& ThorQ::Instance::hwid() const
+{
+	return m_hwid;
 }
 
 void ThorQ::Instance::setPeer(ENetPeer* peer)

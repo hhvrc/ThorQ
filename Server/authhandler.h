@@ -6,10 +6,25 @@
 #include <vector>
 #include <cstdint>
 
+#include <constants.h>
+
 namespace ThorQ {
 namespace AuthHandler {
-bool CheckSystemID(const std::string& hwid);
-bool TryRegisterHwid(const std::string& hwid, const std::vector<std::uint8_t>& key);
+bool tryAddRegkey(const std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN>& key);
+void removeRegkey(const std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN>& key);
+
+enum ResponseCode
+{
+	REGISTERED,
+	RE_REGISTERED,
+	NOT_REGISTERED,
+
+	TIMEOUT,
+	INVALID_REGKEY,
+	INVALID_SYSTEMID,
+};
+ResponseCode checkSystemID(const std::vector<std::uint8_t>& hwid);
+ResponseCode tryRegisterSystemID(const std::vector<std::uint8_t>& hwid, const std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN>& key);
 }
 }
 

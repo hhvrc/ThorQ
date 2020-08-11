@@ -20,13 +20,10 @@ public:
 	Instance(ENetPeer* peer, const std::string& name);
 	~Instance();
 
-    void setHwid(const std::string& hwid);
-    const std::string& hwid() const;
-    bool hasHwid();
-
-    void setName(const std::string& newName);
-    const std::string& name() const;
-    bool hasName();
+	std::string& name();
+	const std::string& name() const;
+	std::vector<std::uint8_t>& hwid();
+	const std::vector<std::uint8_t>& hwid() const;
 
 	void setPeer(ENetPeer* peer);
 	ENetPeer* peer() const;
@@ -76,8 +73,8 @@ private:
 	thorq_login_state_t m_loginState;
 	thorq_session_state_t m_sessionState;
 
-    std::string m_hwid;
     std::string m_name;
+	std::vector<std::uint8_t> m_hwid;
 
 	ENetPeer* m_peer;
 	Instance* m_partner;

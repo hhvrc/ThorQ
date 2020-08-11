@@ -133,11 +133,11 @@ void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t* payload
         std::vector<std::uint8_t> data;
         thorq_payload_auth_get_data(*payload, data);
 
-        instance->setHwid(ThorQ::systemid_to_string(data));
+		instance->hwid() = data;
 
-        thorq_debug_fmt("SystemID: %s\n", instance->hwid().c_str())
+		thorq_debug_fmt("SystemID: %s\n", ThorQ::systemid_to_string(data).c_str())
 
-        if (ThorQ::AuthHandler::CheckSystemID(instance->hwid()))
+		if (ThorQ::AuthHandler::checkSystemID(instance->hwid()))
         {
             thorq_payload_auth_pack(response, THORQ_AUTH_OK);
             instance->sendPayload(&response, true, true);
@@ -161,10 +161,10 @@ void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t* payload
     {
         thorq_debug("RegKey!")
 
-        std::vector<std::uint8_t> data;
+		std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN> data;
         thorq_payload_auth_get_data(*payload, data);
 
-        if (ThorQ::AuthHandler::TryRegisterHwid(instance->hwid(), data))
+		if (ThorQ::AuthHandler::tryRegisterSystemID(instance->hwid(), data))
         {
             thorq_payload_auth_pack(response, THORQ_AUTH_OK);
             instance->sendPayload(&response, true, true);
@@ -204,7 +204,7 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         instance->sendPayload(&response, false, true);
         return;
     }
-
+/*
 	switch (cmd){
 	case THORQ_COMMAND_ID_LOGIN:
     {
@@ -214,16 +214,15 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
 
         if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDOUT)
         {
-            if (registeredInstances->tryAdd(instance, name))
-            {
-                instance->setName(name);
-
-
+			instance->name() = name;
+			if (registeredInstances->tryAdd(instance))
+			{
                 thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK, name);
                 instance->sendPayload(&response, true, true);
             }
             else
             {
+				instance->name().clear();
                 thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, "Username taken");
                 instance->sendPayload(&response, true, true);
             }

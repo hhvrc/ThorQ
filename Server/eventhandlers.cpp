@@ -133,7 +133,7 @@ void handleEventDisconnect(ENetPeer* peer)
 	// Automatically notifies and handles disconnection
 	instance->setConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
 
-	if (!instance->hasName())
+	if (!instance->name().empty())
 	{
 		thorq_debug_fmt("Unnamed client connected from [%s] disconnected", enetaddr_to_str(&peer->address).c_str());
 	}
@@ -159,7 +159,7 @@ void handleEventTimeout(ENetPeer* peer)
 	// Automatically notifies and handles disconnection
 	instance->setConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
 
-	if (!instance->hasName())
+	if (!instance->name().empty())
 	{
 		thorq_debug_fmt("Unnamed client connected from [%s] timed out", enetaddr_to_str(&peer->address).c_str());
 	}

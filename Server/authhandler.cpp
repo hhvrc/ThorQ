@@ -5,74 +5,143 @@
 #include <ctime>
 #include <string>
 #include <mutex>
+#include <algorithm>
 
-struct UserAuth
-{
-    const std::string* hwid;
-    const std::string* regkey;
-    time_t lastLogin;
-};
-
-struct Redirect
-{
-    const std::string string;
-    const UserAuth* userAuth;
-
-    inline int  operator <  (const Redirect& other) const { return string <  other.string; };
-    inline int  operator >  (const Redirect& other) const { return string >  other.string; };
-    inline int  operator <= (const Redirect& other) const { return string <= other.string; };
-    inline int  operator >= (const Redirect& other) const { return string >= other.string; };
-    inline bool operator == (const Redirect& other) const { return string == other.string; };
-    inline bool operator != (const Redirect& other) const { return string != other.string; };
-};
+#include "systemid.h"
 
 static std::mutex mutex{};
-static std::set<UserAuth> set_users{};
-static std::set<Redirect> set_hwid{};
-static std::set<Redirect> set_regkey{};
 
-void insert(const std::string& hwid, const std::string& regkey)
+struct Entry
 {
-    std::scoped_lock<std::mutex> lock(mutex);
+	std::vector<std::uint8_t> sys_id;
+	std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN> reg_key;
+	time_t last_owner_change = 0;
+};
 
-    // create pairs
-    auto it_hwid = set_hwid.insert({ hwid, nullptr });
-    auto it_regkey = set_regkey.insert({ regkey, nullptr });
+struct EntryPointer_IdComparison_Wrapper
+{
+	Entry* entryPtr;
+};
+struct EntryPointer_KeyComparison_Wrapper
+{
+	Entry* entryPtr;
+};
 
-    if (it_hwid.second)
-    {
-        // HWID was available
-    }
+inline bool operator == (const EntryPointer_IdComparison_Wrapper& lhs, const EntryPointer_IdComparison_Wrapper& rhs) { return lhs.entryPtr->sys_id == rhs.entryPtr->sys_id; }
+inline bool operator != (const EntryPointer_IdComparison_Wrapper& lhs, const EntryPointer_IdComparison_Wrapper& rhs) { return !(lhs == rhs); }
+inline bool operator <  (const EntryPointer_IdComparison_Wrapper& lhs, const EntryPointer_IdComparison_Wrapper& rhs) { return lhs.entryPtr->sys_id < rhs.entryPtr->sys_id; }
+inline bool operator >  (const EntryPointer_IdComparison_Wrapper& lhs, const EntryPointer_IdComparison_Wrapper& rhs) { return rhs < lhs; }
+inline bool operator <= (const EntryPointer_IdComparison_Wrapper& lhs, const EntryPointer_IdComparison_Wrapper& rhs) { return !(rhs < lhs); }
+inline bool operator >= (const EntryPointer_IdComparison_Wrapper& lhs, const EntryPointer_IdComparison_Wrapper& rhs) { return !(lhs < rhs); }
 
-    if (it_regkey.second)
-    {
-        // Regkey was available
-    }
+inline bool operator == (const EntryPointer_KeyComparison_Wrapper& lhs, const EntryPointer_KeyComparison_Wrapper& rhs) { return lhs.entryPtr->reg_key == rhs.entryPtr->reg_key; }
+inline bool operator != (const EntryPointer_KeyComparison_Wrapper& lhs, const EntryPointer_KeyComparison_Wrapper& rhs) { return !(lhs == rhs); }
+inline bool operator <  (const EntryPointer_KeyComparison_Wrapper& lhs, const EntryPointer_KeyComparison_Wrapper& rhs) { return lhs.entryPtr->reg_key < rhs.entryPtr->reg_key; }
+inline bool operator >  (const EntryPointer_KeyComparison_Wrapper& lhs, const EntryPointer_KeyComparison_Wrapper& rhs) { return rhs < lhs; }
+inline bool operator <= (const EntryPointer_KeyComparison_Wrapper& lhs, const EntryPointer_KeyComparison_Wrapper& rhs) { return !(rhs < lhs); }
+inline bool operator >= (const EntryPointer_KeyComparison_Wrapper& lhs, const EntryPointer_KeyComparison_Wrapper& rhs) { return !(lhs < rhs); }
 
-    auto it_user = set_users.insert({ &it_hwid.first->string, &it_regkey.first->string, time(nullptr) });
+constexpr time_t time_minute =                60;
+constexpr time_t time_hour   = time_minute *  60;
+constexpr time_t time_day    = time_hour   *  24;
+constexpr time_t time_week   = time_day    *   7;
+constexpr time_t time_year   = time_day    * 365;
+constexpr time_t time_month  = time_year   /  12;
 
-    if (it_user.second)
-    {
-        // User was inserted
-    }
-}
+static std::set<EntryPointer_IdComparison_Wrapper> id_set{};
+static std::set<EntryPointer_KeyComparison_Wrapper> key_set{};
 
 void Init()
 {
 }
 
-bool ThorQ::AuthHandler::CheckSystemID(const std::string& hwid)
+bool ThorQ::AuthHandler::tryAddRegkey(const std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN>& key)
 {
-    std::scoped_lock<std::mutex> lock(mutex);
+	std::scoped_lock lock(mutex);
 
-    auto it = set_hwid.insert({ hwid, nullptr });
+	Entry* entry = new Entry{ {}, key, 0 };
 
-    return !it.second && it.first->userAuth != nullptr;
+	if (key_set.insert({ entry }).second)
+		return true;
+
+	delete entry;
+	return false;
 }
 
-bool ThorQ::AuthHandler::TryRegisterHwid(const std::string& hwid, const std::vector<uint8_t>& key)
+void ThorQ::AuthHandler::removeRegkey(const std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN>& key)
 {
-    (void)hwid;
-    (void)key;
-    return true;
+	std::scoped_lock lock(mutex);
+
+	Entry temp{ {}, key, 0 };
+
+	// Find it in the key set
+	auto key_it = key_set.find({&temp});
+
+	if (key_it != key_set.end())
+	{
+		// TODO: notify program that [key_it->entryPtr->sys_id] is not unauthorized
+		// Delete if its in the key set
+		auto id_it = id_set.find({ key_it->entryPtr });
+		if (id_it != id_set.end())
+			id_set.erase(id_it);
+
+		delete key_it->entryPtr;
+		key_set.erase(key_it);
+	}
+}
+
+ThorQ::AuthHandler::ResponseCode ThorQ::AuthHandler::checkSystemID(const std::vector<std::uint8_t>& sysid)
+{
+	std::scoped_lock lock(mutex);
+
+	if (!ThorQ::systemid_validate(sysid))
+		return INVALID_SYSTEMID;
+
+	Entry temp{ sysid, {}, 0 };
+
+	// Find it in the id set
+	return id_set.find({&temp}) == id_set.end() ? NOT_REGISTERED : REGISTERED;
+}
+
+ThorQ::AuthHandler::ResponseCode ThorQ::AuthHandler::tryRegisterSystemID(const std::vector<std::uint8_t>& sysid, const std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN>& regkey)
+{
+	std::scoped_lock lock(mutex);
+
+	time_t regTime = time(nullptr);
+
+	Entry temp{ sysid, regkey, 0 };
+
+	// Find it in the key set
+	auto key_it = key_set.find({&temp});
+
+	// If not found then the regkey is invalid
+	if (key_it == key_set.end())
+		return INVALID_REGKEY;
+
+	Entry* entry = key_it->entryPtr;
+
+	// If the sys_id matches ours then we are already registered with that regkey
+	if (entry->sys_id == sysid)
+		return REGISTERED;
+
+	// Re-registration of regkey is rate limited to once a week
+	if ((regTime - entry->last_owner_change) < time_week)
+		return TIMEOUT;
+
+	// TODO: notify program that [entry->sys_id] is not unauthorized
+	entry->sys_id = sysid;
+	entry->last_owner_change = regTime;
+
+retry:
+	auto id_it = id_set.insert({entry});
+
+	if (!id_it.second)
+	{
+		id_it.first->entryPtr->sys_id.clear();
+		id_set.erase(id_it.first);
+
+		goto retry;
+	}
+
+	return REGISTERED;
 }
