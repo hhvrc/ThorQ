@@ -17,6 +17,7 @@
 #include <thorq_payload_notification.h>
 #include <thorq_payload_collar.h>
 
+#include "utils.h"
 #include "instance.h"
 #include "singletons.h"
 #include "instancemap.h"
@@ -204,7 +205,7 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         instance->sendPayload(&response, false, true);
         return;
     }
-/*
+
 	switch (cmd){
 	case THORQ_COMMAND_ID_LOGIN:
     {
@@ -241,36 +242,10 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
             // Remove from registered
             registeredInstances->remove(instance->name());
 
-            // Disconnect session if one is ongoing
-            if (instance->sessionState() == THORQ_SESSION_STATE_ACTIVE)
-            {
-                instance->setLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
-                instance->partner()->setSessionState(THORQ_SESSION_STATE_NONE);
+            instance->setLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
 
-                thorq_payload_event_pack(response, THORQ_EVENT_SESSION_DENIED, instance->partner()->name());
-                instance->sendPayload(payload, true, true);
-
-                thorq_payload_event_pack(response, THORQ_EVENT_SESSION_DENIED, instance->name());
-                instance->partner()->sendPayload(payload, true, true);
-
-                thorq_payload_notification_pack(response, THORQ_NOTIFICATION_USER_OFFLINE, instance->name());
-
-
-                instance->clearPartner();
-            }
-            else if (instance->sessionState() == THORQ_SESSION_STATE_REQUESTING)
-            {
-                thorq_payload_command_pack(response, THORQ_COMMAND_ID_SESSION_DENY);
-                instance->sendPayload(payload, true, true);
-            }
-
-            // Announce offline
-            if (instance->hasName())
-            {
-                BroadcastMessage(NOTIFY_UserOffline, instance->name());
-                instance->setName("");
-            }
-            instance->SendEncrypted(ACKNOWLEDGE_OK, "Logged out");
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK);
+            instance->sendPayload(&response, true, true);
         }
         else
         {
@@ -283,15 +258,14 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
 	{
         if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
         {
-            std::vector<ThorQ::Instance*> instances = registeredInstances->GetInstances();
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK);
+
+            std::vector<ThorQ::Instance*> instances = registeredInstances->instances();
 
             for (ThorQ::Instance* i : instances)
             {
-                std::uint32_t txFlag = NOTIFY_UserOnline;
-
-                txFlag |= i->hasCollar() ? FLAG_CollarConnected : 0;
-
-                instance->SendEncrypted(txFlag, i->name());
+                thorq_payload_notification_pack(response, THORQ_NOTIFICATION_USER_ACTIVITY, i->name(), i->activityState());
+                instance->sendPayload(&response, true, true);
             }
         }
         else
@@ -305,17 +279,19 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
 	{
         if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
         {
-            std::string name = ExtractString(data, size, sizeof(std::uint32_t));
+            std::string name;
+            thorq_payload_command_get_data(*payload, name);
 
-            ThorQ::Instance* otherInstance = registeredInstances->GetInstance(name);
+            ThorQ::Instance* otherInstance = registeredInstances->get(name);
 
             if (otherInstance == nullptr)
             {
-                instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
+                thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, name + "is not online");
+                instance->sendPayload(&response, true);
                 return;
             }
 
-            otherInstance->requestOn(instance);
+            instance->requestOn(otherInstance);
         }
         else
         {
@@ -325,48 +301,47 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
 		break;
 	}
     case THORQ_COMMAND_ID_SESSION_ACCEPT:
-	{
+    {
         if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
         {
-            std::string name = ExtractString(data, size, sizeof(std::uint32_t));
+            std::string name;
+            thorq_payload_command_get_data(*payload, name);
 
-            ThorQ::Instance* otherInstance = registeredInstances->GetInstance(name);
+            ThorQ::Instance* otherInstance = registeredInstances->get(name);
 
             if (otherInstance == nullptr)
             {
-                instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
+                thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, name + "is not online");
+                instance->sendPayload(&response, true);
                 return;
             }
 
-            if (instance->requestAcceptFrom(otherInstance))
-            {
-                thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STARTED, THORQ_EVENT_SCOPE_GLOBAL, instance->name());
-                BroadcastMessage(NOTIFY_UserInSession, instance->name());
-                BroadcastMessage(NOTIFY_UserInSession, otherInstance->name());
-            }
+            instance->requestAcceptFrom(otherInstance);
         }
         else
         {
             thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, "Please log in");
             instance->sendPayload(&response, true, true);
         }
-		break;
+        break;
 	}
 	case THORQ_COMMAND_ID_SESSION_DENY:
-	{
+    {
         if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
         {
-            std::string name = ExtractString(data, size, sizeof(std::uint32_t));
+            std::string name;
+            thorq_payload_command_get_data(*payload, name);
 
-            ThorQ::Instance* otherInstance = registeredInstances->GetInstance(name);
+            ThorQ::Instance* otherInstance = registeredInstances->get(name);
 
             if (otherInstance == nullptr)
             {
-                instance->SendEncrypted(ACKNOWLEDGE_Denied, name + " is not online");
+                thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, name + "is not online");
+                instance->sendPayload(&response, true);
                 return;
             }
 
-            instance->partner()->setSessionState(THORQ_SESSION_STATE_NONE);
+            instance->requestDenyFrom(otherInstance);
         }
         else
         {
@@ -400,7 +375,7 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         }
 		break;
     }
-*/
+
 }
 
 void handleMessageCommandAck(ThorQ::Instance* instance, const thorq_payload_t* payload)
