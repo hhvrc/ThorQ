@@ -37,7 +37,7 @@
 #define DISCONNECT_ERROR 0x00000001
 #define DISCONNECT_SHUTDOWN 0x00000002
 
-#define SCOPELOCK(l) std::scoped_lock<std::mutex> lock(const_cast<std::mutex&>(l))
+#define SCOPELOCK(l) std::scoped_lock lock(const_cast<std::mutex&>(l))
 
 std::string enetaddr_to_str(const ENetAddress* addr)
 {
