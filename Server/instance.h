@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <set>
 
 #include <enums.h>
 #include <constants.h>
@@ -50,6 +51,7 @@ public:
 	void setLoginState(thorq_login_state_t state);
 	thorq_session_state_t sessionState() const;
 	void setSessionState(thorq_session_state_t state);
+    std::uint8_t activityState() const;
 
 	void cryptoInit();
 	bool cryptoEstablish(const std::vector<std::uint8_t>& data);
@@ -78,7 +80,9 @@ private:
 
 	ENetPeer* m_peer;
 	Instance* m_partner;
-	Instance* m_requestedPartner;
+
+    std::set<Instance*> m_incoming_requests;
+    std::set<Instance*> m_outgoing_requests;
 
 	std::uint8_t m_verificationData[THORQ_CRYPTO_VERIFICATION_DATA_LENGTH];
 };

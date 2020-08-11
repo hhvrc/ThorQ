@@ -11,6 +11,7 @@
 #include <thorq_payload_event.h>
 #include <thorq_payload_crypto.h>
 #include <thorq_payload_command_ack.h>
+#include <thorq_payload_notification.h>
 
 #include "singletons.h"
 #include "utils.h"
@@ -28,7 +29,8 @@ ThorQ::Instance::Instance(ENetPeer* peer)
 	, m_hwid()
 	, m_peer(peer)
 	, m_partner(nullptr)
-	, m_requestedPartner(nullptr)
+    , m_incoming_requests()
+    , m_outgoing_requests()
 	, m_verificationData()
 {
     peer->data = this;
@@ -78,14 +80,6 @@ void ThorQ::Instance::requestOn(Instance* target)
 {
     thorq_payload_t response;
 
-	// Spam prevention
-	if (m_requestedPartner == target)
-    {
-        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_NO_CHANGE);
-        sendPayload(&response, true, true);
-		return;
-    }
-
     if (m_partner != nullptr)
     {
         thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, "You are already in another session");
@@ -107,13 +101,21 @@ void ThorQ::Instance::requestOn(Instance* target)
 		return;
 	}
 
-	m_requestedPartner = target;
+    // Spam prevention
+    if (!m_outgoing_requests.insert(target).second)
+    {
+        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_NO_CHANGE);
+        sendPayload(&response, true, true);
+        return;
+    }
+
+    target->m_incoming_requests.insert(this);
 
     thorq_payload_event_pack(response, THORQ_EVENT_SESSION_REQUESTED, name());
-    sendPayload(&response, true, true);
+    target->sendPayload(&response, true, true);
 
     thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_IN_PROGRESS, "Request sent");
-    sendPayload(&response, true, true);
+    this->sendPayload(&response, true, true);
 }
 bool ThorQ::Instance::requestAcceptFrom(Instance* sender)
 {
@@ -126,26 +128,27 @@ bool ThorQ::Instance::requestAcceptFrom(Instance* sender)
 		return false;
 	}
 
-	if (sender->m_requestedPartner != this)
+    if (m_incoming_requests.extract(sender).empty())
 	{
         thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_DENIED, " Request from " + sender->name() + " is invalid / never got sent");
         sendPayload(&response, true, true);
 		return false;
 	}
+    sender->m_outgoing_requests.extract(this);
+
+    if (m_partner != nullptr)
+    {
+        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_DENIED, "You are already in another session");
+        sendPayload(&response, true, true);
+        return false;
+    }
 
     if (!sender->isInSession())
 	{
         thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_DENIED, sender->name() + " is already in another session");
         sendPayload(&response, true, true);
 		return false;
-	}
-
-	if (m_partner != nullptr)
-	{
-        thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_DENIED, "You are already in another session");
-        sendPayload(&response, true, true);
-		return false;
-	}
+    }
 
 	m_partner = sender;
 
@@ -158,7 +161,6 @@ bool ThorQ::Instance::requestAcceptFrom(Instance* sender)
 
 	return true;
 }
-
 bool ThorQ::Instance::requestDenyFrom(ThorQ::Instance *sender)
 {
     thorq_payload_t response;
@@ -170,16 +172,20 @@ bool ThorQ::Instance::requestDenyFrom(ThorQ::Instance *sender)
 		return false;
 	}
 
-	if (sender->m_requestedPartner != this)
+    if (m_incoming_requests.extract(sender).empty())
 	{
         thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_DENY, THORQ_COMMAND_ACK_RESULT_DENIED, " Request from " + sender->name() + " is invalid / never got sent");
         sendPayload(&response, true, true);
 		return false;
 	}
+    sender->m_outgoing_requests.extract(this);
+
+    if (sessionState() == THORQ_SESSION_STATE_DECIDING)
+        setSessionState(THORQ_SESSION_STATE_NONE);
 
     thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, "Request denied");
     sender->sendPayload(&response, true, true);
-    thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_DENY, THORQ_COMMAND_ACK_RESULT_OK, "Session denied");
+    thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_DENY, THORQ_COMMAND_ACK_RESULT_OK);
     this->sendPayload(&response, true, true);
 
 	return true;
@@ -197,6 +203,10 @@ void ThorQ::Instance::setIsInSteamVR(bool value)
             m_activityState |= THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT;
         else
             m_activityState &= ~THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT;
+
+        thorq_payload_t payload;
+        thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_ACTIVITY, name(), m_activityState);
+        broadcastNotification(&payload, true);
     }
 }
 
@@ -208,6 +218,10 @@ void ThorQ::Instance::setHasCollar(bool value)
             m_activityState |= THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT;
         else
             m_activityState &= ~THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT;
+
+        thorq_payload_t payload;
+        thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_ACTIVITY, name(), m_activityState);
+        broadcastNotification(&payload, true);
     }
 }
 
@@ -274,14 +288,15 @@ void ThorQ::Instance::setLoginState(thorq_login_state_t state)
 		if (state == THORQ_LOGIN_STATE_LOGGEDIN)
         {
 			thorq_payload_t payload;
-			// TODO: notify about user_online
-            broadcastAnnouncement(&payload, true);
+            thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_ACTIVITY, name(), m_activityState);
+            broadcastNotification(&payload, true);
 		}
 		else if (state == THORQ_LOGIN_STATE_LOGGEDOUT)
         {
-			thorq_payload_t payload;
-			// TODO: notify about user_offline
-            broadcastAnnouncement(&payload, true);
+            thorq_payload_t payload;
+            thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_OFFLINE, name());
+            broadcastNotification(&payload, true);
+            name().clear();
 		}
 
 		if (state < m_loginState)
@@ -295,24 +310,51 @@ thorq_session_state_t ThorQ::Instance::sessionState() const
 void ThorQ::Instance::setSessionState(thorq_session_state_t state)
 {
 	if (state != m_sessionState)
-	{
-		m_sessionState = state;
+    {
+        m_sessionState = state;
 
-		if (state == THORQ_SESSION_STATE_NONE)
-		{
-			Instance* partner = m_partner;
+        Instance* partner = m_partner;
 
-			if (partner != nullptr)
-			{
+        if (state == THORQ_SESSION_STATE_ACTIVE)
+        {
+            if (partner != nullptr)
+            {
+                partner->m_partner = this;
+
+                partner->setSessionState(THORQ_SESSION_STATE_ACTIVE);
+
+                // Set activity flag
+                m_activityState |= THORQ_USER_ACTIVITY_FLAG_IN_SESSION;
+
+                thorq_payload_t payload;
+
+                thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STARTED, name());
+                sendPayload(&payload, true, true);
+
+                thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_ACTIVITY, name(), m_activityState);
+                broadcastNotification(&payload, true);
+            }
+            else
+            {
+                setSessionState(THORQ_SESSION_STATE_NONE);
+            }
+        }
+        else if (state == THORQ_SESSION_STATE_NONE)
+        {
+            if (partner != nullptr)
+            {
+                // clear partner
+                m_partner = nullptr;
+
 				// Clear self from partner, so that it doesnt call recursivley
-				m_partner->m_partner = nullptr;
-
-				// clear partner
-				m_partner = nullptr;
+                partner->m_partner = nullptr;
 
 				// Run partner session disconnection
-				m_partner->setSessionState(THORQ_SESSION_STATE_NONE);
-			}
+                partner->setSessionState(THORQ_SESSION_STATE_NONE);
+            }
+
+            // Set activity flag
+            m_activityState &= ~THORQ_USER_ACTIVITY_FLAG_IN_SESSION;
 
 			// If we have already are notifying users that someone went offline then there is no use in telling them that they left a session, that is obvious
             if (m_loginState == THORQ_LOGIN_STATE_LOGGEDIN)
@@ -320,34 +362,25 @@ void ThorQ::Instance::setSessionState(thorq_session_state_t state)
 				thorq_payload_t payload;
 
 				thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STOPPED, name());
-				sendPayload(&payload, true, true);
+                sendPayload(&payload, true, true);
 
-				thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STOPPED, name());
-                broadcastAnnouncement(&payload, true);
+                thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_ACTIVITY, name(), m_activityState);
+                broadcastNotification(&payload, true);
             }
-		}
-		else if (state == THORQ_SESSION_STATE_ACTIVE)
-		{
-			if (m_partner != nullptr)
-			{
-				m_partner->m_partner = this;
 
-				m_partner->setSessionState(THORQ_SESSION_STATE_ACTIVE);
+            for (Instance* i : m_incoming_requests)
+            {
+                thorq_payload_t payload;
+                thorq_payload_command_ack_pack(payload, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, name() + " went offline");
+                i->sendPayload(&payload, true, true);
+            }
+        }
+    }
+}
 
-				thorq_payload_t payload;
-
-				thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STARTED, name());
-				sendPayload(&payload, true, true);
-
-				thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STARTED, name());
-                broadcastAnnouncement(&payload, true);
-			}
-			else
-			{
-				setSessionState(THORQ_SESSION_STATE_NONE);
-			}
-		}
-	}
+uint8_t ThorQ::Instance::activityState() const
+{
+    return m_activityState;
 }
 
 void ThorQ::Instance::cryptoInit()
