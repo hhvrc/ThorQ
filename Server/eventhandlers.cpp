@@ -128,20 +128,20 @@ void handleEventDisconnect(ENetPeer* peer)
 	if (peer->data == nullptr)
 		return;
 
-	auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
+    auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
-	// Automatically notifies and handles disconnection
-	instance->setConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
-
-	if (!instance->name().empty())
-	{
-		thorq_debug_fmt("Unnamed client connected from [%s] disconnected", enetaddr_to_str(&peer->address).c_str());
-	}
-	else
-	{
-		thorq_debug_fmt("Client \"%s\" connected from [%s] disconnected", instance->name().c_str(), enetaddr_to_str(&peer->address).c_str());
-	}
+    if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
+    {
+        thorq_debug_fmt("User \"%s\" connected from [%s] disconnected", instance->name().c_str(), enetaddr_to_str(&peer->address).c_str());
+    }
+    else
+    {
+        thorq_debug_fmt("Client connected from [%s] disconnected", enetaddr_to_str(&peer->address).c_str());
+    }
 	fflush(stdout);
+
+    // Automatically notifies and handles disconnection
+    instance->setConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
 
 	peer->data = nullptr;
 	delete instance;
@@ -152,22 +152,22 @@ void handleEventTimeout(ENetPeer* peer)
 	if (peer->data == nullptr)
 		return;
 
-	auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
+    auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
-	// TODO: broadcast client timeout
+    // TODO: broadcast client timeout
 
-	// Automatically notifies and handles disconnection
-	instance->setConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
-
-	if (!instance->name().empty())
-	{
-		thorq_debug_fmt("Unnamed client connected from [%s] timed out", enetaddr_to_str(&peer->address).c_str());
-	}
-	else
-	{
-		thorq_debug_fmt("Client \"%s\" connected from [%s] timed out", instance->name().c_str(), enetaddr_to_str(&peer->address).c_str());
-	}
+    if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
+    {
+        thorq_debug_fmt("User \"%s\" connected from [%s] timed out", instance->name().c_str(), enetaddr_to_str(&peer->address).c_str());
+    }
+    else
+    {
+        thorq_debug_fmt("Client connected from [%s] timed out", enetaddr_to_str(&peer->address).c_str());
+    }
 	fflush(stdout);
+
+    // Automatically notifies and handles disconnection
+    instance->setConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
 
 	peer->data = nullptr;
 	delete instance;
