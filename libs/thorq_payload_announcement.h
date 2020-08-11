@@ -48,7 +48,7 @@ inline void thorq_announcement_pack(thorq_payload_t& payload, thorq_announcement
  * @param payload
  * @param type
  */
-inline void thorq_msg_announcement_get_type(const thorq_payload_t& payload, thorq_announcement_type_t& type)
+inline void thorq_payload_announcement_get_type(const thorq_payload_t& payload, thorq_announcement_type_t& type)
 {
     type = static_cast<thorq_announcement_type_t>(payload.data[0]);
 }
@@ -58,7 +58,7 @@ inline void thorq_msg_announcement_get_type(const thorq_payload_t& payload, thor
  * @param payload
  * @param reason
  */
-inline void thorq_msg_announcement_get_reason(const thorq_payload_t& payload, thorq_announcement_reason_t& reason)
+inline void thorq_payload_announcement_get_reason(const thorq_payload_t& payload, thorq_announcement_reason_t& reason)
 {
     reason = static_cast<thorq_announcement_reason_t>(payload.data[1]);
 }
@@ -68,7 +68,7 @@ inline void thorq_msg_announcement_get_reason(const thorq_payload_t& payload, th
  * @param payload
  * @param message
  */
-inline void thorq_msg_announcement_get_message(const thorq_payload_t& payload, std::string& message)
+inline void thorq_payload_announcement_get_message(const thorq_payload_t& payload, std::string& message)
 {
     message.resize(payload.data.size() - 2);
     if (message.size() != 0)

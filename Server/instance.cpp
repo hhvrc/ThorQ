@@ -180,9 +180,6 @@ bool ThorQ::Instance::requestDenyFrom(ThorQ::Instance *sender)
 	}
     sender->m_outgoing_requests.extract(this);
 
-    if (sessionState() == THORQ_SESSION_STATE_DECIDING)
-        setSessionState(THORQ_SESSION_STATE_NONE);
-
     thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, "Request denied");
     sender->sendPayload(&response, true, true);
     thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_DENY, THORQ_COMMAND_ACK_RESULT_OK);
