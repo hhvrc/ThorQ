@@ -413,7 +413,7 @@ void handleMessageCommandAck(ThorQ::Instance* instance, const thorq_payload_t* p
 {
     (void)instance;
     (void)payload;
-    thorq_debug_fmt("Unexpected ack message...")
+    thorq_debug("Unexpected ack message...")
 }
 
 void handleMessageCollar(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
