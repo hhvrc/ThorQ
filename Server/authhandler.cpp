@@ -6,6 +6,7 @@
 #include <string>
 #include <mutex>
 #include <algorithm>
+#include <array>
 
 #include "systemid.h"
 
