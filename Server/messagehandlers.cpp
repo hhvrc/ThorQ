@@ -290,6 +290,7 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
         {
             thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK);
+            instance->sendPayload(&response, true, true);
 
             std::vector<ThorQ::Instance*> instances = registeredInstances->instances();
 
@@ -386,6 +387,9 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
         {
             instance->setSessionState(THORQ_SESSION_STATE_NONE);
+
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK);
+            instance->sendPayload(&response, true, true);
         }
         else
         {

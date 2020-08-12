@@ -831,26 +831,9 @@ void Client::handleMessageCommandAck(const thorq_payload_t &payload)
             return;
         }
     }
-    case THORQ_COMMAND_ID_GET_USER_LIST:
-    {
-        switch (result) {
-        case THORQ_COMMAND_ACK_RESULT_OK:
-            return;
-        case THORQ_COMMAND_ACK_RESULT_IN_PROGRESS:
-            return;
-        case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
-            return;
-        case THORQ_COMMAND_ACK_RESULT_DENIED:
-            return;
-        default:
-            return;
-        }
-    }
     case THORQ_COMMAND_ID_SESSION_REQUEST:
     {
         switch (result) {
-        case THORQ_COMMAND_ACK_RESULT_OK:
-            return;
         case THORQ_COMMAND_ACK_RESULT_IN_PROGRESS:
             return;
         case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
@@ -866,10 +849,6 @@ void Client::handleMessageCommandAck(const thorq_payload_t &payload)
         switch (result) {
         case THORQ_COMMAND_ACK_RESULT_OK:
             return;
-        case THORQ_COMMAND_ACK_RESULT_IN_PROGRESS:
-            return;
-        case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
-            return;
         case THORQ_COMMAND_ACK_RESULT_DENIED:
             return;
         default:
@@ -881,10 +860,6 @@ void Client::handleMessageCommandAck(const thorq_payload_t &payload)
         switch (result) {
         case THORQ_COMMAND_ACK_RESULT_OK:
             return;
-        case THORQ_COMMAND_ACK_RESULT_IN_PROGRESS:
-            return;
-        case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
-            return;
         case THORQ_COMMAND_ACK_RESULT_DENIED:
             return;
         default:
@@ -895,12 +870,6 @@ void Client::handleMessageCommandAck(const thorq_payload_t &payload)
     {
         switch (result) {
         case THORQ_COMMAND_ACK_RESULT_OK:
-            return;
-        case THORQ_COMMAND_ACK_RESULT_IN_PROGRESS:
-            return;
-        case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
-            return;
-        case THORQ_COMMAND_ACK_RESULT_DENIED:
             return;
         default:
             return;
