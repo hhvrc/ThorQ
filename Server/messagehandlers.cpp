@@ -248,7 +248,9 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         {
 			instance->name() = name;
 			if (registeredInstances->tryAdd(instance))
-			{
+            {
+                thorq_debug_fmt("New login from %s", instance->name().c_str())
+
                 thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK, name);
                 instance->sendPayload(&response, true, true);
             }
