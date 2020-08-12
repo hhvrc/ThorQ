@@ -21,7 +21,19 @@ typedef enum {
  */
 inline bool thorq_payload_notification_is_valid(const thorq_payload_t& payload)
 {
-    return payload.id == THORQ_PAYLOAD_ID_NOTIFICATION;
+	if (payload.data.size() == 0)
+		return false;
+
+	switch (payload.data[0]) {
+	case THORQ_NOTIFICATION_USER_ACTIVITY:
+		return payload.data.size() >= 3;
+	case THORQ_NOTIFICATION_USER_OFFLINE:
+	case THORQ_NOTIFICATION_USER_OFFLINE_LOS:
+	case THORQ_NOTIFICATION_USER_OFFLINE_TIMEOUT:
+		return payload.data.size() >= 2;
+	default:
+		return false;
+	}
 }
 
 /**

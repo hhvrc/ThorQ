@@ -26,22 +26,17 @@ typedef enum {
 inline bool thorq_payload_command_is_valid(const thorq_payload_t& payload)
 {
     switch (static_cast<thorq_command_id_t>(payload.data[0])) {
+	case THORQ_COMMAND_ID_LOGOUT:
+	case THORQ_COMMAND_ID_GET_USER_LIST:
+	case THORQ_COMMAND_ID_SESSION_LEAVE:
+		return payload.data.size() == 1;
+	case THORQ_COMMAND_ID_SET_SELF_STATE:
+		return payload.data.size() == 2;
     case THORQ_COMMAND_ID_LOGIN:
+	case THORQ_COMMAND_ID_SESSION_REQUEST:
+	case THORQ_COMMAND_ID_SESSION_ACCEPT:
+	case THORQ_COMMAND_ID_SESSION_DENY:
 		return payload.data.size() >= 2;
-    case THORQ_COMMAND_ID_LOGOUT:
-        return payload.data.size() == 1;
-    case THORQ_COMMAND_ID_SET_SELF_STATE:
-        return payload.data.size() == 2;
-    case THORQ_COMMAND_ID_GET_USER_LIST:
-        return payload.data.size() == 1;
-    case THORQ_COMMAND_ID_SESSION_REQUEST:
-		return payload.data.size() >= 2;
-    case THORQ_COMMAND_ID_SESSION_ACCEPT:
-		return payload.data.size() >= 2;
-    case THORQ_COMMAND_ID_SESSION_DENY:
-		return payload.data.size() >= 2;
-    case THORQ_COMMAND_ID_SESSION_LEAVE:
-        return payload.data.size() == 1;
     }
 }
 
