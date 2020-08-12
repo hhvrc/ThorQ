@@ -304,6 +304,9 @@ void ThorQ::Instance::setLoginState(thorq_login_state_t state)
 		}
 		else if (state == THORQ_LOGIN_STATE_LOGGEDOUT)
         {
+            if (!name().empty())
+                registeredInstances->remove(name());
+
             thorq_payload_t payload;
             thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_OFFLINE, name());
             broadcastNotification(&payload, true);

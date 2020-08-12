@@ -13,6 +13,7 @@
 #include <thorq_payload_command_ack.h>
 #include <thorq_payload_event.h>
 #include <thorq_payload_announcement.h>
+#include <thorq_payload_notification.h>
 #include <thorq_payload_collar.h>
 
 #include "utils.h"
@@ -138,7 +139,7 @@ void handleEventDisconnect(ENetPeer* peer)
     {
         thorq_debug_fmt("Client connected from [%s] disconnected", enetaddr_to_str(&peer->address).c_str());
     }
-	fflush(stdout);
+    fflush(stdout);
 
     // Automatically notifies and handles disconnection
     instance->setConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
@@ -154,10 +155,12 @@ void handleEventTimeout(ENetPeer* peer)
 
     auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
-    // TODO: broadcast client timeout
-
     if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
     {
+        thorq_payload_t payload;
+        thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_OFFLINE_TIMEOUT, instance->name());
+        instance->sendPayload(&payload, true, true);
+
         thorq_debug_fmt("User \"%s\" connected from [%s] timed out", instance->name().c_str(), enetaddr_to_str(&peer->address).c_str());
     }
     else

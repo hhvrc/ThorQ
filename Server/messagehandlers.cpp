@@ -249,6 +249,8 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
 			instance->name() = name;
 			if (registeredInstances->tryAdd(instance))
             {
+                instance->setLoginState(THORQ_LOGIN_STATE_LOGGEDIN);
+
                 thorq_debug_fmt("New login from %s", instance->name().c_str())
 
                 thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK, name);
@@ -272,9 +274,6 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
 	{
         if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
         {
-            // Remove from registered
-            registeredInstances->remove(instance->name());
-
             instance->setLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
 
             thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK);
