@@ -1,5 +1,3 @@
-//====== Copyright Valve Corporation, All rights reserved. =======
-
 #ifndef OPENVROVERLAYCONTROLLER_H
 #define OPENVROVERLAYCONTROLLER_H
 

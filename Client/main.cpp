@@ -14,6 +14,7 @@
 #include "serial.h"
 #include "loginwidget.h"
 #include "openvroverlaycontroller.h"
+#include "mainwidget.h"
 
 Q_DECLARE_METATYPE(thorq_connection_state_t)
 Q_DECLARE_METATYPE(thorq_crypto_state_t)
@@ -72,6 +73,8 @@ int main(int argc, char** argv)
 	qDebug() << "Using" << Client::Version();
 
 	LoginWidget loginWidget;
+    MainWidget mainWidget;
+
 	loginWidget.show();
 
 	Client* cli = Client::NewClient();
@@ -81,15 +84,20 @@ int main(int argc, char** argv)
     QObject::connect(cli, &Client::LoginStateChanged, &loginWidget, &LoginWidget::setLoginState);
     QObject::connect(cli, &Client::PingChanged, &loginWidget, &LoginWidget::setConnectionPing);
 
+    QObject::connect(cli, &Client::LoginStateChanged, &mainWidget, &QWidget::show);
+    QObject::connect(cli, &Client::LoginStateChanged, &loginWidget, &QWidget::hide);
+
     QMessageBox errorBox(&loginWidget);
     errorBox.setIcon(QMessageBox::Warning);
     errorBox.setWindowTitle("error");
 
     QObject::connect(cli, &Client::Error, &errorBox, &QMessageBox::setText);
-    QObject::connect(cli, &Client::Error, &errorBox, &QMessageBox::show);
+    QObject::connect(cli, &Client::Error, &errorBox, &QWidget::show);
 
     QObject::connect(&loginWidget, &LoginWidget::regkeyEntered, cli, &Client::SetRegistrationKey);
     QObject::connect(&loginWidget, &LoginWidget::usernameEntered, cli, &Client::Login);
+
+
 
 	cli->Connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT);
 

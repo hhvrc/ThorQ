@@ -1,5 +1,5 @@
-#ifndef COMBINEWIDGET_H
-#define COMBINEWIDGET_H
+#ifndef MAINWIDGET_H
+#define MAINWIDGET_H
 
 #include <QWidget>
 #include <QVBoxLayout>
@@ -20,4 +20,4 @@ private:
 	QHBoxLayout m_hlayout;
 };
 
-#endif // COMBINEWIDGET_H
+#endif // MAINWIDGET_H
