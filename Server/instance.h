@@ -37,6 +37,9 @@ public:
     void setIsInSteamVR(bool hasCollar);
     void setHasCollar(bool hasCollar);
 
+    void setActivityState(std::uint8_t state);
+    std::uint8_t activityState() const;
+
     bool isInSession() const;
     bool isInSteamVR() const;
     bool hasCollar() const;
@@ -51,7 +54,7 @@ public:
 	void setLoginState(thorq_login_state_t state);
 	thorq_session_state_t sessionState() const;
 	void setSessionState(thorq_session_state_t state);
-    std::uint8_t activityState() const;
+
 
 	void cryptoInit();
 	bool cryptoEstablish(const std::vector<std::uint8_t>& data);

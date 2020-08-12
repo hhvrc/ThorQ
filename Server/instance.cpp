@@ -222,6 +222,20 @@ void ThorQ::Instance::setHasCollar(bool value)
     }
 }
 
+void ThorQ::Instance::setActivityState(uint8_t state)
+{
+    m_activityState = state;
+
+    thorq_payload_t payload;
+    thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_ACTIVITY, name(), m_activityState);
+    broadcastNotification(&payload, true);
+}
+
+uint8_t ThorQ::Instance::activityState() const
+{
+    return m_activityState;
+}
+
 bool ThorQ::Instance::isInSession() const
 {
     return (m_activityState & THORQ_USER_ACTIVITY_FLAG_IN_SESSION) != 0;
@@ -373,11 +387,6 @@ void ThorQ::Instance::setSessionState(thorq_session_state_t state)
             }
         }
     }
-}
-
-uint8_t ThorQ::Instance::activityState() const
-{
-    return m_activityState;
 }
 
 void ThorQ::Instance::cryptoInit()

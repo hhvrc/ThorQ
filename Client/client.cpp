@@ -780,7 +780,135 @@ void Client::handleMessageCommand(const thorq_payload_t &payload)
 }
 void Client::handleMessageCommandAck(const thorq_payload_t &payload)
 {
+    std::string message;
+    thorq_command_id_t cmd;
+    thorq_command_ack_result_t result;
 
+    thorq_payload_command_ack_get_cmd(payload, cmd);
+    thorq_payload_command_ack_get_result(payload, result);
+    thorq_payload_command_ack_get_message(payload, message);
+
+    switch (result) {
+    case THORQ_COMMAND_ACK_RESULT_INVALID:
+        // TODO: HMMMMMMM
+        return;
+    case THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED:
+        SetLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
+        return;
+    case THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED:
+        SetAuthState(THORQ_AUTH_STATE_NONE);
+        return;
+    default:
+        break;
+    }
+
+    switch (cmd) {
+    case THORQ_COMMAND_ID_LOGIN:
+    {
+        switch (result) {
+        case THORQ_COMMAND_ACK_RESULT_OK:
+        case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
+            SetUsername(message.c_str());
+            SetLoginState(THORQ_LOGIN_STATE_LOGGEDIN);
+            return;
+        case THORQ_COMMAND_ACK_RESULT_DENIED:
+            SetUsername("");
+            SetLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
+            return;
+        default:
+            return;
+        }
+    }
+    case THORQ_COMMAND_ID_LOGOUT:
+    {
+        switch (result) {
+        case THORQ_COMMAND_ACK_RESULT_OK:
+        case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
+            SetUsername("");
+            SetLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
+            break;
+        default:
+            return;
+        }
+    }
+    case THORQ_COMMAND_ID_GET_USER_LIST:
+    {
+        switch (result) {
+        case THORQ_COMMAND_ACK_RESULT_OK:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_IN_PROGRESS:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_DENIED:
+            return;
+        default:
+            return;
+        }
+    }
+    case THORQ_COMMAND_ID_SESSION_REQUEST:
+    {
+        switch (result) {
+        case THORQ_COMMAND_ACK_RESULT_OK:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_IN_PROGRESS:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_DENIED:
+            return;
+        default:
+            return;
+        }
+    }
+    case THORQ_COMMAND_ID_SESSION_ACCEPT:
+    {
+        switch (result) {
+        case THORQ_COMMAND_ACK_RESULT_OK:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_IN_PROGRESS:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_DENIED:
+            return;
+        default:
+            return;
+        }
+    }
+    case THORQ_COMMAND_ID_SESSION_DENY:
+    {
+        switch (result) {
+        case THORQ_COMMAND_ACK_RESULT_OK:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_IN_PROGRESS:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_DENIED:
+            return;
+        default:
+            return;
+        }
+    }
+    case THORQ_COMMAND_ID_SESSION_LEAVE:
+    {
+        switch (result) {
+        case THORQ_COMMAND_ACK_RESULT_OK:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_IN_PROGRESS:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
+            return;
+        case THORQ_COMMAND_ACK_RESULT_DENIED:
+            return;
+        default:
+            return;
+        }
+    }
+    default:
+        return;
+    }
 }
 void Client::handleMessageNotification(const thorq_payload_t &payload)
 {

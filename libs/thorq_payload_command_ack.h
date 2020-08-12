@@ -10,6 +10,7 @@ typedef enum {
 
     THORQ_COMMAND_ACK_RESULT_DENIED, ///< Command was denied
     THORQ_COMMAND_ACK_RESULT_INVALID, ///< Command invalid
+    THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED, ///< Client has not logged in
     THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, ///< Client has not authenticated (Crypto + Auth)
 } thorq_command_ack_result_t; ///< Acknowledge of command sent from client
 

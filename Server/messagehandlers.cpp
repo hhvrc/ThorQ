@@ -301,7 +301,7 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, "Please log in");
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
             instance->sendPayload(&response, true, true);
         }
 		break;
@@ -326,7 +326,7 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, "Please log in");
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
             instance->sendPayload(&response, true, true);
         }
 		break;
@@ -351,7 +351,7 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, "Please log in");
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
             instance->sendPayload(&response, true, true);
         }
         break;
@@ -376,7 +376,7 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, "Please log in");
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
             instance->sendPayload(&response, true, true);
         }
         break;
@@ -389,22 +389,26 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, "Please log in");
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
             instance->sendPayload(&response, true, true);
         }
 		break;
     }
 	case THORQ_COMMAND_ID_SET_SELF_STATE:
-
+    {
         if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
         {
+            std::uint8_t state;
+            thorq_payload_command_get_data(*payload, state);
+            instance->setActivityState(state);
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED, "Please log in");
+            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
             instance->sendPayload(&response, true, true);
         }
 		break;
+    }
     }
 
 }
