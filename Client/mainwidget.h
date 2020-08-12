@@ -8,12 +8,15 @@
 /**
  * @brief The MainWidget class
  */
-class MainWidget
+class MainWidget : public QWidget
 {
+    Q_OBJECT
+    Q_DISABLE_COPY(MainWidget)
 public:
-	MainWidget();
+    MainWidget(QWidget* parent = nullptr);
+    ~MainWidget() = default;
 private:
-	QVBoxLayout m_vlayour;
+    QVBoxLayout m_vlayout;
 	QHBoxLayout m_hlayout;
 };
 

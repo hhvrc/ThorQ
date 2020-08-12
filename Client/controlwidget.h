@@ -1,5 +1,5 @@
-#ifndef OVERLAYWIDGET_H
-#define OVERLAYWIDGET_H
+#ifndef CONTROLWIDGET_H
+#define CONTROLWIDGET_H
 
 #include <QWidget>
 
@@ -30,4 +30,4 @@ public:
 private:
 };
 
-#endif // OVERLAYWIDGET_H
+#endif // CONTROLWIDGET_H

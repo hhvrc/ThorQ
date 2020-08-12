@@ -1,5 +1,5 @@
-#ifndef COMBINEWIDGET_H
-#define COMBINEWIDGET_H
+#ifndef LOGINWIDGET_H
+#define LOGINWIDGET_H
 
 #include <QWidget>
 
@@ -47,4 +47,4 @@ private:
 	QHBoxLayout* m_headerLayout;
 };
 
-#endif // COMBINEWIDGET_H
+#endif // LOGINWIDGET_H
