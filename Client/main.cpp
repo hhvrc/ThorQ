@@ -74,33 +74,29 @@ int main(int argc, char** argv)
 
 	LoginWidget loginWidget;
     MainWidget mainWidget;
+	Client* cli = Client::NewClient();
+	QMessageBox errorBox(&loginWidget);
+	errorBox.setIcon(QMessageBox::Warning);
+	errorBox.setWindowTitle("error");
 
-	loginWidget.show();
 	QObject::connect(cli, &Client::PingChanged, &mainWidget, &MainWidget::setConnectionPing);
 	QObject::connect(cli, &Client::LoginStateChanged, &mainWidget, &MainWidget::setLoginState);
 	QObject::connect(cli, &Client::SessionStateChanged, &mainWidget, &MainWidget::setSessionState);
 
-	Client* cli = Client::NewClient();
+	QObject::connect(cli, &Client::PingChanged, &loginWidget, &LoginWidget::setConnectionPing);
     QObject::connect(cli, &Client::ConnectionStateChanged, &loginWidget, &LoginWidget::setConnectionState);
     QObject::connect(cli, &Client::CryptoStateChanged, &loginWidget, &LoginWidget::setCryptoState);
     QObject::connect(cli, &Client::AuthStateChanged, &loginWidget, &LoginWidget::setAuthState);
-    QObject::connect(cli, &Client::LoginStateChanged, &loginWidget, &LoginWidget::setLoginState);
-    QObject::connect(cli, &Client::PingChanged, &loginWidget, &LoginWidget::setConnectionPing);
-
-    QObject::connect(cli, &Client::LoginStateChanged, &loginWidget, &QWidget::hide);
-
-    QMessageBox errorBox(&loginWidget);
-    errorBox.setIcon(QMessageBox::Warning);
-    errorBox.setWindowTitle("error");
+	QObject::connect(cli, &Client::LoginStateChanged, &loginWidget, &LoginWidget::setLoginState);
 
     QObject::connect(cli, &Client::Error, &errorBox, &QMessageBox::setText);
     QObject::connect(cli, &Client::Error, &errorBox, &QWidget::show);
 
     QObject::connect(&loginWidget, &LoginWidget::regkeyEntered, cli, &Client::SetRegistrationKey);
-    QObject::connect(&loginWidget, &LoginWidget::usernameEntered, cli, &Client::Login);
-
+	QObject::connect(&loginWidget, &LoginWidget::usernameEntered, cli, &Client::Login);
 	QObject::connect(&mainWidget, &MainWidget::logoutButtonClicked, cli, &Client::Logout);
 
+	loginWidget.show();
 
 	cli->Connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT);
 

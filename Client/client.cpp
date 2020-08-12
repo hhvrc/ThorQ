@@ -314,10 +314,10 @@ void Client::Service()
                 thorq_payload_t payload;
 
                 SCOPELOCK(l_username);
-                thorq_payload_command_pack(payload, THORQ_COMMAND_ID_LOGIN, m_username);
+				thorq_payload_command_pack(payload, THORQ_COMMAND_ID_LOGOUT);
                 SendPayload(payload, true, true);
 
-                SetLoginState(THORQ_LOGIN_STATE_LOGGINGIN);
+				SetLoginState(THORQ_LOGIN_STATE_LOGGINGOUT);
             }
             else
             {
@@ -814,6 +814,7 @@ void Client::handleMessageCommandAck(const thorq_payload_t &payload)
         case THORQ_COMMAND_ACK_RESULT_DENIED:
             SetUsername("");
             SetLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
+			emit Error(message.c_str());
             return;
         default:
             return;
@@ -839,6 +840,7 @@ void Client::handleMessageCommandAck(const thorq_payload_t &payload)
         case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
             return;
         case THORQ_COMMAND_ACK_RESULT_DENIED:
+			emit Error(message.c_str());
             return;
         default:
             return;
@@ -861,6 +863,7 @@ void Client::handleMessageCommandAck(const thorq_payload_t &payload)
         case THORQ_COMMAND_ACK_RESULT_OK:
             return;
         case THORQ_COMMAND_ACK_RESULT_DENIED:
+			emit Error(message.c_str());
             return;
         default:
             return;
