@@ -30,7 +30,7 @@ bool ThorQ::InstanceMap::tryAdd(Instance* instance)
 	auto it_name = m_nameSorted.insert({instance});
 	auto it_hwid = m_hwidSorted.insert({instance});
 
-    if (it_name.second && it_name.first->instance == it_hwid.first->instance)
+    if (it_name.second)// TODO: && it_name.first->instance == it_hwid.first->instance)
 	{
         return true;
 	}
