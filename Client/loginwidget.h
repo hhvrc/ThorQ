@@ -20,17 +20,17 @@ class LoginWidget : public QWidget
 	Q_DISABLE_COPY(LoginWidget)
 public:
 	LoginWidget(QWidget* parent = nullptr);
-	~LoginWidget() = default;
+	~LoginWidget();
+signals:
+	void regkeyEntered(const QString& username);
+	void usernameEntered(const QString& username);
 public slots:
     void setConnectionState(thorq_connection_state_t state);
     void setCryptoState(thorq_crypto_state_t state);
     void setAuthState(thorq_auth_state_t state);
 
     void setLoginState(thorq_login_state_t state);
-    void setConnectionPing(uint ping);
-signals:
-    void regkeyEntered(const QString& username);
-    void usernameEntered(const QString& username);
+	void setConnectionPing(uint ping);
 private slots:
     void updateUiState();
 	void updateUiPing();

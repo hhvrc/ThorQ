@@ -74,6 +74,11 @@ LoginWidget::LoginWidget(QWidget* parent)
     updateUiState();
 }
 
+LoginWidget::~LoginWidget()
+{
+	delete m_headerLayout;
+}
+
 void LoginWidget::setConnectionState(thorq_connection_state_t state)
 {
     if (m_state != state)
@@ -158,6 +163,15 @@ void LoginWidget::updateUiState()
         m_textInput->hide();
         adjustSize();
     }
+
+	if (m_state < THORQ_LOGIN_STATE_LOGGEDIN)
+	{
+		show();
+	}
+	else
+	{
+		hide();
+	}
 }
 
 void LoginWidget::updateUiPing()
