@@ -910,7 +910,25 @@ void Client::handleMessageNotification(const thorq_payload_t &payload)
 }
 void Client::handleMessageCollar(const thorq_payload_t &payload)
 {
+	std::uint8_t flags, shockVal, vibrateVal, beepVal, autoVal;
+	thorq_payload_collar_unpack(payload, flags, shockVal, vibrateVal, beepVal, autoVal);
 
+	if ((flags & THORQ_COLLAR_FLAG_SHOCK) != 0)
+	{
+		emit ReceivedShock(shockVal);
+	}
+	else if ((flags & THORQ_COLLAR_FLAG_VIBRATE) != 0)
+	{
+		emit ReceivedVibrate(vibrateVal);
+	}
+	else if ((flags & THORQ_COLLAR_FLAG_BEEP) != 0)
+	{
+		emit ReceivedBeep(beepVal);
+	}
+	else if ((flags & THORQ_COLLAR_FLAG_AUTO) != 0)
+	{
+		emit ReceivedAuto(autoVal, shockVal, vibrateVal, beepVal);
+	}
 }
 
 void Client::SendPayload(const thorq_payload_t& payload, bool encrypt, bool reliable)
