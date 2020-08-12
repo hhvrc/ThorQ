@@ -296,6 +296,9 @@ void ThorQ::Instance::setLoginState(thorq_login_state_t state)
 	{
 		m_loginState = state;
 
+		if (state < m_loginState)
+			setSessionState(THORQ_SESSION_STATE_NONE);
+
 		if (state == THORQ_LOGIN_STATE_LOGGEDIN)
         {
 			thorq_payload_t payload;
@@ -310,11 +313,15 @@ void ThorQ::Instance::setLoginState(thorq_login_state_t state)
             thorq_payload_t payload;
             thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_OFFLINE, name());
             broadcastNotification(&payload, true);
+
+			for (Instance* i : m_incoming_requests)
+			{
+				thorq_payload_command_ack_pack(payload, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, name() + " went offline");
+				i->sendPayload(&payload, true, true);
+			}
+
             name().clear();
 		}
-
-		if (state < m_loginState)
-			setSessionState(THORQ_SESSION_STATE_NONE);
 	}
 }
 thorq_session_state_t ThorQ::Instance::sessionState() const
@@ -370,24 +377,13 @@ void ThorQ::Instance::setSessionState(thorq_session_state_t state)
             // Set activity flag
             m_activityState &= ~THORQ_USER_ACTIVITY_FLAG_IN_SESSION;
 
-			// If we have already are notifying users that someone went offline then there is no use in telling them that they left a session, that is obvious
-            if (m_loginState == THORQ_LOGIN_STATE_LOGGEDIN)
-			{
-				thorq_payload_t payload;
+			thorq_payload_t payload;
 
-				thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STOPPED, name());
-                sendPayload(&payload, true, true);
+			thorq_payload_event_pack(payload, THORQ_EVENT_SESSION_STOPPED, name());
+			sendPayload(&payload, true, true);
 
-                thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_ACTIVITY, name(), m_activityState);
-                broadcastNotification(&payload, true);
-            }
-
-            for (Instance* i : m_incoming_requests)
-            {
-                thorq_payload_t payload;
-                thorq_payload_command_ack_pack(payload, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, name() + " went offline");
-                i->sendPayload(&payload, true, true);
-            }
+			thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_ACTIVITY, name(), m_activityState);
+			broadcastNotification(&payload, true);
         }
     }
 }
