@@ -891,7 +891,6 @@ void Client::handleMessageCollar(const thorq_payload_t &payload)
 
 }
 
-
 void Client::SendPayload(const thorq_payload_t& payload, bool encrypt, bool reliable)
 {
 	std::vector<std::uint8_t> message;
@@ -935,34 +934,34 @@ void Client::handleDisconnect(std::uint32_t reason)
 		switch (reason)
 		{
 		case THORQ_DISCONNECT_REASON_TIMEDOUT:
-			emit Error(tr("Connection timed out"));
+			emit Warning(tr("Connection timed out"));
 			return;
 		case THORQ_DISCONNECT_REASON_VERSION_INCOMPATIBLE:
-			emit Error(tr("Please update you application\nDiscord: YameroDev#9058"));
+			emit Error(tr("Please update you application\nContact the Dev:\nYameroDev#9058"));
 			break;
 		case THORQ_DISCONNECT_REASON_CRYPT_FAILED:
 			emit Error(tr("Encryption failed"));
 			break;
         case THORQ_DISCONNECT_REASON_AUTH_TIMEOUT:
-            emit Error(tr("Authentication failed"));
+			emit Error(tr("Authentication failed\nYou changed your registrationkey between pc's too quickly!\nWait a week and try again"));
             break;
         case THORQ_DISCONNECT_REASON_AUTH_INVALID_REGKEY:
-			emit Error(tr("Authentication failed"));
+			emit Error(tr("Authentication failed\nInvalid registration key!"));
 			break;
         case THORQ_DISCONNECT_REASON_AUTH_INVALID_SYSTEMID:
-            emit Error(tr("Authentication failed"));
+			emit Error(tr("Authentication failed\nServer could not identify your computer"));
             break;
 		case THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED:
-			emit Error(tr("Server shut down"));
+			emit Warning(tr("Server shut down"));
 			break;
 		case THORQ_DISCONNECT_REASON_SHUTDOWN_MAINTANENCE:
-			emit Error(tr("Server is undergoing maintenance"));
+			emit Warning(tr("Server is undergoing maintenance"));
 			break;
 		case THORQ_DISCONNECT_REASON_KICKED:
 			emit Error(tr("You have been kicked"));
 			break;
 		default:
-			emit Error(tr("Disconnected for unknown reason"));
+			emit Warning(tr("Disconnected for unknown reason"));
 			break;
 		}
 	}

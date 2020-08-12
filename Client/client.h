@@ -259,16 +259,8 @@ signals:
      */
 	void RequestingRegistrationKey();
 
-    /**
-     * @brief Error
-     * @param what
-     */
+	void Warning(const QString& what);
 	void Error(const QString& what);
-
-    /**
-     * @brief Announcement
-     * @param what
-     */
     void Announcement(const QString& what);
 private slots:
     /**

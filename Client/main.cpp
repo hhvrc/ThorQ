@@ -75,9 +75,14 @@ int main(int argc, char** argv)
 	LoginWidget loginWidget;
     MainWidget mainWidget;
 	Client* cli = Client::NewClient();
+
 	QMessageBox errorBox(&loginWidget);
-	errorBox.setIcon(QMessageBox::Warning);
+	errorBox.setIcon(QMessageBox::Critical);
 	errorBox.setWindowTitle("error");
+
+	QMessageBox warningBox(&loginWidget);
+	warningBox.setIcon(QMessageBox::Warning);
+	errorBox.setWindowTitle("warning");
 
 	QObject::connect(cli, &Client::PingChanged, &mainWidget, &MainWidget::setConnectionPing);
 	QObject::connect(cli, &Client::LoginStateChanged, &mainWidget, &MainWidget::setLoginState);
@@ -90,7 +95,11 @@ int main(int argc, char** argv)
 	QObject::connect(cli, &Client::LoginStateChanged, &loginWidget, &LoginWidget::setLoginState);
 
     QObject::connect(cli, &Client::Error, &errorBox, &QMessageBox::setText);
-    QObject::connect(cli, &Client::Error, &errorBox, &QWidget::show);
+	QObject::connect(cli, &Client::Error, &errorBox, &QWidget::show);
+	//QObject::connect(cli, &Client::Error, [&](){ app.setQuitOnLastWindowClosed(true); loginWidget.hide(); mainWidget.hide(); warningBox.hide(); });
+
+	QObject::connect(cli, &Client::Warning, &warningBox, &QMessageBox::setText);
+	QObject::connect(cli, &Client::Warning, &warningBox, &QWidget::show);
 
     QObject::connect(&loginWidget, &LoginWidget::regkeyEntered, cli, &Client::SetRegistrationKey);
 	QObject::connect(&loginWidget, &LoginWidget::usernameEntered, cli, &Client::Login);
