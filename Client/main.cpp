@@ -76,6 +76,9 @@ int main(int argc, char** argv)
     MainWidget mainWidget;
 
 	loginWidget.show();
+	QObject::connect(cli, &Client::PingChanged, &mainWidget, &MainWidget::setConnectionPing);
+	QObject::connect(cli, &Client::LoginStateChanged, &mainWidget, &MainWidget::setLoginState);
+	QObject::connect(cli, &Client::SessionStateChanged, &mainWidget, &MainWidget::setSessionState);
 
 	Client* cli = Client::NewClient();
     QObject::connect(cli, &Client::ConnectionStateChanged, &loginWidget, &LoginWidget::setConnectionState);
@@ -84,7 +87,6 @@ int main(int argc, char** argv)
     QObject::connect(cli, &Client::LoginStateChanged, &loginWidget, &LoginWidget::setLoginState);
     QObject::connect(cli, &Client::PingChanged, &loginWidget, &LoginWidget::setConnectionPing);
 
-    QObject::connect(cli, &Client::LoginStateChanged, &mainWidget, &QWidget::show);
     QObject::connect(cli, &Client::LoginStateChanged, &loginWidget, &QWidget::hide);
 
     QMessageBox errorBox(&loginWidget);
@@ -97,6 +99,7 @@ int main(int argc, char** argv)
     QObject::connect(&loginWidget, &LoginWidget::regkeyEntered, cli, &Client::SetRegistrationKey);
     QObject::connect(&loginWidget, &LoginWidget::usernameEntered, cli, &Client::Login);
 
+	QObject::connect(&mainWidget, &MainWidget::logoutButtonClicked, cli, &Client::Logout);
 
 
 	cli->Connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT);
