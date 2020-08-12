@@ -259,8 +259,10 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
             else
             {
 				instance->name().clear();
-                thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, "Username taken");
-                instance->sendPayload(&response, true, true);
+
+				thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, registeredInstances->contains(instance->hwid()) ? "Already logged in from this computer" : "Username taken");
+
+				instance->sendPayload(&response, true, true);
             }
         }
         else
