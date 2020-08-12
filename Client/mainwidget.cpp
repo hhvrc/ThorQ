@@ -2,34 +2,44 @@
 
 #include <QBoxLayout>
 #include <QPushButton>
+#include <QListWidget>
+
+#include "usermodel.h"
+#include "userdelegate.h"
 
 MainWidget::MainWidget(QWidget *parent)
-    : QWidget(parent)
+	: QWidget(parent)
 	, m_logoutButton(new QPushButton(this))
+	, m_listView(new QListView(this))
+	, m_userModel(new UserModel(this))
+	, m_userDelegate(new UserDelegate(this))
 	, m_vlayout(new QVBoxLayout(this))
 	, m_hlayout(new QHBoxLayout())
 {
+	m_logoutButton->setText("Logout");
 	QObject::connect(m_logoutButton, &QPushButton::clicked, [this](){ emit logoutButtonClicked(); });
+
+	m_listView->setModel(m_userModel);
+
 	m_vlayout->addWidget(m_logoutButton);
+	m_vlayout->addWidget(m_listView);
+
 	setLayout(m_vlayout);
 }
 
-void MainWidget::setLoginState(THORQ_STATE_LOGIN state)
+void MainWidget::setLoginState(THORQ_STATE_LOGIN newState)
 {
-	if (m_state != state)
+	if (newState < THORQ_STATE_LOGIN_LOGGEDIN)
 	{
-		m_state = state;
-		updateUiState();
+		hide();
+	}
+	else
+	{
+		show();
 	}
 }
-
-void MainWidget::setSessionState(THORQ_STATE_SESSION state)
+void MainWidget::setSessionState(THORQ_STATE_SESSION newState)
 {
-	if (m_state != state)
-	{
-		m_state = state;
-		updateUiState();
-	}
 }
 
 void MainWidget::setConnectionPing(uint ping)
@@ -43,14 +53,6 @@ void MainWidget::setConnectionPing(uint ping)
 
 void MainWidget::updateUiState()
 {
-	if (m_state < THORQ_STATE_LOGIN_LOGGEDIN)
-	{
-		hide();
-	}
-	else
-	{
-		show();
-	}
 }
 
 void MainWidget::updateUiPing()

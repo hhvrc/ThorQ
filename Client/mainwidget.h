@@ -8,17 +8,21 @@
 class QVBoxLayout;
 class QHBoxLayout;
 class QPushButton;
+class QListView;
+
+class UserModel;
+class UserDelegate;
 
 /**
  * @brief The MainWidget class
  */
 class MainWidget : public QWidget
 {
-    Q_OBJECT
-    Q_DISABLE_COPY(MainWidget)
+	Q_OBJECT
+	Q_DISABLE_COPY(MainWidget)
 public:
-    MainWidget(QWidget* parent = nullptr);
-    ~MainWidget() = default;
+	MainWidget(QWidget* parent = nullptr);
+	~MainWidget() = default;
 signals:
 	void logoutButtonClicked();
 	void usernameEntered(const QString& username);
@@ -34,6 +38,10 @@ private:
 	uint m_ping;
 
 	QPushButton* m_logoutButton;
+	QListView*   m_listView;
+
+	UserModel* m_userModel;
+	UserDelegate* m_userDelegate;
 
 	QVBoxLayout* m_vlayout;
 	QHBoxLayout* m_hlayout;
