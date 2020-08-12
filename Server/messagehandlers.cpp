@@ -67,25 +67,16 @@ void handleMessageCrypto(ThorQ::Instance* instance, const thorq_payload_t* paylo
 
     switch (cmd) {
     case THORQ_CRYPTO_REQUEST:
-    {
-        thorq_debug("Got request!")
-        instance->cryptoInit();
-
-        thorq_debug("Sent public key!")
+	{
+		instance->cryptoInit();
         break;
     }
 	case THORQ_CRYPTO_ESTABLISH:
 	{
-        thorq_debug("Got public key!")
-
         std::vector<std::uint8_t> data;
         thorq_payload_crypto_get_data(*payload, data);
 
-        if (instance->cryptoEstablish(data))
-        {
-            thorq_debug("Created shared secret!")
-        }
-        else
+		if (!instance->cryptoEstablish(data))
         {
             thorq_debug("Failed to create shared secret!")
             instance->disconnect(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
@@ -94,14 +85,11 @@ void handleMessageCrypto(ThorQ::Instance* instance, const thorq_payload_t* paylo
     }
 	case THORQ_CRYPTO_VERIFY:
 	{
-        thorq_debug("Verifying!")
-
         std::vector<std::uint8_t> data;
         thorq_payload_crypto_get_data(*payload, data);
 
         if (instance->cryptoVerify(data))
-        {
-            thorq_debug("Verified with client!")
+		{
             thorq_payload_auth_pack(response, THORQ_AUTH_SYSTEMID_REQ);
             instance->sendPayload(&response, true, true);
             instance->setAuthState(THORQ_AUTH_STATE_HWID_REQUESTING);
@@ -128,9 +116,7 @@ void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t* payload
 
     switch (cmd) {
     case THORQ_AUTH_SYSTEMID:
-    {
-        thorq_debug("SystemID!")
-
+	{
         std::vector<std::uint8_t> data;
         thorq_payload_auth_get_data(*payload, data);
 
@@ -165,15 +151,12 @@ void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t* payload
         break;
     }
     case THORQ_AUTH_REGKEY_AWAITING_INPUT:
-    {
-        thorq_debug("Input?")
+	{
         instance->setAuthState(THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT);
         break;
     }
     case THORQ_AUTH_REGKEY:
-    {
-        thorq_debug("RegKey!")
-
+	{
 		std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN> data;
         thorq_payload_auth_get_data(*payload, data);
 

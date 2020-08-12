@@ -70,7 +70,6 @@ int main(int argc, char** argv)
 		printf("Failed to initialize ENet");
         return EXIT_FAILURE;
 	}
-	qDebug() << "Using" << Client::Version();
 
 	LoginWidget loginWidget;
     MainWidget mainWidget;
