@@ -884,7 +884,29 @@ void Client::handleMessageCommandAck(const thorq_payload_t &payload)
 }
 void Client::handleMessageNotification(const thorq_payload_t &payload)
 {
+	thorq_notification_type_t type;
 
+	thorq_payload_notification_get_type(payload, type);
+
+	switch (type) {
+	case THORQ_NOTIFICATION_USER_ACTIVITY:
+	{
+		std::string name;
+		std::uint8_t state = 0;
+		thorq_payload_notification_get_message_and_data(payload, name, state);
+		emit userUpdate(name.c_str(), state);
+		break;
+	}
+	case THORQ_NOTIFICATION_USER_OFFLINE:
+	case THORQ_NOTIFICATION_USER_OFFLINE_LOS:
+	case THORQ_NOTIFICATION_USER_OFFLINE_TIMEOUT:
+	{
+		std::string name;
+		thorq_payload_notification_get_message(payload, name);
+		emit UserOffline(name.c_str());
+		break;
+	}
+	}
 }
 void Client::handleMessageCollar(const thorq_payload_t &payload)
 {
