@@ -20,11 +20,11 @@
 ThorQ::Instance::Instance(ENetPeer* peer)
 	: m_crypto(new Crypto())
 	, m_activityState(0)
-	, m_connectionState(THORQ_CONNECTION_STATE_DISCONNECTED)
-	, m_cryptoState(THORQ_CRYPTO_STATE_NONE)
-	, m_authState(THORQ_AUTH_STATE_NONE)
-	, m_loginState(THORQ_LOGIN_STATE_LOGGEDOUT)
-	, m_sessionState(THORQ_SESSION_STATE_NONE)
+	, m_connectionState(THORQ_STATE_CONNECTION_DISCONNECTED)
+	, m_cryptoState(THORQ_STATE_CRYPTO_NONE)
+	, m_authState(THORQ_STATE_AUTH_NONE)
+	, m_loginState(THORQ_STATE_LOGIN_LOGGEDOUT)
+	, m_sessionState(THORQ_STATE_SESSION_NONE)
 	, m_name()
 	, m_hwid()
 	, m_peer(peer)
@@ -152,7 +152,7 @@ bool ThorQ::Instance::requestAcceptFrom(Instance* sender)
 
 	m_partner = sender;
 
-	setSessionState(THORQ_SESSION_STATE_ACTIVE);
+	setSessionState(THORQ_STATE_SESSION_ACTIVE);
 
     thorq_payload_command_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_OK, "Request accepted");
     m_partner->sendPayload(&response, true, true);
@@ -251,61 +251,61 @@ bool ThorQ::Instance::hasCollar() const
     return (m_activityState & THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT) != 0;
 }
 
-thorq_connection_state_t ThorQ::Instance::connectionState() const
+THORQ_STATE_CONNECTION ThorQ::Instance::connectionState() const
 {
 	return m_connectionState;
 }
 
-void ThorQ::Instance::setConnectionState(thorq_connection_state_t state)
+void ThorQ::Instance::setConnectionState(THORQ_STATE_CONNECTION state)
 {
 	if (state < m_connectionState)
-        setCryptoState(THORQ_CRYPTO_STATE_NONE);
+        setCryptoState(THORQ_STATE_CRYPTO_NONE);
 	m_connectionState = state;
 }
 
-thorq_crypto_state_t ThorQ::Instance::cryptoState() const
+THORQ_STATE_CRYPTO ThorQ::Instance::cryptoState() const
 {
 	return m_cryptoState;
 }
 
-void ThorQ::Instance::setCryptoState(thorq_crypto_state_t state)
+void ThorQ::Instance::setCryptoState(THORQ_STATE_CRYPTO state)
 {
 	if (state < m_cryptoState)
-        setAuthState(THORQ_AUTH_STATE_NONE);
+        setAuthState(THORQ_STATE_AUTH_NONE);
     m_cryptoState = state;
 }
 
-thorq_auth_state_t ThorQ::Instance::authState() const
+THORQ_STATE_AUTH ThorQ::Instance::authState() const
 {
     return m_authState;
 }
 
-void ThorQ::Instance::setAuthState(thorq_auth_state_t state)
+void ThorQ::Instance::setAuthState(THORQ_STATE_AUTH state)
 {
     if (state < m_authState)
-        setLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
+        setLoginState(THORQ_STATE_LOGIN_LOGGEDOUT);
     m_authState = state;
 }
-thorq_login_state_t ThorQ::Instance::loginState() const
+THORQ_STATE_LOGIN ThorQ::Instance::loginState() const
 {
 	return m_loginState;
 }
-void ThorQ::Instance::setLoginState(thorq_login_state_t state)
+void ThorQ::Instance::setLoginState(THORQ_STATE_LOGIN state)
 {
 	if (state != m_loginState)
 	{
 		m_loginState = state;
 
 		if (state < m_loginState)
-			setSessionState(THORQ_SESSION_STATE_NONE);
+			setSessionState(THORQ_STATE_SESSION_NONE);
 
-		if (state == THORQ_LOGIN_STATE_LOGGEDIN)
+		if (state == THORQ_STATE_LOGIN_LOGGEDIN)
         {
 			thorq_payload_t payload;
             thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_ACTIVITY, name(), m_activityState);
             broadcastNotification(&payload, true);
 		}
-		else if (state == THORQ_LOGIN_STATE_LOGGEDOUT)
+		else if (state == THORQ_STATE_LOGIN_LOGGEDOUT)
         {
             if (!name().empty())
                 registeredInstances->remove(name());
@@ -324,11 +324,11 @@ void ThorQ::Instance::setLoginState(thorq_login_state_t state)
 		}
 	}
 }
-thorq_session_state_t ThorQ::Instance::sessionState() const
+THORQ_STATE_SESSION ThorQ::Instance::sessionState() const
 {
 	return m_sessionState;
 }
-void ThorQ::Instance::setSessionState(thorq_session_state_t state)
+void ThorQ::Instance::setSessionState(THORQ_STATE_SESSION state)
 {
 	if (state != m_sessionState)
     {
@@ -336,13 +336,13 @@ void ThorQ::Instance::setSessionState(thorq_session_state_t state)
 
         Instance* partner = m_partner;
 
-        if (state == THORQ_SESSION_STATE_ACTIVE)
+        if (state == THORQ_STATE_SESSION_ACTIVE)
         {
             if (partner != nullptr)
             {
                 partner->m_partner = this;
 
-                partner->setSessionState(THORQ_SESSION_STATE_ACTIVE);
+                partner->setSessionState(THORQ_STATE_SESSION_ACTIVE);
 
                 // Set activity flag
                 m_activityState |= THORQ_USER_ACTIVITY_FLAG_IN_SESSION;
@@ -357,10 +357,10 @@ void ThorQ::Instance::setSessionState(thorq_session_state_t state)
             }
             else
             {
-                setSessionState(THORQ_SESSION_STATE_NONE);
+                setSessionState(THORQ_STATE_SESSION_NONE);
             }
         }
-        else if (state == THORQ_SESSION_STATE_NONE)
+        else if (state == THORQ_STATE_SESSION_NONE)
         {
             if (partner != nullptr)
             {
@@ -371,7 +371,7 @@ void ThorQ::Instance::setSessionState(thorq_session_state_t state)
                 partner->m_partner = nullptr;
 
 				// Run partner session disconnection
-                partner->setSessionState(THORQ_SESSION_STATE_NONE);
+                partner->setSessionState(THORQ_STATE_SESSION_NONE);
             }
 
             // Set activity flag
@@ -392,7 +392,7 @@ void ThorQ::Instance::cryptoInit()
 {
     getCrypto()->reset();
 
-    setCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
+    setCryptoState(THORQ_STATE_CRYPTO_ESTABLISHING);
 
 	thorq_payload_t payload;
     thorq_payload_crypto_pack(payload, THORQ_CRYPTO_ESTABLISH, getCrypto()->publicKey());
@@ -401,7 +401,7 @@ void ThorQ::Instance::cryptoInit()
 
 bool ThorQ::Instance::cryptoEstablish(const std::vector<std::uint8_t>& data)
 {
-    if (cryptoState() == THORQ_CRYPTO_STATE_ESTABLISHING && !data.empty())
+    if (cryptoState() == THORQ_STATE_CRYPTO_ESTABLISHING && !data.empty())
 	{
         if (getCrypto()->agree(data))
         {
@@ -409,13 +409,13 @@ bool ThorQ::Instance::cryptoEstablish(const std::vector<std::uint8_t>& data)
 			thorq_payload_t payload;
 			thorq_payload_crypto_pack(payload, THORQ_CRYPTO_VERIFY, m_verificationData, THORQ_CRYPTO_VERIFICATION_DATA_LENGTH);
             sendPayload(&payload, true, true);
-            setCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
+            setCryptoState(THORQ_STATE_CRYPTO_VERIFYING);
 			return true;
 		}
 	}
 
     getCrypto()->reset();
-    setCryptoState(THORQ_CRYPTO_STATE_NONE);
+    setCryptoState(THORQ_STATE_CRYPTO_NONE);
     disconnect(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
 
 	return false;
@@ -424,21 +424,21 @@ bool ThorQ::Instance::cryptoEstablish(const std::vector<std::uint8_t>& data)
 
 bool ThorQ::Instance::cryptoVerify(const std::vector<std::uint8_t>& data)
 {
-    if (cryptoState() == THORQ_CRYPTO_STATE_VERIFYING && data.size() == THORQ_CRYPTO_VERIFICATION_DATA_LENGTH)
+    if (cryptoState() == THORQ_STATE_CRYPTO_VERIFYING && data.size() == THORQ_CRYPTO_VERIFICATION_DATA_LENGTH)
 	{
 		if (memcmp(&m_verificationData[0], &data[0], THORQ_CRYPTO_VERIFICATION_DATA_LENGTH) == 0)
 		{
 			thorq_payload_t payload;
 			thorq_payload_crypto_pack(payload, THORQ_CRYPTO_OK);
 			sendPayload(&payload, true, true);
-            setCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
+            setCryptoState(THORQ_STATE_CRYPTO_ACTIVE);
 
 			return true;
 		}
 	}
 
     getCrypto()->reset();
-    setCryptoState(THORQ_CRYPTO_STATE_NONE);
+    setCryptoState(THORQ_STATE_CRYPTO_NONE);
     disconnect(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
 
 	return false;

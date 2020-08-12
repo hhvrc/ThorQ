@@ -59,11 +59,11 @@ std::string ExtractString(const std::uint8_t* data, std::size_t dataSize, std::s
 Client::Client(ENetHost* host)
 	: QObject()
 	, m_crypto(new ThorQ::Crypto())
-	, m_connectionState(THORQ_CONNECTION_STATE_DISCONNECTED)
-	, m_cryptoState(THORQ_CRYPTO_STATE_NONE)
-	, m_authState(THORQ_AUTH_STATE_NONE)
-	, m_loginState(THORQ_LOGIN_STATE_LOGGEDOUT)
-	, m_sessionState(THORQ_SESSION_STATE_NONE)
+	, m_connectionState(THORQ_STATE_CONNECTION_DISCONNECTED)
+	, m_cryptoState(THORQ_STATE_CRYPTO_NONE)
+	, m_authState(THORQ_STATE_AUTH_NONE)
+	, m_loginState(THORQ_STATE_LOGIN_LOGGEDOUT)
+	, m_sessionState(THORQ_STATE_SESSION_NONE)
 	, m_ping(0)
 	, l_username()
 	, m_username("")
@@ -118,11 +118,11 @@ Client::~Client()
 	m_thread->requestInterruption();
 	m_thread->wait();
 
-	if (ConnectionState() != THORQ_CONNECTION_STATE_DISCONNECTED)
+	if (ConnectionState() != THORQ_STATE_CONNECTION_DISCONNECTED)
 	{
 		Disconnect();
 		do { Service(); }
-		while (ConnectionState() != THORQ_CONNECTION_STATE_DISCONNECTED);
+		while (ConnectionState() != THORQ_STATE_CONNECTION_DISCONNECTED);
 	}
 
 	if (m_host != nullptr)
@@ -146,27 +146,27 @@ uint Client::Ping() const
 	return m_ping.load();
 }
 
-thorq_connection_state_t Client::ConnectionState() const
+THORQ_STATE_CONNECTION Client::ConnectionState() const
 {
 	return m_connectionState.load();
 }
 
-thorq_crypto_state_t Client::CryptoState() const
+THORQ_STATE_CRYPTO Client::CryptoState() const
 {
 	return m_cryptoState.load();
 }
 
-thorq_auth_state_t Client::AuthState() const
+THORQ_STATE_AUTH Client::AuthState() const
 {
 	return m_authState.load();
 }
 
-thorq_login_state_t Client::LoginState() const
+THORQ_STATE_LOGIN Client::LoginState() const
 {
 	return m_loginState.load();
 }
 
-thorq_session_state_t Client::SessionState() const
+THORQ_STATE_SESSION Client::SessionState() const
 {
 	return m_sessionState.load();
 }
@@ -193,7 +193,7 @@ void Client::Disconnect()
 void Client::Login(const QString &username)
 {
     qDebug() << "Login:" << username;
-	if (LoginState() != THORQ_LOGIN_STATE_LOGGEDOUT)
+	if (LoginState() != THORQ_STATE_LOGIN_LOGGEDOUT)
 		return;
 
     SCOPELOCK(l_username);
@@ -204,7 +204,7 @@ void Client::Login(const QString &username)
 
 void Client::Logout()
 {
-	if (LoginState() != THORQ_LOGIN_STATE_LOGGEDIN)
+	if (LoginState() != THORQ_STATE_LOGIN_LOGGEDIN)
 		return;
 
 	m_actionFlags.fetch_or(ACTION_Logout);
@@ -283,7 +283,7 @@ void Client::Service()
 		switch (event.type)
 		{
         case ENET_EVENT_TYPE_CONNECT:
-			SetConnectionState(THORQ_CONNECTION_STATE_CONNECTED);
+			SetConnectionState(THORQ_STATE_CONNECTION_CONNECTED);
 			requestEncryptionHandshake();
 			break;
 		case ENET_EVENT_TYPE_RECEIVE:
@@ -305,9 +305,9 @@ void Client::Service()
 	uint actions = m_actionFlags.fetch_and(ACTION_TOGGLEACTIONS);
 
 	// Send stuff
-	if (ConnectionState() == THORQ_CONNECTION_STATE_CONNECTED)
+	if (ConnectionState() == THORQ_STATE_CONNECTION_CONNECTED)
     {
-        if (LoginState() == THORQ_LOGIN_STATE_LOGGEDIN)
+        if (LoginState() == THORQ_STATE_LOGIN_LOGGEDIN)
         {
             if ((actions & ACTION_Logout) != 0)
             {
@@ -317,13 +317,13 @@ void Client::Service()
 				thorq_payload_command_pack(payload, THORQ_COMMAND_ID_LOGOUT);
                 SendPayload(payload, true, true);
 
-				SetLoginState(THORQ_LOGIN_STATE_LOGGINGOUT);
+				SetLoginState(THORQ_STATE_LOGIN_LOGGINGOUT);
             }
             else
             {
                 std::uint64_t collarState = m_collarState.fetch_and(~0xFF);
 
-                if (SessionState() == THORQ_SESSION_STATE_ACTIVE && ((collarState & THORQ_COLLAR_FLAG_IMPULSE) != 0))
+                if (SessionState() == THORQ_STATE_SESSION_ACTIVE && ((collarState & THORQ_COLLAR_FLAG_IMPULSE) != 0))
                 {
                     thorq_payload_t payload;
                     thorq_payload_collar_pack(payload, collarState & 0xFF, (collarState >> 56) & 0xFF, (collarState >> 48) & 0xFF, (collarState >> 40) & 0xFF, (collarState >> 32) & 0xFF);
@@ -343,7 +343,7 @@ void Client::Service()
                         thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_ACCEPT, m_requestingPartner);
                         SendPayload(payload, true, true);
                         m_requestingPartner.clear();
-                        SetSessionState(THORQ_SESSION_STATE_JOINING);
+                        SetSessionState(THORQ_STATE_SESSION_JOINING);
                     }
                     else if ((actions & ACTION_SessionDeny) != 0)
                     {
@@ -351,16 +351,16 @@ void Client::Service()
                         thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_DENY, m_requestingPartner);
                         SendPayload(payload, true, true);
                         m_requestingPartner.clear();
-                        SetSessionState(THORQ_SESSION_STATE_NONE);
+                        SetSessionState(THORQ_STATE_SESSION_NONE);
                     }
                 }
             }
         }
-        else if (LoginState() == THORQ_LOGIN_STATE_LOGGEDOUT)
+        else if (LoginState() == THORQ_STATE_LOGIN_LOGGEDOUT)
         {
             if ((actions & ACTION_SendRegKey) != 0)
             {
-                if (AuthState() == THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT)
+                if (AuthState() == THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT)
                 {
                     thorq_payload_t payload;
 
@@ -368,7 +368,7 @@ void Client::Service()
                     thorq_payload_auth_pack(payload, THORQ_AUTH_REGKEY, std::vector<std::uint8_t>(m_registrationKey.begin(), m_registrationKey.end()));
 
                     SendPayload(payload, true, true);
-                    SetAuthState(THORQ_AUTH_STATE_REGKEY_CHECKING);
+                    SetAuthState(THORQ_STATE_AUTH_REGKEY_CHECKING);
                 }
             }
             else if ((actions & ACTION_Login) != 0)
@@ -379,7 +379,7 @@ void Client::Service()
                 thorq_payload_command_pack(payload, THORQ_COMMAND_ID_LOGIN, m_username);
                 SendPayload(payload, true, true);
 
-                SetLoginState(THORQ_LOGIN_STATE_LOGGINGIN);
+                SetLoginState(THORQ_STATE_LOGIN_LOGGINGIN);
             }
 
         }
@@ -391,7 +391,7 @@ void Client::Service()
           */
 		if ((actions & ACTION_ReConnect) != 0 || (actions & ACTION_Connected) == 0)
         {
-			SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTING);
+			SetConnectionState(THORQ_STATE_CONNECTION_DISCONNECTING);
 			enet_peer_disconnect(m_peer, 0);
 		}
 		else
@@ -419,7 +419,7 @@ void Client::Service()
 			}
 		}
 	}
-	else if (ConnectionState() == THORQ_CONNECTION_STATE_DISCONNECTED)
+	else if (ConnectionState() == THORQ_STATE_CONNECTION_DISCONNECTED)
 	{
 		if ((actions & ACTION_Connected) != 0)
         {
@@ -437,7 +437,7 @@ void Client::Service()
             if (addressFound)
 			{
 				m_peer = enet_host_connect(m_host, m_address, 4, 0);
-				SetConnectionState(THORQ_CONNECTION_STATE_CONNECTING);
+				SetConnectionState(THORQ_STATE_CONNECTION_CONNECTING);
 			}
 			else
 			{
@@ -457,69 +457,69 @@ void Client::SetPing(std::uint16_t ping)
 }
 
 // Cascading setters
-void Client::SetConnectionState(thorq_connection_state_t newState)
+void Client::SetConnectionState(THORQ_STATE_CONNECTION newState)
 {
 	int oldState = m_connectionState.exchange(newState);
 
 	if (newState != oldState)
 	{
 		if (newState < oldState)
-            SetCryptoState(THORQ_CRYPTO_STATE_NONE);
+            SetCryptoState(THORQ_STATE_CRYPTO_NONE);
 
 		emit ConnectionStateChanged(newState);
 	}
 }
-void Client::SetCryptoState(thorq_crypto_state_t newState)
+void Client::SetCryptoState(THORQ_STATE_CRYPTO newState)
 {
 	int oldState = m_cryptoState.exchange(newState);
 
 	if (newState != oldState)
 	{
 		if (newState < oldState)
-			SetAuthState(THORQ_AUTH_STATE_NONE);
+			SetAuthState(THORQ_STATE_AUTH_NONE);
 		else
-			SetConnectionState(THORQ_CONNECTION_STATE_CONNECTED);
+			SetConnectionState(THORQ_STATE_CONNECTION_CONNECTED);
 
 		emit CryptoStateChanged(newState);
 	}
 }
 
-void Client::SetAuthState(thorq_auth_state_t newState)
+void Client::SetAuthState(THORQ_STATE_AUTH newState)
 {
 	int oldState = m_authState.exchange(newState);
 
 	if (newState != oldState)
 	{
 		if (newState < oldState)
-			SetLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
+			SetLoginState(THORQ_STATE_LOGIN_LOGGEDOUT);
 		else
-			SetCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
+			SetCryptoState(THORQ_STATE_CRYPTO_ACTIVE);
 
 		emit AuthStateChanged(newState);
 	}
 }
-void Client::SetLoginState(thorq_login_state_t newState)
+void Client::SetLoginState(THORQ_STATE_LOGIN newState)
 {
 	int oldState = m_loginState.exchange(newState);
 
 	if (newState != oldState)
 	{
 		if (newState < oldState)
-			SetSessionState(THORQ_SESSION_STATE_NONE);
+			SetSessionState(THORQ_STATE_SESSION_NONE);
 		else
-			SetAuthState(THORQ_AUTH_STATE_OK);
+			SetAuthState(THORQ_STATE_AUTH_OK);
 
 		emit LoginStateChanged(newState);
 	}
 }
-void Client::SetSessionState(thorq_session_state_t newState)
+void Client::SetSessionState(THORQ_STATE_SESSION newState)
 {
 	int oldState = m_sessionState.exchange(newState);
 
 	if (newState != oldState)
 	{
 		if (newState > oldState)
-			SetLoginState(THORQ_LOGIN_STATE_LOGGEDIN);
+			SetLoginState(THORQ_STATE_LOGIN_LOGGEDIN);
 
 		emit SessionStateChanged(newState);
 	}
@@ -539,7 +539,7 @@ void Client::SetPartner(const QString &username)
 
 void Client::HandleMessage(ENetPacket* packet)
 {
-	if (ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED || !thorq_message_is_valid(packet->data, packet->dataLength))
+	if (ConnectionState() != THORQ_STATE_CONNECTION_CONNECTED || !thorq_message_is_valid(packet->data, packet->dataLength))
 		return;
 
 	std::vector<std::uint8_t> message;
@@ -572,7 +572,7 @@ void Client::HandleMessage(ENetPacket* packet)
             handleMessageHeartbeat();
 		return;
 	default:
-		if (AuthState() != THORQ_AUTH_STATE_OK)
+		if (AuthState() != THORQ_STATE_AUTH_OK)
 		{
 			return;
 		}
@@ -652,7 +652,7 @@ void Client::handleMessageCrypto(const thorq_payload_t& payload)
     switch (cmd) {
 	case THORQ_CRYPTO_ESTABLISH:
     {
-        SetCryptoState(THORQ_CRYPTO_STATE_ESTABLISHING);
+        SetCryptoState(THORQ_STATE_CRYPTO_ESTABLISHING);
 
         std::vector<std::uint8_t> data;
         thorq_payload_crypto_get_data(payload, data);
@@ -667,16 +667,16 @@ void Client::handleMessageCrypto(const thorq_payload_t& payload)
 		else
 		{
 			m_crypto->reset();
-			SetCryptoState(THORQ_CRYPTO_STATE_NONE);
+			SetCryptoState(THORQ_STATE_CRYPTO_NONE);
 		}
         break;
     }
     case THORQ_CRYPTO_VERIFY:
-        SetCryptoState(THORQ_CRYPTO_STATE_VERIFYING);
+        SetCryptoState(THORQ_STATE_CRYPTO_VERIFYING);
         SendPayload(payload, true, true);
 		break;
     case THORQ_CRYPTO_OK:
-        SetCryptoState(THORQ_CRYPTO_STATE_ACTIVE);
+        SetCryptoState(THORQ_STATE_CRYPTO_ACTIVE);
 		break;
 	default:
         qDebug() << "CRYPT: Unexpected message:" << cmd;
@@ -694,16 +694,16 @@ void Client::handleMessageAuth(const thorq_payload_t& payload)
     case THORQ_AUTH_SYSTEMID_REQ:
         thorq_payload_auth_pack(response, THORQ_AUTH_SYSTEMID, ThorQ::systemid_generate());
         SendPayload(response);
-        SetAuthState(THORQ_AUTH_STATE_HWID_CHECKING);
+        SetAuthState(THORQ_STATE_AUTH_HWID_CHECKING);
 		break;
     case THORQ_AUTH_REGKEY_REQ:
         thorq_payload_auth_pack(response, THORQ_AUTH_REGKEY_AWAITING_INPUT);
 		SendPayload(response);
-        SetAuthState(THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT);
+        SetAuthState(THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT);
 		emit RequestingRegistrationKey();
 		break;
 	case THORQ_AUTH_OK:
-		SetAuthState(THORQ_AUTH_STATE_OK);
+		SetAuthState(THORQ_STATE_AUTH_OK);
 		break;
 	default:
         qDebug() << "AUTH: Unexpected message:" << cmd;
@@ -767,10 +767,10 @@ void Client::handleMessageEvent(const thorq_payload_t &payload)
         emit SessionRequested(message.c_str());
         break;
     case THORQ_EVENT_SESSION_STARTED:
-        SetSessionState(THORQ_SESSION_STATE_ACTIVE);
+        SetSessionState(THORQ_STATE_SESSION_ACTIVE);
         break;
     case THORQ_EVENT_SESSION_STOPPED:
-        SetSessionState(THORQ_SESSION_STATE_NONE);
+        SetSessionState(THORQ_STATE_SESSION_NONE);
         break;
     }
 }
@@ -793,10 +793,10 @@ void Client::handleMessageCommandAck(const thorq_payload_t &payload)
         // TODO: HMMMMMMM
         return;
     case THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED:
-        SetLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
+        SetLoginState(THORQ_STATE_LOGIN_LOGGEDOUT);
         return;
     case THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED:
-        SetAuthState(THORQ_AUTH_STATE_NONE);
+        SetAuthState(THORQ_STATE_AUTH_NONE);
         return;
     default:
         break;
@@ -809,11 +809,11 @@ void Client::handleMessageCommandAck(const thorq_payload_t &payload)
         case THORQ_COMMAND_ACK_RESULT_OK:
         case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
             SetUsername(message.c_str());
-            SetLoginState(THORQ_LOGIN_STATE_LOGGEDIN);
+            SetLoginState(THORQ_STATE_LOGIN_LOGGEDIN);
             return;
         case THORQ_COMMAND_ACK_RESULT_DENIED:
             SetUsername("");
-            SetLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
+            SetLoginState(THORQ_STATE_LOGIN_LOGGEDOUT);
 			emit Error(message.c_str());
             return;
         default:
@@ -826,7 +826,7 @@ void Client::handleMessageCommandAck(const thorq_payload_t &payload)
         case THORQ_COMMAND_ACK_RESULT_OK:
         case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
             SetUsername("");
-            SetLoginState(THORQ_LOGIN_STATE_LOGGEDOUT);
+            SetLoginState(THORQ_STATE_LOGIN_LOGGEDOUT);
             break;
         default:
             return;
@@ -953,11 +953,11 @@ void Client::SendPayload(const thorq_payload_t& payload, bool encrypt, bool reli
 
 void Client::requestEncryptionHandshake()
 {
-    if (ConnectionState() != THORQ_CONNECTION_STATE_CONNECTED)
+    if (ConnectionState() != THORQ_STATE_CONNECTION_CONNECTED)
         return;
 
     m_crypto->reset();
-    SetCryptoState(THORQ_CRYPTO_STATE_REQUESTED);
+    SetCryptoState(THORQ_STATE_CRYPTO_REQUESTED);
 
 	thorq_payload_t payload;
 	thorq_payload_crypto_pack(payload, THORQ_CRYPTO_REQUEST);
@@ -967,7 +967,7 @@ void Client::requestEncryptionHandshake()
 void Client::handleDisconnect(std::uint32_t reason)
 {
 	m_peer = nullptr;
-	SetConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
+	SetConnectionState(THORQ_STATE_CONNECTION_DISCONNECTED);
 
 	if (reason != 0)
 	{

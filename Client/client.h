@@ -54,27 +54,27 @@ public:
     /**
      * @return
      */
-	thorq_connection_state_t ConnectionState() const;
+	THORQ_STATE_CONNECTION ConnectionState() const;
 
     /**
      * @return
      */
-	thorq_crypto_state_t CryptoState() const;
+	THORQ_STATE_CRYPTO CryptoState() const;
 
     /**
      * @return
      */
-	thorq_auth_state_t AuthState() const;
+	THORQ_STATE_AUTH AuthState() const;
 
     /**
      * @return
      */
-	thorq_login_state_t LoginState() const;
+	THORQ_STATE_LOGIN LoginState() const;
 
     /**
      * @return
      */
-	thorq_session_state_t SessionState() const;
+	THORQ_STATE_SESSION SessionState() const;
 public slots:
     /**
      * @param address
@@ -173,27 +173,27 @@ signals:
     /**
      * @param state
      */
-	void ConnectionStateChanged(thorq_connection_state_t state);
+	void ConnectionStateChanged(THORQ_STATE_CONNECTION state);
 
     /**
      * @param state
      */
-	void CryptoStateChanged(thorq_crypto_state_t state);
+	void CryptoStateChanged(THORQ_STATE_CRYPTO state);
 
     /**
      * @param state
      */
-	void AuthStateChanged(thorq_auth_state_t state);
+	void AuthStateChanged(THORQ_STATE_AUTH state);
 
     /**
      * @param state
      */
-	void LoginStateChanged(thorq_login_state_t state);
+	void LoginStateChanged(THORQ_STATE_LOGIN state);
 
     /**
      * @param state
      */
-	void SessionStateChanged(thorq_session_state_t state);
+	void SessionStateChanged(THORQ_STATE_SESSION state);
 
     /**
      * @param username
@@ -276,7 +276,7 @@ private slots:
 	 *
      * @param state State to set
 	 */
-	void SetConnectionState(thorq_connection_state_t state);
+	void SetConnectionState(THORQ_STATE_CONNECTION state);
 
     /**
      * @brief [Thread-Safe] Sets the state of the cryptographic agreement
@@ -284,7 +284,7 @@ private slots:
      *
      * @param state State to set
 	 */
-	void SetCryptoState(thorq_crypto_state_t state);
+	void SetCryptoState(THORQ_STATE_CRYPTO state);
 
     /**
      * @brief [Thread-Safe] Sets the state of the authentication
@@ -292,7 +292,7 @@ private slots:
      *
      * @param state State to set
 	 */
-	void SetAuthState(thorq_auth_state_t state);
+	void SetAuthState(THORQ_STATE_AUTH state);
 
     /**
      * @brief [Thread-Safe] Sets the state of the login
@@ -300,14 +300,14 @@ private slots:
      *
      * @param state State to set
 	 */
-	void SetLoginState(thorq_login_state_t state);
+	void SetLoginState(THORQ_STATE_LOGIN state);
 
     /**
      * @brief [Thread-Safe] Sets the state of the session
      *
      * @param state State to set
 	 */
-	void SetSessionState(thorq_session_state_t state);
+	void SetSessionState(THORQ_STATE_SESSION state);
 
     /**
      * @brief SetUsername
@@ -351,11 +351,11 @@ private slots:
 private:
 	ThorQ::Crypto* m_crypto;
 
-	std::atomic<thorq_connection_state_t> m_connectionState;
-	std::atomic<thorq_crypto_state_t> m_cryptoState;
-	std::atomic<thorq_auth_state_t> m_authState;
-	std::atomic<thorq_login_state_t> m_loginState;
-	std::atomic<thorq_session_state_t> m_sessionState;
+	std::atomic<THORQ_STATE_CONNECTION> m_connectionState;
+	std::atomic<THORQ_STATE_CRYPTO> m_cryptoState;
+	std::atomic<THORQ_STATE_AUTH> m_authState;
+	std::atomic<THORQ_STATE_LOGIN> m_loginState;
+	std::atomic<THORQ_STATE_SESSION> m_sessionState;
 	std::atomic_uint m_ping;
 
 	std::mutex l_username;

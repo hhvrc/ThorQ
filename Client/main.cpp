@@ -16,10 +16,10 @@
 #include "openvroverlaycontroller.h"
 #include "mainwidget.h"
 
-Q_DECLARE_METATYPE(thorq_connection_state_t)
-Q_DECLARE_METATYPE(thorq_crypto_state_t)
-Q_DECLARE_METATYPE(thorq_auth_state_t)
-Q_DECLARE_METATYPE(thorq_login_state_t)
+Q_DECLARE_METATYPE(THORQ_STATE_CONNECTION)
+Q_DECLARE_METATYPE(THORQ_STATE_CRYPTO)
+Q_DECLARE_METATYPE(THORQ_STATE_AUTH)
+Q_DECLARE_METATYPE(THORQ_STATE_LOGIN)
 
 #define COMTEST 1
 
@@ -31,10 +31,10 @@ Q_DECLARE_METATYPE(thorq_login_state_t)
 
 int main(int argc, char** argv)
 {
-	qRegisterMetaType<thorq_connection_state_t>("ThorqConnectionState");
-    qRegisterMetaType<thorq_crypto_state_t>("ThorqCryptoState");
-    qRegisterMetaType<thorq_auth_state_t>("ThorqAuthState");
-	qRegisterMetaType<thorq_login_state_t>("ThorqLoginState");
+	qRegisterMetaType<THORQ_STATE_CONNECTION>("ThorqConnectionState");
+    qRegisterMetaType<THORQ_STATE_CRYPTO>("ThorqCryptoState");
+    qRegisterMetaType<THORQ_STATE_AUTH>("ThorqAuthState");
+	qRegisterMetaType<THORQ_STATE_LOGIN>("ThorqLoginState");
 
 	// TODO: customize GUI
     // TODO: enable support for SteamVR

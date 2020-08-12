@@ -21,7 +21,7 @@
 
 typedef struct __thorq_payload
 {
-	thorq_payload_id_t id;
+	THORQ_PAYLOAD_ID id;
 	std::vector<std::uint8_t> data;
 
 	inline bool operator==(const struct __thorq_payload& other) const
@@ -39,7 +39,7 @@ typedef struct __thorq_payload
  * @param payload
  * @return
  */
-inline thorq_payload_id_t thorq_payload_get_id(const thorq_payload_t& payload)
+inline THORQ_PAYLOAD_ID thorq_payload_get_id(const thorq_payload_t& payload)
 {
     return payload.id;
 }
@@ -70,7 +70,7 @@ inline void thorq_payload_unpack(const std::vector<std::uint8_t>& message, thorq
 {
     payload.data.resize(message.size() - 1);
 
-    payload.id = (thorq_payload_id_t)message[0];
+    payload.id = (THORQ_PAYLOAD_ID)message[0];
 
     if (payload.data.size() != 0)
         memcpy(&payload.data[0], &message[1], payload.data.size());
@@ -81,12 +81,12 @@ inline void thorq_payload_unpack(const std::vector<std::uint8_t>& message, thorq
  * @param message
  * @return
  */
-inline thorq_payload_id_t thorq_payload_get_id(const std::vector<std::uint8_t>& message)
+inline THORQ_PAYLOAD_ID thorq_payload_get_id(const std::vector<std::uint8_t>& message)
 {
 	if (message.size() < 1)
 		return THORQ_PAYLOAD_ID_INVALID;
 
-	return (thorq_payload_id_t)message[0];
+	return (THORQ_PAYLOAD_ID)message[0];
 }
 
 #endif // THORQ_PAYLOAD_H

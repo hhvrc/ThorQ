@@ -25,7 +25,7 @@ void handleEventNewConnection(ENetPeer* peer)
 {
 	// Dont worry, this is ok
 	ThorQ::Instance* instance = new ThorQ::Instance(peer);
-	instance->setConnectionState(THORQ_CONNECTION_STATE_CONNECTED);
+	instance->setConnectionState(THORQ_STATE_CONNECTION_CONNECTED);
 
 	thorq_payload_t payload;
 
@@ -49,7 +49,7 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 
 	auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
-	if (instance->connectionState() != THORQ_CONNECTION_STATE_CONNECTED || !thorq_message_is_valid(packet->data, packet->dataLength))
+	if (instance->connectionState() != THORQ_STATE_CONNECTION_CONNECTED || !thorq_message_is_valid(packet->data, packet->dataLength))
 		return;
 
 	std::vector<std::uint8_t> message;
@@ -115,7 +115,7 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 		fflush(stdout);
         break;
 	default:
-		if (instance->authState() != THORQ_AUTH_STATE_OK)
+		if (instance->authState() != THORQ_STATE_AUTH_OK)
 		{
 			return;
 		}
@@ -131,7 +131,7 @@ void handleEventDisconnect(ENetPeer* peer)
 
     auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
-    if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
+    if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
     {
         thorq_debug_fmt("User \"%s\" connected from [%s] disconnected", instance->name().c_str(), enetaddr_to_str(&peer->address).c_str());
     }
@@ -142,7 +142,7 @@ void handleEventDisconnect(ENetPeer* peer)
     fflush(stdout);
 
     // Automatically notifies and handles disconnection
-    instance->setConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
+    instance->setConnectionState(THORQ_STATE_CONNECTION_DISCONNECTED);
 
 	peer->data = nullptr;
 	delete instance;
@@ -155,7 +155,7 @@ void handleEventTimeout(ENetPeer* peer)
 
     auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
-    if (instance->loginState() == THORQ_LOGIN_STATE_LOGGEDIN)
+    if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
     {
         thorq_payload_t payload;
         thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_OFFLINE_TIMEOUT, instance->name());
@@ -170,7 +170,7 @@ void handleEventTimeout(ENetPeer* peer)
 	fflush(stdout);
 
     // Automatically notifies and handles disconnection
-    instance->setConnectionState(THORQ_CONNECTION_STATE_DISCONNECTED);
+    instance->setConnectionState(THORQ_STATE_CONNECTION_DISCONNECTED);
 
 	peer->data = nullptr;
 	delete instance;

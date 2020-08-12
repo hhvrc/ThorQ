@@ -7,26 +7,26 @@
 #include <QVBoxLayout>
 #include <QGraphicsDropShadowEffect>
 
-const char* uiStatusList[THORQ_LOGIN_STATE_LOGGEDIN + 1][2]
+const char* uiStatusList[THORQ_STATE_LOGIN_LOGGEDIN + 1][2]
 {
-    { "● Offline",                  "font-size: 16px; color: #FF0000" }, // THORQ_CONNECTION_STATE_DISCONNECTED
-    { "● Disconnecting...",         "font-size: 16px; color: #FF0000" }, // THORQ_CONNECTION_STATE_DISCONNECTING
-    { "● Connecting..."   ,         "font-size: 16px; color: #FFA500" }, // THORQ_CONNECTION_STATE_CONNECTING
-    { "● Connected\n%1 ms",         "font-size: 16px; color: #00FF00" }, // THORQ_CONNECTION_STATE_CONNECTED
+    { "● Offline",                  "font-size: 16px; color: #FF0000" }, // THORQ_STATE_CONNECTION_DISCONNECTED
+    { "● Disconnecting...",         "font-size: 16px; color: #FF0000" }, // THORQ_STATE_CONNECTION_DISCONNECTING
+    { "● Connecting..."   ,         "font-size: 16px; color: #FFA500" }, // THORQ_STATE_CONNECTION_CONNECTING
+    { "● Connected\n%1 ms",         "font-size: 16px; color: #00FF00" }, // THORQ_STATE_CONNECTION_CONNECTED
 
-    { "● Requesting...\n%1 ms",     "font-size: 16px; color: #FFA500" }, // THORQ_CRYPTO_STATE_REQUESTED
-    { "● Encrypting...\n%1 ms",     "font-size: 16px; color: #FFA500" }, // THORQ_CRYPTO_STATE_ESTABLISHING
-    { "● Verifying...\n%1 ms",      "font-size: 16px; color: #FFA500" }, // THORQ_CRYPTO_STATE_VERIFYING
-    { "● Encryped\n%1 ms",          "font-size: 16px; color: #00FF00" }, // THORQ_AUTH_STATE_NONE
+    { "● Requesting...\n%1 ms",     "font-size: 16px; color: #FFA500" }, // THORQ_STATE_CRYPTO_REQUESTED
+    { "● Encrypting...\n%1 ms",     "font-size: 16px; color: #FFA500" }, // THORQ_STATE_CRYPTO_ESTABLISHING
+    { "● Verifying...\n%1 ms",      "font-size: 16px; color: #FFA500" }, // THORQ_STATE_CRYPTO_VERIFYING
+    { "● Encryped\n%1 ms",          "font-size: 16px; color: #00FF00" }, // THORQ_STATE_AUTH_NONE
 
-    { "● Authenticating...\n%1 ms", "font-size: 16px; color: #FFA500" }, // THORQ_AUTH_STATE_HWID_CHECKING
-    { "● Awaiting key...\n%1 ms",   "font-size: 16px; color: #FFA500" }, // THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT
-    { "● Registering...\n%1 ms",    "font-size: 16px; color: #FFA500" }, // THORQ_AUTH_STATE_REGKEY_CHECKING
-    { "● Authenticated\n%1 ms",     "font-size: 16px; color: #00FF00" }, // THORQ_AUTH_STATE_OK
+    { "● Authenticating...\n%1 ms", "font-size: 16px; color: #FFA500" }, // THORQ_STATE_AUTH_HWID_CHECKING
+    { "● Awaiting key...\n%1 ms",   "font-size: 16px; color: #FFA500" }, // THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT
+    { "● Registering...\n%1 ms",    "font-size: 16px; color: #FFA500" }, // THORQ_STATE_AUTH_REGKEY_CHECKING
+    { "● Authenticated\n%1 ms",     "font-size: 16px; color: #00FF00" }, // THORQ_STATE_AUTH_OK
 
-    { "● Logging out...\n%1 ms",    "font-size: 16px; color: #FFA500" }, // THORQ_LOGIN_STATE_LOGGINGOUT
-    { "● Logging in...\n%1 ms",     "font-size: 16px; color: #FFA500" }, // THORQ_LOGIN_STATE_LOGGINGIN
-    { "● Logged in\n%1 ms",         "font-size: 16px; color: #00FF00" }, // THORQ_LOGIN_STATE_LOGGEDIN
+    { "● Logging out...\n%1 ms",    "font-size: 16px; color: #FFA500" }, // THORQ_STATE_LOGIN_LOGGINGOUT
+    { "● Logging in...\n%1 ms",     "font-size: 16px; color: #FFA500" }, // THORQ_STATE_LOGIN_LOGGINGIN
+    { "● Logged in\n%1 ms",         "font-size: 16px; color: #00FF00" }, // THORQ_STATE_LOGIN_LOGGEDIN
 };
 
 LoginWidget::LoginWidget(QWidget* parent)
@@ -61,7 +61,7 @@ LoginWidget::LoginWidget(QWidget* parent)
 
     QObject::connect(m_acceptButton, &QPushButton::clicked, [this]()
     {
-        if (m_state == THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT)
+        if (m_state == THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT)
         {
             emit regkeyEntered(m_textInput->text());
         }
@@ -79,7 +79,7 @@ LoginWidget::~LoginWidget()
 	delete m_headerLayout;
 }
 
-void LoginWidget::setConnectionState(thorq_connection_state_t state)
+void LoginWidget::setConnectionState(THORQ_STATE_CONNECTION state)
 {
     if (m_state != state)
 	{
@@ -88,7 +88,7 @@ void LoginWidget::setConnectionState(thorq_connection_state_t state)
     }
 }
 
-void LoginWidget::setCryptoState(thorq_crypto_state_t state)
+void LoginWidget::setCryptoState(THORQ_STATE_CRYPTO state)
 {
     if (m_state != state)
     {
@@ -97,7 +97,7 @@ void LoginWidget::setCryptoState(thorq_crypto_state_t state)
     }
 }
 
-void LoginWidget::setAuthState(thorq_auth_state_t state)
+void LoginWidget::setAuthState(THORQ_STATE_AUTH state)
 {
     if (m_state != state)
     {
@@ -106,7 +106,7 @@ void LoginWidget::setAuthState(thorq_auth_state_t state)
     }
 }
 
-void LoginWidget::setLoginState(thorq_login_state_t state)
+void LoginWidget::setLoginState(THORQ_STATE_LOGIN state)
 {
     if (m_state != state)
     {
@@ -128,7 +128,7 @@ void LoginWidget::updateUiState()
 {
     m_onlineStatus->setStyleSheet(uiStatusList[m_state][1]);
 
-    if (m_state < THORQ_CONNECTION_STATE_CONNECTED)
+    if (m_state < THORQ_STATE_CONNECTION_CONNECTED)
     {
         m_onlineStatus->setText(QString(uiStatusList[m_state][0]));
     }
@@ -137,7 +137,7 @@ void LoginWidget::updateUiState()
         m_onlineStatus->setText(QString(uiStatusList[m_state][0]).arg(m_ping));
     }
 
-    if (m_state == THORQ_AUTH_STATE_REGKEY_AWAITING_INPUT)
+    if (m_state == THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT)
     {
         m_textInput->setText("");
         m_textInput->show();
@@ -147,7 +147,7 @@ void LoginWidget::updateUiState()
 
         adjustSize();
     }
-    else if (m_state == THORQ_LOGIN_STATE_LOGGEDOUT)
+    else if (m_state == THORQ_STATE_LOGIN_LOGGEDOUT)
     {
         m_textInput->setText("");
         m_textInput->show();
@@ -164,7 +164,7 @@ void LoginWidget::updateUiState()
         adjustSize();
     }
 
-	if (m_state < THORQ_LOGIN_STATE_LOGGEDIN)
+	if (m_state < THORQ_STATE_LOGIN_LOGGEDIN)
 	{
 		show();
 	}
@@ -176,7 +176,7 @@ void LoginWidget::updateUiState()
 
 void LoginWidget::updateUiPing()
 {
-    if (m_state >= THORQ_CONNECTION_STATE_CONNECTED)
+    if (m_state >= THORQ_STATE_CONNECTION_CONNECTED)
     {
         m_onlineStatus->setText(QString(uiStatusList[m_state][0]).arg(m_ping));
     }

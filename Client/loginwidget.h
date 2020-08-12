@@ -25,11 +25,11 @@ signals:
 	void regkeyEntered(const QString& username);
 	void usernameEntered(const QString& username);
 public slots:
-    void setConnectionState(thorq_connection_state_t state);
-    void setCryptoState(thorq_crypto_state_t state);
-    void setAuthState(thorq_auth_state_t state);
+    void setConnectionState(THORQ_STATE_CONNECTION state);
+    void setCryptoState(THORQ_STATE_CRYPTO state);
+    void setAuthState(THORQ_STATE_AUTH state);
 
-    void setLoginState(thorq_login_state_t state);
+    void setLoginState(THORQ_STATE_LOGIN state);
 	void setConnectionPing(uint ping);
 private slots:
     void updateUiState();

@@ -23,8 +23,8 @@ signals:
 	void logoutButtonClicked();
 	void usernameEntered(const QString& username);
 public slots:
-	void setLoginState(thorq_login_state_t state);
-	void setSessionState(thorq_session_state_t state);
+	void setLoginState(THORQ_STATE_LOGIN state);
+	void setSessionState(THORQ_STATE_SESSION state);
 	void setConnectionPing(uint ping);
 private slots:
 	void updateUiState();

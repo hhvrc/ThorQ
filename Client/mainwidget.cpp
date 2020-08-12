@@ -14,7 +14,7 @@ MainWidget::MainWidget(QWidget *parent)
 	setLayout(m_vlayout);
 }
 
-void MainWidget::setLoginState(thorq_login_state_t state)
+void MainWidget::setLoginState(THORQ_STATE_LOGIN state)
 {
 	if (m_state != state)
 	{
@@ -23,7 +23,7 @@ void MainWidget::setLoginState(thorq_login_state_t state)
 	}
 }
 
-void MainWidget::setSessionState(thorq_session_state_t state)
+void MainWidget::setSessionState(THORQ_STATE_SESSION state)
 {
 	if (m_state != state)
 	{
@@ -43,7 +43,7 @@ void MainWidget::setConnectionPing(uint ping)
 
 void MainWidget::updateUiState()
 {
-	if (m_state < THORQ_LOGIN_STATE_LOGGEDIN)
+	if (m_state < THORQ_STATE_LOGIN_LOGGEDIN)
 	{
 		hide();
 	}

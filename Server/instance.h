@@ -44,16 +44,16 @@ public:
     bool isInSteamVR() const;
     bool hasCollar() const;
 
-	thorq_connection_state_t connectionState() const;
-	void setConnectionState(thorq_connection_state_t state);
-	thorq_crypto_state_t cryptoState() const;
-	void setCryptoState(thorq_crypto_state_t state);
-	thorq_auth_state_t authState() const;
-	void setAuthState(thorq_auth_state_t state);
-	thorq_login_state_t loginState() const;
-	void setLoginState(thorq_login_state_t state);
-	thorq_session_state_t sessionState() const;
-	void setSessionState(thorq_session_state_t state);
+	THORQ_STATE_CONNECTION connectionState() const;
+	void setConnectionState(THORQ_STATE_CONNECTION state);
+	THORQ_STATE_CRYPTO cryptoState() const;
+	void setCryptoState(THORQ_STATE_CRYPTO state);
+	THORQ_STATE_AUTH authState() const;
+	void setAuthState(THORQ_STATE_AUTH state);
+	THORQ_STATE_LOGIN loginState() const;
+	void setLoginState(THORQ_STATE_LOGIN state);
+	THORQ_STATE_SESSION sessionState() const;
+	void setSessionState(THORQ_STATE_SESSION state);
 
 
 	void cryptoInit();
@@ -72,11 +72,11 @@ private:
 
     std::uint8_t m_activityState; // enum: thorq_user_activity_flag
 
-	thorq_connection_state_t m_connectionState;
-	thorq_crypto_state_t m_cryptoState;
-	thorq_auth_state_t m_authState;
-	thorq_login_state_t m_loginState;
-	thorq_session_state_t m_sessionState;
+	THORQ_STATE_CONNECTION m_connectionState;
+	THORQ_STATE_CRYPTO m_cryptoState;
+	THORQ_STATE_AUTH m_authState;
+	THORQ_STATE_LOGIN m_loginState;
+	THORQ_STATE_SESSION m_sessionState;
 
     std::string m_name;
 	std::vector<std::uint8_t> m_hwid;
