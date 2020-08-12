@@ -188,11 +188,21 @@ int main(int argc, char** argv)
 				enet_packet_destroy(event.packet);
 				break;
 			case ENET_EVENT_TYPE_DISCONNECT:
+			{
 				handleEventDisconnect(event.peer);
+				auto it = std::find(peers.begin(), peers.end(), event.peer);
+				if (it != peers.end())
+					peers.erase(it);
 				break;
+			}
 			case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
+			{
 				handleEventTimeout(event.peer);
+				auto it = std::find(peers.begin(), peers.end(), event.peer);
+				if (it != peers.end())
+					peers.erase(it);
 				break;
+			}
 			case ENET_EVENT_TYPE_NONE:
 				break;
 			}
