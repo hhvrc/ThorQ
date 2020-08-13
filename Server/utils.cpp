@@ -29,7 +29,7 @@ void broadcastNotification(const thorq_payload_t* payload, bool reliable)
 	thorq_message_encode(message, data);
 
     for (ThorQ::Instance* instance : instances)
-        instance->sendMessage(message, false, reliable);
+        instance->sendMessage(message, true, reliable);
 }
 void broadcastAnnouncement(const thorq_payload_t* payload, bool reliable)
 {

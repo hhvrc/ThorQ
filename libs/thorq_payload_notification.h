@@ -44,7 +44,7 @@ inline bool thorq_payload_notification_is_valid(const thorq_payload_t& payload)
  */
 inline void thorq_payload_notification_pack(thorq_payload_t& payload, const thorq_notification_type_t& type, const std::string& message)
 {
-    payload.id = THORQ_PAYLOAD_ID_EVENT;
+    payload.id = THORQ_PAYLOAD_ID_NOTIFICATION;
     payload.data.resize(1 + message.size());
     payload.data[0] = static_cast<std::uint8_t>(type);
     if (message.size() != 0)
@@ -60,7 +60,7 @@ inline void thorq_payload_notification_pack(thorq_payload_t& payload, const thor
  */
 inline void thorq_payload_notification_pack(thorq_payload_t& payload, const thorq_notification_type_t& type, const std::string& message, std::uint8_t data)
 {
-    payload.id = THORQ_PAYLOAD_ID_EVENT;
+    payload.id = THORQ_PAYLOAD_ID_NOTIFICATION;
     payload.data.resize(1 + message.size() + 1);
     payload.data[0] = static_cast<std::uint8_t>(type);
     if (message.size() != 0)
@@ -95,7 +95,7 @@ inline void thorq_payload_notification_get_message_and_data(const thorq_payload_
 {
     message.resize(payload.data.size() - 2);
     if (message.size() != 0)
-        memcpy(&message[0], &payload.data[1], payload.data.size() - 2);
+        memcpy(&message[0], &payload.data[1], message.size());
     data = payload.data[payload.data.size() - 1];
 }
 
