@@ -87,6 +87,10 @@ elseif(WINDOWS)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 endif()
 
+if(NOT ${CMAKE_BUILD_TYPE} MATCHES "Release")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DDEBUG")
+endif()
+
 add_subdirectory(libs)
 include_directories(${LIB_INC_DIRS})
 add_subdirectory(Client)
