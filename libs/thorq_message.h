@@ -25,21 +25,21 @@ constexpr std::size_t THORQ_MESSAGE_LEN = THORQ_PAYLOAD_LEN + 4 + THORQ_CRYPTO_C
 
 inline bool thorq_message_encode(std::vector<std::uint8_t>& dataInOut)
 {
-	std::uint32_t payloadSize = dataInOut.size();
+    std::size_t messageSize = dataInOut.size();
 
-	if (payloadSize > THORQ_PAYLOAD_LEN)
+    if (messageSize > THORQ_PAYLOAD_LEN)
 		return false;
 
 	dataInOut.resize(THORQ_MESSAGE_LEN);
 
 	// Randomize the rest of the data
-	ThorQ::Crypto::RandomizeBytes(&dataInOut[payloadSize], THORQ_MESSAGE_LEN - payloadSize);
+    ThorQ::Crypto::RandomizeBytes(&dataInOut[messageSize], THORQ_MESSAGE_LEN - messageSize);
 
-	// Set size
-	dataInOut[THORQ_PAYLOAD_LEN + 0] = payloadSize >> 24;
-	dataInOut[THORQ_PAYLOAD_LEN + 1] = payloadSize >> 16;
-	dataInOut[THORQ_PAYLOAD_LEN + 2] = payloadSize >>  8;
-	dataInOut[THORQ_PAYLOAD_LEN + 3] = payloadSize >>  0;
+    // Set size
+    dataInOut[THORQ_PAYLOAD_LEN + 0] = (messageSize >> 24) & 0xFF;
+    dataInOut[THORQ_PAYLOAD_LEN + 1] = (messageSize >> 16) & 0xFF;
+    dataInOut[THORQ_PAYLOAD_LEN + 2] = (messageSize >>  8) & 0xFF;
+    dataInOut[THORQ_PAYLOAD_LEN + 3] = (messageSize >>  0) & 0xFF;
 
 	// Set header
 	dataInOut[THORQ_MESSAGE_LEN - 1] = 0;
@@ -48,9 +48,9 @@ inline bool thorq_message_encode(std::vector<std::uint8_t>& dataInOut)
 }
 inline bool thorq_message_encode(std::vector<std::uint8_t>& dataInOut, ThorQ::Crypto* crypto)
 {
-	std::uint32_t payloadSize = dataInOut.size();
+    std::size_t messageSize = dataInOut.size();
 
-	if (payloadSize > THORQ_PAYLOAD_LEN)
+    if (messageSize > THORQ_PAYLOAD_LEN)
 		return false;
 
 	// Reserve space for the entire message, but keep the size as payload size for now
@@ -58,13 +58,13 @@ inline bool thorq_message_encode(std::vector<std::uint8_t>& dataInOut, ThorQ::Cr
 	dataInOut.resize(THORQ_PAYLOAD_LEN + 4);
 
 	// Set size
-	dataInOut[THORQ_PAYLOAD_LEN + 0] = payloadSize >> 24;
-	dataInOut[THORQ_PAYLOAD_LEN + 1] = payloadSize >> 16;
-	dataInOut[THORQ_PAYLOAD_LEN + 2] = payloadSize >>  8;
-	dataInOut[THORQ_PAYLOAD_LEN + 3] = payloadSize >>  0;
+    dataInOut[THORQ_PAYLOAD_LEN + 0] = (messageSize >> 24) & 0xFF;
+    dataInOut[THORQ_PAYLOAD_LEN + 1] = (messageSize >> 16) & 0xFF;
+    dataInOut[THORQ_PAYLOAD_LEN + 2] = (messageSize >>  8) & 0xFF;
+    dataInOut[THORQ_PAYLOAD_LEN + 3] = (messageSize >>  0) & 0xFF;
 
     //Randomize all data after the message
-	ThorQ::Crypto::RandomizeBytes(&dataInOut[payloadSize], THORQ_PAYLOAD_LEN - payloadSize);
+    ThorQ::Crypto::RandomizeBytes(&dataInOut[messageSize], THORQ_PAYLOAD_LEN - messageSize);
 
 	{
         // Encrpyt the data, this will copy the iv into the "iv" array
@@ -100,15 +100,15 @@ inline bool thorq_message_decode(std::vector<std::uint8_t>& dataInOut, ThorQ::Cr
             return false;
     }
 
-    std::uint32_t payloadSize  = dataInOut[THORQ_PAYLOAD_LEN + 0] << 24;
-    payloadSize               |= dataInOut[THORQ_PAYLOAD_LEN + 1] << 16;
-    payloadSize               |= dataInOut[THORQ_PAYLOAD_LEN + 2] <<  8;
-    payloadSize               |= dataInOut[THORQ_PAYLOAD_LEN + 3] <<  0;
+    std::uint32_t messageSize  = dataInOut[THORQ_PAYLOAD_LEN + 0] << 24;
+    messageSize               |= dataInOut[THORQ_PAYLOAD_LEN + 1] << 16;
+    messageSize               |= dataInOut[THORQ_PAYLOAD_LEN + 2] <<  8;
+    messageSize               |= dataInOut[THORQ_PAYLOAD_LEN + 3] <<  0;
 
-    if (payloadSize > THORQ_PAYLOAD_LEN)
+    if (messageSize > THORQ_PAYLOAD_LEN)
         return false;
 
-    dataInOut.resize(payloadSize);
+    dataInOut.resize(messageSize);
 
 	return true;
 }

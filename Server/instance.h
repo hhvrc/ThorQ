@@ -62,8 +62,9 @@ public:
 
 	Crypto* getCrypto();
 
-	void sendPayload(const thorq_payload_t* payload, bool encrypt = true, bool reliable = true);
+	void sendMessage(std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
 	void sendMessage(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
+    void sendRaw(const std::vector<std::uint8_t>& raw, bool reliable = true);
 
 	void disconnect(std::uint32_t reason);
 	void disconnectForcibly(std::uint32_t reason);

@@ -7,7 +7,6 @@
 #include <mutex>
 #include <vector>
 
-#include <thorq_payload.h>
 #include <thorq_payload_version.h>
 
 // Forward declerations
@@ -323,16 +322,16 @@ private slots:
 
     /// These should be self-explanatory
     void HandleMessage(ENetPacket* packet);
-    void handleMessageVersion(const thorq_payload_t& payload);
-    void handleMessageCrypto(const thorq_payload_t& payload);
-    void handleMessageAuth(const thorq_payload_t& payload);
-    void handleMessageAnnouncement(const thorq_payload_t& payload);
+    void handleMessageVersion(std::vector<std::uint8_t>& payload);
+    void handleMessageCrypto(std::vector<std::uint8_t>& payload);
+    void handleMessageAuth(std::vector<std::uint8_t>& payload);
+    void handleMessageAnnouncement(std::vector<std::uint8_t>& payload);
     void handleMessageHeartbeat();
-    void handleMessageEvent(const thorq_payload_t& payload);
-    void handleMessageCommand(const thorq_payload_t& payload);
-    void handleMessageCommandAck(const thorq_payload_t& payload);
-    void handleMessageNotification(const thorq_payload_t& payload);
-    void handleMessageCollar(const thorq_payload_t& payload);
+    void handleMessageEvent(std::vector<std::uint8_t>& payload);
+    void handleMessageCommand(std::vector<std::uint8_t>& payload);
+    void handleMessageCommandAck(std::vector<std::uint8_t>& payload);
+    void handleMessageNotification(std::vector<std::uint8_t>& payload);
+    void handleMessageCollar(std::vector<std::uint8_t>& payload);
 
     /**
      * @brief SendPayload
@@ -340,7 +339,7 @@ private slots:
      * @param encrypt
      * @param reliable
      */
-	void SendPayload(const thorq_payload_t& payload, bool encrypt = true, bool reliable = true);
+    void SendPayload(std::vector<std::uint8_t>& payload, bool encrypt = true, bool reliable = true);
 
     /**
      * @brief requestEncryptionHandshake

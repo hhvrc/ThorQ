@@ -2,12 +2,12 @@
 #define THORQ_PAYLOAD_VERSION_H
 
 #include <string>
+#include <vector>
 
 #include "enums.h"
 #include "constants.h"
-#include "thorq_payload.h"
 
-/** @file thorq_payload_version.h
+/** @file thorq_message_version.h
  *
  */
 
@@ -80,43 +80,43 @@ constexpr thorq_version_t THORQ_VERSION_CLIENT { THORQ_VERSION_CLIENT_MAJOR, THO
 constexpr thorq_version_t THORQ_VERSION_LINK   { THORQ_VERSION_LINK_MAJOR,   THORQ_VERSION_LINK_MINOR,   THORQ_VERSION_LINK_PATCH   };
 
 /**
- * @brief thorq_payload_version_is_valid
+ * @brief thorq_message_version_is_valid
  * @param payload
  * @return
  */
-inline bool thorq_payload_version_is_valid(const thorq_payload_t& payload)
+inline bool thorq_message_version_is_valid(const std::vector<std::uint8_t>& payload)
 {
-	return payload.id == THORQ_PAYLOAD_ID_VERSION && payload.data.size() == 4;
+    return payload.size() == 5 && payload[0] == THORQ_MESSAGE_ID_VERSION;
 }
 
 /**
- * @brief thorq_payload_version_pack
+ * @brief thorq_message_version_pack
  * @param payload
  * @param app
  * @param version
  */
-inline void thorq_payload_version_pack(thorq_payload_t& payload, const std::uint8_t& app, const thorq_version_t& version)
+inline void thorq_message_version_pack(std::vector<std::uint8_t>& payload, const std::uint8_t& app, const thorq_version_t& version)
 {
-	payload.id = THORQ_PAYLOAD_ID_VERSION;
-	payload.data.resize(4);
-	payload.data[0] = app;
-	payload.data[1] = version.major;
-	payload.data[2] = version.minor;
-	payload.data[3] = version.patch;
+    payload.resize(5);
+    payload[0] = THORQ_MESSAGE_ID_VERSION;
+    payload[1] = app;
+    payload[2] = version.major;
+    payload[3] = version.minor;
+    payload[4] = version.patch;
 }
 
 /**
- * @brief thorq_payload_version_unpack
+ * @brief thorq_message_version_unpack
  * @param payload
  * @param app
  * @param version
  */
-inline void thorq_payload_version_unpack(const thorq_payload_t& payload, std::uint8_t& app, thorq_version_t& version)
+inline void thorq_message_version_unpack(const std::vector<std::uint8_t>& payload, std::uint8_t& app, thorq_version_t& version)
 {
-	app = payload.data[0];
-	version.major = payload.data[1];
-	version.minor = payload.data[2];
-	version.patch = payload.data[3];
+    app = payload[1];
+    version.major = payload[2];
+    version.minor = payload[3];
+    version.patch = payload[4];
 }
 
 #endif // THORQ_PAYLOAD_VERSION_H

@@ -4,7 +4,6 @@
 #include <enet.h>
 
 #include <thorq_message.h>
-#include <thorq_payload.h>
 #include <thorq_payload_version.h>
 #include <thorq_payload_heartbeat.h>
 #include <thorq_payload_crypto.h>
@@ -27,16 +26,16 @@ void handleEventNewConnection(ENetPeer* peer)
 	ThorQ::Instance* instance = new ThorQ::Instance(peer);
 	instance->setConnectionState(THORQ_STATE_CONNECTION_CONNECTED);
 
-	thorq_payload_t payload;
+    std::vector<std::uint8_t> message;
 
-	thorq_payload_version_pack(payload, THORQ_APP_LINK,   THORQ_VERSION_LINK);
-	instance->sendPayload(&payload, false, true);
+    thorq_message_version_pack(message, THORQ_APP_LINK,   THORQ_VERSION_LINK);
+    instance->sendMessage(message, false, true);
 
-	thorq_payload_version_pack(payload, THORQ_APP_CLIENT, THORQ_VERSION_CLIENT);
-	instance->sendPayload(&payload, false, true);
+    thorq_message_version_pack(message, THORQ_APP_CLIENT, THORQ_VERSION_CLIENT);
+    instance->sendMessage(message, false, true);
 
-	thorq_payload_version_pack(payload, THORQ_APP_SERVER, THORQ_VERSION_SERVER);
-	instance->sendPayload(&payload, false, true);
+    thorq_message_version_pack(message, THORQ_APP_SERVER, THORQ_VERSION_SERVER);
+    instance->sendMessage(message, false, true);
 
 	thorq_debug_fmt("A new client connected from:\n\tIPV6: %s\n\tPORT: %u\n", enetaddr_to_str(&peer->address).c_str(), peer->address.port)
 	fflush(stdout);
@@ -55,65 +54,62 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 	std::vector<std::uint8_t> message(packet->data, packet->data + packet->dataLength);
 
 	if (!thorq_message_decode(message, instance->getCrypto()))
-		return;
+        return;
 
-	thorq_payload_t payload;
-	thorq_payload_unpack(message, payload);
-
-	switch (payload.id) {
-	case THORQ_PAYLOAD_ID_COLLAR:
-		if (thorq_payload_collar_is_valid(payload))
+    switch (message[0]) {
+	case THORQ_MESSAGE_ID_COLLAR:
+        if (thorq_message_collar_is_valid(message))
 		{
 			handleMessageCollar(instance, message);
 			return;
 		}
 		break;
-	case THORQ_PAYLOAD_ID_HEARTBEAT:
-		if (thorq_payload_heartbeat_is_valid(payload))
+	case THORQ_MESSAGE_ID_HEARTBEAT:
+        if (thorq_message_heartbeat_is_valid(message))
 		{
 			handleMessageHeartbeat(instance);
 			return;
 		}
 		break;
-	case THORQ_PAYLOAD_ID_VERSION:
-		if (thorq_payload_version_is_valid(payload))
+	case THORQ_MESSAGE_ID_VERSION:
+        if (thorq_message_version_is_valid(message))
 		{
-			handleMessageVersion(instance, &payload);
+            handleMessageVersion(instance, message);
 			return;
 		}
 		break;
-	case THORQ_PAYLOAD_ID_CRYPTO:
-		if (thorq_payload_crypto_is_valid(payload))
+	case THORQ_MESSAGE_ID_CRYPTO:
+        if (thorq_message_crypto_is_valid(message))
 		{
-			handleMessageCrypto(instance, &payload);
+            handleMessageCrypto(instance, message);
 			return;
 		}
 		break;
-	case THORQ_PAYLOAD_ID_AUTH:
-		if (thorq_payload_auth_is_valid(payload))
+	case THORQ_MESSAGE_ID_AUTH:
+        if (thorq_message_auth_is_valid(message))
 		{
-			handleMessageAuth(instance, &payload);
+            handleMessageAuth(instance, message);
 			return;
 		}
 		break;
-	case THORQ_PAYLOAD_ID_COMMAND:
-		if (thorq_payload_command_is_valid(payload))
+	case THORQ_MESSAGE_ID_COMMAND:
+        if (thorq_message_command_is_valid(message))
 		{
-			handleMessageCommand(instance, &payload);
+            handleMessageCommand(instance, message);
 			return;
 		}
 		break;
-	case THORQ_PAYLOAD_ID_COMMAND_ACK:
-		if (thorq_payload_command_ack_is_valid(payload))
+	case THORQ_MESSAGE_ID_COMMAND_ACK:
+        if (thorq_message_command_ack_is_valid(message))
 		{
-			handleMessageCommandAck(instance, &payload);
+            handleMessageCommandAck(instance, message);
 			return;
 		}
         break;
-    case THORQ_PAYLOAD_ID_EVENT:
-    case THORQ_PAYLOAD_ID_ANNOUNCEMENT:
-	case THORQ_PAYLOAD_ID_INVALID:
-        thorq_debug_fmt("Got invalid payload: %i\n", payload.id);
+    case THORQ_MESSAGE_ID_EVENT:
+    case THORQ_MESSAGE_ID_ANNOUNCEMENT:
+	case THORQ_MESSAGE_ID_INVALID:
+        thorq_debug_fmt("Got invalid message: %u\n", message[0]);
 		fflush(stdout);
         break;
 	default:
@@ -159,9 +155,9 @@ void handleEventTimeout(ENetPeer* peer)
 
     if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
     {
-        thorq_payload_t payload;
-        thorq_payload_notification_pack(payload, THORQ_NOTIFICATION_USER_OFFLINE_TIMEOUT, instance->name());
-        instance->sendPayload(&payload, true, true);
+        std::vector<std::uint8_t> message;
+        thorq_message_notification_pack(message, THORQ_NOTIFICATION_USER_OFFLINE_TIMEOUT, instance->name());
+        instance->sendMessage(message, true, true);
 
         thorq_debug_fmt("User \"%s\" connected from [%s] timed out", instance->name().c_str(), enetaddr_to_str(&peer->address).c_str());
     }

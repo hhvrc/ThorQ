@@ -5,7 +5,6 @@
 #include <crypto.h>
 #include <systemid.h>
 #include <thorq_message.h>
-#include <thorq_payload.h>
 #include <thorq_payload_version.h>
 #include <thorq_payload_heartbeat.h>
 #include <thorq_payload_crypto.h>
@@ -23,11 +22,11 @@
 #include "instancemap.h"
 #include "authhandler.h"
 
-void handleMessageVersion(ThorQ::Instance* instance, const thorq_payload_t* payload)
+void handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
 	std::uint8_t app;
 	thorq_version_t version;
-    thorq_payload_version_unpack(*payload, app, version);
+    thorq_message_version_unpack(message, app, version);
 
 	thorq_version_t currentVersion;
 
@@ -58,12 +57,12 @@ void handleMessageVersion(ThorQ::Instance* instance, const thorq_payload_t* payl
 	instance->disconnect(THORQ_DISCONNECT_REASON_VERSION_INCOMPATIBLE);
 }
 
-void handleMessageCrypto(ThorQ::Instance* instance, const thorq_payload_t* payload)
+void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
-    thorq_payload_t response;
+    std::vector<std::uint8_t> response;
 
     thorq_crypto_cmd_t cmd;
-    thorq_payload_crypto_get_cmd(*payload, cmd);
+    thorq_message_crypto_get_cmd(message, cmd);
 
     switch (cmd) {
     case THORQ_CRYPTO_REQUEST:
@@ -74,7 +73,7 @@ void handleMessageCrypto(ThorQ::Instance* instance, const thorq_payload_t* paylo
 	case THORQ_CRYPTO_ESTABLISH:
 	{
         std::vector<std::uint8_t> data;
-        thorq_payload_crypto_get_data(*payload, data);
+        thorq_message_crypto_get_data(message, data);
 
 		if (!instance->cryptoEstablish(data))
         {
@@ -86,12 +85,12 @@ void handleMessageCrypto(ThorQ::Instance* instance, const thorq_payload_t* paylo
 	case THORQ_CRYPTO_VERIFY:
 	{
         std::vector<std::uint8_t> data;
-        thorq_payload_crypto_get_data(*payload, data);
+        thorq_message_crypto_get_data(message, data);
 
         if (instance->cryptoVerify(data))
 		{
-            thorq_payload_auth_pack(response, THORQ_AUTH_SYSTEMID_REQ);
-            instance->sendPayload(&response, true, true);
+            thorq_message_auth_pack(response, THORQ_AUTH_SYSTEMID_REQ);
+            instance->sendMessage(response, true, true);
             instance->setAuthState(THORQ_STATE_AUTH_HWID_REQUESTING);
         }
         else
@@ -107,18 +106,18 @@ void handleMessageCrypto(ThorQ::Instance* instance, const thorq_payload_t* paylo
     }
 }
 
-void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t* payload)
+void handleMessageAuth(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
-    thorq_payload_t response;
+    std::vector<std::uint8_t> response;
 
     thorq_auth_cmd_t cmd;
-    thorq_payload_auth_get_cmd(*payload, cmd);
+    thorq_message_auth_get_cmd(message, cmd);
 
     switch (cmd) {
     case THORQ_AUTH_SYSTEMID:
 	{
         std::vector<std::uint8_t> data;
-        thorq_payload_auth_get_data(*payload, data);
+        thorq_message_auth_get_data(message, data);
 
 		instance->hwid() = data;
 
@@ -127,15 +126,15 @@ void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t* payload
         switch (ThorQ::AuthHandler::checkSystemID(instance->hwid())) {
         case ThorQ::AuthHandler::REGISTERED:
             {
-                thorq_payload_auth_pack(response, THORQ_AUTH_OK);
-                instance->sendPayload(&response, true, true);
+                thorq_message_auth_pack(response, THORQ_AUTH_OK);
+                instance->sendMessage(response, true, true);
                 instance->setAuthState(THORQ_STATE_AUTH_OK);
                 break;
             }
         case ThorQ::AuthHandler::NOT_REGISTERED:
             {
-                thorq_payload_auth_pack(response, THORQ_AUTH_REGKEY_REQ);
-                instance->sendPayload(&response, true, true);
+                thorq_message_auth_pack(response, THORQ_AUTH_REGKEY_REQ);
+                instance->sendMessage(response, true, true);
                 instance->setAuthState(THORQ_STATE_AUTH_REGKEY_REQUESTING);
                 break;
             }
@@ -158,21 +157,21 @@ void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t* payload
     case THORQ_AUTH_REGKEY:
 	{
 		std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN> data;
-        thorq_payload_auth_get_data(*payload, data);
+        thorq_message_auth_get_data(message, data);
 
         switch (ThorQ::AuthHandler::tryRegisterSystemID(instance->hwid(), data)) {
         case ThorQ::AuthHandler::REGISTERED:
         case ThorQ::AuthHandler::RE_REGISTERED:
             {
-                thorq_payload_auth_pack(response, THORQ_AUTH_OK);
-                instance->sendPayload(&response, true, true);
+                thorq_message_auth_pack(response, THORQ_AUTH_OK);
+                instance->sendMessage(response, true, true);
                 instance->setAuthState(THORQ_STATE_AUTH_OK);
                 break;
             }
         case ThorQ::AuthHandler::INVALID_REGKEY:
             {
-                thorq_payload_auth_pack(response, THORQ_AUTH_REGKEY_REQ);
-                instance->sendPayload(&response, true, true);
+                thorq_message_auth_pack(response, THORQ_AUTH_REGKEY_REQ);
+                instance->sendMessage(response, true, true);
                 instance->setAuthState(THORQ_STATE_AUTH_REGKEY_REQUESTING);
                 break;
             }
@@ -201,22 +200,22 @@ void handleMessageAuth(ThorQ::Instance* instance, const thorq_payload_t* payload
 
 void handleMessageHeartbeat(ThorQ::Instance* instance)
 {
-    thorq_payload_t payload;
-    thorq_payload_heartbeat_pack(payload);
-    instance->sendPayload(&payload, false, true);
+    std::vector<std::uint8_t> message;
+    thorq_message_heartbeat_pack(message);
+    instance->sendMessage(message, false, true);
 }
 
-void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payload)
+void handleMessageCommand(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
-    thorq_payload_t response;
+    std::vector<std::uint8_t> response;
 
     thorq_command_id_t cmd;
-    thorq_payload_command_get_id(*payload, cmd);
+    thorq_message_command_get_id(message, cmd);
 
     if (instance->authState() != THORQ_STATE_AUTH_OK)
     {
-        thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED);
-        instance->sendPayload(&response, false, true);
+        thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_UNAUTHORIZED);
+        instance->sendMessage(response, false, true);
         return;
     }
 
@@ -225,7 +224,7 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
     {
         std::string name;
 
-        thorq_payload_command_get_data(*payload, name);
+        thorq_message_command_get_data(message, name);
 
         if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDOUT)
         {
@@ -236,22 +235,22 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
 
                 thorq_debug_fmt("New login from %s", instance->name().c_str())
 
-                thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK, name);
-                instance->sendPayload(&response, true, true);
+                thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK, name);
+                instance->sendMessage(response, true, true);
             }
             else
             {
 				instance->name().clear();
 
-				thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, registeredInstances->contains(instance->hwid()) ? "Already logged in from this computer" : "Username taken");
+                thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, registeredInstances->contains(instance->hwid()) ? "Already logged in from this computer" : "Username taken");
 
-				instance->sendPayload(&response, true, true);
+                instance->sendMessage(response, true, true);
             }
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_NO_CHANGE, name);
-            instance->sendPayload(&response, true, true);
+            thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_NO_CHANGE, name);
+            instance->sendMessage(response, true, true);
         }
 		break;
 	}
@@ -261,13 +260,13 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         {
             instance->setLoginState(THORQ_STATE_LOGIN_LOGGEDOUT);
 
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK);
-            instance->sendPayload(&response, true, true);
+            thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK);
+            instance->sendMessage(response, true, true);
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_NO_CHANGE);
-            instance->sendPayload(&response, true, true);
+            thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_NO_CHANGE);
+            instance->sendMessage(response, true, true);
         }
 		break;
 	}
@@ -275,21 +274,21 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
 	{
         if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK);
-            instance->sendPayload(&response, true, true);
+            thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK);
+            instance->sendMessage(response, true, true);
 
             std::vector<ThorQ::Instance*> instances = registeredInstances->instances();
 
             for (ThorQ::Instance* i : instances)
             {
-                thorq_payload_notification_pack(response, THORQ_NOTIFICATION_USER_ACTIVITY, i->name(), i->activityState());
-                instance->sendPayload(&response, true, true);
+                thorq_message_notification_pack(response, THORQ_NOTIFICATION_USER_ACTIVITY, i->name(), i->activityState());
+                instance->sendMessage(response, true, true);
             }
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
-            instance->sendPayload(&response, true, true);
+            thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
+            instance->sendMessage(response, true, true);
         }
 		break;
 	}
@@ -298,14 +297,14 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
         {
             std::string name;
-            thorq_payload_command_get_data(*payload, name);
+            thorq_message_command_get_data(message, name);
 
             ThorQ::Instance* otherInstance = registeredInstances->get(name);
 
             if (otherInstance == nullptr)
             {
-                thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, name + "is not online");
-                instance->sendPayload(&response, true);
+                thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, name + "is not online");
+                instance->sendMessage(response, true);
                 return;
             }
 
@@ -313,8 +312,8 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
-            instance->sendPayload(&response, true, true);
+            thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
+            instance->sendMessage(response, true, true);
         }
 		break;
 	}
@@ -323,14 +322,14 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
         {
             std::string name;
-            thorq_payload_command_get_data(*payload, name);
+            thorq_message_command_get_data(message, name);
 
             ThorQ::Instance* otherInstance = registeredInstances->get(name);
 
             if (otherInstance == nullptr)
             {
-                thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, name + "is not online");
-                instance->sendPayload(&response, true);
+                thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, name + "is not online");
+                instance->sendMessage(response, true);
                 return;
             }
 
@@ -338,8 +337,8 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
-            instance->sendPayload(&response, true, true);
+            thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
+            instance->sendMessage(response, true, true);
         }
         break;
 	}
@@ -348,14 +347,14 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
         {
             std::string name;
-            thorq_payload_command_get_data(*payload, name);
+            thorq_message_command_get_data(message, name);
 
             ThorQ::Instance* otherInstance = registeredInstances->get(name);
 
             if (otherInstance == nullptr)
             {
-                thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, name + "is not online");
-                instance->sendPayload(&response, true);
+                thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_DENIED, name + "is not online");
+                instance->sendMessage(response, true);
                 return;
             }
 
@@ -363,8 +362,8 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
-            instance->sendPayload(&response, true, true);
+            thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
+            instance->sendMessage(response, true, true);
         }
         break;
 	}
@@ -374,13 +373,12 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         {
             instance->setSessionState(THORQ_STATE_SESSION_NONE);
 
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK);
-            instance->sendPayload(&response, true, true);
+            thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_OK);
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
-            instance->sendPayload(&response, true, true);
+            thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
+            instance->sendMessage(response, true, true);
         }
 		break;
     }
@@ -389,13 +387,13 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
         if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
         {
             std::uint8_t state;
-            thorq_payload_command_get_data(*payload, state);
+            thorq_message_command_get_data(message, state);
             instance->setActivityState(state);
         }
         else
         {
-            thorq_payload_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
-            instance->sendPayload(&response, true, true);
+            thorq_message_command_ack_pack(response, cmd, THORQ_COMMAND_ACK_RESULT_LOGIN_NEEDED);
+            instance->sendMessage(response, true, true);
         }
 		break;
     }
@@ -403,10 +401,10 @@ void handleMessageCommand(ThorQ::Instance* instance, const thorq_payload_t* payl
 
 }
 
-void handleMessageCommandAck(ThorQ::Instance* instance, const thorq_payload_t* payload)
+void handleMessageCommandAck(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
     (void)instance;
-    (void)payload;
+    (void)message;
     thorq_debug("Unexpected ack message...")
 }
 

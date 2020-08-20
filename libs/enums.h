@@ -8,23 +8,23 @@ typedef enum {
 } thorq_app_t;
 
 typedef enum {
-	THORQ_PAYLOAD_ID_INVALID,      ///< invalid id
+    THORQ_MESSAGE_ID_INVALID,      ///< invalid id
 
-	THORQ_PAYLOAD_ID_VERSION,      ///< Request updated version info
+    THORQ_MESSAGE_ID_VERSION,      ///< Request updated version info
 
-	THORQ_PAYLOAD_ID_CRYPTO,       ///< Cryptographic handshake messages
-	THORQ_PAYLOAD_ID_AUTH,         ///< Client authentication (SysID/RegKey) messages
+    THORQ_MESSAGE_ID_CRYPTO,       ///< Cryptographic handshake messages
+    THORQ_MESSAGE_ID_AUTH,         ///< Client authentication (SysID/RegKey) messages
 
-	THORQ_PAYLOAD_ID_HEARTBEAT,    ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
+    THORQ_MESSAGE_ID_HEARTBEAT,    ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
 
-    THORQ_PAYLOAD_ID_EVENT,        ///< Server events (user statuses)
-    THORQ_PAYLOAD_ID_COMMAND,      ///< Commands like login/logout/session/requests
-	THORQ_PAYLOAD_ID_COMMAND_ACK,  ///< Acknowledge for commands
-    THORQ_PAYLOAD_ID_NOTIFICATION, ///< Server notification (requires the receiver to be logged in)
-    THORQ_PAYLOAD_ID_ANNOUNCEMENT, ///< Server announcement (doesnt need any sort of authentication)
+    THORQ_MESSAGE_ID_EVENT,        ///< Server events (user statuses)
+    THORQ_MESSAGE_ID_COMMAND,      ///< Commands like login/logout/session/requests
+    THORQ_MESSAGE_ID_COMMAND_ACK,  ///< Acknowledge for commands
+    THORQ_MESSAGE_ID_NOTIFICATION, ///< Server notification (requires the receiver to be logged in)
+    THORQ_MESSAGE_ID_ANNOUNCEMENT, ///< Server announcement (doesnt need any sort of authentication)
 
-	THORQ_PAYLOAD_ID_COLLAR,       ///< Collar command
-} THORQ_PAYLOAD_ID; ///< Message entry flags to describe the state of a message
+    THORQ_MESSAGE_ID_COLLAR,       ///< Collar command
+} THORQ_MESSAGE_ID; ///< Message entry flags to describe the state of a message
 
 typedef enum {
     THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT = 1 << 0, ///< User currently has a collar connected to their pc, this will show up as a [🗲] icon next to their name
