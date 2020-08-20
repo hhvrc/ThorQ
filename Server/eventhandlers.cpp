@@ -49,11 +49,13 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 
 	auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
-	if (instance->connectionState() != THORQ_STATE_CONNECTION_CONNECTED || !thorq_message_is_valid(packet->data, packet->dataLength))
+	if (instance->connectionState() != THORQ_STATE_CONNECTION_CONNECTED)
 		return;
 
-	std::vector<std::uint8_t> message;
-	thorq_message_decode(packet->data, packet->dataLength, message, instance->getCrypto());
+	std::vector<std::uint8_t> message(packet->data, packet->data + packet->dataLength);
+
+	if (!thorq_message_decode(message, instance->getCrypto()))
+		return;
 
 	thorq_payload_t payload;
 	thorq_payload_unpack(message, payload);

@@ -459,16 +459,37 @@ void ThorQ::Instance::sendPayload(const thorq_payload_t* payload, bool encrypt, 
     sendMessage(message, encrypt, reliable);
 }
 
-void ThorQ::Instance::sendMessage(const std::vector<uint8_t>& message, bool encrypt, bool reliable)
+void ThorQ::Instance::sendMessage(std::vector<uint8_t>& data, bool encrypt, bool reliable)
 {
-	std::vector<std::uint8_t> data;
-
 	if (encrypt)
-        thorq_message_encode(message, data, getCrypto());
+	{
+		if (!thorq_message_encode(data, m_crypto))
+			return;
+	}
 	else
-		thorq_message_encode(message, data);
+	{
+		if (!thorq_message_encode(data))
+			return;
+	}
 
 	enet_peer_send(m_peer, reliable ? 0 : 1, enet_packet_create(data.data(), data.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
+}
+void ThorQ::Instance::sendMessage(const std::vector<uint8_t>& data, bool encrypt, bool reliable)
+{
+	std::vector<std::uint8_t> copy = data;
+
+	if (encrypt)
+	{
+		if (!thorq_message_encode(copy, m_crypto))
+			return;
+	}
+	else
+	{
+		if (!thorq_message_encode(copy))
+			return;
+	}
+
+	enet_peer_send(m_peer, reliable ? 0 : 1, enet_packet_create(copy.data(), copy.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
 }
 
 void ThorQ::Instance::disconnect(uint32_t reason)

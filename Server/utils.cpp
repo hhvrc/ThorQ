@@ -20,24 +20,21 @@ std::string enetaddr_to_str(const ENetAddress* addr)
 
 void broadcastNotification(const thorq_payload_t* payload, bool reliable)
 {
-    std::vector<std::uint8_t> message;
-    thorq_payload_pack(*payload, message);
 
     std::vector<ThorQ::Instance*> instances = registeredInstances->instances();
 
 	std::vector<std::uint8_t> data;
-	thorq_message_encode(message, data);
+	thorq_payload_pack(*payload, data);
+	thorq_message_encode(data);
 
     for (ThorQ::Instance* instance : instances)
-        instance->sendMessage(message, true, reliable);
+		instance->sendMessage(data, true, reliable);
 }
 void broadcastAnnouncement(const thorq_payload_t* payload, bool reliable)
 {
-    std::vector<std::uint8_t> message;
-    thorq_payload_pack(*payload, message);
-
-    std::vector<std::uint8_t> data;
-    thorq_message_encode(message, data);
+	std::vector<std::uint8_t> data;
+	thorq_payload_pack(*payload, data);
+	thorq_message_encode(data);
 
     enet_host_broadcast(server, reliable ? 0 : 1, enet_packet_create(data.data(), data.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
 }

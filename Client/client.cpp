@@ -539,11 +539,13 @@ void Client::SetPartner(const QString &username)
 
 void Client::HandleMessage(ENetPacket* packet)
 {
-	if (ConnectionState() != THORQ_STATE_CONNECTION_CONNECTED || !thorq_message_is_valid(packet->data, packet->dataLength))
+	if (ConnectionState() != THORQ_STATE_CONNECTION_CONNECTED)
 		return;
 
-	std::vector<std::uint8_t> message;
-	thorq_message_decode(packet->data, packet->dataLength, message, m_crypto);
+	std::vector<std::uint8_t> message(packet->data, packet->data + packet->dataLength);
+
+	if (!thorq_message_decode(message, m_crypto))
+		return;
 
 	thorq_payload_t payload;
 	thorq_payload_unpack(message, payload);
@@ -933,19 +935,19 @@ void Client::handleMessageCollar(const thorq_payload_t &payload)
 
 void Client::SendPayload(const thorq_payload_t& payload, bool encrypt, bool reliable)
 {
-	std::vector<std::uint8_t> message;
-
-	thorq_payload_pack(payload, message);
-
 	std::vector<std::uint8_t> data;
+
+	thorq_payload_pack(payload, data);
 
     if (encrypt)
 	{
-        thorq_message_encode(message, data, m_crypto);
+		if (!thorq_message_encode(data, m_crypto))
+			return;
 	}
     else
 	{
-        thorq_message_encode(message, data);
+		if (!thorq_message_encode(data))
+			return;
 	}
 
 	enet_peer_send(m_peer, reliable ? 0 : 1, enet_packet_create(data.data(), data.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
