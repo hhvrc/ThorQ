@@ -25,7 +25,6 @@ Q_DECLARE_METATYPE(THORQ_STATE_LOGIN)
 
 #include <crypto.h>
 #include <thorq_message.h>
-#include <thorq_payload.h>
 #include <thorq_payload_crypto.h>
 
 
