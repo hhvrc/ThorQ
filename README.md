@@ -10,7 +10,7 @@ Server and Client to control a shock-collar remotely from anywhere in the world.
 ### Linux
 ```console
 $ git clone https://github.com/hhvrc/CollarControl.git
-$ cd TestingRep
+$ cd CollarControl
 $ git checkout ThorQ++
 $ git submodule update --init
 $ mkdir build
@@ -21,10 +21,9 @@ $ make -4
 ### Windows
 ```powershell
 > git clone https://github.com/hhvrc/CollarControl.git
-> cd TestingRep
+> cd CollarControl
 > git checkout ThorQ++
-> git submodule init
-> git submodule update
+> git submodule update --init
 ```
 Open Visual Studio 2019
 
