@@ -27,226 +27,206 @@ class OpenVROverlayController : public QObject
 	Q_OBJECT
 	Q_DISABLE_COPY(OpenVROverlayController)
 public:
-    /**
-     * @brief IsSteamVRRunning
-     * @return
-     */
+	/**
+	 * @brief Checks if SteamVR is installed
+	 * @return Returns if SteamVR is installed
+	 */
+	static bool IsSteamVRInstalled();
+
+	/**
+	 * @brief Checks if SteamVR is running
+	 * @return Returns if SteamVR is running
+	 */
 	static bool IsSteamVRRunning();
 
-    /**
-     * @brief IsHmdPresent
-     * @return
-     */
+	/**
+	 * @brief Checks if a VR headset is connected to the computer
+	 * @return Returns if a VR headset is connected to the computer
+	 */
     static bool IsHmdPresent();
 public:
-    /**
-     * @brief OpenVROverlayController
-     * @param parent
-     */
 	OpenVROverlayController(QObject* parent = nullptr);
-
-    /**
-     * @brief ~OpenVROverlayController
-     */
 	~OpenVROverlayController() override;
 
-    /**
-     * @brief GetWidget
-     * @return
-     */
-	QWidget* GetWidget() const;
+	/**
+	 * @brief widget
+	 * @return
+	 */
+	QWidget* widget() const;
 
-    /**
-     * @brief GetIsVisible
-     * @return
-     */
-	bool GetIsVisible() const;
+	/**
+	 * @brief isVisible
+	 * @return
+	 */
+	bool isVisible() const;
 
-    /**
-     * @brief GetWidth
-     * @return
-     */
-	float GetWidth() const;
+	/**
+	 * @brief width
+	 * @return
+	 */
+	float width() const;
 
-    /**
-     * @brief GetAlpha
-     * @return
-     */
-	float GetAlpha() const;
+	/**
+	 * @brief alpha
+	 * @return
+	 */
+	float alpha() const;
 
-    /**
-     * @brief GetTint
-     * @return
-     */
-	QColor GetTint() const;
+	/**
+	 * @brief tint
+	 * @return
+	 */
+	QColor tint() const;
+
+	/**
+	 * @brief visibilityTimeout
+	 * @return
+	 */
+	int visibilityTimeout() const;
+
+	/**
+	 * @brief visibilityTimeoutEnabled
+	 * @return
+	 */
+	bool visibilityTimeoutEnabled() const;
 signals:
     /**
-     * @brief VrExited
+	 * @brief vrQuit
      */
-	void VrExited();
+	void vrQuit();
 
-    /**
-     * @brief WidgetChanged
-     * @param widget
-     */
-	void WidgetChanged(QWidget* widget);
+	/**
+	 * @brief widgetChanged
+	 * @param widget
+	 */
+	void widgetChanged(QWidget* widget);
 
-    /**
-     * @brief IsVisibleChanged
-     * @param visible
-     */
-	void IsVisibleChanged(bool visible);
+	/**
+	 * @brief isVisibleChanged
+	 * @param visible
+	 */
+	void isVisibleChanged(bool visible);
 
-    /**
-     * @brief WidthChanged
-     * @param width
-     */
-	void WidthChanged(float width);
+	/**
+	 * @brief visibilityTimeoutChanged
+	 * @param timeout
+	 */
+	void visibilityTimeoutChanged(int timeout);
 
-    /**
-     * @brief AlphaChanged
-     * @param alpha
-     */
-	void AlphaChanged(float alpha);
+	/**
+	 * @brief visibilityTimeoutEnabledChanged
+	 * @param enabled
+	 */
+	void visibilityTimeoutEnabledChanged(bool enabled);
 
-    /**
-     * @brief TintChanged
-     * @param color
-     */
-	void TintChanged(const QColor& color);
+	/**
+	 * @brief widthChanged
+	 * @param width
+	 */
+	void widthChanged(float width);
+
+	/**
+	 * @brief alphaChanged
+	 * @param alpha
+	 */
+	void alphaChanged(float alpha);
+
+	/**
+	 * @brief tintChanged
+	 * @param color
+	 */
+    void tintChanged(const QColor& color);
 public slots:
     /**
-     * @brief Init
+	 * @brief init
      * @return
      */
-	bool Init();
+	bool init();
 
     /**
-     * @brief Shutdown
+	 * @brief shutdown
      */
-	void Shutdown();
+	void shutdown();
 
     /**
-     * @brief SetWidget
+	 * @brief setWidget
      * @param widget
      */
-	void SetWidget(QWidget* widget);
+	bool setWidget(QWidget* widget);
+
+	/**
+	 * @brief setIsVisible
+	 * @param isVisible
+	 */
+	void setIsVisible(bool isVisible);
+
+	/**
+	 * @brief setVisibilityTimeout
+	 * @param timeout
+	 */
+	void setVisibilityTimeout(int timeout);
+
+	/**
+	 * @brief setVisibilityTimeoutEnabled
+	 * @param isEnabled
+	 */
+	void setVisibilityTimeoutEnabled(bool isEnabled);
 
     /**
-     * @brief SetIsVisible
-     * @param visible
-     */
-	void SetIsVisible(bool visible);
-
-    /**
-     * @brief ToggleIsVisible
-     */
-	void ToggleIsVisible();
-
-    /**
-     * @brief SetIsVisibleTimeout
-     * @param enabled
-     * @param msecs
-     */
-	void SetIsVisibleTimeout(bool enabled, int msecs);
-
-    /**
-     * @brief SetWidth
+	 * @brief setWidth
      * @param width
      */
-	void SetWidth(float width);
+	void setWidth(float width);
 
     /**
-     * @brief SetAlpha
+	 * @brief setAlpha
      * @param alpha
      */
-	void SetAlpha(float alpha);
+	void setAlpha(float alpha);
 
     /**
-     * @brief SetTint
+	 * @brief setTint
      * @param color
      */
-	void SetTint(const QColor& color);
+	void setTint(const QColor& color);
 protected:
-    /**
-     * @brief ConnectToVRRuntime
-     * @return
-     */
-    bool ConnectToVRRuntime();
+	void visibilityTimeoutExpired();
 
-    /**
-     * @brief DisconnectFromVRRuntime
-     */
-    void DisconnectFromVRRuntime();
+	void update();
 
-    /**
-     * @brief SetTrackedDevice
-     * @param index
-     */
-	void SetTrackedDevice(vr::TrackedDeviceIndex_t index);
+	bool createOverlay();
+	void onSceneChanged();
+    void overlayTransform();
 
-    /**
-     * @brief GetTrackedDevice
-     * @return
-     */
-	vr::TrackedDeviceIndex_t GetTrackedDevice() const;
-
-    /**
-     * @brief PollEvents
-     */
-	void PollEvents();
-
-    /**
-     * @brief SetOverlayResolution
-     * @param width
-     * @param height
-     */
-	void SetOverlayResolution(float width, float height);
-
-    /**
-     * @brief OverlayCreate
-     */
-	void OverlayCreate();
-
-    /**
-     * @brief OverlayInit
-     */
-	void OverlayInit();
-
-    /**
-     * @brief OverlayProcess
-     */
-	void OverlayProcess();
-
-    /**
-     * @brief OverlayDraw
-     */
-	void OverlayDraw();
-
-    /**
-     * @brief OverlayTransform
-     */
-	void OverlayTransform();
+    void setPriController(vr::TrackedDeviceIndex_t index);
+	bool isOculus(vr::TrackedDeviceIndex_t index) const;
 private:
-	bool m_isInitialized;
 	bool m_isVisible;
 	float m_alpha;
 	float m_width;
 	QColor m_tint;
 
+	bool m_timeoutEnabled;
+
 	// Widget
-	QWidget *m_widget;
-	QTimer *m_pumpEventsTimer;
+	QGraphicsProxyWidget* m_proxyWidget;
+	QTimer* m_updateLogicTimer;
 	QTimer* m_visibilityTimer;
 
 	// Overlay stuff
-	vr::IVRSystem* m_ivrSystem;
-	vr::VROverlayHandle_t m_handle;
-    vr::HmdMatrix34_t* m_deviceOffset;
-    vr::HmdMatrix34_t m_L_deviceOffset;
-    vr::HmdMatrix34_t m_R_deviceOffset;
+	vr::IVRSystem* m_system;
+	vr::VROverlayHandle_t m_overlay;
     vr::HmdVector2_t m_windowSize;
-	vr::TrackedDeviceIndex_t m_deviceIndex;
+
+    // Controller stuff
+    vr::TrackedDeviceIndex_t m_controller_pri;
+    vr::TrackedDeviceIndex_t m_controller_sec;
+
+	// Overlay offset
+	QMatrix4x4& m_overlay_offset;
+	QMatrix4x4  m_overlay_offset_L;
+	QMatrix4x4  m_overlay_offset_R;
+	QMatrix4x4  m_overlay_offset_U;
 
 	// Graphics
 	QGraphicsScene *m_scene;
@@ -254,9 +234,9 @@ private:
 	QOffscreenSurface *m_surface;
 	QOpenGLFramebufferObject *m_frameBuffer;
 
-	// Input handling
-	QPointF m_lastMousePoint;
-	Qt::MouseButtons m_lastMouseButtons;
+    // Input handling
+    QPointF m_lastMousePoint;
+    Qt::MouseButtons m_lastMouseButtons;
 };
 
 

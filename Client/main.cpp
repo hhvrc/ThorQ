@@ -113,9 +113,10 @@ int main(int argc, char** argv)
 	lab.setPixmap(pix);
 
     OpenVROverlayController* ovr = new OpenVROverlayController(&app);
-    ovr->Init();
-    ovr->SetWidget(&lab);
-    QObject::connect(ovr, &OpenVROverlayController::VrExited, ovr, &QObject::deleteLater);
+
+    ovr->init();
+    ovr->setWidget(&lab);
+    QObject::connect(ovr, &OpenVROverlayController::vrQuit, ovr, &QObject::deleteLater);
 #endif
 
 	int retval = app.exec();
