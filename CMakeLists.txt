@@ -29,6 +29,29 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# ---Qt---
+find_package(
+        Qt5
+	COMPONENTS
+	        Core
+		Gui
+		OpenGL
+		Widgets
+		SerialPort
+		Concurrent
+		Sql
+	REQUIRED
+)
+if (NOT Qt5Core_FOUND)
+        message(FATAL_ERROR "No Qt installation found, aborting")
+endif()
+set(Qt5_VERSION ${Qt5Core_VERSION})
+set(Qt5_LIBS ${Qt5Core_LIBRARIES} ${Qt5Gui_LIBRARIES} ${Qt5OpenGL_LIBRARIES} ${Qt5Widgets_LIBRARIES} ${Qt5SerialPort_LIBRARIES} ${Qt5Concurrent_LIBRARIES} ${Qt5Sql_LIBRARIES})
+set(Qt5_DIRS ${Qt5Core_INCLUDE_DIRS} ${Qt5Gui_INCLUDE_DIRS} ${Qt5OpenGL_INCLUDE_DIRS} ${Qt5Widgets_INCLUDE_DIRS} ${Qt5SerialPort_DIRS} ${Qt5Concurrent_INCLUDE_DIRS} ${Qt5Sql_INCLUDE_DIRS})
+message("Found Qt ${Qt5_VERSION}")
+message("Includes:\t\t${Qt5_DIRS}")
+message("Libraries:\t\t${Qt5_LIBS}\n")
+
 if(LINUX)
 	# 64-bit, threading, and verbose
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m64 -pthread -Wall -Wextra -pedantic")
@@ -92,7 +115,7 @@ if(NOT ${CMAKE_BUILD_TYPE} MATCHES "Release")
 endif()
 
 add_subdirectory(libs)
-include_directories(${LIB_INC_DIRS})
+include_directories(${GLOB_INCLUDE_DIRS})
 add_subdirectory(Client)
 add_subdirectory(Server)
 add_subdirectory(Keygen)
