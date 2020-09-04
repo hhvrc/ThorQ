@@ -68,7 +68,7 @@ OpenVROverlayController::OpenVROverlayController(QObject* parent)
     , m_windowSize()
     , m_controller_pri(vr::k_unTrackedDeviceIndexInvalid)
     , m_controller_sec(vr::k_unTrackedDeviceIndexInvalid)
-	, m_overlay_offset(m_overlay_offset_R)
+    , m_overlay_offset(&m_overlay_offset_R)
 	, m_overlay_offset_L()
 	, m_overlay_offset_R()
 	, m_overlay_offset_U()
@@ -91,19 +91,19 @@ OpenVROverlayController::OpenVROverlayController(QObject* parent)
 
 	// Left controller
 	m_overlay_offset_L.scale(0.25f);
-	m_overlay_offset_L.rotate(90.f, -90.f, 90.f);
+    m_overlay_offset_L.rotate(90.f, 1.f, 0.f, 0.f);
     m_overlay_offset_L.translate(-0.4f, -0.05f, 0.06f);
 	m_overlay_offset_L.optimize();
 
 	// Right controller
 	m_overlay_offset_R.scale(0.25f);
-	m_overlay_offset_R.rotate(-90.f, 90.f, 90.f);
+    m_overlay_offset_R.rotate(90.f, 1.f, 0.f, 0.f);
     m_overlay_offset_R.translate(0.4f, -0.05f, 0.06f);
 	m_overlay_offset_R.optimize();
 
 	// Unidirectional controller
 	m_overlay_offset_U.scale(0.25f);
-	m_overlay_offset_U.rotate(-90.f, 90.f, 90.f);
+    m_overlay_offset_U.rotate(90.f, 1.f, 0.f, 0.f);
     m_overlay_offset_U.translate(0.f, -0.05f, 0.06f);
 	m_overlay_offset_U.optimize();
 }
@@ -697,7 +697,7 @@ void OpenVROverlayController::overlayTransform()
 
 	vr::HmdMatrix34_t offset;
 
-	ToHmdMatrix34(m_overlay_offset, offset);
+    ToHmdMatrix34(*m_overlay_offset, offset);
 
 	// Position
     vr::EVROverlayError err = vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_overlay, m_controller_pri, &offset);
@@ -714,13 +714,13 @@ void OpenVROverlayController::setPriController(vr::TrackedDeviceIndex_t index)
     switch (m_system->GetControllerRoleForTrackedDeviceIndex(index))
     {
     case vr::TrackedControllerRole_LeftHand:
-        m_overlay_offset = m_overlay_offset_L;
+        m_overlay_offset = &m_overlay_offset_L;
         break;
     case vr::TrackedControllerRole_RightHand:
-        m_overlay_offset = m_overlay_offset_R;
+        m_overlay_offset = &m_overlay_offset_R;
         break;
     case vr::TrackedControllerRole_Invalid:
-        m_overlay_offset = m_overlay_offset_U;
+        m_overlay_offset = &m_overlay_offset_U;
         break;
     default:
         return;

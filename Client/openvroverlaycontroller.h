@@ -223,7 +223,7 @@ private:
     vr::TrackedDeviceIndex_t m_controller_sec;
 
 	// Overlay offset
-	QMatrix4x4& m_overlay_offset;
+    QMatrix4x4* m_overlay_offset;
 	QMatrix4x4  m_overlay_offset_L;
 	QMatrix4x4  m_overlay_offset_R;
 	QMatrix4x4  m_overlay_offset_U;
