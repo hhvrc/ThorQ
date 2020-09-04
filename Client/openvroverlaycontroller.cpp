@@ -236,11 +236,11 @@ bool OpenVROverlayController::setWidget(QWidget* widget)
 		}
 	}
 
-	// all of the mouse handling stuff requires that the widget be at 0,0
-    widget->move(0, 0);
-
     // Fixed some fuckery
     widget->resize(widget->sizeHint());
+
+	// all of the mouse handling stuff requires that the widget be at 0,0
+    widget->move(0, 0);
 
     m_proxyWidget = m_scene->addWidget(widget);
 
@@ -652,17 +652,30 @@ void OpenVROverlayController::onSceneChanged()
 	if (!createOverlay() || m_frameBuffer == nullptr)
 	{
 		return;
-	}
+    }
 
-	qDebug() << tr("Drawing overlay");
+    qDebug() << tr("Drawing overlay");
 
-	m_glContext->makeCurrent(m_surface);
-	m_frameBuffer->bind();
+    QWidget* widget = m_proxyWidget->widget();
+    QSize newSize = widget->sizeHint();
+
+    if (m_frameBuffer->size() != newSize)
+    {
+        widget->resize(newSize);
+        widget->move(0, 0);
+
+        delete m_frameBuffer;
+        m_frameBuffer = new QOpenGLFramebufferObject(newSize, GL_TEXTURE_2D);
+    }
+
+    m_glContext->makeCurrent(m_surface);
+    m_frameBuffer->bind();
 
     qDebug() << "Size:" << m_frameBuffer->width() << m_frameBuffer->height();
 
     QOpenGLPaintDevice device(m_frameBuffer->size());
     QPainter painter(&device);
+    painter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::HighQualityAntialiasing);
 
 	m_scene->render(&painter);
 
