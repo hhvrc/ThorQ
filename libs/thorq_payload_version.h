@@ -1,20 +1,23 @@
 #ifndef THORQ_PAYLOAD_VERSION_H
 #define THORQ_PAYLOAD_VERSION_H
-
-#include <string>
-#include <vector>
-
-#include "enums.h"
-#include "constants.h"
-
 /** @file thorq_message_version.h
  *
  */
 
+#include <vector>
+#include <string>
+#include <cstring>
+#include <cstdint>
+
+#include "enums.h"
+#include "constants.h"
+
+
 /** @typedef thorq_version_t
  *
  */
-typedef struct __thorq_version {
+struct thorq_version_t
+{
 	std::uint8_t major;
 	std::uint8_t minor;
 	std::uint8_t patch;
@@ -25,9 +28,9 @@ typedef struct __thorq_version {
      */
 	inline std::string to_string() const
 	{
-		char buffer[12];
-		memset(buffer, 0, 12);
+        char buffer[12];
 		int cx = snprintf(buffer, 12, "%u.%u.%u", major, minor, patch);
+		buffer[cx] = 0;
 
 		return std::string(buffer, cx);
 	}
@@ -37,9 +40,9 @@ typedef struct __thorq_version {
      * @param other
      * @return
      */
-	__thorq_version operator- (const __thorq_version& other)
+    thorq_version_t operator- (const thorq_version_t& other)
 	{
-		__thorq_version diff;
+        thorq_version_t diff;
 		diff.major = major - other.major;
 		diff.minor = minor - other.minor;
 		diff.patch = patch - other.patch;
@@ -51,18 +54,18 @@ typedef struct __thorq_version {
      * @param other
      * @return
      */
-    __thorq_version& operator-=(const __thorq_version& other)
+    thorq_version_t& operator-=(const thorq_version_t& other)
     {
         return *this; *this = *this - other;
     };
 
-	bool operator==(const __thorq_version& other) { return major == other.major && minor == other.minor && patch == other.patch; }
-	bool operator!=(const __thorq_version& other) { return major != other.major || minor != other.minor || patch != other.patch; }
-	bool operator< (const __thorq_version& other) { return major <  other.major || minor <  other.minor || patch <  other.patch; }
-	bool operator> (const __thorq_version& other) { return major >  other.major || minor >  other.minor || patch >  other.patch; }
-	bool operator<=(const __thorq_version& other) { return *this < other || *this == other; }
-	bool operator>=(const __thorq_version& other) { return *this > other || *this == other; }
-} thorq_version_t;
+	bool operator==(const thorq_version_t& other) const { return this->major == other.major && this->minor == other.minor && this->patch == other.patch; }
+	bool operator!=(const thorq_version_t& other) const { return !(*this == other); }
+	bool operator< (const thorq_version_t& other) const { return this->major <  other.major || this->minor <  other.minor || this->patch <  other.patch; }
+	bool operator<=(const thorq_version_t& other) const { return !(other < *this); }
+	bool operator> (const thorq_version_t& other) const { return other < *this; }
+	bool operator>=(const thorq_version_t& other) const { return !(*this < other); }
+};
 
 /** @value THORQ_VERSION_SERVER
  *
@@ -95,7 +98,7 @@ inline bool thorq_message_version_is_valid(const std::vector<std::uint8_t>& payl
  * @param app
  * @param version
  */
-inline void thorq_message_version_pack(std::vector<std::uint8_t>& payload, const std::uint8_t& app, const thorq_version_t& version)
+inline void thorq_message_version_pack(std::vector<std::uint8_t>& payload, THORQ_APP app, const thorq_version_t& version)
 {
     payload.resize(5);
     payload[0] = THORQ_MESSAGE_ID_VERSION;
@@ -111,7 +114,7 @@ inline void thorq_message_version_pack(std::vector<std::uint8_t>& payload, const
  * @param app
  * @param version
  */
-inline void thorq_message_version_unpack(const std::vector<std::uint8_t>& payload, std::uint8_t& app, thorq_version_t& version)
+inline void thorq_message_version_unpack(const std::vector<std::uint8_t>& payload, THORQ_APP& app, thorq_version_t& version)
 {
     app = payload[1];
     version.major = payload[2];

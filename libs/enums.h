@@ -1,11 +1,14 @@
 #ifndef ENUMS_H
 #define ENUMS_H
 
-typedef enum {
+#include <cstdint>
+
+enum THORQ_APP : std::uint8_t
+{
 	THORQ_APP_SERVER,
 	THORQ_APP_CLIENT,
 	THORQ_APP_LINK,
-} thorq_app_t;
+};
 
 typedef enum {
     THORQ_MESSAGE_ID_INVALID,      ///< invalid id
