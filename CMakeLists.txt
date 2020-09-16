@@ -74,13 +74,13 @@ if(NOT ${CMAKE_BUILD_TYPE} MATCHES "Release")
     add_definitions(-DDEBUG)
 endif()
 if(MSVC)
-    # Remove all previously decleared flags before adding new ones
+    # Remove all previously declared flags before adding new ones
     string(REGEX REPLACE "[/-]W[0-4] ?" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
     string(REGEX REPLACE "[/-][ML][DT]d? ?" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
     string(REGEX REPLACE "[/-]O[12bdgistxy] ?" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
     string(REGEX REPLACE "[/-]DEBUG\:[a-zA-Z]+ ?" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
-    # Enable max warnings, and make them cause errors
+    # Enable max warnings
     string(APPEND CMAKE_CXX_FLAGS " /W4")
 
     if(${CMAKE_BUILD_TYPE} MATCHES "Release")
@@ -88,8 +88,6 @@ if(MSVC)
     else()
 	string(APPEND CMAKE_CXX_FLAGS " /MTd /DEBUG:FULL /Od")
     endif()
-
-    message("${CMAKE_CXX_FLAGS}")
 else()
     # 64-bit, threading, and verbose
     string(APPEND CMAKE_CXX_FLAGS " -m64 -pthread -Wall -Wextra -pedantic")
