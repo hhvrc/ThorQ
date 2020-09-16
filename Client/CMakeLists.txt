@@ -9,40 +9,13 @@ project(
 
 message("Configuring ${project}...")
 
-# ---Qt---
-get_target_property (QT_QMAKE_EXECUTABLE Qt5::qmake IMPORTED_LOCATION)
-macro(qt_add_resources)
-   qt5_add_resources(${ARGN})
-endmacro()
-macro(qt_wrap_cpp)
-	qt5_wrap_cpp(${ARGN})
-endmacro()
-macro(qt_wrap_ui)
-	qt5_wrap_ui(${ARGN})
-endmacro()
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-include_directories(${Qt5_DIRS})
-
-
-# ---OpenVR---
-if(LINUX)
-	set(OVR_LIB linux)
-elseif(WINDOWS)
-	set(OVR_LIB win)
-endif()
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	set(OVR_LIB ${OVR_LIB}64)
-elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-	set(OVR_LIB ${OVR_LIB}32)
-endif()
-list(APPEND LIBRARIES openvr_api)
+# --- OpenVR ---
+math(EXPR VPTR_BITS "${CMAKE_SIZEOF_VOID_P}*8")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/headers)
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/lib/${OVR_LIB})
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/lib/${BUILD_OS}${VPTR_BITS}) # eg. win64 / linux32
+# --------------
 
-
-# ---Build---
+# --- Build ---
 set(${project}_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/client.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/serial.cpp
@@ -58,7 +31,7 @@ set(${project}_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.cpp
 )
-set(${project}_MOC
+set(${project}_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/client.h
 	${CMAKE_CURRENT_SOURCE_DIR}/serial.h
 	${CMAKE_CURRENT_SOURCE_DIR}/procmon.h
@@ -76,22 +49,39 @@ set(${project}_MOC
 )
 set(${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc)
 
-if (WINDOWS)
+if (MSVC)
     list(APPEND ${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
 endif()
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(
+    ${Qt5Core_INCLUDE_DIRS}
+    ${Qt5Gui_INCLUDE_DIRS}
+    ${Qt5OpenGL_INCLUDE_DIRS}
+    ${Qt5Widgets_INCLUDE_DIRS}
+    ${Qt5SerialPort_INCLUDE_DIRS}
+    ${Qt5Concurrent_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
+)
 
 add_executable(${project}
-	main.cpp
-	${${project}_RESOURCES}
+        main.cpp
+	${${project}_HEADERS}
 	${${project}_SOURCES}
-	${${project}_MOC}
+	${${project}_RESOURCES}
+)
+
+target_link_libraries(${project}
+    ThorQLib
+    openvr_api
+    ${Qt5Core_LIBRARIES}
+    ${Qt5Gui_LIBRARIES}
+    ${Qt5OpenGL_LIBRARIES}
+    ${Qt5Widgets_LIBRARIES}
+    ${Qt5SerialPort_LIBRARIES}
+    ${Qt5Concurrent_LIBRARIES}
 )
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    set_property(TARGET ${project} PROPERTY WIN32_EXECUTABLE true)
+    set_property(TARGET ${project} PROPERTY WIN32_EXECUTABLE TRUE)
 endif()
-
-set_target_properties(${project} PROPERTIES COMPILE_FLAGS -DBUILDER_STATIC_DEFINE)
-target_link_libraries(${project} ThorQLib)

@@ -9,65 +9,28 @@ project(
 
 message("Configuring ${project}...")
 
-# ---Qt---
-list(APPEND ${project}_LIBS ${Qt5_LIBS})
-list(APPEND INCLUDE_DIRS ${Qt5_DIRS})
-get_target_property (QT_QMAKE_EXECUTABLE Qt5::qmake IMPORTED_LOCATION)
-macro(qt_add_resources)
-   qt5_add_resources(${ARGN})
-endmacro()
-macro(qt_wrap_cpp)
-        qt5_wrap_cpp(${ARGN})
-endmacro()
-macro(qt_wrap_ui)
-        qt5_wrap_ui(${ARGN})
-endmacro()
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-list(APPEND INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
-
-if(LINUX)
-	set(BUILD_OS "linux")
-	set(BUILD_COMPILER "gcc")
-elseif(WINDOWS)
-	set(BUILD_OS "windows")
-	set(BUILD_COMPILER "msvc")
-endif()
-
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-	set(BUILD_ARCH "x86_64")
-elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-	set(BUILD_ARCH "i386")
-endif()
-
-
-# ---Botan---
-# Set python initial arguments
+# --- Botan amalgamation build ---
 set(PYTHON_ARGS
-	"${CMAKE_CURRENT_SOURCE_DIR}/botan/configure.py"
-	"--os=${BUILD_OS}"
-	"--cc=${BUILD_COMPILER}"
-	"--cpu=${BUILD_ARCH}"
-	"--amalgamation"
-	"--disable-shared"
-	"--link-method=copy"
-	"--minimized-build"
-	"--enable-modules=auto_rng,sha2_32,stream,keypair,pubkey,ecdh,x509,bcrypt"
-	"--without-documentation"
+    "${CMAKE_CURRENT_SOURCE_DIR}/botan/configure.py"
+    "--os=${BUILD_OSL}"
+    "--cc=${BUILD_COMPILER}"
+    "--cpu=${BUILD_ARCH}"
+    "--amalgamation"
+    "--disable-shared"
+    "--link-method=copy"
+    "--minimized-build"
+    "--enable-modules=auto_rng,chacha_rng,chacha,chacha20poly1305,chacha_avx2,salsa20,seed,rdseed,sha2_32,stream,keypair,pubkey,ecdh,x509,bcrypt,kdf2,pbkdf2"
+    "--without-documentation"
 )
-# Compile amalgamation file
 execute_process(
-	COMMAND "python" ${PYTHON_ARGS}
-	WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-	RESULT_VARIABLE py_result
-	OUTPUT_VARIABLE py_output
+    COMMAND "python" ${PYTHON_ARGS}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    RESULT_VARIABLE py_result
+    OUTPUT_VARIABLE py_output
 )
-# Print the output
-message("BUILD OUTPUT:\n${py_output}")
-# If it returned something else than 0 it probably didnt succeed
 if (NOT ${py_result} EQUAL 0)
-	message(FATAL_ERROR "Failed to build Botan")
+    message("BUILD OUTPUT:\n${py_output}")
+    message(FATAL_ERROR "Failed to build Botan")
 endif()
 
 set(${project}_SOURCES
@@ -77,7 +40,6 @@ set(${project}_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
 )
-
 set(${project}_HEADERS
     ${CMAKE_CURRENT_BINARY_DIR}/botan_all.h
 	${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
@@ -100,25 +62,29 @@ set(${project}_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_notification.h
 	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_announcement.h
 )
+if (MSVC)
+    list(APPEND ${project}_LIBS Crypt32 winmm ws2_32 Iphlpapi)
 
-if (WINDOWS)
-	list(APPEND ${project}_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/systemid_windows.cpp)
-	list(APPEND ${project}_LIBS Crypt32 winmm ws2_32 Iphlpapi)
-elseif(LINUX)
-	list(APPEND ${project}_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/systemid_linux.cpp)
+    # Stop botan from fucking up (on windows)
+    string(APPEND CMAKE_CXX_FLAGS " /DNOMINMAX")
 endif()
 
-add_library(${project} STATIC
-	${${project}_SOURCES}
-	${${project}_HEADERS}
+include_directories(
+    ${Qt5Core_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
 )
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${INCLUDE_DIRS})
 
-# Disable "deprecated header" messages
-target_compile_definitions(${project} PRIVATE BOTAN_NO_DEPRECATED_WARNINGS)
+add_library(${project} STATIC
+    ${${project}_SOURCES}
+    ${${project}_HEADERS}
+)
 
 # Link libraries
-target_link_libraries(${project} ${${project}_LIBS})
+target_link_libraries(${project}
+    ${${project}_LIBS}
+    ${Qt5Core_LIBRARIES}
+)
 
 set(GLOB_INCLUDE_DIRS
 	${CMAKE_CURRENT_SOURCE_DIR}

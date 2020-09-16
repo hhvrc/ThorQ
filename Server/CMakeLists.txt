@@ -9,23 +9,6 @@ project(
 
 message("Configuring ${project}...")
 
-# ---Qt---
-get_target_property (QT_QMAKE_EXECUTABLE Qt5::qmake IMPORTED_LOCATION)
-macro(qt_add_resources)
-   qt5_add_resources(${ARGN})
-endmacro()
-macro(qt_wrap_cpp)
-        qt5_wrap_cpp(${ARGN})
-endmacro()
-macro(qt_wrap_ui)
-        qt5_wrap_ui(${ARGN})
-endmacro()
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-include_directories(${Qt5_DIRS})
-
-
 set(${project}_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/instance.cpp
@@ -45,7 +28,13 @@ set(${project}_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.h
 )
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(
+    ${Qt5Core_INCLUDE_DIRS}
+    ${Qt5Sql_INCLUDE_DIRS}
+    ${Qt5Concurrent_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
+)
 
 add_executable(${project}
 	main.cpp
@@ -53,5 +42,9 @@ add_executable(${project}
 	${${project}_HEADERS}
 )
 
-set_target_properties(${project} PROPERTIES COMPILE_FLAGS -DBUILDER_STATIC_DEFINE)
-target_link_libraries(${project} ThorQLib)
+target_link_libraries(${project}
+    ${Qt5Core_LIBRARIES}
+    ${Qt5Sql_LIBRARIES}
+    ${Qt5Concurrent_LIBRARIES}
+    ThorQLib
+)
