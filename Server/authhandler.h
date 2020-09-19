@@ -1,17 +1,17 @@
 #ifndef AUTHHANDLER_H
 #define AUTHHANDLER_H
 
-#include <set>
-#include <map>
-#include <vector>
+#include <QSet>
+#include <QMap>
+#include <QByteArray>
 #include <cstdint>
 
 #include <constants.h>
 
 namespace ThorQ {
 namespace AuthHandler {
-bool tryAddRegkey(const std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN>& key);
-void removeRegkey(const std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN>& key);
+bool tryAddRegkey(const QByteArray& key);
+void removeRegkey(const QByteArray& key);
 
 enum ResponseCode
 {
@@ -23,8 +23,8 @@ enum ResponseCode
 	INVALID_REGKEY,
 	INVALID_SYSTEMID,
 };
-ResponseCode checkSystemID(const std::vector<std::uint8_t>& hwid);
-ResponseCode tryRegisterSystemID(const std::vector<std::uint8_t>& hwid, const std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN>& key);
+ResponseCode checkSystemID(const QByteArray& hwid);
+ResponseCode tryRegisterSystemID(const QByteArray& hwid, const QByteArray& key);
 }
 }
 

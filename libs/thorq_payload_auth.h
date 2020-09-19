@@ -1,82 +1,104 @@
+/// @file thorq_payload_auth.h
+///
+///
+
 #ifndef THORQ_PAYLOAD_AUTH_H
 #define THORQ_PAYLOAD_AUTH_H
 
-#include <array>
 #include <vector>
+
+#include <QString>
+#include <QByteArray>
 
 #include "constants.h"
 #include "enums.h"
 
-/** @typedef thorq_auth_cmd_t
- *
- */
-typedef enum {
-	THORQ_AUTH_SYSTEMID_REQ,
-	THORQ_AUTH_SYSTEMID,
-
-	THORQ_AUTH_REGKEY_REQ,
-	THORQ_AUTH_REGKEY_AWAITING_INPUT,
-	THORQ_AUTH_REGKEY,
-
-	THORQ_AUTH_OK,
-} thorq_auth_cmd_t;
-
-/**
- * @brief thorq_message_auth_pack
- * @param payload
- * @param state
- * @param data
- */
-inline void thorq_message_auth_pack(std::vector<std::uint8_t>& payload, const thorq_auth_cmd_t& cmd, const std::vector<std::uint8_t>& data = std::vector<std::uint8_t>())
+/// @enum THORQ_PAYLOAD_AUTH
+enum THORQ_PAYLOAD_AUTH : std::uint8_t
 {
-    payload.resize(2 + data.size());
+    THORQ_PAYLOAD_AUTH_SYSTEMID,
+    THORQ_PAYLOAD_AUTH_SYSTEMID_REQ,
 
-    payload[0] = THORQ_MESSAGE_ID_AUTH;
-    payload[1] = cmd;
+    THORQ_PAYLOAD_AUTH_REGKEY,
+    THORQ_PAYLOAD_AUTH_REGKEY_REQ,
+    THORQ_PAYLOAD_AUTH_REGKEY_AWAITING_INPUT,
 
-    memcpy(payload.data() + 2, data.data(), data.size());
-}
+    THORQ_PAYLOAD_AUTH_OK,
+};
 
 /**
- * @brief thorq_message_auth_is_valid
+ * @brief thorq_payload_auth_is_valid
  * @param payload
  * @return
  */
-inline bool thorq_message_auth_is_valid(const std::vector<std::uint8_t>& payload)
+inline bool thorq_payload_auth_is_valid(const std::vector<std::uint8_t>& payload)
 {
-    return payload.size() >= 2 && payload[0] == THORQ_MESSAGE_ID_AUTH;
+    if (payload[0] != THORQ_PAYLOAD_ID_AUTH) return false;
+
+    if (payload.size() == 2)
+    {
+        return payload[1] == THORQ_PAYLOAD_AUTH_SYSTEMID_REQ
+            || payload[1] == THORQ_PAYLOAD_AUTH_REGKEY_REQ
+            || payload[1] == THORQ_PAYLOAD_AUTH_REGKEY_AWAITING_INPUT
+            || payload[1] == THORQ_PAYLOAD_AUTH_OK;
+    }
+
+    return (payload[1] == THORQ_PAYLOAD_AUTH_REGKEY
+            && payload.size() == THORQ_AUTH_REGKEY_LEN)
+        || (payload[1] == THORQ_PAYLOAD_AUTH_SYSTEMID
+            && payload.size() >= THORQ_AUTH_SYSTEMID_LEN_MIN + 2
+            && payload.size() <= THORQ_AUTH_SYSTEMID_LEN_MAX + 2);
 }
 
 /**
- * @brief thorq_message_auth_get_cmd
+ * @brief thorq_payload_auth_pack
  * @param payload
  * @param cmd
  */
-inline void thorq_message_auth_get_cmd(const std::vector<std::uint8_t>& payload, thorq_auth_cmd_t& cmd)
+inline void thorq_payload_auth_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_AUTH cmd)
 {
-    cmd = static_cast<thorq_auth_cmd_t>(payload[1]);
+	payload.resize(2);
+
+    payload[0] = THORQ_PAYLOAD_ID_AUTH;
+    payload[1] = static_cast<std::uint8_t>(cmd);
 }
 
 /**
- * @brief thorq_message_auth_get_data
+ * @brief thorq_payload_auth_pack
  * @param payload
+ * @param cmd
  * @param data
  */
-inline void thorq_message_auth_get_data(const std::vector<std::uint8_t>& payload, std::vector<std::uint8_t>& data)
+inline void thorq_payload_auth_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_AUTH cmd, const QByteArray& data)
 {
-    data.resize(payload.size() - 2);
+	payload.resize(2 + data.size());
 
-    memcpy(data.data(), payload.data() + 2, payload.size() - 2);
+    payload[0] = THORQ_PAYLOAD_ID_AUTH;
+	payload[1] = cmd;
+
+	memcpy(payload.data() + 2, data.data(), data.size());
 }
 
 /**
- * @brief thorq_message_auth_get_data
+ * @brief thorq_payload_auth_get_cmd
+ * @param payload
+ * @param cmd
+ */
+inline void thorq_payload_auth_get_cmd(const std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_AUTH& cmd)
+{
+    cmd = static_cast<THORQ_PAYLOAD_AUTH>(payload[1]);
+}
+
+/**
+ * @brief thorq_payload_auth_get_data
  * @param payload
  * @param data
  */
-inline void thorq_message_auth_get_data(const std::vector<std::uint8_t>& payload, std::array<std::uint8_t, THORQ_AUTH_REGKEY_LEN>& data)
+inline void thorq_payload_auth_get_data(const std::vector<std::uint8_t>& payload, QByteArray& data)
 {
-    memcpy(data.data(), payload.data() + 2, std::min(payload.size() - 2, THORQ_AUTH_REGKEY_LEN));
+    data.resize((int)payload.size() - 2);
+
+	memcpy(data.data(), payload.data() + 2, payload.size() - 2);
 }
 
 #endif // THORQ_PAYLOAD_AUTH_H

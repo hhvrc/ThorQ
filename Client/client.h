@@ -7,24 +7,18 @@
 #include <mutex>
 #include <vector>
 
+#include <typedefs.h>
 #include <thorq_payload_version.h>
 
-// Forward declerations
-class QTimer;
-class QThread;
-class QElapsedTimer;
-namespace ThorQ { class Crypto; }
-typedef struct _ENetPeer    ENetPeer;
-typedef struct _ENetHost    ENetHost;
-typedef struct _ENetPacket  ENetPacket;
-typedef struct _ENetAddress ENetAddress;
+#include "user.h"
 
-/** @class The Client class
- */
+/// @class Client
 class Client : public QObject
 {
 	Q_OBJECT
 	Q_DISABLE_COPY(Client)
+
+    friend ThorQ::User;
 
     /**
      * @param client
@@ -48,7 +42,7 @@ public:
     /**
      * @return
      */
-	uint Ping() const;
+    quint16 Ping() const;
 
     /**
      * @return
@@ -79,7 +73,7 @@ public slots:
      * @param address
      * @param port
      */
-	void Connect(const char* address, std::uint16_t port);
+    void Connect(const char* address, quint16 port);
 
     /**
      * @brief blah blah blah
@@ -124,22 +118,22 @@ public slots:
     /**
      * @param strengt
      */
-	void SetShock(std::uint8_t strengt);
+    void SetShock(quint8 strengt);
 
     /**
      * @param strength
      */
-	void SetVibrate(std::uint8_t strength);
+    void SetVibrate(quint8 strength);
 
     /**
      * @param strength
      */
-	void SetBeep(std::uint8_t strength);
+    void SetBeep(quint8 strength);
 
     /**
      * @param sensitivity
      */
-	void EnableAuto(std::uint8_t sensitivity);
+    void EnableAuto(quint8 sensitivity);
 
     /**
      */
@@ -152,7 +146,7 @@ public slots:
     /**
      * @param regKey
      */
-	void SetRegistrationKey(const QString& regKey);
+    void submitRegistrationKey(const QString& regKey);
 signals:
     /**
      * @param Address
@@ -162,12 +156,12 @@ signals:
     /**
      * @param Port
      */
-	void PortChanged(std::uint16_t Port);
+    void PortChanged(quint16 Port);
 
     /**
      * @param ping
      */
-	void PingChanged(uint ping);
+    void PingChanged(quint16 ping);
 
     /**
      * @param state
@@ -208,7 +202,7 @@ signals:
      * @param user
      * @param state
      */
-	void userUpdate(const QString& user, std::uint8_t state);
+    void userUpdate(const QString& user, quint8 state);
 
     /**
      * @param user
@@ -228,17 +222,17 @@ signals:
     /**
      * @param strength
      */
-	void ReceivedShock(std::uint8_t strength);
+    void ReceivedShock(quint8 strength);
 
     /**
      * @param strength
      */
-	void ReceivedVibrate(std::uint8_t strength);
+    void ReceivedVibrate(quint8 strength);
 
     /**
      * @param count
      */
-	void ReceivedBeep(std::uint8_t count);
+    void ReceivedBeep(quint8 count);
 
     /**
      * @param sensitivity
@@ -246,7 +240,7 @@ signals:
      * @param vibrateStrength
      * @param beepCount
      */
-	void ReceivedAuto(std::uint8_t sensitivity, std::uint8_t shockStrength, std::uint8_t vibrateStrength, std::uint8_t beepCount);
+    void ReceivedAuto(quint8 sensitivity, quint8 shockStrength, quint8 vibrateStrength, quint8 beepCount);
 
     /**
      * @brief blah blah blah
@@ -267,7 +261,7 @@ private slots:
      */
 	void Service();
 
-	void SetPing(std::uint16_t ping);
+    void SetPing(quint16 ping);
 
     /**
      * @brief [Thread-Safe] Sets the state of the connection
@@ -346,7 +340,7 @@ private slots:
      */
 	void requestEncryptionHandshake();
 
-	void handleDisconnect(std::uint32_t reason);
+    void handleDisconnect(quint32 reason);
 private:
 	ThorQ::Crypto* m_crypto;
 
@@ -355,25 +349,26 @@ private:
 	std::atomic<THORQ_STATE_AUTH> m_authState;
 	std::atomic<THORQ_STATE_LOGIN> m_loginState;
 	std::atomic<THORQ_STATE_SESSION> m_sessionState;
-	std::atomic_uint m_ping;
+	std::atomic<quint16> m_ping;
 
-	std::mutex l_username;
-	std::string m_username;
+    std::mutex l_loginInfo;
+	QString m_username;
+	QString m_password;
 
 	std::mutex l_partnerName;
-	std::string m_partnerName;
+	QString m_partnerName;
 
 	std::mutex l_requestedPartner;
-	std::string m_requestedPartner;
+	QString m_requestedPartner;
 
 	std::mutex l_requestingPartner;
-	std::string m_requestingPartner;
+	QString m_requestingPartner;
 
 	std::mutex l_registrationKey;
-	std::string m_registrationKey;
+	QString m_registrationKey;
 
-	std::atomic<std::uint16_t> m_actionFlags;
-    std::atomic<std::uint64_t> m_collarState;
+	std::atomic<quint16> m_actionFlags;
+	std::atomic<quint64> m_collarState;
 
 	QThread* m_thread;
 	QTimer* m_serviceTimer;
@@ -386,8 +381,8 @@ private:
 	ENetPeer* m_peer;
 
 	std::mutex    l_requestedHost;
-	std::string   m_requestedHostName;
-	std::uint16_t m_requestedHostPort;
+	QString m_requestedHostName;
+	quint16 m_requestedHostPort;
 
 	ENetAddress* m_address;
 };

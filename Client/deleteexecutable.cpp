@@ -1,5 +1,6 @@
 #include "deleteexecutable.h"
 
+#include <QDebug>
 
 #if __linux__
 #include <sys/param.h>
@@ -21,10 +22,10 @@ void DelMe()
 
 	if (readlink("/proc/self/exe", &cmd[3], MAXPATHLEN) == -1)
 	{
-		fprintf(stderr, "Error getting path to self: %s\n", strerror(errno));
+        qWarning() << "Error getting path to self:" << strerror(errno);
 	}
 
-	printf("System call %s\n", system(cmd) == EXIT_SUCCESS ? "succeeded" : "failed");
+    qDebug() << "System call success:" << (system(cmd) == EXIT_SUCCESS);
 #elif _WIN32
     TCHAR szModuleName[MAX_PATH];
     GetModuleFileName(NULL, szModuleName, MAX_PATH);

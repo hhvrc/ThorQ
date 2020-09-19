@@ -37,19 +37,19 @@ endif()
 
 # --- Find and configure Qt ---
 find_package(
-        Qt5
-	COMPONENTS
-	        Core
-		Gui
-		OpenGL
-		Widgets
-		SerialPort
-		Concurrent
-		Sql
-	REQUIRED
+    Qt5
+    COMPONENTS
+        Core
+	Gui
+	OpenGL
+	Widgets
+	SerialPort
+	Concurrent
+	Sql
+    REQUIRED
 )
 if (NOT Qt5Core_FOUND)
-        message(FATAL_ERROR "No Qt installation found, aborting")
+    message(FATAL_ERROR "No Qt installation found, aborting")
 endif()
 message("Found Qt ${Qt5Core_VERSION}")
 # -----------------------------
@@ -81,12 +81,12 @@ if(MSVC)
     string(REGEX REPLACE "[/-]DEBUG:[a-zA-Z]+ ?" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
     # Enable max warnings
-    string(APPEND CMAKE_CXX_FLAGS " /W4")
+    string(APPEND CMAKE_CXX_FLAGS " -W4")
 
     if(${CMAKE_BUILD_TYPE} MATCHES "Release")
-	string(APPEND CMAKE_CXX_FLAGS " /MT /DEBUG:NONE /O2")
+	string(APPEND CMAKE_CXX_FLAGS " -MT -DEBUG:NONE -O2")
     else()
-	string(APPEND CMAKE_CXX_FLAGS " /MTd /DEBUG:FULL /Od")
+	string(APPEND CMAKE_CXX_FLAGS " -MTd -DEBUG:FULL -Od")
     endif()
 else()
     # 64-bit, threading, and verbose

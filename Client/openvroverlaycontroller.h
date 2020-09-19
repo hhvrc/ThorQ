@@ -214,7 +214,10 @@ private:
 	QTimer* m_visibilityTimer;
 
 	// Overlay stuff
-	vr::IVRSystem* m_system;
+	vr::IVRSystem* m_vrSystem;
+	vr::IVRInput* m_vrInput;
+	vr::IVROverlay* m_vrOverlay;
+	vr::IVRSettings* m_vrSettings;
 	vr::VROverlayHandle_t m_overlay;
     vr::HmdVector2_t m_windowSize;
 
@@ -237,6 +240,8 @@ private:
     // Input handling
     QPointF m_lastMousePoint;
     Qt::MouseButtons m_lastMouseButtons;
+
+	std::string m_vrManifestPath;
 };
 
 

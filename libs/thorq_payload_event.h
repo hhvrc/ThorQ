@@ -1,12 +1,12 @@
 #ifndef THORQ_PAYLOAD_EVENT_H
 #define THORQ_PAYLOAD_EVENT_H
 
-#include <string>
+#include <QString>
 #include <vector>
 
 #include "enums.h"
 
-/** @file thorq_message_event.h
+/** @file thorq_payload_event.h
  *
  */
 
@@ -20,46 +20,46 @@ typedef enum {
 } thorq_event_type_t;
 
 /**
- * @brief thorq_message_event_is_valid
+ * @brief thorq_payload_event_is_valid
  * @param payload
  * @return
  */
-inline bool thorq_message_event_is_valid(const std::vector<std::uint8_t>& payload)
+inline bool thorq_payload_event_is_valid(const std::vector<std::uint8_t>& payload)
 {
-    return payload.size() >= 2 && payload[0] == THORQ_MESSAGE_ID_EVENT;
+    return payload.size() >= 2 && payload[0] == THORQ_PAYLOAD_ID_EVENT;
 }
 
 /**
- * @brief thorq_message_event_pack
+ * @brief thorq_payload_event_pack
  * @param payload
  * @param type
  * @param data
  */
-inline void thorq_message_event_pack(std::vector<std::uint8_t>& payload, const thorq_event_type_t& type, const std::string& data)
+inline void thorq_payload_event_pack(std::vector<std::uint8_t>& payload, const thorq_event_type_t& type, const QString& data)
 {
     payload.resize(2 + data.size());
-    payload[0] = THORQ_MESSAGE_ID_EVENT;
+    payload[0] = THORQ_PAYLOAD_ID_EVENT;
     payload[1] = static_cast<std::uint8_t>(type);
 
     memcpy(payload.data() + 2, data.data(), data.size());
 }
 
 /**
- * @brief thorq_message_event_get_type
+ * @brief thorq_payload_event_get_type
  * @param payload
  * @param type
  */
-inline void thorq_message_event_get_type(const std::vector<std::uint8_t>& payload, thorq_event_type_t& type)
+inline void thorq_payload_event_get_type(const std::vector<std::uint8_t>& payload, thorq_event_type_t& type)
 {
     type = static_cast<thorq_event_type_t>(payload[1]);
 }
 
 /**
- * @brief thorq_message_event_get_message
+ * @brief thorq_payload_event_get_message
  * @param payload
  * @param message
  */
-inline void thorq_message_event_get_message(const std::vector<std::uint8_t>& payload, std::string& message)
+inline void thorq_payload_event_get_message(const std::vector<std::uint8_t>& payload, QString& message)
 {
     message.resize(payload.size() - 2);
 

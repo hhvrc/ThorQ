@@ -1,17 +1,19 @@
 #include <fstream>
 
+#include <QDebug>
+
 #include <crypto.h>
 
 int main(int argc, char** argv)
 {
     if (argc < 2)
     {
-        printf("Please provide a password to encrypt the key with\n");
+        qWarning() << "Please provide a password to encrypt the key with";
         return EXIT_FAILURE;
     }
     if (argc > 2)
     {
-        printf("Too many arguments\n");
+        qWarning() << "Too many arguments";
         return EXIT_FAILURE;
     }
 

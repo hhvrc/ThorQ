@@ -2,35 +2,29 @@
 
 #include <QBoxLayout>
 #include <QPushButton>
-#include <QListWidget>
+#include <QListView>
 
-#include "usermodel.h"
-#include "userdelegate.h"
+#include "userlistitem.h"
+#include "userlistmodel.h"
 
 MainWidget::MainWidget(QWidget *parent)
 	: QWidget(parent)
-	, m_logoutButton(new QPushButton(this))
-	, m_listView(new QListView(this))
-	, m_userModel(new UserModel(this))
-	, m_userDelegate(new UserDelegate(this))
+    , m_logoutButton(new QPushButton(this))
 	, m_vlayout(new QVBoxLayout(this))
 	, m_hlayout(new QHBoxLayout())
 {
 	m_logoutButton->setText("Logout");
-	QObject::connect(m_logoutButton, &QPushButton::clicked, [this](){ emit logoutButtonClicked(); });
+    QObject::connect(m_logoutButton, &QPushButton::clicked, [this](){ emit logoutButtonClicked(); });
 
-	m_listView->setModel(m_userModel);
-
-	m_vlayout->addWidget(m_logoutButton);
-	m_vlayout->addWidget(m_listView);
-
+    m_vlayout->addWidget(m_logoutButton);
 	setLayout(m_vlayout);
 }
 
 void MainWidget::setLoginState(THORQ_STATE_LOGIN newState)
 {
 	if (newState < THORQ_STATE_LOGIN_LOGGEDIN)
-	{
+    {
+        clearUsers();
 		hide();
 	}
 	else
@@ -48,7 +42,23 @@ void MainWidget::setConnectionPing(uint ping)
 	{
 		m_ping = ping;
 		updateUiPing();
-	}
+    }
+}
+
+void MainWidget::updateUser(const QString& username, uint8_t state)
+{
+   // m_userList->addItem(username);
+}
+
+void MainWidget::removeUser(const QString& username)
+{
+    //m_userModel->removeUser(username);
+}
+
+void MainWidget::clearUsers()
+{
+   // m_userList->clear();
+    //m_userModel->clearUsers();
 }
 
 void MainWidget::updateUiState()

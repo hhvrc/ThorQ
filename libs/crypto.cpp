@@ -1,10 +1,10 @@
 #include "crypto.h"
 
 #include <fstream>
+#include <QDebug>
 
 #include <botan_all.h>
 
-#include "log.h"
 #include "constants.h"
 
 
@@ -38,11 +38,11 @@ Crypto* Crypto::load(const std::string &keyName, const std::string &password)
     }
     catch (const Botan::Exception& ex)
     {
-		thorq_error_fmt("Error while decoding key: %s\n", ex.what())
+        qDebug() << "Error while decoding key:" << ex.what();
     }
     catch (const std::exception& ex)
     {
-		thorq_error_fmt("Error while loading key: %s\n", ex.what())
+        qDebug() << "Error while loading key:" << ex.what();
     }
 
     return nullptr;
@@ -59,12 +59,12 @@ bool Crypto::save(const std::string &keyName, const std::string &password) const
     }
     catch (const Botan::Exception& ex)
     {
-		thorq_error_fmt("Error while encoding key: %s\n", ex.what())
+        qDebug() << "Error while encoding key:" << ex.what();
         return false;
     }
     catch (const std::exception& ex)
     {
-		thorq_error_fmt("Error while saving key: %s\n", ex.what())
+        qDebug() << "Error while saving key:" << ex.what();
         return false;
     }
 
@@ -108,7 +108,7 @@ bool Crypto::agree(const std::vector<std::uint8_t>& data)
         }
         catch (const std::exception& ex)
 		{
-			thorq_error_fmt("Error while doing key agreement: %s\n", ex.what())
+            qDebug() << "Error while doing key agreement:" << ex.what();
 		}
 	}
 
@@ -127,7 +127,7 @@ void Crypto::reset()
     }
     catch (const std::exception& ex)
 	{
-		thorq_error_fmt("Error while resetting encryption: %s\n", ex.what())
+        qDebug() << "Error while resetting encryption:" << ex.what();
 	}
 }
 
@@ -151,7 +151,7 @@ bool Crypto::encrypt(std::vector<std::uint8_t>& data)
         }
         catch (const std::exception& ex)
 		{
-			thorq_error_fmt("Error while doing encryption: %s\n", ex.what())
+            qDebug() << "Error while doing encryption:" << ex.what();
 		}
 	}
     return false;
@@ -171,7 +171,7 @@ bool Crypto::encrypt(std::vector<std::uint8_t> &data, std::uint8_t* iv)
         }
         catch (const std::exception& ex)
         {
-			thorq_error_fmt("Error while doing encryption: %s\n", ex.what())
+            qDebug() << "Error while doing encryption:" << ex.what();
         }
     }
     return false;
@@ -194,7 +194,7 @@ bool Crypto::decrypt(std::vector<std::uint8_t>& data)
         }
         catch (const std::exception& ex)
 		{
-			thorq_error_fmt("Error while doing decryption: %s\n", ex.what())
+            qDebug() << "Error while doing decryption:" << ex.what();
 		}
 	}
     return false;
@@ -213,7 +213,7 @@ bool Crypto::decrypt(std::vector<std::uint8_t> &data, const std::uint8_t *iv)
         }
         catch (const std::exception& ex)
         {
-			thorq_error_fmt("Error while doing decryption: %s\n", ex.what())
+            qDebug() << "Error while doing decryption:" << ex.what();
         }
     }
     return false;

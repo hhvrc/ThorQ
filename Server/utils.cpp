@@ -1,26 +1,27 @@
 #include "utils.h"
 
-#include <vector>
+#include <QDebug>
 
 #include <enet.h>
 #include <thorq_message.h>
 
 #include "singletons.h"
 #include "instance.h"
-#include "instancemap.h"
 
-std::string enetaddr_to_str(const ENetAddress* addr)
+QString enet_peer_address_str(const ENetPeer* addr)
 {
 	char buffer[50];
-	if (enet_address_get_host_ip(addr, buffer, sizeof(buffer)) < 0)
+    if (enet_address_get_host_ip(&addr->address, buffer, sizeof(buffer)) < 0)
 		return "ERROR";
-	return std::string(buffer);
+    return buffer;
 }
 
 void broadcastNotification(std::vector<std::uint8_t>& message, bool reliable)
 {
 
-    std::vector<ThorQ::Instance*> instances = registeredInstances->instances();
+    QList<ThorQ::Instance*> instances = g_onlineInstances.toList();
+
+    qDebug() << "Sending notification to" << instances.size() <<  "instances!";
 
     thorq_message_encode(message);
 
@@ -31,5 +32,5 @@ void broadcastAnnouncement(std::vector<std::uint8_t>& message, bool reliable)
 {
     thorq_message_encode(message);
 
-    enet_host_broadcast(server, reliable ? 0 : 1, enet_packet_create(message.data(), message.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
+    enet_host_broadcast(g_server, reliable ? 0 : 1, enet_packet_create(message.data(), message.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
 }

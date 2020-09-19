@@ -1,4 +1,8 @@
-﻿#ifndef THORQ_MESSAGE_H
+﻿/// @file thorq_payload_message.h
+///
+///
+
+#ifndef THORQ_MESSAGE_H
 #define THORQ_MESSAGE_H
 
 #include <vector>
@@ -10,7 +14,9 @@
 #include "crypto.h"
 #include "enums.h"
 
-typedef enum {
+/// Flags to describe the state of a message (these flags will NOT be encrypted)
+enum THORQ_MESSAGE_FLAG : std::uint8_t
+{
     THORQ_MESSAGE_FLAG_ENCRYPTED  = 1 << 0, ///< The following data is encrypted, it needs to get decrypted to make sense
     THORQ_MESSAGE_FLAG_RESERVED_2 = 1 << 1,
     THORQ_MESSAGE_FLAG_RESERVED_3 = 1 << 2,
@@ -19,15 +25,22 @@ typedef enum {
     THORQ_MESSAGE_FLAG_RESERVED_6 = 1 << 5,
     THORQ_MESSAGE_FLAG_RESERVED_7 = 1 << 6,
     THORQ_MESSAGE_FLAG_RESERVED_8 = 1 << 7,
-} thorq_message_header_flag_t; ///< Message entry flags to describe the state of a message
+};
 
-constexpr std::size_t THORQ_MESSAGE_LEN = THORQ_PAYLOAD_LEN + 4 + THORQ_CRYPTO_CIPHER_IV_LEN + 1;
+/* Fixed size of message
+ * PAYLOAD | SIZE | CRYPTO_IV | MESSAGE_FLAGS
+ */
+constexpr std::size_t THORQ_MESSAGE_LEN =
+        THORQ_PAYLOAD_LEN
+      + sizeof(std::uint32_t)
+      + THORQ_CRYPTO_CIPHER_IV_LEN
+      + sizeof(THORQ_MESSAGE_FLAG);
 
 inline bool thorq_message_encode(std::vector<std::uint8_t>& dataInOut)
 {
     std::size_t messageSize = dataInOut.size();
 
-    if (messageSize > THORQ_PAYLOAD_LEN)
+    if (messageSize == 0 || messageSize > THORQ_PAYLOAD_LEN)
 		return false;
 
 	dataInOut.resize(THORQ_MESSAGE_LEN);
@@ -50,7 +63,7 @@ inline bool thorq_message_encode(std::vector<std::uint8_t>& dataInOut, ThorQ::Cr
 {
     std::size_t messageSize = dataInOut.size();
 
-    if (messageSize > THORQ_PAYLOAD_LEN)
+    if (messageSize == 0 || messageSize > THORQ_PAYLOAD_LEN)
 		return false;
 
 	// Reserve space for the entire message, but keep the size as payload size for now
@@ -80,7 +93,7 @@ inline bool thorq_message_encode(std::vector<std::uint8_t>& dataInOut, ThorQ::Cr
 	}
 
 	// Set header
-	dataInOut[THORQ_MESSAGE_LEN - 1] = THORQ_MESSAGE_FLAG_ENCRYPTED;
+    dataInOut[THORQ_MESSAGE_LEN - 1] = THORQ_MESSAGE_FLAG_ENCRYPTED;
 
 	return true;
 }
@@ -89,7 +102,7 @@ inline bool thorq_message_decode(std::vector<std::uint8_t>& dataInOut, ThorQ::Cr
 	if (dataInOut.size() != THORQ_MESSAGE_LEN)
         return false;
 
-	if ((dataInOut[THORQ_MESSAGE_LEN - 1] & THORQ_MESSAGE_FLAG_ENCRYPTED) != 0)
+    if ((dataInOut[THORQ_MESSAGE_LEN - 1] & THORQ_MESSAGE_FLAG_ENCRYPTED) != 0)
     {
         std::uint8_t iv[THORQ_CRYPTO_CIPHER_IV_LEN];
         memcpy(iv, &dataInOut[THORQ_PAYLOAD_LEN + 4], THORQ_CRYPTO_CIPHER_IV_LEN);
@@ -105,7 +118,7 @@ inline bool thorq_message_decode(std::vector<std::uint8_t>& dataInOut, ThorQ::Cr
     messageSize               |= dataInOut[THORQ_PAYLOAD_LEN + 2] <<  8;
     messageSize               |= dataInOut[THORQ_PAYLOAD_LEN + 3] <<  0;
 
-    if (messageSize > THORQ_PAYLOAD_LEN)
+    if (messageSize > THORQ_PAYLOAD_LEN || messageSize == 0)
         return false;
 
     dataInOut.resize(messageSize);

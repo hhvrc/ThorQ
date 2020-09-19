@@ -27,6 +27,9 @@ Q_DECLARE_METATYPE(THORQ_STATE_LOGIN)
 #include <thorq_message.h>
 #include <thorq_payload_crypto.h>
 
+#include <QVBoxLayout>
+
+#include <thorq_message.h>
 
 int main(int argc, char** argv)
 {
@@ -39,7 +42,7 @@ int main(int argc, char** argv)
     // TODO: enable support for SteamVR
 
 	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-	QApplication app(argc, argv);
+    QApplication app(argc, argv);
 #if COMTEST
 	QString stylesheet;
 
@@ -59,14 +62,14 @@ int main(int argc, char** argv)
 	app.setStyleSheet(stylesheet);
 	app.setApplicationName(THORQ_APPLICATION_NAME);
 	app.setDesktopFileName(THORQ_APPLICATION_NAME);
-	app.setApplicationVersion(THORQ_VERSION_CLIENT.to_string().c_str());
+    app.setApplicationVersion(THORQ_VERSION_CLIENT.toString());
 	app.setWindowIcon(QIcon(":/shockGrey.ico"));
     //app.setQuitOnLastWindowClosed(false);
 
 	// Initialize ENet
 	if (enet_initialize() < 0)
 	{
-		printf("Failed to initialize ENet");
+        qDebug() << "Failed to initialize ENet";
         return EXIT_FAILURE;
 	}
 
@@ -99,16 +102,19 @@ int main(int argc, char** argv)
 	QObject::connect(cli, &Client::Warning, &warningBox, &QMessageBox::setText);
 	QObject::connect(cli, &Client::Warning, &warningBox, &QWidget::show);
 
-    QObject::connect(&loginWidget, &LoginWidget::regkeyEntered, cli, &Client::SetRegistrationKey);
+    QObject::connect(&loginWidget, &LoginWidget::regkeyEntered, cli, &Client::submitRegistrationKey);
 	QObject::connect(&loginWidget, &LoginWidget::usernameEntered, cli, &Client::Login);
+
+    QObject::connect(cli, &Client::userUpdate, &mainWidget, &MainWidget::updateUser);
+    QObject::connect(cli, &Client::UserOffline, &mainWidget, &MainWidget::removeUser);
 	QObject::connect(&mainWidget, &MainWidget::logoutButtonClicked, cli, &Client::Logout);
 
-	loginWidget.show();
+    loginWidget.show();
 
 	cli->Connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT);
 
 #else
-	QPixmap pix(":/uwu.png");
+    QPixmap pix(":/uwu.png");
 	QLabel lab;
 	lab.setPixmap(pix);
 

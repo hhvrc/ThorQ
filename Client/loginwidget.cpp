@@ -40,12 +40,12 @@ LoginWidget::LoginWidget(QWidget* parent)
     , m_mainLayout(new QVBoxLayout(this))
     , m_headerLayout(new QHBoxLayout())
 {
-	setWindowTitle("ThorQ Login");
+    setWindowTitle(tr("ThorQ Login"));
 
     m_title->setText("ThorQ");
     m_title->setStyleSheet("font-size: 72px; color: #FFFFFF");
 
-    m_onlineStatus->setText("● Offline");
+    m_onlineStatus->setText(tr(uiStatusList[0][0]));
     m_onlineStatus->setStyleSheet("font-size: 16px; color: #FF0000");
 
 	m_headerLayout->addWidget(m_title);
@@ -61,6 +61,9 @@ LoginWidget::LoginWidget(QWidget* parent)
 
     QObject::connect(m_acceptButton, &QPushButton::clicked, [this]()
     {
+        if (m_textInput->text().isEmpty())
+            return;
+
         if (m_state == THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT)
         {
             emit regkeyEntered(m_textInput->text());
@@ -130,11 +133,11 @@ void LoginWidget::updateUiState()
 
     if (m_state < THORQ_STATE_CONNECTION_CONNECTED)
     {
-        m_onlineStatus->setText(QString(uiStatusList[m_state][0]));
+        m_onlineStatus->setText(tr(uiStatusList[m_state][0]));
     }
     else
     {
-        m_onlineStatus->setText(QString(uiStatusList[m_state][0]).arg(m_ping));
+        m_onlineStatus->setText(tr(uiStatusList[m_state][0]).arg(m_ping));
     }
 
     if (m_state == THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT)
@@ -142,7 +145,7 @@ void LoginWidget::updateUiState()
         m_textInput->setText("");
         m_textInput->show();
 
-        m_acceptButton->setText("Submit");
+        m_acceptButton->setText(tr("Submit"));
         m_acceptButton->show();
 
         adjustSize();
@@ -152,7 +155,7 @@ void LoginWidget::updateUiState()
         m_textInput->setText("");
         m_textInput->show();
 
-        m_acceptButton->setText("Login");
+        m_acceptButton->setText(tr("Login"));
         m_acceptButton->show();
 
         adjustSize();
@@ -178,6 +181,6 @@ void LoginWidget::updateUiPing()
 {
     if (m_state >= THORQ_STATE_CONNECTION_CONNECTED)
     {
-        m_onlineStatus->setText(QString(uiStatusList[m_state][0]).arg(m_ping));
+        m_onlineStatus->setText(tr(uiStatusList[m_state][0]).arg(m_ping));
     }
 }

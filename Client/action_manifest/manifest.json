@@ -1,0 +1,118 @@
+{
+  "app_key": "HeavenVR.ThorQ",
+  "strings": {
+    "en_us": {
+      "name": "ThorQ",
+      "description": "Application to control a shock-collar remotely from anywhere in the world."
+    }
+  },
+  "image_path": "shockGrey.png",
+  "action_sets": [
+    {
+      "name": "/actions/ui",
+      "usage": "single"
+    }
+  ],
+  "actions": [
+    {
+      "name": "/actions/ui/in/LeftClick",
+      "type": "boolean",
+      "requirement": "mandatory"
+    },
+    {
+      "name": "/actions/ui/in/RightClick",
+      "type": "boolean",
+      "requirement": "optional"
+    },
+    {
+      "name": "/actions/ui/in/TouchpadPosition",
+      "type": "vector2",
+      "requirement": "optional"
+    },
+    {
+      "name": "/actions/ui/in/EditMode",
+      "type": "boolean"
+    },
+    {
+      "name": "/actions/ui/in/MoveWindow",
+      "type": "boolean"
+    },
+    {
+      "name": "/actions/ui/in/LeftSkeleton",
+      "type": "skeleton",
+      "skeleton": "/skeleton/hand/left"
+    },
+    {
+      "name": "/actions/ui/in/RightSkeleton",
+      "type": "skeleton",
+      "skeleton": "/skeleton/hand/right"
+    },
+    {
+      "name": "/actions/ui/in/MiddleClick",
+      "type": "boolean"
+    },
+    {
+      "name": "/actions/ui/in/Screenshot",
+      "type": "boolean"
+    }
+  ],
+  "default_bindings": [
+    {
+      "controller_type": "vive_controller",
+      "binding_url": "bindings_vive_controller.json"
+    },
+    {
+      "controller_type": "oculus_touch",
+      "binding_url": "bindings_oculus_touch.json"
+    },
+    {
+      "controller_type": "knuckles",
+      "binding_url": "bindings_knuckles.json"
+    },
+    {
+      "controller_type": "holographic_controller",
+      "binding_url": "bindings_holographic_controller.json"
+    },
+    {
+      "controller_type": "vive_cosmos_controller",
+      "binding_url": "bindings_vive_cosmos_controller.json"
+    },
+    {
+      "controller_type": "logitech_stylus",
+      "binding_url": "bindings_logitech_stylus.json"
+    },
+    {
+      "controller_type": "vive_cosmos",
+      "binding_url": "binding_vive_cosmos.json"
+    },
+    {
+      "controller_type": "vive",
+      "binding_url": "binding_vive.json"
+    },
+    {
+      "controller_type": "indexhmd",
+      "binding_url": "binding_index_hmd.json"
+    },
+    {
+      "controller_type": "vive_pro",
+      "binding_url": "binding_vive_pro.json"
+    },
+    {
+      "controller_type": "rift",
+      "binding_url": "binding_rift.json"
+    },
+    {
+      "controller_type": "holographic_hmd",
+      "binding_url": "binding_holographic_hmd.json"
+    },
+    {
+      "controller_type": "vive_tracker_camera",
+      "binding_url": "binding_vive_tracker_camera.json"
+    }
+  ],
+  "localization": [
+    {
+      "language_tag": "en_US"
+    }
+  ]
+}

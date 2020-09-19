@@ -1,6 +1,8 @@
 #include "eventhandlers.h"
 
-#include <log.h>
+#include <QDebug>
+#include <QString>
+
 #include <enet.h>
 
 #include <thorq_message.h>
@@ -8,16 +10,14 @@
 #include <thorq_payload_heartbeat.h>
 #include <thorq_payload_crypto.h>
 #include <thorq_payload_auth.h>
-#include <thorq_payload_command.h>
-#include <thorq_payload_command_ack.h>
 #include <thorq_payload_event.h>
 #include <thorq_payload_announcement.h>
 #include <thorq_payload_notification.h>
 #include <thorq_payload_collar.h>
 
 #include "utils.h"
+#include "account.h"
 #include "instance.h"
-#include "instancemap.h"
 #include "messagehandlers.h"
 
 void handleEventNewConnection(ENetPeer* peer)
@@ -28,17 +28,18 @@ void handleEventNewConnection(ENetPeer* peer)
 
     std::vector<std::uint8_t> message;
 
-    thorq_message_version_pack(message, THORQ_APP_LINK,   THORQ_VERSION_LINK);
+    thorq_payload_version_pack(message, THORQ_APP_LINK, THORQ_VERSION_LINK);
     instance->sendMessage(message, false, true);
 
-    thorq_message_version_pack(message, THORQ_APP_CLIENT, THORQ_VERSION_CLIENT);
+    thorq_payload_version_pack(message, THORQ_APP_CLIENT, THORQ_VERSION_CLIENT);
     instance->sendMessage(message, false, true);
 
-    thorq_message_version_pack(message, THORQ_APP_SERVER, THORQ_VERSION_SERVER);
+    thorq_payload_version_pack(message, THORQ_APP_SERVER, THORQ_VERSION_SERVER);
     instance->sendMessage(message, false, true);
 
-	thorq_debug_fmt("A new client connected from:\n\tIPV6: %s\n\tPORT: %u\n", enetaddr_to_str(&peer->address).c_str(), peer->address.port)
-	fflush(stdout);
+    qDebug() << QString("A new client connected from:\n\tIPV6: %1\n\tPORT: %2")
+                .arg(enet_peer_address_str(peer))
+                .arg(peer->address.port);
 }
 
 void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
@@ -53,63 +54,49 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 
 	std::vector<std::uint8_t> message(packet->data, packet->data + packet->dataLength);
 
-	if (!thorq_message_decode(message, instance->getCrypto()))
+    if (!thorq_message_decode(message, instance->getCrypto()))
         return;
 
     switch (message[0]) {
-	case THORQ_MESSAGE_ID_COLLAR:
-        if (thorq_message_collar_is_valid(message))
+    case THORQ_PAYLOAD_ID_COLLAR:
+        if (thorq_payload_collar_is_valid(message))
 		{
 			handleMessageCollar(instance, message);
 			return;
 		}
 		break;
-	case THORQ_MESSAGE_ID_HEARTBEAT:
-        if (thorq_message_heartbeat_is_valid(message))
+    case THORQ_PAYLOAD_ID_HEARTBEAT:
+        if (thorq_payload_heartbeat_is_valid(message))
 		{
 			handleMessageHeartbeat(instance);
 			return;
 		}
 		break;
-	case THORQ_MESSAGE_ID_VERSION:
-        if (thorq_message_version_is_valid(message))
+    case THORQ_PAYLOAD_ID_VERSION:
+        if (thorq_payload_version_is_valid(message))
 		{
             handleMessageVersion(instance, message);
 			return;
 		}
 		break;
-	case THORQ_MESSAGE_ID_CRYPTO:
-        if (thorq_message_crypto_is_valid(message))
+    case THORQ_PAYLOAD_ID_CRYPTO:
+        if (thorq_payload_crypto_is_valid(message))
 		{
             handleMessageCrypto(instance, message);
 			return;
 		}
 		break;
-	case THORQ_MESSAGE_ID_AUTH:
-        if (thorq_message_auth_is_valid(message))
+    case THORQ_PAYLOAD_ID_AUTH:
+        if (thorq_payload_auth_is_valid(message))
 		{
             handleMessageAuth(instance, message);
 			return;
 		}
-		break;
-	case THORQ_MESSAGE_ID_COMMAND:
-        if (thorq_message_command_is_valid(message))
-		{
-            handleMessageCommand(instance, message);
-			return;
-		}
-		break;
-	case THORQ_MESSAGE_ID_COMMAND_ACK:
-        if (thorq_message_command_ack_is_valid(message))
-		{
-            handleMessageCommandAck(instance, message);
-			return;
-		}
         break;
-    case THORQ_MESSAGE_ID_EVENT:
-    case THORQ_MESSAGE_ID_ANNOUNCEMENT:
-	case THORQ_MESSAGE_ID_INVALID:
-        thorq_debug_fmt("Got invalid message: %u\n", message[0]);
+    case THORQ_PAYLOAD_ID_EVENT:
+    case THORQ_PAYLOAD_ID_ANNOUNCEMENT:
+    case THORQ_PAYLOAD_ID_INVALID:
+        qDebug() << "Waitttttt... im not supposed to get these?" << (int)message[0];
 		fflush(stdout);
         break;
 	default:
@@ -129,15 +116,15 @@ void handleEventDisconnect(ENetPeer* peer)
 
     auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
-    if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
+    if (instance->account() != nullptr)
     {
-        thorq_debug_fmt("User \"%s\" connected from [%s] disconnected", instance->name().c_str(), enetaddr_to_str(&peer->address).c_str());
+        qDebug() << "User" << instance->account()->username()
+                 << "connected from [" << enet_peer_address_str(peer) << "] disconnected";
     }
     else
     {
-        thorq_debug_fmt("Client connected from [%s] disconnected", enetaddr_to_str(&peer->address).c_str());
+        qDebug() << "User connected from [" << enet_peer_address_str(peer) << "] disconnected";
     }
-    fflush(stdout);
 
     // Automatically notifies and handles disconnection
     instance->setConnectionState(THORQ_STATE_CONNECTION_DISCONNECTED);
@@ -153,19 +140,15 @@ void handleEventTimeout(ENetPeer* peer)
 
     auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
-    if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
+    if (instance->account() != nullptr)
     {
-        std::vector<std::uint8_t> message;
-        thorq_message_notification_pack(message, THORQ_NOTIFICATION_USER_OFFLINE_TIMEOUT, instance->name());
-        instance->sendMessage(message, true, true);
-
-        thorq_debug_fmt("User \"%s\" connected from [%s] timed out", instance->name().c_str(), enetaddr_to_str(&peer->address).c_str());
+        qDebug() << "User" << instance->account()->username()
+                 << "connected from [" << enet_peer_address_str(peer) << "] timed out";
     }
     else
     {
-        thorq_debug_fmt("Client connected from [%s] timed out", enetaddr_to_str(&peer->address).c_str());
+        qDebug() << "User connected from [" << enet_peer_address_str(peer) << "] timed out";
     }
-	fflush(stdout);
 
     // Automatically notifies and handles disconnection
     instance->setConnectionState(THORQ_STATE_CONNECTION_DISCONNECTED);

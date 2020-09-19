@@ -34,43 +34,51 @@ if (NOT ${py_result} EQUAL 0)
 endif()
 
 set(${project}_SOURCES
-	${CMAKE_CURRENT_BINARY_DIR}/botan_all.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/botan_all.cpp
 
-	${CMAKE_CURRENT_SOURCE_DIR}/log.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/version.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/systemid_${BUILD_OSL}.cpp
 )
 set(${project}_HEADERS
     ${CMAKE_CURRENT_BINARY_DIR}/botan_all.h
-	${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
 
-	${CMAKE_CURRENT_SOURCE_DIR}/log.h
-	${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
-	${CMAKE_CURRENT_SOURCE_DIR}/systemid.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/version.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/systemid.h
 
-	${CMAKE_CURRENT_SOURCE_DIR}/enums.h
-	${CMAKE_CURRENT_SOURCE_DIR}/constants.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_auth.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_event.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_collar.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_crypto.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_version.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_command.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_heartbeat.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_command_ack.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_notification.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_announcement.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/enums.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/typedefs.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/constants.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_auth.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_event.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_login.h
+    #${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_regkey.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_logout.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_collar.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_crypto.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_account.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_instance.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_session.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_version.h
+    #${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_systemid.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_authtoken.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_heartbeat.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_notification.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_announcement.h
 )
 
 # Stop botan from fucking up
-string(APPEND CMAKE_CXX_FLAGS " /bigobj /DBOTAN_IS_BEING_BUILT /DBOTAN_NO_DEPRECATED_WARNINGS")
+string(APPEND CMAKE_CXX_FLAGS " -bigobj -DBOTAN_IS_BEING_BUILT -DBOTAN_NO_DEPRECATED_WARNINGS")
 
 if (MSVC)
     list(APPEND ${project}_LIBS Crypt32 winmm ws2_32 Iphlpapi)
 
     # Stop botan from fucking up (on windows)
-    string(APPEND CMAKE_CXX_FLAGS " /DNOMINMAX")
+    string(APPEND CMAKE_CXX_FLAGS " -DNOMINMAX")
 endif()
 
 include_directories(

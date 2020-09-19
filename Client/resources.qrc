@@ -3,5 +3,19 @@
         <file>uwu.png</file>
         <file>shockGrey.ico</file>
         <file>stylesheet.css</file>
+        <file>action_manifest/binding_holographic_hmd.json</file>
+        <file>action_manifest/binding_index_hmd.json</file>
+        <file>action_manifest/binding_rift.json</file>
+        <file>action_manifest/binding_vive.json</file>
+        <file>action_manifest/binding_vive_cosmos.json</file>
+        <file>action_manifest/binding_vive_pro.json</file>
+        <file>action_manifest/binding_vive_tracker_camera.json</file>
+        <file>action_manifest/bindings_holographic_controller.json</file>
+        <file>action_manifest/bindings_knuckles.json</file>
+        <file>action_manifest/bindings_logitech_stylus.json</file>
+        <file>action_manifest/bindings_oculus_touch.json</file>
+        <file>action_manifest/bindings_vive_controller.json</file>
+        <file>action_manifest/bindings_vive_cosmos_controller.json</file>
+        <file>action_manifest/manifest.json</file>
     </qresource>
 </RCC>

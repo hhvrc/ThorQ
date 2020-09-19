@@ -2,18 +2,24 @@
 #define CONSTANTS_H
 
 #include <cstdint>
+#include <cstddef>
+
+#include "version.h"
 
 constexpr std::uint8_t THORQ_VERSION_SERVER_MAJOR = 0;
 constexpr std::uint8_t THORQ_VERSION_SERVER_MINOR = 0;
 constexpr std::uint8_t THORQ_VERSION_SERVER_PATCH = 132;
+constexpr ThorQ::Version THORQ_VERSION_SERVER { THORQ_VERSION_SERVER_MAJOR, THORQ_VERSION_SERVER_MINOR, THORQ_VERSION_SERVER_PATCH };
 
 constexpr std::uint8_t THORQ_VERSION_CLIENT_MAJOR = 0;
 constexpr std::uint8_t THORQ_VERSION_CLIENT_MINOR = 0;
 constexpr std::uint8_t THORQ_VERSION_CLIENT_PATCH = 132;
+constexpr ThorQ::Version THORQ_VERSION_CLIENT { THORQ_VERSION_CLIENT_MAJOR, THORQ_VERSION_CLIENT_MINOR, THORQ_VERSION_CLIENT_PATCH };
 
 constexpr std::uint8_t THORQ_VERSION_LINK_MAJOR = 0;
 constexpr std::uint8_t THORQ_VERSION_LINK_MINOR = 0;
 constexpr std::uint8_t THORQ_VERSION_LINK_PATCH = 132;
+constexpr ThorQ::Version THORQ_VERSION_LINK { THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH };
 
 constexpr const char* THORQ_CRYPTO_EC_ID = "secp256r1";
 constexpr std::size_t THORQ_CRYPTO_CIPHER_IV_LEN = 24; // StreamCipher::default_iv_length()
@@ -23,8 +29,33 @@ constexpr const char* THORQ_CRYPTO_KEY_DVFUNC = "KDF2(SHA-256)";
 constexpr std::size_t THORQ_CRYPTO_VERIFICATION_DATA_LENGTH = 256;
 
 constexpr std::size_t THORQ_PAYLOAD_LEN = 512; ///< Maximum payload length
-constexpr std::size_t THORQ_AUTH_REGKEY_LEN = 256; ///< Maximum payload length
+constexpr std::size_t THORQ_AUTH_REGKEY_LEN = 32; ///< Fixed registration key length
 
+/* So according to the POSIX standard, a hostname is guaranteed not to exceed 255 bytes
+ * Also a hostname can minimum be 1 character long
+ *
+ * The systemID we generate is 10 bytes long, so this sums up to:
+ * Minimum: 10 + 1   (11)
+ * Maximum: 10 + 255 (265)
+ */
+constexpr std::size_t THORQ_AUTH_SYSTEMID_LEN_MIN = 11; ///< Minimum SystemID length
+constexpr std::size_t THORQ_AUTH_SYSTEMID_LEN_MAX = 265; ///< Maximum SystemID length
+
+/* Users cannot have usernames less than 2 characters, thats retarded
+ * Limit usernames at 32 characters, because having more is... retarded
+ */
+constexpr int THORQ_USERNAME_LEN_MIN = 2; ///< Minimum Username length
+constexpr int THORQ_USERNAME_LEN_MAX = 32; ///< Maximum Username length
+
+/* Having a password less than 6 characters long is stupid and i wont allow supidity
+ * The hashing algorithm used effectively truncates the password at 72 characters, so set the limit there
+ * see: https://botan.randombit.net/handbook/api_ref/passhash.html
+ */
+constexpr int THORQ_PASSWORD_LEN_MIN = 6; ///< Minimum Password length
+constexpr int THORQ_PASSWORD_LEN_MAX = 72; ///< Maximum Password length
+
+/* TODO: move this to a config file
+ */
 constexpr const char*   THORQ_APPLICATION_NAME = "ThorQ";
 constexpr const char*   THORQ_SERVER_HOSTNAME = "www.dededededede.de";
 constexpr std::uint16_t THORQ_SERVER_PORT = 12345;

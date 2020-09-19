@@ -12,8 +12,7 @@ class Private_Key;
 }
 
 namespace ThorQ {
-/** Class to make cryptography extremely easy to deal with
-  */
+/// Class to make cryptography extremely easy to deal with
 class Crypto
 {
 	bool m_ready;

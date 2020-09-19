@@ -1,14 +1,18 @@
 #ifndef SINGETONS_H
 #define SINGETONS_H
 
-#include "typedefs.h"
+#include <QSet>
+
+#include <typedefs.h>
 
 #ifdef SINGLETON_BASE
-ENetHost* server = nullptr;
-ThorQ::InstanceMap* registeredInstances = nullptr;
+ENetHost* g_server = nullptr;
+QSet<ThorQ::Account*> g_accounts;
+QSet<ThorQ::Instance*> g_onlineInstances;
 #else
-extern ENetHost* server;
-extern ThorQ::InstanceMap* registeredInstances;
+extern ENetHost* g_server;
+extern QSet<ThorQ::Account*> g_accounts;
+extern QSet<ThorQ::Instance*> g_onlineInstances;
 #endif
 
 #endif // SINGETONS_H

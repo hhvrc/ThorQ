@@ -1,43 +1,55 @@
-#ifndef THORQ_MSG_PAYLOAD_ANNOUNCEMENT_H
-#define THORQ_MSG_PAYLOAD_ANNOUNCEMENT_H
+/// @file thorq_payload_announcement.h
+///
+///
 
-#include <string>
+#ifndef THORQ_PAYLOAD_ANNOUNCEMENT_H
+#define THORQ_PAYLOAD_ANNOUNCEMENT_H
+
 #include <vector>
+
+#include <QString>
 
 #include "enums.h"
 
-typedef enum {
-    ADMIN,
-    SYSTEM,
-} thorq_announcement_type_t;
+/// @enum THORQ_PAYLOAD_ANNOUNCEMENT_TYPE
+enum THORQ_PAYLOAD_ANNOUNCEMENT_TYPE : std::uint8_t
+{
+    THORQ_PAYLOAD_ANNOUNCEMENT_TYPE_ADMIN,
+    THORQ_PAYLOAD_ANNOUNCEMENT_TYPE_SYSTEM,
+};
 
-typedef enum {
-    ALERT,
-    NOTICE,
-    MAINTANENCE,
-} thorq_announcement_reason_t;
+/// @enum THORQ_PAYLOAD_ANNOUNCEMENT_REASON
+enum THORQ_PAYLOAD_ANNOUNCEMENT_REASON : std::uint8_t
+{
+    THORQ_PAYLOAD_ANNOUNCEMENT_REASON_ALERT,
+    THORQ_PAYLOAD_ANNOUNCEMENT_REASON_NOTICE,
+    THORQ_PAYLOAD_ANNOUNCEMENT_REASON_MAINTANENCE,
+};
 
 /**
- * @brief thorq_message_announcement_is_valid
+ * @brief thorq_payload_announcement_is_valid
  * @param payload
  * @return
  */
-inline bool thorq_message_announcement_is_valid(const std::vector<std::uint8_t>& payload)
+inline bool thorq_payload_announcement_is_valid(const std::vector<std::uint8_t>& payload)
 {
-    return payload.size() > 3 && payload[0] == THORQ_MESSAGE_ID_ANNOUNCEMENT;
+    return payload.size() > 3
+        && payload[0] == THORQ_PAYLOAD_ID_ANNOUNCEMENT
+        && payload[1] <= THORQ_PAYLOAD_ANNOUNCEMENT_TYPE_SYSTEM // Max enum value
+        && payload[2] <= THORQ_PAYLOAD_ANNOUNCEMENT_REASON_MAINTANENCE; // Max enum value
 }
 
 /**
- * @brief thorq_announcement_pack
+ * @brief thorq_payload_announcement_pack
  * @param payload
  * @param type
  * @param reason
  * @param message
  */
-inline void thorq_announcement_pack(std::vector<std::uint8_t>& payload, thorq_announcement_type_t type, thorq_announcement_reason_t reason, const std::string& message)
+inline void thorq_payload_announcement_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ANNOUNCEMENT_TYPE type, THORQ_PAYLOAD_ANNOUNCEMENT_REASON reason, const QString& message)
 {
     payload.resize(3 + message.size());
-    payload[0] = THORQ_MESSAGE_ID_ANNOUNCEMENT;
+    payload[0] = THORQ_PAYLOAD_ID_ANNOUNCEMENT;
     payload[1] = static_cast<std::uint8_t>(type);
     payload[2] = static_cast<std::uint8_t>(reason);
 
@@ -45,33 +57,35 @@ inline void thorq_announcement_pack(std::vector<std::uint8_t>& payload, thorq_an
 }
 
 /**
- * @brief thorq_msg_announcement_get_type
+ * @brief thorq_payload_announcement_get_type
  * @param payload
  * @param type
  */
-inline void thorq_message_announcement_get_type(const std::vector<std::uint8_t>& payload, thorq_announcement_type_t& type)
+inline void thorq_payload_announcement_get_type(const std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ANNOUNCEMENT_TYPE& type)
 {
-    type = static_cast<thorq_announcement_type_t>(payload[1]);
+    // if u did safety checking, this is fine
+    type = static_cast<THORQ_PAYLOAD_ANNOUNCEMENT_TYPE>(payload[1]);
 }
 
 /**
- * @brief thorq_msg_announcement_get_reason
+ * @brief thorq_payload_announcement_get_reason
  * @param payload
  * @param reason
  */
-inline void thorq_message_announcement_get_reason(const std::vector<std::uint8_t>& payload, thorq_announcement_reason_t& reason)
+inline void thorq_payload_announcement_get_reason(const std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ANNOUNCEMENT_REASON& reason)
 {
-    reason = static_cast<thorq_announcement_reason_t>(payload[2]);
+    // if u did safety checking, this is fine
+    reason = static_cast<THORQ_PAYLOAD_ANNOUNCEMENT_REASON>(payload[2]);
 }
 
 /**
- * @brief thorq_msg_announcement_get_message
+ * @brief thorq_payload_announcement_get_message
  * @param payload
  * @param message
  */
-inline void thorq_message_announcement_get_message(const std::vector<std::uint8_t>& payload, std::string& message)
+inline void thorq_payload_announcement_get_message(const std::vector<std::uint8_t>& payload, QString& message)
 {
-    message.resize(payload.size() - 3);
+    message.resize((int)payload.size() - 3);
 
     memcpy(message.data(), payload.data() + 3, payload.size() - 3);
 }

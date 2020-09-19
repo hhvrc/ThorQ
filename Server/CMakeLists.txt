@@ -11,21 +11,26 @@ message("Configuring ${project}...")
 
 set(${project}_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
+
+	${CMAKE_CURRENT_SOURCE_DIR}/account.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/instance.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/instancemap.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/authhandler.cpp
+
 	${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.cpp
 )
 set(${project}_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/utils.h
+
+	${CMAKE_CURRENT_SOURCE_DIR}/account.h
 	${CMAKE_CURRENT_SOURCE_DIR}/instance.h
-	${CMAKE_CURRENT_SOURCE_DIR}/typedefs.h
-	${CMAKE_CURRENT_SOURCE_DIR}/singletons.h
-	${CMAKE_CURRENT_SOURCE_DIR}/instancemap.h
-	${CMAKE_CURRENT_SOURCE_DIR}/authhandler.h
+
 	${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.h
 	${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.h
+
+	${CMAKE_CURRENT_SOURCE_DIR}/singletons.h
+
+	${CMAKE_CURRENT_SOURCE_DIR}/authtoken.h
+	${CMAKE_CURRENT_SOURCE_DIR}/relationship.h
 )
 
 include_directories(

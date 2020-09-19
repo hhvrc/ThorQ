@@ -10,21 +10,22 @@ project(
 message("Configuring ${project}...")
 
 # --- OpenVR ---
-math(EXPR VPTR_BITS "${CMAKE_SIZEOF_VOID_P}*8")
+math(EXPR VPTR_BITS "${CMAKE_SIZEOF_VOID_P}*8") # Convert 4/8 -> 32/64
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/headers)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/lib/${BUILD_OS}${VPTR_BITS}) # eg. win64 / linux32
 # --------------
 
 # --- Build ---
 set(${project}_SOURCES
+	${CMAKE_CURRENT_SOURCE_DIR}/user.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/client.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/serial.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.cpp
 
-	${CMAKE_CURRENT_SOURCE_DIR}/usermodel.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/userdelegate.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/userlistitem.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/userlistwidget.cpp
 
 	${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.cpp
@@ -32,15 +33,15 @@ set(${project}_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.cpp
 )
 set(${project}_HEADERS
+	${CMAKE_CURRENT_SOURCE_DIR}/user.h
 	${CMAKE_CURRENT_SOURCE_DIR}/client.h
 	${CMAKE_CURRENT_SOURCE_DIR}/serial.h
 	${CMAKE_CURRENT_SOURCE_DIR}/procmon.h
 	${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.h
 	${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.h
 
-	${CMAKE_CURRENT_SOURCE_DIR}/userdata.h
-	${CMAKE_CURRENT_SOURCE_DIR}/usermodel.h
-	${CMAKE_CURRENT_SOURCE_DIR}/userdelegate.h
+	${CMAKE_CURRENT_SOURCE_DIR}/userlistitem.h
+	${CMAKE_CURRENT_SOURCE_DIR}/userlistwidget.h
 
 	${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.h
 	${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.h
