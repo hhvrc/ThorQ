@@ -25,14 +25,21 @@ elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
 endif()
 
 if(UNIX AND NOT APPLE)
-    set(BUILD_OS "linux")
-    set(BUILD_OSS "linux")
+	set(BUILD_OS "linux")
+	set(BUILD_OSL "linux")
 elseif(WIN32)
-    set(BUILD_OS "win")
-    set(BUILD_OSL "windows")
+	set(BUILD_OS "win")
+	set(BUILD_OSL "windows")
 endif()
 
 string(TOLOWER ${CMAKE_CXX_COMPILER_ID} BUILD_COMPILER)
+
+# Translate some stuff
+if (${BUILD_COMPILER} STREQUAL "gnu")
+  set(BUILD_COMPILER "gcc")
+elseif (${BUILD_COMPILER} STREQUAL "intel")
+  set(BUILD_COMPILER "icc")
+endif()
 # --------------------------------
 
 # --- Find and configure Qt ---
@@ -40,12 +47,12 @@ find_package(
     Qt5
     COMPONENTS
         Core
-	Gui
-	OpenGL
-	Widgets
-	SerialPort
-	Concurrent
-	Sql
+		Gui
+		OpenGL
+		Widgets
+		SerialPort
+		Concurrent
+		Sql
     REQUIRED
 )
 if (NOT Qt5Core_FOUND)

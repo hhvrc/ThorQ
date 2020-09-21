@@ -22,6 +22,7 @@ set(PYTHON_ARGS
     "--enable-modules=auto_rng,chacha_rng,chacha,chacha20poly1305,chacha_avx2,salsa20,seed,rdseed,sha2_32,stream,keypair,pubkey,ecdh,x509,bcrypt,kdf2,pbkdf2"
     "--without-documentation"
 )
+message("Executing: ${PYTHON_ARGS}")
 execute_process(
     COMMAND "python" ${PYTHON_ARGS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
