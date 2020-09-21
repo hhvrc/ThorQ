@@ -55,10 +55,8 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_auth.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_event.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_login.h
-    #${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_regkey.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_logout.h
+	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_event.h
+	#${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_regkey.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_collar.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_crypto.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_account.h

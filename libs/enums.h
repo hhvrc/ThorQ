@@ -25,7 +25,7 @@ enum THORQ_PAYLOAD_TYPE
 /// Flags to describe the payload of a message
 enum THORQ_PAYLOAD_ID
 {
-    THORQ_PAYLOAD_ID_VERSION,      ///< Request updated version info
+	THORQ_PAYLOAD_ID_VERSION,      ///< Request updated version info
 
     THORQ_PAYLOAD_ID_CRYPTO,       ///< Cryptographic handshake messages
 

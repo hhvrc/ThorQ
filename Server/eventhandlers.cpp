@@ -37,6 +37,9 @@ void handleEventNewConnection(ENetPeer* peer)
     thorq_payload_version_pack(message, THORQ_APP_SERVER, THORQ_VERSION_SERVER);
     instance->sendMessage(message, false, true);
 
+	thorq_payload_heartbeat_pack(message, 500); // TODO: get from config
+	instance->sendMessage(message, false, true);
+
     qDebug() << QString("A new client connected from:\n\tIPV6: %1\n\tPORT: %2")
                 .arg(enet_peer_address_str(peer))
                 .arg(peer->address.port);
@@ -56,6 +59,11 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 
     if (!thorq_message_decode(message, instance->getCrypto()))
         return;
+
+	switch (message[0]) {
+	case THORQ_PAYLOAD_TYPE_HEARTBEAT:
+		break;
+	}
 
     switch (message[0]) {
     case THORQ_PAYLOAD_ID_COLLAR:

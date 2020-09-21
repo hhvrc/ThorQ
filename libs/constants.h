@@ -47,6 +47,10 @@ constexpr std::size_t THORQ_AUTH_SYSTEMID_LEN_MAX = 265; ///< Maximum SystemID l
 constexpr int THORQ_USERNAME_LEN_MIN = 2; ///< Minimum Username length
 constexpr int THORQ_USERNAME_LEN_MAX = 32; ///< Maximum Username length
 
+/* Length of auth token
+ */
+constexpr int THORQ_AUTHTOKEN_LEN = 256;
+
 /* Having a password less than 6 characters long is stupid and i wont allow supidity
  * The hashing algorithm used effectively truncates the password at 72 characters, so set the limit there
  * see: https://botan.randombit.net/handbook/api_ref/passhash.html
