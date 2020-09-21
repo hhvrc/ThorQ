@@ -85,11 +85,11 @@ int main(int argc, char** argv)
 	warningBox.setIcon(QMessageBox::Warning);
 	errorBox.setWindowTitle("warning");
 
-	QObject::connect(cli, &Client::PingChanged, &mainWidget, &MainWidget::setConnectionPing);
+    QObject::connect(cli, &Client::RttChanged, &mainWidget, &MainWidget::setConnectionPing);
 	QObject::connect(cli, &Client::LoginStateChanged, &mainWidget, &MainWidget::setLoginState);
 	QObject::connect(cli, &Client::SessionStateChanged, &mainWidget, &MainWidget::setSessionState);
 
-	QObject::connect(cli, &Client::PingChanged, &loginWidget, &LoginWidget::setConnectionPing);
+    QObject::connect(cli, &Client::RttChanged, &loginWidget, &LoginWidget::setConnectionPing);
     QObject::connect(cli, &Client::ConnectionStateChanged, &loginWidget, &LoginWidget::setConnectionState);
     QObject::connect(cli, &Client::CryptoStateChanged, &loginWidget, &LoginWidget::setCryptoState);
     QObject::connect(cli, &Client::AuthStateChanged, &loginWidget, &LoginWidget::setAuthState);
