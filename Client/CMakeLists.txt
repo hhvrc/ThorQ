@@ -50,7 +50,7 @@ set(${project}_HEADERS
 )
 set(${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc)
 
-if (MSVC)
+if (WIN32)
     list(APPEND ${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
 endif()
 

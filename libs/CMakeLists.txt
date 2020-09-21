@@ -74,7 +74,7 @@ set(${project}_HEADERS
 # Stop botan from fucking up
 string(APPEND CMAKE_CXX_FLAGS " -bigobj -DBOTAN_IS_BEING_BUILT -DBOTAN_NO_DEPRECATED_WARNINGS")
 
-if (MSVC)
+if(WIN32)
     list(APPEND ${project}_LIBS Crypt32 winmm ws2_32 Iphlpapi)
 
     # Stop botan from fucking up (on windows)

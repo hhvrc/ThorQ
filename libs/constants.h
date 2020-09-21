@@ -54,6 +54,11 @@ constexpr int THORQ_USERNAME_LEN_MAX = 32; ///< Maximum Username length
 constexpr int THORQ_PASSWORD_LEN_MIN = 6; ///< Minimum Password length
 constexpr int THORQ_PASSWORD_LEN_MAX = 72; ///< Maximum Password length
 
+/* Discord id limits
+ */
+constexpr int THORQ_DISCORDID_LEN_MIN = 5; ///< Minimum id length (1 char + "#xxxx")
+constexpr int THORQ_DISCORDID_LEN_MAX = 36; ///< Maximum id length (32 chars + "#xxxx")
+
 /* TODO: move this to a config file
  */
 constexpr const char*   THORQ_APPLICATION_NAME = "ThorQ";

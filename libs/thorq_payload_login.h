@@ -1,32 +1,4 @@
-#ifndef THORQ_PAYLOAD_LOGIN_H
-#define THORQ_PAYLOAD_LOGIN_H
 
-#include <vector>
-#include <algorithm>
-
-#include <QString>
-#include <QtGlobal>
-
-#include "enums.h"
-#include "constants.h"
-
-/**
- * @brief thorq_payload_login_is_valid
- * @param payload
- * @return
- */
-inline bool thorq_payload_login_is_valid(const std::vector<std::uint8_t>& payload)
-{
-    return payload.size() > 3
-        && payload[0] == THORQ_PAYLOAD_ID_LOGIN
-        && payload[1] >= THORQ_USERNAME_LEN_MIN
-        && payload[1] <= THORQ_USERNAME_LEN_MAX
-        && payload[2] >= THORQ_PASSWORD_LEN_MIN
-        && payload[2] <= THORQ_PASSWORD_LEN_MAX
-        && payload.size() == 3 + payload[1] + payload[2];
-}
-
-/**
  * @brief thorq_payload_login_pack
  * @param payload
  * @param cmd_id

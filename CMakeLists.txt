@@ -27,12 +27,12 @@ endif()
 if(UNIX AND NOT APPLE)
     set(BUILD_OS "linux")
     set(BUILD_OSS "linux")
-    set(BUILD_COMPILER "gcc")
 elseif(WIN32)
     set(BUILD_OS "win")
     set(BUILD_OSL "windows")
-    set(BUILD_COMPILER "msvc")
 endif()
+
+string(TOLOWER ${CMAKE_CXX_COMPILER_ID} BUILD_COMPILER)
 # --------------------------------
 
 # --- Find and configure Qt ---

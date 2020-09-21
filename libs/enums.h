@@ -11,30 +11,37 @@ enum THORQ_APP : std::uint8_t
 	THORQ_APP_LINK,
 };
 
+
+enum THORQ_PAYLOAD_TYPE
+{
+    THORQ_PAYLOAD_TYPE_REQ,  ///< Request for remote to do an action
+    THORQ_PAYLOAD_TYPE_ACK,  ///< Acknowledge of request
+    THORQ_PAYLOAD_TYPE_DATA, ///< Data
+    THORQ_PAYLOAD_TYPE_EVENT,
+    THORQ_PAYLOAD_TYPE_HEARTBEAT,
+    THORQ_PAYLOAD_TYPE_INVALID,
+};
+
 /// Flags to describe the payload of a message
 enum THORQ_PAYLOAD_ID
 {
-    THORQ_PAYLOAD_ID_INVALID,      ///< invalid id
-
     THORQ_PAYLOAD_ID_VERSION,      ///< Request updated version info
 
-    THORQ_PAYLOAD_ID_HEARTBEAT,    ///< Message is a heartbeat, the server needs to send a heartbeat back as soon as possible when it gets this
-
     THORQ_PAYLOAD_ID_CRYPTO,       ///< Cryptographic handshake messages
-//    THORQ_PAYLOAD_ID_SYSTEMID,     ///< SystemID messages
-//    THORQ_PAYLOAD_ID_REGKEY,       ///< Registration-key messages
-    THORQ_PAYLOAD_ID_AUTH,         ///< Client authentication (SysID/RegKey) messages
 
-    THORQ_PAYLOAD_ID_ACCOUNT,  ///< Create/Delete/Recover Accounts
-    THORQ_PAYLOAD_ID_INSTANCE, ///< Login/Logout/SetState
-    THORQ_PAYLOAD_ID_SESSION,  ///< Request/Accept/Deny/Leave session
+    THORQ_PAYLOAD_ID_SYSTEMID,     ///< SystemID messages
+    THORQ_PAYLOAD_ID_REGKEY,       ///< Registration-key messages
 
-    THORQ_PAYLOAD_ID_EVENT,        ///< Server events (user statuses)
-    THORQ_PAYLOAD_ID_NOTIFICATION, ///< Server notification (requires the receiver to be logged in)
-    THORQ_PAYLOAD_ID_ANNOUNCEMENT, ///< Server announcement (doesnt need any sort of authentication)
+    THORQ_PAYLOAD_ID_ACCOUNT,      ///< Create/Delete/Recover/Login/Logout/SetState
+    THORQ_PAYLOAD_ID_FRIEND,       ///< Friend/Accept/Deny/Unfriend/GetFriends
+    THORQ_PAYLOAD_ID_SESSION,      ///< Request/Accept/Deny/Leave Sessions
+
+    THORQ_PAYLOAD_ID_MODERATION,   ///< Bans/Reporting
+    THORQ_PAYLOAD_ID_ANNOUNCEMENT, ///< Server notifications/Admin notifications
 
     THORQ_PAYLOAD_ID_COLLAR,       ///< Collar command
 };
+
 
 /// Acknowledgement of message sent from remote host
 enum THORQ_PAYLOAD_ACK

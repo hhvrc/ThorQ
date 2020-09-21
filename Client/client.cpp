@@ -105,7 +105,7 @@ Client::Client(ENetHost* host)
 	, m_authState(THORQ_STATE_AUTH_NONE)
 	, m_loginState(THORQ_STATE_LOGIN_LOGGEDOUT)
 	, m_sessionState(THORQ_STATE_SESSION_NONE)
-	, m_ping(0)
+    , m_rtt(0)
     , l_loginInfo()
 	, m_username("")
 	, l_partnerName()
@@ -120,9 +120,9 @@ Client::Client(ENetHost* host)
 	, m_collarState(0)
 	, m_thread(new QThread())
 	, m_serviceTimer(new QTimer())
-	, m_awaitingPing(false)
-    , m_lastPing(0)
-	, m_pingTimer(new QElapsedTimer())
+    , m_awaitingHeartbeat(false)
+    , m_lastCheck(0)
+    , m_heartbeatTimer(new QElapsedTimer())
 	, m_host(host)
 	, m_peer(nullptr)
 	, l_requestedHost()
@@ -172,7 +172,7 @@ Client::~Client()
 	}
 
 	delete m_address;
-	delete m_pingTimer;
+    delete m_heartbeatTimer;
 	delete m_crypto;
 	delete m_thread;
 }
@@ -182,9 +182,9 @@ QString Client::Version()
 	return QString("ENet-%1.%2.%3").arg(ENET_VERSION_MAJOR).arg(ENET_VERSION_MINOR).arg(ENET_VERSION_PATCH);
 }
 
-quint16 Client::Ping() const
+quint16 Client::Rtt() const
 {
-	return m_ping.load();
+    return m_rtt.load();
 }
 
 THORQ_STATE_CONNECTION Client::ConnectionState() const
@@ -438,26 +438,31 @@ void Client::Service()
 		}
 		else
 		{
-			std::uint64_t elapsed = m_pingTimer->elapsed();
+            std::uint64_t elapsed = m_heartbeatTimer->elapsed();
 
-			if ((elapsed - m_lastPing) > 500)
+            // If there has been been more than the set interval of ms since last heartbeat got sent,
+            // then update the RTT and resend heartbeat
+            if ((elapsed - m_lastCheck) > m_heartbeatInterval)
 			{
-
-				if (m_awaitingPing)
-				{
-					SetPing(elapsed);
-					m_lastPing = elapsed;
+                if (m_awaitingHeartbeat)
+                {
+                    // We still havent received a heart,
+                    // So update the RTT, and the check time
+                    SetRtt(elapsed);
+                    m_lastCheck = elapsed;
 				}
 				else
-				{
-					m_pingTimer->start();
-					m_lastPing = 0;
+                {
+                    // We did get a heartbeat response, so reset the elapsed time, and the check time
+                    m_heartbeatTimer->start();
+                    m_lastCheck = 0;
 				}
 
+                // Send a heartbeat, and set awaiting to true
                 std::vector<std::uint8_t> payload;
-                thorq_payload_heartbeat_pack(payload);
+                thorq_payload_heartbeat_pack(payload, m_heartbeatInterval);
                 SendPayload(payload, false, false);
-				m_awaitingPing = true;
+                m_awaitingHeartbeat = true;
 			}
 		}
 	}
@@ -489,12 +494,12 @@ void Client::Service()
 	}
 }
 
-void Client::SetPing(std::uint16_t ping)
+void Client::SetRtt(std::uint16_t rtt)
 {
-	if (m_ping != ping)
+    if (m_rtt != rtt)
     {
-        m_ping = ping;
-		emit PingChanged(ping);
+        m_rtt = rtt;
+        emit RttChanged(rtt);
 	}
 }
 
@@ -610,7 +615,7 @@ void Client::HandleMessage(ENetPacket* packet)
         return;
     case THORQ_PAYLOAD_ID_HEARTBEAT:
         if (thorq_payload_heartbeat_is_valid(message))
-            handleMessageHeartbeat();
+            handleMessageHeartbeat(message);
 		return;
 	default:
 		if (AuthState() != THORQ_STATE_AUTH_OK)
@@ -787,12 +792,15 @@ void Client::handleMessageAnnouncement(std::vector<std::uint8_t> &payload)
 
     emit Announcement("Announcement!");
 }
-void Client::handleMessageHeartbeat()
+void Client::handleMessageHeartbeat(std::vector<std::uint8_t>& payload)
 {
-	if (m_awaitingPing)
+    // Set interval from server
+    thorq_payload_heartbeat_unpack(payload, m_heartbeatInterval);
+
+    if (m_awaitingHeartbeat)
 	{
-		m_awaitingPing = false;
-		SetPing(m_pingTimer->elapsed());
+        m_awaitingHeartbeat = false;
+        SetRtt(m_heartbeatTimer->elapsed());
 	}
 }
 void Client::handleMessageEvent(std::vector<std::uint8_t> &payload)

@@ -42,7 +42,7 @@ public:
     /**
      * @return
      */
-    quint16 Ping() const;
+    quint16 Rtt() const;
 
     /**
      * @return
@@ -161,7 +161,7 @@ signals:
     /**
      * @param ping
      */
-    void PingChanged(quint16 ping);
+    void RttChanged(quint16 ping);
 
     /**
      * @param state
@@ -261,7 +261,7 @@ private slots:
      */
 	void Service();
 
-    void SetPing(quint16 ping);
+    void SetRtt(quint16 rtt);
 
     /**
      * @brief [Thread-Safe] Sets the state of the connection
@@ -320,7 +320,7 @@ private slots:
     void handleMessageCrypto(std::vector<std::uint8_t>& payload);
     void handleMessageAuth(std::vector<std::uint8_t>& payload);
     void handleMessageAnnouncement(std::vector<std::uint8_t>& payload);
-    void handleMessageHeartbeat();
+    void handleMessageHeartbeat(std::vector<std::uint8_t>& payload);
     void handleMessageEvent(std::vector<std::uint8_t>& payload);
     void handleMessageCommand(std::vector<std::uint8_t>& payload);
     void handleMessageCommandAck(std::vector<std::uint8_t>& payload);
@@ -349,7 +349,7 @@ private:
 	std::atomic<THORQ_STATE_AUTH> m_authState;
 	std::atomic<THORQ_STATE_LOGIN> m_loginState;
 	std::atomic<THORQ_STATE_SESSION> m_sessionState;
-	std::atomic<quint16> m_ping;
+    std::atomic<quint16> m_rtt;
 
     std::mutex l_loginInfo;
 	QString m_username;
@@ -373,9 +373,10 @@ private:
 	QThread* m_thread;
 	QTimer* m_serviceTimer;
 
-	bool m_awaitingPing;
-    std::uint64_t m_lastPing;
-	QElapsedTimer* m_pingTimer;
+    bool m_awaitingHeartbeat;
+    std::uint64_t m_lastCheck;
+    std::uint16_t m_heartbeatInterval;
+    QElapsedTimer* m_heartbeatTimer;
 
 	ENetHost* m_host;
 	ENetPeer* m_peer;
