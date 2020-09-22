@@ -1,3 +1,7 @@
+/// @file thorq_payload_collar.h
+///
+///
+
 #ifndef THORQ_PAYLOAD_COLLAR_H
 #define THORQ_PAYLOAD_COLLAR_H
 

@@ -16,9 +16,9 @@
 /// @enum THORQ_PAYLOAD_REGKEY
 enum THORQ_PAYLOAD_SYSTEMID : std::uint8_t
 {
-    THORQ_PAYLOAD_SYSTEMID_DATA,
-    THORQ_PAYLOAD_SYSTEMID_CMD_REQ,
-    THORQ_PAYLOAD_SYSTEMID_CMD_OK
+	THORQ_PAYLOAD_SYSTEMID_REQ,
+	THORQ_PAYLOAD_SYSTEMID_DATA,
+	THORQ_PAYLOAD_SYSTEMID_OK
 };
 
 inline bool thorq_payload_systemid_is_valid(const std::vector<std::uint8_t>& payload)
@@ -27,8 +27,8 @@ inline bool thorq_payload_systemid_is_valid(const std::vector<std::uint8_t>& pay
 
     if (payload.size() == 2)
     {
-        return payload[1] == THORQ_PAYLOAD_SYSTEMID_CMD_REQ
-            || payload[1] == THORQ_PAYLOAD_SYSTEMID_CMD_OK;
+		return payload[1] == THORQ_PAYLOAD_SYSTEMID_REQ
+			|| payload[1] == THORQ_PAYLOAD_SYSTEMID_OK;
     }
 
     std::size_t dataSize = payload.size() - 2;
@@ -40,7 +40,22 @@ inline bool thorq_payload_systemid_is_valid(const std::vector<std::uint8_t>& pay
 
 inline void thorq_payload_systemid_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_SYSTEMID cmd)
 {
+	payload.resize(2);
+	payload[0] = THORQ_PAYLOAD_ID_SYSTEMID;
+	payload[1] = static_cast<std::uint8_t>(cmd);
+}
+inline void thorq_payload_systemid_data_pack(std::vector<std::uint8_t>& payload, const QByteArray& systemid)
+{
+	payload.resize(2 + systemid.size());
+	payload[0] = THORQ_PAYLOAD_ID_SYSTEMID;
+	payload[1] = THORQ_PAYLOAD_SYSTEMID_DATA;
 
+	memcpy(payload.data() + 2, systemid.data(), systemid.size());
+}
+inline void thorq_payload_systemid_data_unpack(const std::vector<std::uint8_t>& payload, QByteArray& systemid)
+{
+	systemid.resize(payload.size() - 2);
+	memcpy(systemid.data(), payload.data() + 2, payload.size() - 2);
 }
 
 #endif // THORQ_PAYLOAD_SYSTEMID_H

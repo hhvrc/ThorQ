@@ -1,3 +1,7 @@
+/// @file thorq_payload_account.h
+///
+///
+
 #ifndef THORQ_PAYLOAD_ACCOUNT_H
 #define THORQ_PAYLOAD_ACCOUNT_H
 
@@ -10,13 +14,13 @@
 /// @enum THORQ_PAYLOAD_ACCOUNT_CMD
 enum THORQ_PAYLOAD_ACCOUNT : std::uint8_t
 {
-    THORQ_PAYLOAD_ACCOUNT_CMD_RESERVE_DISCORDID, ///< Try to reserve a discordID
-    THORQ_PAYLOAD_ACCOUNT_CMD_RESERVE_USERNAME,  ///< Try to reserve a username
-    THORQ_PAYLOAD_ACCOUNT_CMD_REGISTER,          ///< Register an account
-    THORQ_PAYLOAD_ACCOUNT_CMD_DELETE,            ///< Delete an account (requires password)
-    THORQ_PAYLOAD_ACCOUNT_CMD_LOGIN,             ///< Log in normally
-    THORQ_PAYLOAD_ACCOUNT_CMD_LOGIN_AUTHTOKEN,   ///< Log in with authtoken
-    THORQ_PAYLOAD_ACCOUNT_CMD_LOGOUT             ///< Log out, removes any authtoken connected to this hwid
+	THORQ_PAYLOAD_ACCOUNT_RESERVE_DISCORDID, ///< Try to reserve a discordID
+	THORQ_PAYLOAD_ACCOUNT_RESERVE_USERNAME,  ///< Try to reserve a username
+	THORQ_PAYLOAD_ACCOUNT_REGISTER,          ///< Register an account
+	THORQ_PAYLOAD_ACCOUNT_DELETE,            ///< Delete an account (requires password)
+	THORQ_PAYLOAD_ACCOUNT_LOGIN,             ///< Log in normally
+	THORQ_PAYLOAD_ACCOUNT_LOGIN_AUTHTOKEN,   ///< Log in with authtoken
+	THORQ_PAYLOAD_ACCOUNT_LOGOUT             ///< Log out, removes any authtoken connected to this hwid
 };
 
 inline bool thorq_payload_account_is_valid(const std::vector<std::uint8_t>& payload)
@@ -26,11 +30,11 @@ inline bool thorq_payload_account_is_valid(const std::vector<std::uint8_t>& payl
     if (payload.size() >= 2)
     {
 		switch (payload[1]) {
-		case THORQ_PAYLOAD_ACCOUNT_CMD_RESERVE_DISCORDID:
+		case THORQ_PAYLOAD_ACCOUNT_RESERVE_DISCORDID:
 			return payload.size() >= THORQ_DISCORDID_LEN_MIN + 2 && payload.size() <= THORQ_DISCORDID_LEN_MAX + 2;
-		case THORQ_PAYLOAD_ACCOUNT_CMD_RESERVE_USERNAME:
+		case THORQ_PAYLOAD_ACCOUNT_RESERVE_USERNAME:
 			return payload.size() >= THORQ_USERNAME_LEN_MIN + 2 && payload.size() <= THORQ_USERNAME_LEN_MAX + 2;
-		case THORQ_PAYLOAD_ACCOUNT_CMD_REGISTER:
+		case THORQ_PAYLOAD_ACCOUNT_REGISTER:
 			return payload.size() > 5
 					&& payload[2] >= THORQ_USERNAME_LEN_MIN
 					&& payload[2] <= THORQ_USERNAME_LEN_MAX
@@ -39,21 +43,21 @@ inline bool thorq_payload_account_is_valid(const std::vector<std::uint8_t>& payl
 					&& payload[4] >= THORQ_DISCORDID_LEN_MIN
 					&& payload[4] <= THORQ_DISCORDID_LEN_MAX
 					&& payload.size() == 5 + payload[2] + payload[3] + payload[4];
-		case THORQ_PAYLOAD_ACCOUNT_CMD_DELETE:
+		case THORQ_PAYLOAD_ACCOUNT_DELETE:
 			return payload.size() > 3
 					&& payload[1] >= THORQ_PASSWORD_LEN_MIN
 					&& payload[1] <= THORQ_PASSWORD_LEN_MAX
 					&& payload.size() == 3 + payload[2];
-		case THORQ_PAYLOAD_ACCOUNT_CMD_LOGIN:
+		case THORQ_PAYLOAD_ACCOUNT_LOGIN:
 			return payload.size() > 4
 					&& payload[2] >= THORQ_USERNAME_LEN_MIN
 					&& payload[2] <= THORQ_USERNAME_LEN_MAX
 					&& payload[3] >= THORQ_PASSWORD_LEN_MIN
 					&& payload[3] <= THORQ_PASSWORD_LEN_MAX
 					&& payload.size() == 4 + payload[2] + payload[3];
-		case THORQ_PAYLOAD_ACCOUNT_CMD_LOGIN_AUTHTOKEN:
+		case THORQ_PAYLOAD_ACCOUNT_LOGIN_AUTHTOKEN:
 			return payload.size() == THORQ_AUTHTOKEN_LEN + 2;
-		case THORQ_PAYLOAD_ACCOUNT_CMD_LOGOUT:
+		case THORQ_PAYLOAD_ACCOUNT_LOGOUT:
 			return payload.size() == 3;
 		default:
 			return false;
@@ -76,7 +80,7 @@ inline void thorq_payload_account_reserve_discordid_pack(std::vector<std::uint8_
 
 	payload.resize(2 + discordIdBytes.size());
 	payload[0] = THORQ_PAYLOAD_ID_ACCOUNT;
-	payload[1] = THORQ_PAYLOAD_ACCOUNT_CMD_RESERVE_DISCORDID;
+	payload[1] = THORQ_PAYLOAD_ACCOUNT_RESERVE_DISCORDID;
 
 	memcpy(payload.data() + 2, discordIdBytes.data(), discordIdBytes.size());
 }
@@ -93,7 +97,7 @@ inline void thorq_payload_account_reserve_username_pack(std::vector<std::uint8_t
 
 	payload.resize(2 + usernameBytes.size());
 	payload[0] = THORQ_PAYLOAD_ID_ACCOUNT;
-	payload[1] = THORQ_PAYLOAD_ACCOUNT_CMD_RESERVE_USERNAME;
+	payload[1] = THORQ_PAYLOAD_ACCOUNT_RESERVE_USERNAME;
 
 	memcpy(payload.data() + 2, usernameBytes.data(), usernameBytes.size());
 }
@@ -118,7 +122,7 @@ inline void thorq_payload_account_register_pack(std::vector<std::uint8_t>& paylo
 
 	payload.resize(5 + usernameBytes.size() + passwordBytes.size());
 	payload[0] = THORQ_PAYLOAD_ID_ACCOUNT;
-	payload[1] = THORQ_PAYLOAD_ACCOUNT_CMD_LOGIN;
+	payload[1] = THORQ_PAYLOAD_ACCOUNT_LOGIN;
 	payload[2] = usernameBytes.size();
 	payload[3] = passwordBytes.size();
 	payload[4] = discordIdBytes.size();
@@ -148,7 +152,7 @@ inline void thorq_payload_account_delete_pack(std::vector<std::uint8_t>& payload
 
     payload.resize(2 +  passwordBytes.size());
 	payload[0] = THORQ_PAYLOAD_ID_ACCOUNT;
-    payload[1] = THORQ_PAYLOAD_ACCOUNT_CMD_LOGIN;
+	payload[1] = THORQ_PAYLOAD_ACCOUNT_LOGIN;
 
     memcpy(payload.data() + 2, passwordBytes.data(), passwordBytes.size());
 }
@@ -169,7 +173,7 @@ inline void thorq_payload_account_login_pack(std::vector<std::uint8_t>& payload,
 
 	payload.resize(4 + usernameBytes.size() + passwordBytes.size());
     payload[0] = THORQ_PAYLOAD_ID_ACCOUNT;
-	payload[1] = THORQ_PAYLOAD_ACCOUNT_CMD_LOGIN;
+	payload[1] = THORQ_PAYLOAD_ACCOUNT_LOGIN;
 	payload[2] = usernameBytes.size();
     payload[3] = passwordBytes.size();
 
@@ -190,7 +194,7 @@ inline void thorq_payload_account_login_authtoken_pack(std::vector<std::uint8_t>
 {
 	payload.resize(2 + authtoken.size());
 	payload[0] = THORQ_PAYLOAD_ID_ACCOUNT;
-	payload[1] = THORQ_PAYLOAD_ACCOUNT_CMD_LOGIN_AUTHTOKEN;
+	payload[1] = THORQ_PAYLOAD_ACCOUNT_LOGIN_AUTHTOKEN;
 
     memcpy(payload.data() + 2, authtoken.data(), authtoken.size());
 }
@@ -204,7 +208,7 @@ inline void thorq_payload_account_logout_pack(std::vector<std::uint8_t>& payload
 {
     payload.resize(3);
     payload[0] = THORQ_PAYLOAD_ID_ACCOUNT;
-	payload[1] = THORQ_PAYLOAD_ACCOUNT_CMD_LOGOUT;
+	payload[1] = THORQ_PAYLOAD_ACCOUNT_LOGOUT;
     payload[2] = data;
 }
 inline void thorq_payload_account_logout_unpack(const std::vector<std::uint8_t>& payload, std::uint8_t& data)

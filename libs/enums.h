@@ -23,28 +23,29 @@ enum THORQ_PAYLOAD_ID
     THORQ_PAYLOAD_ID_SYSTEMID,     ///< SystemID messages
     THORQ_PAYLOAD_ID_REGKEY,       ///< Registration-key messages
 
-    THORQ_PAYLOAD_ID_ACCOUNT,      ///< Create/Delete/Recover/Login/Logout/SetState
-    THORQ_PAYLOAD_ID_FRIEND,       ///< Friend/Accept/Deny/Unfriend/GetFriends
-    THORQ_PAYLOAD_ID_SESSION,      ///< Request/Accept/Deny/Leave Sessions
+	THORQ_PAYLOAD_ID_ACCOUNT,      ///< Create/Delete/Recover/Login/Logout
+	THORQ_PAYLOAD_ID_SESSION,      ///< SetState
+	THORQ_PAYLOAD_ID_FRIEND,       ///< Friend/Accept/Deny/Unfriend/GetFriends
+	THORQ_PAYLOAD_ID_ROOM,
 
-    THORQ_PAYLOAD_ID_MODERATION,   ///< Bans/Reporting
-    THORQ_PAYLOAD_ID_ANNOUNCEMENT, ///< Server notifications/Admin notifications
+	THORQ_PAYLOAD_ID_MODERATION,   ///< Bans/Reporting
+	THORQ_PAYLOAD_ID_ANNOUNCEMENT, ///< Server notifications/Admin notifications
 
-    THORQ_PAYLOAD_ID_COLLAR,       ///< Collar command
+	THORQ_PAYLOAD_ID_COLLAR,       ///< Collar command
 };
 
 
 /// Acknowledgement of message sent from remote host
 enum THORQ_PAYLOAD_ACK
 {
-    THORQ_PAYLOAD_ACK_OK,           ///< Command succeeded
-    THORQ_PAYLOAD_ACK_IN_PROGRESS,  ///< Command accepted, and is in progress
-    THORQ_PAYLOAD_ACK_NO_CHANGE,    ///< Command was ignored, because it didnt change anything
+	THORQ_PAYLOAD_ACK_OK,           ///< Command succeeded
+	THORQ_PAYLOAD_ACK_IN_PROGRESS,  ///< Command accepted, and is in progress
+	THORQ_PAYLOAD_ACK_NO_CHANGE,    ///< Command was ignored, because it didnt change anything
 
-    THORQ_PAYLOAD_ACK_DENIED,       ///< Command was denied
-    THORQ_PAYLOAD_ACK_INVALID,      ///< Command invalid
-    THORQ_PAYLOAD_ACK_LOGIN_NEEDED, ///< Client has not logged in
-    THORQ_PAYLOAD_ACK_UNAUTHORIZED, ///< Client has not authenticated (Crypto + Auth)
+	THORQ_PAYLOAD_ACK_DENIED,       ///< Command was denied
+	THORQ_PAYLOAD_ACK_INVALID,      ///< Command invalid
+	THORQ_PAYLOAD_ACK_LOGIN_NEEDED, ///< Client has not logged in
+	THORQ_PAYLOAD_ACK_UNAUTHORIZED, ///< Client has not authenticated (Crypto + Auth)
 };
 
 /// Id of a device or service that client has
