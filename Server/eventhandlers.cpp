@@ -17,13 +17,13 @@
 
 #include "utils.h"
 #include "account.h"
-#include "instance.h"
+#include "session.h"
 #include "messagehandlers.h"
 
 void handleEventNewConnection(ENetPeer* peer)
 {
 	// Dont worry, this is ok
-	ThorQ::Instance* instance = new ThorQ::Instance(peer);
+	ThorQ::Session* instance = new ThorQ::Session(peer);
 	instance->setConnectionState(THORQ_STATE_CONNECTION_CONNECTED);
 
     std::vector<std::uint8_t> message;
@@ -50,7 +50,7 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 	if (peer->data == nullptr)
 		return;
 
-	auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
+	auto instance = reinterpret_cast<ThorQ::Session*>(peer->data);
 
 	if (instance->connectionState() != THORQ_STATE_CONNECTION_CONNECTED)
 		return;
@@ -122,7 +122,7 @@ void handleEventDisconnect(ENetPeer* peer)
 	if (peer->data == nullptr)
 		return;
 
-    auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
+    auto instance = reinterpret_cast<ThorQ::Session*>(peer->data);
 
     if (instance->account() != nullptr)
     {
@@ -146,7 +146,7 @@ void handleEventTimeout(ENetPeer* peer)
 	if (peer->data == nullptr)
 		return;
 
-    auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
+    auto instance = reinterpret_cast<ThorQ::Session*>(peer->data);
 
     if (instance->account() != nullptr)
     {

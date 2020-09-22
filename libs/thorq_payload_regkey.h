@@ -16,36 +16,33 @@
 /// @enum THORQ_PAYLOAD_REGKEY
 enum THORQ_PAYLOAD_REGKEY : std::uint8_t
 {
+    THORQ_PAYLOAD_REGKEY_REQ,
+    THORQ_PAYLOAD_REGKEY_AWAITING_INPUT,
     THORQ_PAYLOAD_REGKEY_DATA,
-    THORQ_PAYLOAD_REGKEY_CMD_REQ,
-    THORQ_PAYLOAD_REGKEY_CMD_AWAITING_INPUT,
-    THORQ_PAYLOAD_REGKEY_CMD_OK
+    THORQ_PAYLOAD_REGKEY_OK
 };
 
-/**
- * @brief thorq_payload_regkey_is_valid
- * @param payload
- * @return
- */
 inline bool thorq_payload_regkey_is_valid(const std::vector<std::uint8_t>& payload)
 {
     if (payload[0] != THORQ_PAYLOAD_ID_REGKEY) return false;
 
-    if (payload.size() == 2)
+    if (payload.size() >= 2)
     {
-        return payload[1] == THORQ_PAYLOAD_REGKEY_CMD_REQ,
-            || payload[1] == THORQ_PAYLOAD_REGKEY_CMD_AWAITING_INPUT,
-            || payload[1] == THORQ_PAYLOAD_REGKEY_CMD_OK;
+        switch (payload[1]) {
+        case THORQ_PAYLOAD_REGKEY_REQ:
+        case THORQ_PAYLOAD_REGKEY_AWAITING_INPUT:
+        case THORQ_PAYLOAD_REGKEY_OK:
+            return payload.size() == 2;
+        case THORQ_PAYLOAD_REGKEY_DATA:
+            return payload.size() == THORQ_AUTH_REGKEY_LEN + 2;
+        default:
+            return false;
+        }
     }
 
-    return payload.size() == THORQ_AUTH_REGKEY_LEN + 2 && payload[1] == THORQ_PAYLOAD_SYSTEMID_DATA;
+    return false;
 }
 
-/**
- * @brief thorq_payload_regkey_pack
- * @param payload
- * @param cmd
- */
 inline void thorq_payload_regkey_pack(std::vector<std::uint8_t>& payload, THORQ_REGKEY_CMD cmd)
 {
     payload.resize(2);

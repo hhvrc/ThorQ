@@ -10,6 +10,6 @@ typedef struct _ENetHost ENetHost;
 typedef struct _ENetPacket ENetPacket;
 typedef struct _ENetAddress ENetAddress;
 
-namespace ThorQ { class Crypto; class Account; class Instance; }
+namespace ThorQ { class Crypto; class Account; class Session; }
 
 #endif // TYPEDEFS_H

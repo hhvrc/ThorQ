@@ -13,18 +13,18 @@
 #include <thorq_payload_heartbeat.h>
 #include <thorq_payload_crypto.h>
 #include <thorq_payload_auth.h>
-#include <thorq_payload_login.h>
+#include <thorq_payload_account.h>
 #include <thorq_payload_event.h>
 #include <thorq_payload_announcement.h>
 #include <thorq_payload_notification.h>
 #include <thorq_payload_collar.h>
 
 #include "utils.h"
-#include "instance.h"
+#include "session.h"
 #include "singletons.h"
 #include "authhandler.h"
 
-void handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
+void handleMessageVersion(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
 {
     THORQ_APP app;
     ThorQ::Version version;
@@ -60,22 +60,22 @@ void handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint
 	instance->disconnect(THORQ_DISCONNECT_REASON_VERSION_INCOMPATIBLE);
 }
 
-void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
+void handleMessageCrypto(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
 {
     qDebug() << "message crypto!";
     std::vector<std::uint8_t> response;
 
-    thorq_crypto_cmd_t cmd;
+    THORQ_PAYLOAD_CRYPTO cmd;
     thorq_payload_crypto_get_cmd(message, cmd);
 
     switch (cmd) {
-    case THORQ_CRYPTO_REQUEST:
+    case THORQ_PAYLOAD_CRYPTO_REQUEST:
 	{
         qDebug() <<  "Got crypto request!";
 		instance->cryptoInit();
         break;
     }
-	case THORQ_CRYPTO_ESTABLISH:
+    case THORQ_PAYLOAD_CRYPTO_ESTABLISH:
 	{
         qDebug() <<  "Got crypto establish!";
         std::vector<std::uint8_t> data;
@@ -88,7 +88,7 @@ void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8
         }
         break;
     }
-	case THORQ_CRYPTO_VERIFY:
+    case THORQ_PAYLOAD_CRYPTO_VERIFY:
 	{
         qDebug() <<  "Got crypto verify!";
         std::vector<std::uint8_t> data;
@@ -114,7 +114,7 @@ void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8
     }
 }
 
-void handleMessageAuth(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
+void handleMessageAuth(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
 {
     std::vector<std::uint8_t> response;
 
@@ -206,14 +206,14 @@ void handleMessageAuth(ThorQ::Instance* instance, const std::vector<std::uint8_t
 	}
 }
 
-void handleMessageHeartbeat(ThorQ::Instance* instance)
+void handleMessageHeartbeat(ThorQ::Session* instance)
 {
     std::vector<std::uint8_t> message;
-    thorq_payload_heartbeat_pack(message);
+    thorq_payload_heartbeat_pack(message, 500); // HARDCODED
     instance->sendMessage(message, false, true);
 }
 
-void handleMessageLogin(ThorQ::Instance *instance, const std::vector<uint8_t> &message)
+void handleMessageLogin(ThorQ::Session *instance, const std::vector<uint8_t> &message)
 {
     std::vector<std::uint8_t> response;
 
@@ -252,7 +252,7 @@ void handleMessageLogin(ThorQ::Instance *instance, const std::vector<uint8_t> &m
     }
 }
 
-void handleMessageLogout(ThorQ::Instance *instance)
+void handleMessageLogout(ThorQ::Session *instance)
 {
     std::vector<std::uint8_t> response;
 
@@ -270,7 +270,7 @@ void handleMessageLogout(ThorQ::Instance *instance)
     }
 }
 
-void handleMessageCommand(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
+void handleMessageCommand(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
 {
     std::vector<std::uint8_t> response;
 
@@ -292,9 +292,9 @@ void handleMessageCommand(ThorQ::Instance* instance, const std::vector<std::uint
             thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_COMMAND, cmd, THORQ_PAYLOAD_ACK_OK);
             instance->sendMessage(response, true, true);
 
-            QList<ThorQ::Instance*> instances = g_onlineInstances.toList();
+            QList<ThorQ::Session*> instances = g_sessions.toList();
 
-            for (ThorQ::Instance* i : instances)
+            for (ThorQ::Session* i : instances)
             {
                 if (i->account() != nullptr)
                 {
@@ -329,7 +329,7 @@ void handleMessageCommand(ThorQ::Instance* instance, const std::vector<std::uint
                 return;
             }
 
-            QSet<ThorQ::Instance*> targetInstances = (*it)->instances();
+            QSet<ThorQ::Session*> targetInstances = (*it)->instances();
 
             if (targetInstances.isEmpty())
             {
@@ -338,7 +338,7 @@ void handleMessageCommand(ThorQ::Instance* instance, const std::vector<std::uint
                 return;
             }
 
-            for (ThorQ::Instance* otherInstance : (*it)->instances())
+            for (ThorQ::Session* otherInstance : (*it)->instances())
             instance->requestOn(otherInstance);
         }
         else
@@ -355,7 +355,7 @@ void handleMessageCommand(ThorQ::Instance* instance, const std::vector<std::uint
             QString name;
             thorq_payload_command_get_data(message, name);
 
-            ThorQ::Instance* otherInstance = g_onlineInstances->get(name);
+            ThorQ::Session* otherInstance = g_sessions->get(name);
 
             if (otherInstance == nullptr)
             {
@@ -380,7 +380,7 @@ void handleMessageCommand(ThorQ::Instance* instance, const std::vector<std::uint
             QString name;
             thorq_payload_command_get_data(message, name);
 
-            ThorQ::Instance* otherInstance = g_onlineInstances->get(name);
+            ThorQ::Session* otherInstance = g_sessions->get(name);
 
             if (otherInstance == nullptr)
             {
@@ -433,14 +433,14 @@ void handleMessageCommand(ThorQ::Instance* instance, const std::vector<std::uint
 
 }
 
-void handleMessageCommandAck(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
+void handleMessageCommandAck(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
 {
     (void)instance;
     (void)message;
     thorq_debug("Unexpected ack message...")
 }
 
-void handleMessageCollar(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
+void handleMessageCollar(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
 {
 	if (instance->sessionState() == THORQ_STATE_SESSION_ACTIVE)
 		if (instance->partner() != nullptr)

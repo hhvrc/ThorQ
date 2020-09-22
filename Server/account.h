@@ -26,7 +26,7 @@ public:
 	bool verifyPassword(const QString& password);
 
     QSet<Account*> friends();
-    QSet<Instance*> instances();
+    QSet<Session*> instances();
 signals:
 	void usernameChanged(const QString& username);
 private:
@@ -39,7 +39,7 @@ private:
 	bool m_isAdmin;
 
     QSet<Account*> m_friends;
-    QSet<Instance*> m_instances;
+    QSet<Session*> m_instances;
     QSet<Relationship*> m_relationships;
 };
 }

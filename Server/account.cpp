@@ -4,7 +4,7 @@
 
 #include <botan_all.h>
 
-#include "instance.h"
+#include "session.h"
 
 inline QSqlDatabase OpenDb(bool readonly = true)
 {

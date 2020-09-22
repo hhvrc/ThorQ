@@ -11,20 +11,11 @@ enum THORQ_APP : std::uint8_t
 	THORQ_APP_LINK,
 };
 
-
-enum THORQ_PAYLOAD_TYPE
-{
-    THORQ_PAYLOAD_TYPE_REQ,  ///< Request for remote to do an action
-    THORQ_PAYLOAD_TYPE_ACK,  ///< Acknowledge of request
-    THORQ_PAYLOAD_TYPE_DATA, ///< Data
-    THORQ_PAYLOAD_TYPE_EVENT,
-    THORQ_PAYLOAD_TYPE_HEARTBEAT,
-    THORQ_PAYLOAD_TYPE_INVALID,
-};
-
 /// Flags to describe the payload of a message
 enum THORQ_PAYLOAD_ID
 {
+    THORQ_PAYLOAD_ID_HEARTBEAT,    ///< Heartbeat to keep connection alive and determine RTT
+
 	THORQ_PAYLOAD_ID_VERSION,      ///< Request updated version info
 
     THORQ_PAYLOAD_ID_CRYPTO,       ///< Cryptographic handshake messages

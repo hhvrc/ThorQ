@@ -14,16 +14,16 @@
 #include <typedefs.h>
 
 namespace ThorQ {
-class Instance : public QObject
+class Session : public QObject
 {
 	Q_OBJECT
 
-	Instance(const Instance&) = delete;
-	Instance& operator=(const Instance&) = delete;
+	Session(const Session&) = delete;
+	Session& operator=(const Session&) = delete;
 public:
-	Instance(ENetPeer* peer, QObject* parent = nullptr);
-	Instance(ENetPeer* peer, const std::string& name);
-	~Instance();
+	Session(ENetPeer* peer, QObject* parent = nullptr);
+	Session(ENetPeer* peer, const std::string& name);
+	~Session();
 
 	void setAccount(Account* account);
 	Account* account() const;
@@ -34,10 +34,10 @@ public:
 	void setPeer(ENetPeer* peer);
 	ENetPeer* peer() const;
 
-	void requestOn(Instance* target);
-	bool requestAcceptFrom(Instance* sender);
-	bool requestDenyFrom(Instance* sender);
-	Instance* partner() const;
+	void requestOn(Session* target);
+	bool requestAcceptFrom(Session* sender);
+	bool requestDenyFrom(Session* sender);
+	Session* partner() const;
 
     void setIsInSteamVR(bool hasCollar);
     void setHasCollar(bool hasCollar);
@@ -88,10 +88,10 @@ private:
 	QByteArray m_hwid;
 	Account* m_account;
 
-	Instance* m_partner;
+	Session* m_partner;
 
-    QSet<Instance*> m_incoming_requests;
-    QSet<Instance*> m_outgoing_requests;
+    QSet<Session*> m_incoming_requests;
+    QSet<Session*> m_outgoing_requests;
 
 	Crypto* m_crypto;
     quint8 m_verificationData[THORQ_CRYPTO_VERIFICATION_DATA_LENGTH];

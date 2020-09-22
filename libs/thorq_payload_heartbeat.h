@@ -12,7 +12,7 @@
  */
 inline bool thorq_payload_heartbeat_is_valid(const std::vector<std::uint8_t>& payload)
 {
-    return payload[0] == THORQ_PAYLOAD_TYPE_HEARTBEAT && payload.size() == 3;
+    return payload[0] == THORQ_PAYLOAD_ID_HEARTBEAT && payload.size() == 3;
 }
 
 /**
@@ -23,7 +23,7 @@ inline bool thorq_payload_heartbeat_is_valid(const std::vector<std::uint8_t>& pa
 inline void thorq_payload_heartbeat_pack(std::vector<std::uint8_t>& payload, std::uint16_t interval_ms)
 {
     payload.resize(3);
-    payload[0] = THORQ_PAYLOAD_TYPE_HEARTBEAT;
+    payload[0] = THORQ_PAYLOAD_ID_HEARTBEAT;
     payload[1] = interval_ms >> 8;
     payload[2] = interval_ms >> 0;
 }

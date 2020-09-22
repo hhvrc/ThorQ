@@ -4,96 +4,85 @@
 #include <vector>
 #include <QByteArray>
 
+#include "constants.h"
 #include "enums.h"
 
-/** @file thorq_payload_crypto.h
- *
- */
-
-/** @typedef thorq_crypto_cmd_t
- *
- */
-enum thorq_crypto_cmd_t
+enum THORQ_PAYLOAD_CRYPTO
 {
-    THORQ_CRYPTO_REQUEST,
-    THORQ_CRYPTO_ESTABLISH,
-    THORQ_CRYPTO_VERIFY,
-    THORQ_CRYPTO_OK,
+    THORQ_PAYLOAD_CRYPTO_REQUEST,
+    THORQ_PAYLOAD_CRYPTO_ESTABLISH,
+    THORQ_PAYLOAD_CRYPTO_VERIFY,
+    THORQ_PAYLOAD_CRYPTO_OK,
 };
 
-/**
- * @brief thorq_payload_crypto_pack
- * @param payload
- * @param state
- */
-inline void thorq_payload_crypto_pack(std::vector<std::uint8_t>& payload, thorq_crypto_cmd_t state)
+inline bool thorq_payload_crypto_is_valid(const std::vector<std::uint8_t>& payload)
+{
+    if (payload[0] != THORQ_PAYLOAD_ID_CRYPTO) return false;
+
+    if (payload.size() >= 2)
+    {
+        switch (payload[1]) {
+        case THORQ_PAYLOAD_CRYPTO_REQUEST:
+            return payload.size() == 2;
+        case THORQ_PAYLOAD_CRYPTO_ESTABLISH:
+            return payload.size() == 2 + THORQ_CRYPTO_KEY_LENGTH;
+        case THORQ_PAYLOAD_CRYPTO_VERIFY:
+            return payload.size() == 2 + THORQ_CRYPTO_VERIFICATION_DATA_LENGTH;
+        case THORQ_PAYLOAD_CRYPTO_OK:
+            return payload.size() == 2;
+        default:
+            return false;
+        }
+    }
+
+    return false;
+}
+
+inline void thorq_payload_crypto_get_cmd(const std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_CRYPTO& cmd)
+{
+    cmd = static_cast<THORQ_PAYLOAD_CRYPTO>(payload[1]);
+}
+
+inline void thorq_payload_crypto_request_pack(std::vector<std::uint8_t>& payload)
 {
     payload.resize(2);
     payload[0] = THORQ_PAYLOAD_ID_CRYPTO;
-    payload[1] = static_cast<std::uint8_t>(state);
+    payload[1] = THORQ_PAYLOAD_CRYPTO_REQUEST;
 }
 
-/**
- * @brief thorq_payload_crypto_pack
- * @param payload
- * @param state
- * @param data
- * @param size
- */
-inline void thorq_payload_crypto_pack(std::vector<std::uint8_t>& payload, thorq_crypto_cmd_t state, const quint8* data, std::size_t size)
-{
-    payload.resize(2 + size);
-    payload[0] = THORQ_PAYLOAD_ID_CRYPTO;
-    payload[1] = static_cast<std::uint8_t>(state);
-
-    memcpy(payload.data() + 2, data, size);
-}
-
-/**
- * @brief thorq_payload_crypto_pack
- * @param payload
- * @param state
- * @param data
- */
-inline void thorq_payload_crypto_pack(std::vector<std::uint8_t>& payload, thorq_crypto_cmd_t state, const std::vector<std::uint8_t>& data)
+inline void thorq_payload_crypto_establish_pack(std::vector<std::uint8_t>& payload, const std::vector<std::uint8_t>& data)
 {
     payload.resize(2 + data.size());
     payload[0] = THORQ_PAYLOAD_ID_CRYPTO;
-    payload[1] = static_cast<std::uint8_t>(state);
+    payload[1] = THORQ_PAYLOAD_CRYPTO_ESTABLISH;
 
     memcpy(payload.data() + 2, data.data(), data.size());
 }
-
-/**
- * @brief thorq_payload_crypto_is_valid
- * @param payload
- * @return
- */
-inline bool thorq_payload_crypto_is_valid(const std::vector<std::uint8_t>& payload)
-{
-    return payload.size() >= 2 && payload[0] == THORQ_PAYLOAD_ID_CRYPTO;
-}
-
-/**
- * @brief thorq_payload_crypto_get_cmd
- * @param payload
- * @param cmd
- */
-inline void thorq_payload_crypto_get_cmd(const std::vector<std::uint8_t>& payload, thorq_crypto_cmd_t& cmd)
-{
-    cmd = static_cast<thorq_crypto_cmd_t>(payload[1]);
-}
-
-/**
- * @brief thorq_payload_crypto_get_data
- * @param payload
- * @param data
- */
-inline void thorq_payload_crypto_get_data(const std::vector<std::uint8_t>& payload, std::vector<std::uint8_t>& data)
+inline void thorq_payload_crypto_establish_unpack(const std::vector<std::uint8_t>& payload, std::vector<std::uint8_t>& data)
 {
     data.resize(payload.size() - 2);
-
     memcpy(data.data(), payload.data() + 2, payload.size() - 2);
+}
+
+inline void thorq_payload_crypto_verify_pack(std::vector<std::uint8_t>& payload, const std::vector<std::uint8_t>& data)
+{
+    payload.resize(2 + data.size());
+    payload[0] = THORQ_PAYLOAD_ID_CRYPTO;
+    payload[1] = THORQ_PAYLOAD_CRYPTO_VERIFY;
+
+    memcpy(payload.data() + 2, data.data(), data.size());
+}
+inline void thorq_payload_crypto_verify_unpack(const std::vector<std::uint8_t>& payload, std::vector<std::uint8_t>& data)
+{
+    data.resize(payload.size() - 2);
+    memcpy(data.data(), payload.data() + 2, payload.size() - 2);
+}
+
+inline void thorq_payload_crypto_ok_pack(std::vector<std::uint8_t>& payload)
+{
+    payload.resize(2);
+    payload[0] = THORQ_PAYLOAD_ID_CRYPTO;
+    payload[1] = THORQ_PAYLOAD_CRYPTO_OK;
 }
 
 #endif // THORQ_PAYLOAD_CRYPTO_H

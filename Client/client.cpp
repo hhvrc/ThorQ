@@ -30,8 +30,7 @@
 #include <thorq_payload_auth.h>
 #include <thorq_payload_event.h>
 #include <thorq_payload_crypto.h>
-#include <thorq_payload_login.h>
-#include <thorq_payload_logout.h>
+#include <thorq_payload_account.h>
 #include <thorq_payload_collar.h>
 #include <thorq_payload_version.h>
 #include <thorq_payload_heartbeat.h>
@@ -692,22 +691,22 @@ void Client::handleMessageCrypto(std::vector<std::uint8_t>& payload)
 {
     std::vector<std::uint8_t> response;
 
-    thorq_crypto_cmd_t cmd;
+    THORQ_PAYLOAD_CRYPTO cmd;
     thorq_payload_crypto_get_cmd(payload, cmd);
 
     switch (cmd) {
-	case THORQ_CRYPTO_ESTABLISH:
+	case THORQ_PAYLOAD_CRYPTO_ESTABLISH:
     {
         SetCryptoState(THORQ_STATE_CRYPTO_ESTABLISHING);
 
         std::vector<std::uint8_t> data;
-        thorq_payload_crypto_get_data(payload, data);
+        thorq_payload_crypto_establish_unpack(payload, data);
 
         if (m_crypto->ready()) m_crypto->reset();
 
         if (m_crypto->agree(data))
         {
-            thorq_payload_crypto_pack(response, THORQ_CRYPTO_ESTABLISH, m_crypto->publicKey());
+            thorq_payload_crypto_establish_pack(response, m_crypto->publicKey());
             SendPayload(response, false, true);
 		}
 		else
@@ -717,11 +716,11 @@ void Client::handleMessageCrypto(std::vector<std::uint8_t>& payload)
 		}
         break;
     }
-    case THORQ_CRYPTO_VERIFY:
+    case THORQ_PAYLOAD_CRYPTO_VERIFY:
         SetCryptoState(THORQ_STATE_CRYPTO_VERIFYING);
         SendPayload(payload, true, true);
 		break;
-    case THORQ_CRYPTO_OK:
+    case THORQ_PAYLOAD_CRYPTO_OK:
         SetCryptoState(THORQ_STATE_CRYPTO_ACTIVE);
 		break;
 	default:
@@ -1013,7 +1012,7 @@ void Client::requestEncryptionHandshake()
     SetCryptoState(THORQ_STATE_CRYPTO_REQUESTED);
 
     std::vector<std::uint8_t> payload;
-    thorq_payload_crypto_pack(payload, THORQ_CRYPTO_REQUEST);
+    thorq_payload_crypto_request_pack(payload);
     SendPayload(payload, false, true);
 }
 

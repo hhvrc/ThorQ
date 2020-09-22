@@ -26,16 +26,11 @@ enum THORQ_PAYLOAD_AUTH : std::uint8_t
     THORQ_PAYLOAD_AUTH_OK,
 };
 
-/**
- * @brief thorq_payload_auth_is_valid
- * @param payload
- * @return
- */
 inline bool thorq_payload_auth_is_valid(const std::vector<std::uint8_t>& payload)
 {
     if (payload[0] != THORQ_PAYLOAD_ID_AUTH) return false;
 
-    if (payload.size() == 2)
+    if (payload.size() >= 2)
     {
         return payload[1] == THORQ_PAYLOAD_AUTH_SYSTEMID_REQ
             || payload[1] == THORQ_PAYLOAD_AUTH_REGKEY_REQ
