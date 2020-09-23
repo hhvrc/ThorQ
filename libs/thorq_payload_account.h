@@ -23,6 +23,19 @@ enum THORQ_PAYLOAD_ACCOUNT : std::uint8_t
 	THORQ_PAYLOAD_ACCOUNT_LOGOUT             ///< Log out, removes any authtoken connected to this hwid
 };
 
+enum THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS : std::uint8_t
+{
+	THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_NONE       = 0,
+	THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_ALL        = 1 << 0,  ///< Log out all users on this account
+	THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_RESERVED2  = 1 << 1,
+	THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_RESERVED3  = 1 << 2,
+	THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_RESERVED4  = 1 << 3,
+	THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_RESERVED5  = 1 << 4,
+	THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_RESERVED6  = 1 << 5,
+	THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_RESERVED7  = 1 << 6,
+	THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_RESERVED8  = 1 << 7
+};
+
 inline bool thorq_payload_account_is_valid(const std::vector<std::uint8_t>& payload)
 {
     if (payload[0] != THORQ_PAYLOAD_ID_ACCOUNT) return false;
@@ -58,7 +71,7 @@ inline bool thorq_payload_account_is_valid(const std::vector<std::uint8_t>& payl
 		case THORQ_PAYLOAD_ACCOUNT_LOGIN_AUTHTOKEN:
 			return payload.size() == THORQ_AUTHTOKEN_LEN + 2;
 		case THORQ_PAYLOAD_ACCOUNT_LOGOUT:
-			return payload.size() == 3;
+			return payload.size() == 3 && payload[2] <= THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_ALL;
 		default:
 			return false;
 		}
@@ -204,12 +217,12 @@ inline void thorq_payload_account_login_authtoken_unpack(const std::vector<std::
     memcpy(authtoken.data(), payload.data(), payload.size() - 2);
 }
 
-inline void thorq_payload_account_logout_pack(std::vector<std::uint8_t>& payload, std::uint8_t data)
+inline void thorq_payload_account_logout_pack(std::vector<std::uint8_t>& payload, std::uint8_t options = THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_NONE)
 {
     payload.resize(3);
     payload[0] = THORQ_PAYLOAD_ID_ACCOUNT;
 	payload[1] = THORQ_PAYLOAD_ACCOUNT_LOGOUT;
-    payload[2] = data;
+	payload[2] = options;
 }
 inline void thorq_payload_account_logout_unpack(const std::vector<std::uint8_t>& payload, std::uint8_t& data)
 {

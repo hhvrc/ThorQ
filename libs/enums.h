@@ -12,7 +12,7 @@ enum THORQ_APP : std::uint8_t
 };
 
 /// Flags to describe the payload of a message
-enum THORQ_PAYLOAD_ID
+enum THORQ_PAYLOAD_ID : std::uint8_t
 {
     THORQ_PAYLOAD_ID_HEARTBEAT,    ///< Heartbeat to keep connection alive and determine RTT
 
@@ -32,11 +32,13 @@ enum THORQ_PAYLOAD_ID
 	THORQ_PAYLOAD_ID_ANNOUNCEMENT, ///< Server notifications/Admin notifications
 
 	THORQ_PAYLOAD_ID_COLLAR,       ///< Collar command
+
+	THORQ_PAYLOAD_ID_ACK, ///< Acknowledge
 };
 
 
 /// Acknowledgement of message sent from remote host
-enum THORQ_PAYLOAD_ACK
+enum THORQ_PAYLOAD_ACK : std::uint8_t
 {
 	THORQ_PAYLOAD_ACK_OK,           ///< Command succeeded
 	THORQ_PAYLOAD_ACK_IN_PROGRESS,  ///< Command accepted, and is in progress
@@ -49,7 +51,7 @@ enum THORQ_PAYLOAD_ACK
 };
 
 /// Id of a device or service that client has
-enum THORQ_USER_ACTIVITY_FLAG
+enum THORQ_USER_ACTIVITY_FLAG : std::uint8_t
 {
     THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT = 1 << 0, ///< User currently has a collar connected to their pc, this will show up as a [🗲] icon next to their name
     THORQ_USER_ACTIVITY_FLAG_OPENVR_RUNNING = 1 << 1, ///< User is currently in Virtual Reality, this will show up as a [VR] icon next to their name
@@ -62,7 +64,7 @@ enum THORQ_USER_ACTIVITY_FLAG
 };
 
 ///
-enum THORQ_DISCONNECT_REASON
+enum THORQ_DISCONNECT_REASON : std::uint8_t
 {
     THORQ_DISCONNECT_REASON_UNKNOWN = 0,
 	THORQ_DISCONNECT_REASON_VERSION_INCOMPATIBLE,
@@ -78,6 +80,8 @@ enum THORQ_DISCONNECT_REASON
 
 	THORQ_DISCONNECT_REASON_KICKED,
 	THORQ_DISCONNECT_REASON_TIMEDOUT,
+
+	THORQ_DISCONNECT_REASON_FUCK_YOU,
 };
 
 ////////////////////////////////////////////////////

@@ -27,18 +27,16 @@
 #include <crypto.h>
 #include <systemid.h>
 #include <thorq_message.h>
-#include <thorq_payload_auth.h>
 #include <thorq_payload_event.h>
 #include <thorq_payload_crypto.h>
 #include <thorq_payload_account.h>
 #include <thorq_payload_collar.h>
+#include <thorq_payload_regkey.h>
 #include <thorq_payload_version.h>
+#include <thorq_payload_systemid.h>
 #include <thorq_payload_heartbeat.h>
 #include <thorq_payload_notification.h>
 #include <thorq_payload_announcement.h>
-
-#define DISCONNECT_ERROR 0x00000001
-#define DISCONNECT_SHUTDOWN 0x00000002
 
 #define SCOPELOCK(l) std::scoped_lock lock(const_cast<std::mutex&>(l))
 
@@ -354,7 +352,7 @@ void Client::Service()
                 std::vector<std::uint8_t> payload;
 
                 SCOPELOCK(l_loginInfo);
-                thorq_payload_logout_pack(payload);
+				thorq_payload_account_logout_pack(payload);
                 SendPayload(payload, true, true);
 
 				SetLoginState(THORQ_STATE_LOGIN_LOGGINGOUT);
