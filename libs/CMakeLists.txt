@@ -14,7 +14,7 @@ set(PYTHON_ARGS
     "${CMAKE_CURRENT_SOURCE_DIR}/botan/configure.py"
     "--os=${BUILD_OSL}"
     "--cc=${BUILD_COMPILER}"
-    "--cpu=${BUILD_ARCH}"
+	"--cpu=x86_${VPTR_BITS}"
     "--amalgamation"
     "--disable-shared"
     "--link-method=copy"

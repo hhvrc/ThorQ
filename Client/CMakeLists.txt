@@ -10,7 +10,6 @@ project(
 message("Configuring ${project}...")
 
 # --- OpenVR ---
-math(EXPR VPTR_BITS "${CMAKE_SIZEOF_VOID_P}*8") # Convert 4/8 -> 32/64
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/headers)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/lib/${BUILD_OS}${VPTR_BITS}) # eg. win64 / linux32
 # --------------

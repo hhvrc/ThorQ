@@ -18,11 +18,7 @@ endif()
 # --------------------------------
 
 # --- Simplify build checking ---
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    set(BUILD_ARCH "x86_64")
-elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
-    set(BUILD_ARCH "i386")
-endif()
+math(EXPR VPTR_BITS "${CMAKE_SIZEOF_VOID_P}*8") # Convert 4/8 -> 32/64
 
 if(UNIX AND NOT APPLE)
 	set(BUILD_OS "linux")
@@ -113,4 +109,4 @@ add_subdirectory(Client)
 add_subdirectory(Server)
 add_subdirectory(Keygen)
 
-message("Building ${project} in ${CMAKE_BUILD_TYPE} mode for ${BUILD_OS} ${BUILD_ARCH} with ${BUILD_COMPILER}")
+message("Building ${project} in ${CMAKE_BUILD_TYPE} mode for ${BUILD_OS} x86_${VPTR_BITS} with ${BUILD_COMPILER}")
