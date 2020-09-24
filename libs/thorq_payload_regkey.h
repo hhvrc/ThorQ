@@ -38,9 +38,9 @@ inline bool thorq_payload_regkey_is_valid(const std::vector<std::uint8_t>& paylo
 	return dataSize >= THORQ_AUTH_REGKEY_LEN && payload[1] == THORQ_PAYLOAD_REGKEY_DATA;
 }
 
-inline void thorq_payload_regkey_get_id(const std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_REGKEY& id)
+inline void thorq_payload_regkey_get_cmd(const std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_REGKEY& cmd)
 {
-	id = static_cast<THORQ_PAYLOAD_REGKEY>(payload[1]);
+	cmd = static_cast<THORQ_PAYLOAD_REGKEY>(payload[1]);
 }
 
 inline void thorq_payload_regkey_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_REGKEY id)

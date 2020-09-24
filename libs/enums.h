@@ -24,8 +24,8 @@ enum THORQ_PAYLOAD_ID : std::uint8_t
     THORQ_PAYLOAD_ID_REGKEY,       ///< Registration-key messages
 
 	THORQ_PAYLOAD_ID_ACCOUNT,      ///< Create/Delete/Recover/Login/Logout
+	THORQ_PAYLOAD_ID_RELATION,     ///< Friend/Block/AcceptFriend/DenyFriend/UnFriend/GetRelations
 	THORQ_PAYLOAD_ID_SESSION,      ///< SetState
-	THORQ_PAYLOAD_ID_FRIEND,       ///< Friend/Accept/Deny/Unfriend/GetFriends
 	THORQ_PAYLOAD_ID_ROOM,
 
 	THORQ_PAYLOAD_ID_MODERATION,   ///< Bans/Reporting

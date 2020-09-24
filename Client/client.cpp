@@ -27,7 +27,6 @@
 #include <crypto.h>
 #include <systemid.h>
 #include <thorq_message.h>
-#include <thorq_payload_event.h>
 #include <thorq_payload_crypto.h>
 #include <thorq_payload_account.h>
 #include <thorq_payload_collar.h>
@@ -35,8 +34,8 @@
 #include <thorq_payload_version.h>
 #include <thorq_payload_systemid.h>
 #include <thorq_payload_heartbeat.h>
-#include <thorq_payload_notification.h>
 #include <thorq_payload_announcement.h>
+#include <thorq_payload_systemid.h>
 
 #define SCOPELOCK(l) std::scoped_lock lock(const_cast<std::mutex&>(l))
 
@@ -589,30 +588,88 @@ void Client::HandleMessage(ENetPacket* packet)
 	std::vector<std::uint8_t> message(packet->data, packet->data + packet->dataLength);
 
     if (!thorq_message_decode(message, m_crypto))
+	{
         return;
+	}
 
-    switch (message[0]) {
-    case THORQ_PAYLOAD_ID_INVALID:
+	switch (message[0]) {
+	case THORQ_PAYLOAD_ID_HEARTBEAT:
+		if (thorq_payload_heartbeat_is_valid(message))
+		{
+			handlePayloadHeartbeat(message);
+		}
 		return;
     case THORQ_PAYLOAD_ID_VERSION:
         if (thorq_payload_version_is_valid(message))
-            handleMessageVersion(message);
+		{
+			handlePayloadVersion(message);
+		}
 		return;
     case THORQ_PAYLOAD_ID_CRYPTO:
         if (thorq_payload_crypto_is_valid(message))
-            handleMessageCrypto(message);
+		{
+			handlePayloadCrypto(message);
+		}
 		return;
-    case THORQ_PAYLOAD_ID_AUTH:
-        if (thorq_payload_auth_is_valid(message))
-            handleMessageAuth(message);
+	case THORQ_PAYLOAD_ID_SYSTEMID:
+		if (thorq_payload_systemid_is_valid(message))
+		{
+			handlePayloadSystemID(message);
+		}
 		return;
-    case THORQ_PAYLOAD_ID_ANNOUNCEMENT:
-        if (thorq_payload_announcement_is_valid(message))
-            handleMessageAnnouncement(message);
-        return;
-    case THORQ_PAYLOAD_ID_HEARTBEAT:
-        if (thorq_payload_heartbeat_is_valid(message))
-            handleMessageHeartbeat(message);
+	case THORQ_PAYLOAD_ID_REGKEY:
+		if (thorq_payload_regkey_is_valid(message))
+		{
+			handlePayloadRegKey(message);
+		}
+		return;
+	case THORQ_PAYLOAD_ID_ACCOUNT:
+		if (thorq_payload_account_is_valid(message))
+		{
+			handlePayloadAccount(message);
+		}
+		return;
+	case THORQ_PAYLOAD_ID_RELATION:
+		if (thorq_payload_relation_is_valid(message))
+		{
+			handlePayloadRelation(message);
+		}
+		return;
+	case THORQ_PAYLOAD_ID_SESSION:
+		if (thorq_payload_session_is_valid(message))
+		{
+			handlePayloadSession(message);
+		}
+		return;
+	case THORQ_PAYLOAD_ID_ROOM:
+		if (thorq_payload_room_is_valid(message))
+		{
+			handlePayloadRoom(message);
+		}
+		return;
+	case THORQ_PAYLOAD_ID_MODERATION:
+		if (thorq_payload_moderation_is_valid(message))
+		{
+			handlePayloadModeration(message);
+		}
+		return;
+	case THORQ_PAYLOAD_ID_ANNOUNCEMENT:
+		if (thorq_payload_announcement_is_valid(message))
+		{
+			handlePayloadAnnouncement(message);
+		}
+		return;
+	case THORQ_PAYLOAD_ID_COLLAR:
+		if (thorq_payload_collar_is_valid(message))
+		{
+			handlePayloadCollar(message);
+		}
+		return;
+	case THORQ_PAYLOAD_ID_ACK:
+		if (thorq_payload_ack_is_valid(message))
+		{
+			handlePayloadAck(message);
+		}
 		return;
 	default:
 		if (AuthState() != THORQ_STATE_AUTH_OK)
@@ -622,34 +679,20 @@ void Client::HandleMessage(ENetPacket* packet)
 
 		break;
 	}
-
-    switch (message[0]) {
-    case THORQ_PAYLOAD_ID_EVENT:
-        if (thorq_payload_event_is_valid(message))
-            handleMessageEvent(message);
-        break;
-    case THORQ_PAYLOAD_ID_COMMAND:
-        if (thorq_payload_command_is_valid(message))
-            handleMessageCommand(message);
-        break;
-    case THORQ_PAYLOAD_ID_COMMAND_ACK:
-        if (thorq_payload_ack_is_valid(message))
-            handleMessageCommandAck(message);
-        break;
-    case THORQ_PAYLOAD_ID_NOTIFICATION:
-        if (thorq_payload_notification_is_valid(message))
-            handleMessageNotification(message);
-        break;
-    case THORQ_PAYLOAD_ID_COLLAR:
-        if (thorq_payload_collar_is_valid(message))
-            handleMessageEvent(message);
-        break;
-    default:
-        break;
-    }
 }
 
-void Client::handleMessageVersion(std::vector<std::uint8_t>& payload)
+void Client::handlePayloadHeartbeat(std::vector<std::uint8_t>& payload)
+{
+	// Set interval from server
+	thorq_payload_heartbeat_unpack(payload, m_heartbeatInterval);
+
+	if (m_awaitingHeartbeat)
+	{
+		m_awaitingHeartbeat = false;
+		SetRtt(m_heartbeatTimer->elapsed());
+	}
+}
+void Client::handlePayloadVersion(std::vector<std::uint8_t>& payload)
 {
     THORQ_APP app;
     ThorQ::Version version;
@@ -685,7 +728,7 @@ void Client::handleMessageVersion(std::vector<std::uint8_t>& payload)
 		return;
 	}
 }
-void Client::handleMessageCrypto(std::vector<std::uint8_t>& payload)
+void Client::handlePayloadCrypto(std::vector<std::uint8_t>& payload)
 {
     std::vector<std::uint8_t> response;
 
@@ -726,26 +769,20 @@ void Client::handleMessageCrypto(std::vector<std::uint8_t>& payload)
 		return;
 	}
 }
-void Client::handleMessageAuth(std::vector<std::uint8_t>& payload)
+void Client::handlePayloadSystemID(std::vector<std::uint8_t>& payload)
 {
     std::vector<std::uint8_t> response;
 
-    THORQ_PAYLOAD_AUTH cmd;
-    thorq_payload_auth_get_cmd(payload, cmd);
+	THORQ_PAYLOAD_SYSTEMID cmd;
+	thorq_payload_systemid_get_cmd(payload, cmd);
 
     switch (cmd) {
-    case THORQ_PAYLOAD_AUTH_SYSTEMID_REQ:
-        thorq_payload_auth_pack(response, THORQ_PAYLOAD_AUTH_SYSTEMID, ThorQ::systemid_generate());
+	case THORQ_PAYLOAD_SYSTEMID_REQ:
+		thorq_payload_systemid_data_pack(response, ThorQ::systemid_generate());
         SendPayload(response);
         SetAuthState(THORQ_STATE_AUTH_HWID_CHECKING);
 		break;
-    case THORQ_PAYLOAD_AUTH_REGKEY_REQ:
-        thorq_payload_auth_pack(response, THORQ_PAYLOAD_AUTH_REGKEY_AWAITING_INPUT);
-        SendPayload(response);
-        SetAuthState(THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT);
-		emit RequestingRegistrationKey();
-		break;
-    case THORQ_PAYLOAD_AUTH_OK:
+	case THORQ_PAYLOAD_SYSTEMID_OK:
 		SetAuthState(THORQ_STATE_AUTH_OK);
 		break;
 	default:
@@ -753,7 +790,45 @@ void Client::handleMessageAuth(std::vector<std::uint8_t>& payload)
 		break;
     }
 }
-void Client::handleMessageAnnouncement(std::vector<std::uint8_t> &payload)
+void Client::handlePayloadRegKey(std::vector<std::uint8_t>& payload)
+{
+	std::vector<std::uint8_t> response;
+
+	THORQ_PAYLOAD_REGKEY cmd;
+	thorq_payload_regkey_get_cmd(payload, cmd);
+
+	switch (cmd) {
+	case THORQ_PAYLOAD_REGKEY_REQ:
+		thorq_payload_regkey_pack(response, THORQ_PAYLOAD_REGKEY_AWAITING_INPUT);
+		SendPayload(response);
+		SetAuthState(THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT);
+		emit RequestingRegistrationKey();
+		break;
+	case THORQ_PAYLOAD_REGKEY_OK:
+		SetAuthState(THORQ_STATE_AUTH_OK);
+		break;
+	default:
+		qDebug() << "AUTH: Unexpected message:" << cmd;
+		break;
+	}
+}
+void Client::handlePayloadAccount(std::vector<std::uint8_t>& payload)
+{
+	THORQ_PAYLOAD_ACCOUNT cmd;
+	thorq_payload_account_get_cmd(payload, cmd);
+
+	switch (cmd) {
+	case THORQ_PAYLOAD_ACCOU
+		type_str = "admin";
+		break;
+	case THORQ_PAYLOAD_ANNOUNCEMENT_TYPE_SYSTEM:
+		type_str = "system";
+		break;
+	}
+
+	emit Announcement("Announcement!");
+}
+void Client::handlePayloadAnnouncement(std::vector<std::uint8_t>& payload)
 {
 	QString message;
     THORQ_PAYLOAD_ANNOUNCEMENT_TYPE type;
@@ -788,17 +863,6 @@ void Client::handleMessageAnnouncement(std::vector<std::uint8_t> &payload)
     }
 
     emit Announcement("Announcement!");
-}
-void Client::handleMessageHeartbeat(std::vector<std::uint8_t>& payload)
-{
-    // Set interval from server
-    thorq_payload_heartbeat_unpack(payload, m_heartbeatInterval);
-
-    if (m_awaitingHeartbeat)
-	{
-        m_awaitingHeartbeat = false;
-        SetRtt(m_heartbeatTimer->elapsed());
-	}
 }
 void Client::handleMessageEvent(std::vector<std::uint8_t> &payload)
 {

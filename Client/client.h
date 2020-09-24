@@ -316,16 +316,19 @@ private slots:
 
     /// These should be self-explanatory
     void HandleMessage(ENetPacket* packet);
-    void handleMessageVersion(std::vector<std::uint8_t>& payload);
-    void handleMessageCrypto(std::vector<std::uint8_t>& payload);
-    void handleMessageAuth(std::vector<std::uint8_t>& payload);
-    void handleMessageAnnouncement(std::vector<std::uint8_t>& payload);
-    void handleMessageHeartbeat(std::vector<std::uint8_t>& payload);
-    void handleMessageEvent(std::vector<std::uint8_t>& payload);
-    void handleMessageCommand(std::vector<std::uint8_t>& payload);
-    void handleMessageCommandAck(std::vector<std::uint8_t>& payload);
-    void handleMessageNotification(std::vector<std::uint8_t>& payload);
-    void handleMessageCollar(std::vector<std::uint8_t>& payload);
+	void handlePayloadHeartbeat(std::vector<std::uint8_t>& payload);
+	void handlePayloadVersion(std::vector<std::uint8_t>& payload);
+	void handlePayloadCrypto(std::vector<std::uint8_t>& payload);
+	void handlePayloadSystemID(std::vector<std::uint8_t>& payload);
+	void handlePayloadRegKey(std::vector<std::uint8_t>& payload);
+	void handlePayloadAccount(std::vector<std::uint8_t>& payload);
+	void handlePayloadRelation(std::vector<std::uint8_t>& payload);
+	void handlePayloadSession(std::vector<std::uint8_t>& payload);
+	void handlePayloadRoom(std::vector<std::uint8_t>& payload);
+	void handlePayloadModeration(std::vector<std::uint8_t>& payload);
+	void handlePayloadAnnouncement(std::vector<std::uint8_t>& payload);
+	void handlePayloadCollar(std::vector<std::uint8_t>& payload);
+	void handlePayloadAck(std::vector<std::uint8_t>& payload);
 
     /**
      * @brief SendPayload
