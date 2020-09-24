@@ -6,14 +6,19 @@
 #include <enet.h>
 
 #include <thorq_message.h>
-#include <thorq_payload_version.h>
 #include <thorq_payload_heartbeat.h>
+#include <thorq_payload_version.h>
 #include <thorq_payload_crypto.h>
-#include <thorq_payload_auth.h>
-#include <thorq_payload_event.h>
+#include <thorq_payload_systemid.h>
+#include <thorq_payload_regkey.h>
+#include <thorq_payload_account.h>
+#include <thorq_payload_session.h>
+//#include <thorq_payload_friend.h>
+//#include <thorq_payload_room.h>
+//#include <thorq_payload_moderation.h>
 #include <thorq_payload_announcement.h>
-#include <thorq_payload_notification.h>
 #include <thorq_payload_collar.h>
+#include <thorq_payload_ack.h>
 
 #include "utils.h"
 #include "account.h"
@@ -60,50 +65,86 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
     if (!thorq_message_decode(message, instance->getCrypto()))
         return;
 
-	switch (message[0]) {
-	case THORQ_PAYLOAD_TYPE_HEARTBEAT:
-		break;
-	}
-
     switch (message[0]) {
-    case THORQ_PAYLOAD_ID_COLLAR:
-        if (thorq_payload_collar_is_valid(message))
-		{
-			handleMessageCollar(instance, message);
-			return;
-		}
-		break;
     case THORQ_PAYLOAD_ID_HEARTBEAT:
         if (thorq_payload_heartbeat_is_valid(message))
-		{
-			handleMessageHeartbeat(instance);
-			return;
-		}
-		break;
+        {
+            handleMessageHeartbeat(instance, message);
+            return;
+        }
+        break;
     case THORQ_PAYLOAD_ID_VERSION:
         if (thorq_payload_version_is_valid(message))
-		{
+        {
             handleMessageVersion(instance, message);
-			return;
-		}
-		break;
+            return;
+        }
+        break;
     case THORQ_PAYLOAD_ID_CRYPTO:
         if (thorq_payload_crypto_is_valid(message))
-		{
+        {
             handleMessageCrypto(instance, message);
+            return;
+        }
+        break;
+    case THORQ_PAYLOAD_ID_SYSTEMID:
+        if (thorq_payload_systemid_is_valid(message))
+        {
+            handleMessageSystemID(instance, message);
+            return;
+        }
+        break;
+    case THORQ_PAYLOAD_ID_REGKEY:
+        if (thorq_payload_regkey_is_valid(message))
+        {
+            handleMessageRegKey(instance, message);
+            return;
+        }
+        break;
+    case THORQ_PAYLOAD_ID_ACCOUNT:
+        if (thorq_payload_account_is_valid(message))
+        {
+            handleMessageAccount(instance, message);
+            return;
+        }
+        break;
+    case THORQ_PAYLOAD_ID_SESSION:
+        if (thorq_payload_session_is_valid(message))
+        {
+            handleMessageSession(instance, message);
+            return;
+        }
+        break;
+    case THORQ_PAYLOAD_ID_FRIEND:
+        if (thorq_payload_friend_is_valid(message))
+		{
+            handleMessageFriend(instance, message);
 			return;
 		}
 		break;
-    case THORQ_PAYLOAD_ID_AUTH:
-        if (thorq_payload_auth_is_valid(message))
+    case THORQ_PAYLOAD_ID_ROOM:
+        if (thorq_payload_room_is_valid(message))
 		{
-            handleMessageAuth(instance, message);
+            handleMessageRoom(instance, message);
 			return;
 		}
         break;
-    case THORQ_PAYLOAD_ID_EVENT:
+    case THORQ_PAYLOAD_ID_MODERATION:
+        if (thorq_payload_moderation_is_valid(message))
+		{
+            handleMessageModeration(instance, message);
+			return;
+		}
+        break;
+    case THORQ_PAYLOAD_ID_COLLAR:
+        if (thorq_payload_collar_is_valid(message))
+        {
+            handleMessageCollar(instance, message);
+            return;
+        }
+        break;
     case THORQ_PAYLOAD_ID_ANNOUNCEMENT:
-    case THORQ_PAYLOAD_ID_INVALID:
+    case THORQ_PAYLOAD_ID_ACK:
         qDebug() << "Waitttttt... im not supposed to get these?" << (int)message[0];
 		fflush(stdout);
         break;

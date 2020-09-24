@@ -12,7 +12,8 @@
 #include <thorq_payload_version.h>
 #include <thorq_payload_heartbeat.h>
 #include <thorq_payload_crypto.h>
-#include <thorq_payload_auth.h>
+#include <thorq_payload_regkey.h>
+#include <thorq_payload_systemid.h>
 #include <thorq_payload_account.h>
 #include <thorq_payload_event.h>
 #include <thorq_payload_announcement.h>
@@ -23,6 +24,19 @@
 #include "session.h"
 #include "singletons.h"
 #include "authhandler.h"
+
+
+void handleMessageHeartbeat(ThorQ::Session *instance, const std::vector<uint8_t> &message)
+{
+    std::uint16_t interval;
+    thorq_payload_heartbeat_unpack(message, interval);
+    if (interval != 500) // HARDCODED
+    {
+        std::vector<std::uint8_t> response;
+        thorq_payload_heartbeat_pack(response, 500); // HARDCODED
+        instance->sendMessage(response, false, true);
+    }
+}
 
 void handleMessageVersion(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
 {
@@ -114,7 +128,7 @@ void handleMessageCrypto(ThorQ::Session* instance, const std::vector<std::uint8_
     }
 }
 
-void handleMessageAuth(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
+void handleMessageSystemID(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
 {
     std::vector<std::uint8_t> response;
 
@@ -206,14 +220,99 @@ void handleMessageAuth(ThorQ::Session* instance, const std::vector<std::uint8_t>
 	}
 }
 
-void handleMessageHeartbeat(ThorQ::Session* instance)
+void handleMessageRegKey(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
 {
-    std::vector<std::uint8_t> message;
-    thorq_payload_heartbeat_pack(message, 500); // HARDCODED
-    instance->sendMessage(message, false, true);
+    std::vector<std::uint8_t> response;
+
+    THORQ_PAYLOAD_AUTH cmd;
+    thorq_payload_auth_get_cmd(message, cmd);
+
+    switch (cmd) {
+    case THORQ_PAYLOAD_AUTH_SYSTEMID:
+    {
+        QByteArray data;
+        thorq_payload_auth_get_data(message, data);
+
+        instance->setHwid(data);
+
+        qDebug() << "SystemID:" << ThorQ::systemid_to_string(data);
+
+        switch (ThorQ::AuthHandler::checkSystemID(instance->hwid())) {
+        case ThorQ::AuthHandler::REGISTERED:
+            {
+                thorq_payload_auth_pack(response, THORQ_PAYLOAD_AUTH_OK);
+                instance->sendMessage(response, true, true);
+                instance->setAuthState(THORQ_STATE_AUTH_OK);
+                break;
+            }
+        case ThorQ::AuthHandler::NOT_REGISTERED:
+            {
+                thorq_payload_auth_pack(response, THORQ_PAYLOAD_AUTH_REGKEY_REQ);
+                instance->sendMessage(response, true, true);
+                instance->setAuthState(THORQ_STATE_AUTH_REGKEY_REQUESTING);
+                break;
+            }
+        case ThorQ::AuthHandler::INVALID_SYSTEMID:
+            {
+                instance->setAuthState(THORQ_STATE_AUTH_NONE);
+                instance->disconnect(THORQ_DISCONNECT_REASON_AUTH_SYSTEMID_BANNED);
+                break;
+            }
+        default:
+            break;
+        }
+        break;
+    }
+    case THORQ_PAYLOAD_AUTH_REGKEY_AWAITING_INPUT:
+    {
+        instance->setAuthState(THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT);
+        break;
+    }
+    case THORQ_PAYLOAD_AUTH_REGKEY:
+    {
+        QByteArray data;
+        thorq_payload_auth_get_data(message, data);
+
+        switch (ThorQ::AuthHandler::tryRegisterSystemID(instance->hwid(), data)) {
+        case ThorQ::AuthHandler::REGISTERED:
+        case ThorQ::AuthHandler::RE_REGISTERED:
+            {
+                thorq_payload_auth_pack(response, THORQ_PAYLOAD_AUTH_OK);
+                instance->sendMessage(response, true, true);
+                instance->setAuthState(THORQ_STATE_AUTH_OK);
+                break;
+            }
+        case ThorQ::AuthHandler::INVALID_REGKEY:
+            {
+                thorq_payload_auth_pack(response, THORQ_PAYLOAD_AUTH_REGKEY_REQ);
+                instance->sendMessage(response, true, true);
+                instance->setAuthState(THORQ_STATE_AUTH_REGKEY_REQUESTING);
+                break;
+            }
+        case ThorQ::AuthHandler::TIMEOUT:
+            {
+            instance->setAuthState(THORQ_STATE_AUTH_NONE);
+            instance->disconnect(THORQ_DISCONNECT_REASON_AUTH_TIMEOUT);
+                break;
+            }
+        case ThorQ::AuthHandler::INVALID_SYSTEMID:
+            {
+                instance->setAuthState(THORQ_STATE_AUTH_NONE);
+                instance->disconnect(THORQ_DISCONNECT_REASON_AUTH_SYSTEMID_BANNED);
+                break;
+            }
+        default:
+            break;
+        }
+        break;
+    }
+    default:
+        qDebug() << "Unexpected message:" << cmd;
+        break;
+    }
 }
 
-void handleMessageLogin(ThorQ::Session *instance, const std::vector<uint8_t> &message)
+void handleMessageAccount(ThorQ::Session *instance, const std::vector<uint8_t> &message)
 {
     std::vector<std::uint8_t> response;
 
@@ -252,7 +351,7 @@ void handleMessageLogin(ThorQ::Session *instance, const std::vector<uint8_t> &me
     }
 }
 
-void handleMessageLogout(ThorQ::Session *instance)
+void handleMessageSession(ThorQ::Session *instance)
 {
     std::vector<std::uint8_t> response;
 
@@ -270,7 +369,7 @@ void handleMessageLogout(ThorQ::Session *instance)
     }
 }
 
-void handleMessageCommand(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
+void handleMessageFriend(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
 {
     std::vector<std::uint8_t> response;
 
@@ -433,16 +532,28 @@ void handleMessageCommand(ThorQ::Session* instance, const std::vector<std::uint8
 
 }
 
-void handleMessageCommandAck(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
+void handleMessageRoom(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
 {
-    (void)instance;
-    (void)message;
-    thorq_debug("Unexpected ack message...")
+}
+
+void handleMessageModeration(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
+{
+}
+
+void handleMessageAnnouncement(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
+{
 }
 
 void handleMessageCollar(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
 {
-	if (instance->sessionState() == THORQ_STATE_SESSION_ACTIVE)
-		if (instance->partner() != nullptr)
-			instance->partner()->sendMessage(message, true, false);
+    if (instance->sessionState() == THORQ_STATE_SESSION_ACTIVE)
+        if (instance->partner() != nullptr)
+            instance->partner()->sendMessage(message, true, false);
+}
+
+void handleMessageAck(ThorQ::Session* instance, const std::vector<std::uint8_t>& message)
+{
+    (void)instance;
+    (void)message;
+    thorq_debug("Unexpected ack message...")
 }

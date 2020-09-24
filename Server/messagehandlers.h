@@ -6,14 +6,18 @@
 
 #include <typedefs.h>
 
+void handleMessageHeartbeat(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
 void handleMessageVersion(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
 void handleMessageCrypto(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
-void handleMessageAuth(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
-void handleMessageHeartbeat(ThorQ::Session* instance);
-void handleMessageLogin(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
-void handleMessageLogout(ThorQ::Session* instance);
-void handleMessageCommand(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
-void handleMessageCommandAck(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
+void handleMessageSystemID(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
+void handleMessageRegKey(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
+void handleMessageAccount(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
+void handleMessageSession(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
+void handleMessageFriend(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
+void handleMessageRoom(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
+void handleMessageModeration(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
+void handleMessageAnnouncement(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
 void handleMessageCollar(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
+void handleMessageAck(ThorQ::Session* instance, const std::vector<std::uint8_t>& message);
 
 #endif // MESSAGEHANDLERS_H

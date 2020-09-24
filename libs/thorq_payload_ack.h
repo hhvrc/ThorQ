@@ -13,7 +13,9 @@
  */
 inline bool thorq_payload_ack_is_valid(const QByteArray& payload)
 {
-	return payload.size() >= 3 && payload[0] == THORQ_PAYLOAD_ID_ACK && payload[1] < THORQ_PAYLOAD_ID_ACK; // payload id that gets acked can be anything else than an ack
+    return payload.size() >= 3
+        && payload[0] == THORQ_PAYLOAD_ID_ACK
+        && payload[1] <  THORQ_PAYLOAD_ID_ACK; // payload id that gets acked can be anything else than an ack
 }
 
 /**
