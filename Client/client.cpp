@@ -54,7 +54,7 @@ enum THORQ_CLIENT_ACTION
     ACTION_SessionAccept  = 1 << 6,  ///< [Signal] Tell server to accept an given incoming request
     ACTION_SessionDeny    = 1 << 7,  ///< [Signal] Tell server to deny an given incoming request
     ACTION_SessionLeave   = 1 << 8,  ///< [Signal] Tell server to stop an ongoing session
-    ACTION_SendRegKey     = 1 << 9,
+    ACTION_SendRegKey     = 1 << 9,  ///< [Signal] Send registration key to server
     ACTION_RESERVED_11    = 1 << 10,
     ACTION_RESERVED_12    = 1 << 11,
     ACTION_RESERVED_13    = 1 << 12,
@@ -843,10 +843,10 @@ void Client::handlePayloadAnnouncement(std::vector<std::uint8_t>& payload)
 
     switch (type) {
     case THORQ_PAYLOAD_ANNOUNCEMENT_TYPE_ADMIN:
-        type_str = "admin";
+        type_str = "ADMIN";
         break;
     case THORQ_PAYLOAD_ANNOUNCEMENT_TYPE_SYSTEM:
-        type_str = "system";
+        type_str = "SYSTEM";
         break;
     }
 
@@ -862,7 +862,7 @@ void Client::handlePayloadAnnouncement(std::vector<std::uint8_t>& payload)
         break;
     }
 
-    emit Announcement("Announcement!");
+    emit Announcement(QString("[%1] %2 announcement:\n%3").arg(type_str).arg(reason_str).arg(message));
 }
 void Client::handleMessageEvent(std::vector<std::uint8_t> &payload)
 {
@@ -1103,7 +1103,7 @@ void Client::handleDisconnect(quint32 reason)
 			emit Error(tr("Authentication failed\nInvalid registration key!"));
 			break;
         case THORQ_DISCONNECT_REASON_AUTH_SYSTEMID_BANNED:
-			emit Error(tr("Authentication failed\nServer could not identify your computer"));
+            emit Error(tr("Authentication failed\nYou have been banned!"));
             break;
 		case THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED:
 			emit Warning(tr("Server shut down"));
@@ -1114,6 +1114,9 @@ void Client::handleDisconnect(quint32 reason)
 		case THORQ_DISCONNECT_REASON_KICKED:
 			emit Error(tr("You have been kicked"));
 			break;
+        case THORQ_DISCONNECT_REASON_FUCK_YOU:
+            emit Error(tr("Fuck you"));
+            break;
 		default:
 			emit Warning(tr("Disconnected for unknown reason"));
 			break;

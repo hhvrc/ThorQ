@@ -27,13 +27,12 @@ inline bool thorq_payload_crypto_is_valid(const std::vector<std::uint8_t>& paylo
     {
         switch (payload[1]) {
         case THORQ_PAYLOAD_CRYPTO_REQUEST:
+        case THORQ_PAYLOAD_CRYPTO_OK:
             return payload.size() == 2;
         case THORQ_PAYLOAD_CRYPTO_ESTABLISH:
             return payload.size() == 2 + THORQ_CRYPTO_KEY_LENGTH;
         case THORQ_PAYLOAD_CRYPTO_VERIFY:
             return payload.size() == 2 + THORQ_CRYPTO_VERIFICATION_DATA_LENGTH;
-        case THORQ_PAYLOAD_CRYPTO_OK:
-            return payload.size() == 2;
         default:
             return false;
         }

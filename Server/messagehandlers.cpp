@@ -15,9 +15,8 @@
 #include <thorq_payload_regkey.h>
 #include <thorq_payload_systemid.h>
 #include <thorq_payload_account.h>
-#include <thorq_payload_event.h>
 #include <thorq_payload_announcement.h>
-#include <thorq_payload_notification.h>
+#include <thorq_payload_room.h>
 #include <thorq_payload_collar.h>
 
 #include "utils.h"
@@ -93,7 +92,7 @@ void handleMessageCrypto(ThorQ::Session* instance, const std::vector<std::uint8_
 	{
         qDebug() <<  "Got crypto establish!";
         std::vector<std::uint8_t> data;
-        thorq_payload_crypto_get_data(message, data);
+        thorq_payload_crypto_establish_unpack(message, data);
 
 		if (!instance->cryptoEstablish(data))
         {
@@ -106,7 +105,7 @@ void handleMessageCrypto(ThorQ::Session* instance, const std::vector<std::uint8_
 	{
         qDebug() <<  "Got crypto verify!";
         std::vector<std::uint8_t> data;
-        thorq_payload_crypto_get_data(message, data);
+        thorq_payload_crypto_verify_unpack(message, data);
 
         if (instance->cryptoVerify(data))
 		{
@@ -472,14 +471,21 @@ void handleMessageFriend(ThorQ::Session* instance, const std::vector<std::uint8_
         }
         break;
 	}
-	case THORQ_COMMAND_ID_SESSION_DENY:
+    case THORQ_PAYLOAD_ROOM_
     {
         if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
         {
             QString name;
+            thorq_payload_
             thorq_payload_command_get_data(message, name);
 
-            ThorQ::Session* otherInstance = g_sessions->get(name);
+            auto sit = std::find_if(g_accounts.begin(), g_accounts.end(), [name](const ThorQ::Account* a) -> bool
+            {
+                if (a == nullptr) return false;
+
+                return a->username() == name;
+            });
+            ThorQ::Session* otherInstance = g_sessions .get(name);
 
             if (otherInstance == nullptr)
             {
