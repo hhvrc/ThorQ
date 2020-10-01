@@ -5,14 +5,19 @@
 #include <botan_all.h>
 
 #include "utils.h"
-#include "session.h"
+#include "instance.h"
 
 ThorQ::Account::Account(QObject* parent)
 	: QObject(parent)
 	, m_dbId(-1)
 	, m_username()
 	, m_passwordHash()
-//	, m_instances()
+    , l_sessions(QReadWriteLock::Recursive)
+    , m_sessions()
+    , l_instances(QReadWriteLock::Recursive)
+    , m_instances()
+    , l_relationships(QReadWriteLock::Recursive)
+    , m_relationships()
 {
 }
 
@@ -266,12 +271,37 @@ bool ThorQ::Account::verifyPassword(const QString& password)
 	return Botan::check_bcrypt(password.toStdString(), m_passwordHash.toStdString());
 }
 
-void ThorQ::Instance::requestOn(Instance* target)
+QSet<ThorQ::Session*> ThorQ::Account::sessions()
+{
+    l_sessions.lockForRead();
+    QSet<ThorQ::Session*> retval = m_sessions;
+    l_sessions.unlock();
+
+    return m_sessions;
+}
+QSet<ThorQ::Instance*> ThorQ::Account::instances()
+{
+    l_instances.lockForRead();
+    QSet<ThorQ::Instance*> retval = m_instances;
+    l_instances.unlock();
+
+    return retval;
+}
+QSet<ThorQ::Relationship*> ThorQ::Account::relationships()
+{
+    l_relationships.lockForRead();
+    QSet<ThorQ::Relationship*> retval = m_relationships;
+    l_relationships.unlock();
+
+    return retval;
+}
+
+void ThorQ::Account::requestSession(Account* sender, Account* receiver)
 {
     std::vector<std::uint8_t> response;
 
     // If account already has a partner or target account is self
-    if (m_partner != nullptr || target == this)
+    if (sender->pa != nullptr || target == this)
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SESSION, THORQ_PAYLOAD_SESSION_REQUEST, THORQ_PAYLOAD_ACK_DENIED);
         sendMessage(response, true, true);
@@ -441,4 +471,24 @@ bool ThorQ::Account::isInSteamVR() const
 bool ThorQ::Account::hasCollar() const
 {
     return (m_activityState & THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT) != 0;
+}
+
+void ThorQ::Account::sendMessage(const std::vector<std::uint8_t>& message, bool encrypt, bool reliable)
+{
+    auto recepients = instances();
+
+    for (Instance* instance : recepients)
+    {
+        instance->sendMessage(message, encrypt, reliable);
+    }
+}
+
+void ThorQ::Account::sendMessageToFriends(const std::vector<uint8_t> &message, bool encrypt, bool reliable)
+{
+    auto recepients = relationships();
+
+    for (Relationship* relationship : recepients)
+    {
+        relationship;
+    }
 }

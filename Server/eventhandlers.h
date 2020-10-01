@@ -1,7 +1,7 @@
 #ifndef EVENTHANDLERS_H
 #define EVENTHANDLERS_H
 
-#include <typedefs.h>
+#include <typedefs_global.h>
 
 void handleEventNewConnection(ENetPeer* peer);
 void handleEventMessage(ENetPeer* peer, ENetPacket* packet);

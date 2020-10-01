@@ -7,7 +7,7 @@
 #include <QVBoxLayout>
 #include <QGraphicsDropShadowEffect>
 
-const char* uiStatusList[THORQ_STATE_LOGIN_LOGGEDIN + 1][2]
+const char* uiStatusList[][2]
 {
     { "● Offline",                  "font-size: 16px; color: #FF0000" }, // THORQ_STATE_CONNECTION_DISCONNECTED
     { "● Disconnecting...",         "font-size: 16px; color: #FF0000" }, // THORQ_STATE_CONNECTION_DISCONNECTING

@@ -35,14 +35,7 @@ inline bool thorq_payload_session_is_valid(const std::vector<std::uint8_t>& payl
     return payload.size() > 2 && payload[1] == THORQ_PAYLOAD_SESSION_REQUEST;
 }
 
-inline void thorq_payload_session_cmd_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_SESSION cmd)
-{
-    payload.resize(2);
-    payload[0] = THORQ_PAYLOAD_ID_SESSION;
-    payload[1] = cmd;
-}
-
-inline void thorq_payload_session_request_pack(std::vector<std::uint8_t>& payload, const QString& username)
+inline void thorq_payload_session_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_SESSION cmd, const QString& username)
 {
     QByteArray usernameBytes = username.toUtf8();
 
@@ -59,7 +52,7 @@ inline void thorq_payload_session_get_cmd(const std::vector<std::uint8_t>& paylo
 
 inline void thorq_payload_session_get_data(const std::vector<std::uint8_t>& payload, QString& username)
 {
-    username = QString::fromUtf8((char*)(payload.data() + 2), payload.size() - 2);
+    username = QString::fromUtf8((char*)payload.data() + 2, payload.size() - 2);
 }
 
 #endif // THORQ_PAYLOAD_SESSION_H

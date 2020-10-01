@@ -105,7 +105,7 @@ endif()
 
 add_subdirectory(libs)
 include_directories(${GLOB_INCLUDE_DIRS})
-add_subdirectory(Client)
+#add_subdirectory(Client)
 add_subdirectory(Server)
 add_subdirectory(Keygen)
 

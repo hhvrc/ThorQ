@@ -7,7 +7,7 @@
 #include <mutex>
 #include <vector>
 
-#include <typedefs.h>
+#include <typedefs_global.h>
 #include <thorq_payload_version.h>
 
 #include "user.h"
@@ -319,8 +319,7 @@ private slots:
 	void handlePayloadHeartbeat(std::vector<std::uint8_t>& payload);
 	void handlePayloadVersion(std::vector<std::uint8_t>& payload);
 	void handlePayloadCrypto(std::vector<std::uint8_t>& payload);
-	void handlePayloadSystemID(std::vector<std::uint8_t>& payload);
-	void handlePayloadRegKey(std::vector<std::uint8_t>& payload);
+    void handlePayloadSystemID(std::vector<std::uint8_t>& payload);
 	void handlePayloadAccount(std::vector<std::uint8_t>& payload);
 	void handlePayloadRelation(std::vector<std::uint8_t>& payload);
 	void handlePayloadSession(std::vector<std::uint8_t>& payload);

@@ -1,5 +1,5 @@
-#ifndef TYPEDEFS_H
-#define TYPEDEFS_H
+#ifndef TYPEDEFS_GLOBAL_H
+#define TYPEDEFS_GLOBAL_H
 
 class QTimer;
 class QThread;
@@ -11,6 +11,6 @@ typedef struct _ENetHost ENetHost;
 typedef struct _ENetPacket ENetPacket;
 typedef struct _ENetAddress ENetAddress;
 
-namespace ThorQ { class Crypto; class Account; class Instance; }
+namespace ThorQ { class Crypto; }
 
-#endif // TYPEDEFS_H
+#endif // TYPEDEFS_GLOBAL_H

@@ -41,6 +41,7 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/version.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid_${BUILD_OSL}.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/serialization.cpp
 )
 set(${project}_HEADERS
     ${CMAKE_CURRENT_BINARY_DIR}/botan_all.h
@@ -49,9 +50,10 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
     ${CMAKE_CURRENT_SOURCE_DIR}/version.h
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/serialization.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/enums.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/typedefs.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_global.h
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_heartbeat.h
@@ -59,8 +61,7 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_crypto.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_systemid.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_account.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_block.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_friend.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_relation.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_session.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_moderation.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_announcement.h

@@ -31,7 +31,9 @@
 #include <thorq_payload_account.h>
 #include <thorq_payload_collar.h>
 #include <thorq_payload_version.h>
+#include <thorq_payload_account.h>
 #include <thorq_payload_systemid.h>
+#include <thorq_payload_session.h>
 #include <thorq_payload_heartbeat.h>
 #include <thorq_payload_announcement.h>
 #include <thorq_payload_systemid.h>
@@ -370,13 +372,13 @@ void Client::Service()
                     if ((actions & ACTION_SessionRequest) != 0)
                     {
                         std::vector<std::uint8_t> payload;
-                        thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_REQUEST, m_requestedPartner);
+                        thorq_payload_session_pack(payload, THORQ_PAYLOAD_SESSION_REQUEST, m_requestedPartner);
                         SendPayload(payload, true, true);
                     }
                     else if ((actions & ACTION_SessionAccept) != 0)
                     {
                         std::vector<std::uint8_t> payload;
-                        thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_ACCEPT, m_requestingPartner);
+                        thorq_payload_session_pack(payload, THORQ_PAYLOAD_SESSION_ACCEPT, m_requestedPartner);
                         SendPayload(payload, true, true);
                         m_requestingPartner.clear();
                         SetSessionState(THORQ_STATE_SESSION_JOINING);
@@ -384,7 +386,7 @@ void Client::Service()
                     else if ((actions & ACTION_SessionDeny) != 0)
                     {
                         std::vector<std::uint8_t> payload;
-                        thorq_payload_command_pack(payload, THORQ_COMMAND_ID_SESSION_DENY, m_requestingPartner);
+                        thorq_payload_session_pack(payload, THORQ_PAYLOAD_SESSION_DENY, m_requestedPartner);
                         SendPayload(payload, true, true);
                         m_requestingPartner.clear();
                         SetSessionState(THORQ_STATE_SESSION_NONE);
@@ -394,25 +396,12 @@ void Client::Service()
         }
         else if (LoginState() == THORQ_STATE_LOGIN_LOGGEDOUT)
         {
-            if ((actions & ACTION_SendRegKey) != 0)
-            {
-                if (AuthState() == THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT)
-                {
-                    std::vector<std::uint8_t> payload;
-
-                    SCOPELOCK(l_registrationKey);
-                    thorq_payload_auth_pack(payload, THORQ_PAYLOAD_AUTH_REGKEY, m_registrationKey.toUtf8());
-
-                    SendPayload(payload, true, true);
-                    SetAuthState(THORQ_STATE_AUTH_REGKEY_CHECKING);
-                }
-            }
-            else if ((actions & ACTION_Login) != 0)
+            if ((actions & ACTION_Login) != 0)
             {
                 std::vector<std::uint8_t> payload;
 
                 SCOPELOCK(l_loginInfo);
-                thorq_payload_login_pack(payload, m_username, m_password);
+                thorq_payload_account_login_pack(payload, m_username, m_password);
                 SendPayload(payload, true, true);
 
                 SetLoginState(THORQ_STATE_LOGIN_LOGGINGIN);
@@ -615,13 +604,7 @@ void Client::HandleMessage(ENetPacket* packet)
 		{
 			handlePayloadSystemID(message);
 		}
-		return;
-	case THORQ_PAYLOAD_ID_REGKEY:
-		if (thorq_payload_regkey_is_valid(message))
-		{
-			handlePayloadRegKey(message);
-		}
-		return;
+        return;
 	case THORQ_PAYLOAD_ID_ACCOUNT:
 		if (thorq_payload_account_is_valid(message))
 		{
@@ -788,28 +771,6 @@ void Client::handlePayloadSystemID(std::vector<std::uint8_t>& payload)
         qDebug() << "AUTH: Unexpected message:" << cmd;
 		break;
     }
-}
-void Client::handlePayloadRegKey(std::vector<std::uint8_t>& payload)
-{
-	std::vector<std::uint8_t> response;
-
-	THORQ_PAYLOAD_REGKEY cmd;
-	thorq_payload_regkey_get_cmd(payload, cmd);
-
-	switch (cmd) {
-	case THORQ_PAYLOAD_REGKEY_REQUEST:
-		thorq_payload_regkey_pack(response, THORQ_PAYLOAD_REGKEY_AWAITING_INPUT);
-		SendPayload(response);
-		SetAuthState(THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT);
-		emit RequestingRegistrationKey();
-		break;
-	case THORQ_PAYLOAD_REGKEY_OK:
-		SetAuthState(THORQ_STATE_AUTH_OK);
-		break;
-	default:
-		qDebug() << "AUTH: Unexpected message:" << cmd;
-		break;
-	}
 }
 void Client::handlePayloadAccount(std::vector<std::uint8_t>& payload)
 {

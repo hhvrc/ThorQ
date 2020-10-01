@@ -21,14 +21,14 @@
 
 #include "utils.h"
 #include "account.h"
-#include "session.h"
+#include "instance.h"
 #include "messagehandlers.h"
 
 void handleEventNewConnection(ENetPeer* peer)
 {
-	// Dont worry, this is ok
+    // Dont worry, its ok to have a seemingly dangling pointer here (ENet keeps track of the pointer)
+
     ThorQ::Instance* instance = new ThorQ::Instance(peer);
-	instance->setConnectionState(THORQ_STATE_CONNECTION_CONNECTED);
 
     std::vector<std::uint8_t> message;
 
@@ -55,9 +55,6 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 		return;
 
     auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
-
-	if (instance->connectionState() != THORQ_STATE_CONNECTION_CONNECTED)
-		return;
 
 	std::vector<std::uint8_t> message(packet->data, packet->data + packet->dataLength);
 
@@ -93,17 +90,17 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
             return;
         }
         break;
-    case THORQ_PAYLOAD_ID_REGKEY:
-        if (thorq_payload_regkey_is_valid(message))
-        {
-            handleMessageRegKey(instance, message);
-            return;
-        }
-        break;
     case THORQ_PAYLOAD_ID_ACCOUNT:
         if (thorq_payload_account_is_valid(message))
         {
             handleMessageAccount(instance, message);
+            return;
+        }
+        break;
+    case THORQ_PAYLOAD_ID_RELATION:
+        if (thorq_payload_relation_is_valid(message))
+        {
+            handleMessageRelation(instance, message);
             return;
         }
         break;
@@ -113,20 +110,6 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
             handleMessageSession(instance, message);
             return;
         }
-        break;
-    case THORQ_PAYLOAD_ID_FRIEND:
-        if (thorq_payload_friend_is_valid(message))
-		{
-            handleMessageFriend(instance, message);
-			return;
-		}
-		break;
-    case THORQ_PAYLOAD_ID_ROOM:
-        if (thorq_payload_room_is_valid(message))
-		{
-            handleMessageRoom(instance, message);
-			return;
-		}
         break;
     case THORQ_PAYLOAD_ID_MODERATION:
         if (thorq_payload_moderation_is_valid(message))
@@ -174,11 +157,10 @@ void handleEventDisconnect(ENetPeer* peer)
         qDebug() << "User connected from [" << enet_peer_address_str(peer) << "] disconnected";
     }
 
-    // Automatically notifies and handles disconnection
-    instance->setConnectionState(THORQ_STATE_CONNECTION_DISCONNECTED);
-
 	peer->data = nullptr;
-	delete instance;
+
+    // Automatically notifies others
+    instance->deleteLater();
 }
 
 void handleEventTimeout(ENetPeer* peer)
@@ -198,9 +180,8 @@ void handleEventTimeout(ENetPeer* peer)
         qDebug() << "User connected from [" << enet_peer_address_str(peer) << "] timed out";
     }
 
-    // Automatically notifies and handles disconnection
-    instance->setConnectionState(THORQ_STATE_CONNECTION_DISCONNECTED);
+    peer->data = nullptr;
 
-	peer->data = nullptr;
-	delete instance;
+    // Automatically notifies others
+    instance->deleteLater();
 }

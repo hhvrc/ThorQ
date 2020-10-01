@@ -7,7 +7,7 @@
 #include <thorq_message.h>
 
 #include "singletons.h"
-#include "session.h"
+#include "instance.h"
 
 QString enet_peer_address_str(const ENetPeer* addr)
 {

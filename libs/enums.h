@@ -21,12 +21,11 @@ enum THORQ_PAYLOAD_ID : std::uint8_t
     THORQ_PAYLOAD_ID_CRYPTO,       ///< Cryptographic handshake messages
 
     THORQ_PAYLOAD_ID_SYSTEMID,     ///< SystemID messages
-    THORQ_PAYLOAD_ID_REGKEY,       ///< Registration-key messages
 
 	THORQ_PAYLOAD_ID_ACCOUNT,      ///< Create/Delete/Recover/Login/Logout
 	THORQ_PAYLOAD_ID_RELATION,     ///< Friend/Block/AcceptFriend/DenyFriend/UnFriend/GetRelations
-	THORQ_PAYLOAD_ID_SESSION,      ///< SetState
-	THORQ_PAYLOAD_ID_ROOM,
+
+    THORQ_PAYLOAD_ID_SESSION,      ///< Sessions with other people
 
 	THORQ_PAYLOAD_ID_MODERATION,   ///< Bans/Reporting
 	THORQ_PAYLOAD_ID_ANNOUNCEMENT, ///< Server notifications/Admin notifications
@@ -91,32 +90,34 @@ enum THORQ_DISCONNECT_REASON : std::uint8_t
 ////////////////////////////////////////////////////
 
 /// Friend relationship status
-enum THORQ_RELATIONSHIP_FRIEND
+enum THORQ_RELATIONSHIP_STATUS : std::uint8_t
 {
-	THORQ_RELATIONSHIP_FRIEND_NONE,     ///< No friendship status
-	THORQ_RELATIONSHIP_FRIEND_OUTGOING, ///< Incoming friend-request
-	THORQ_RELATIONSHIP_FRIEND_INCOMING, ///< Outgoing friend-request
-	THORQ_RELATIONSHIP_FRIEND_FRIENDS,  ///< Account is friended
+    THORQ_RELATIONSHIP_STATUS_MUTUAL_BLOCK, ///< Both accounts have each other blocked
+    THORQ_RELATIONSHIP_STATUS_BLOCKED,      ///< This account is being blocked by the other account
+    THORQ_RELATIONSHIP_STATUS_BLOCKING,     ///< This account is blocking the other account
+    THORQ_RELATIONSHIP_STATUS_NONE,         ///< No friendship status
+    THORQ_RELATIONSHIP_STATUS_FRIENDED,     ///< Incoming friend-request
+    THORQ_RELATIONSHIP_STATUS_FRIENDING,    ///< Outgoing friend-request
+    THORQ_RELATIONSHIP_STATUS_FRIENDS,      ///< Account is friended
 };
 
 /// Actions to be taken on session requested
-enum THORQ_RELATIONSHIP_BLOCK
+enum THORQ_RELATIONSHIP_AUTHORITY : std::uint8_t
 {
-	THORQ_RELATIONSHIP_BLOCK_NONE,     ///< Both have each other un-blocked
-	THORQ_RELATIONSHIP_BLOCK_BLOCKING, ///< This account is blocking the other account
-	THORQ_RELATIONSHIP_BLOCK_BLOCKED,  ///< This account is being blocked by the other account
-	THORQ_RELATIONSHIP_BLOCK_MUTUAL,   ///< Both accounts have each other blocked
+    THORQ_RELATIONSHIP_AUTHORITY_REJECT,    ///< Always reject this persons requests
+    THORQ_RELATIONSHIP_AUTHORITY_SILENT,    ///< Persons requests will not prompt me
+    THORQ_RELATIONSHIP_AUTHORITY_NOTIFY,    ///< Prompt me if this person requests control
+    THORQ_RELATIONSHIP_AUTHORITY_ACCEPT,    ///< Accept if this person requests
+    THORQ_RELATIONSHIP_AUTHORITY_EXCLUSIVE  ///< This person can invoke exclusive access to me (will kick everyone else out)
 };
 
-/// Actions to be taken on session requested
-enum THORQ_RELATIONSHIP_AUTHORITY
+enum THORQ_ACCOUNT_AUTHORITY : std::uint8_t
 {
-	THORQ_RELATIONSHIP_AUTHORITY_NONE,     ///< Always reject this persons requests
-	THORQ_RELATIONSHIP_AUTHORITY_REQUEST,  ///< Prompt me if this person requests control
-	THORQ_RELATIONSHIP_AUTHORITY_ACCEPT,   ///< Accept if this person requests, and im not in a session
-	THORQ_RELATIONSHIP_AUTHORITY_OVERRIDE, ///< Accept if this person requests, even if im in another session
+    THORQ_ACCOUNT_AUTHORITY_NONE,          ///< Just a normie
+    THORQ_ACCOUNT_AUTHORITY_MODERATOR,     ///< Can moderate users (kick/ban)
+    THORQ_ACCOUNT_AUTHORITY_ADMINISTRATOR, ///< Can manage server parameters
+    THORQ_ACCOUNT_AUTHORITY_FOUNDER        ///< Exclusive to HeavenVR
 };
-
 
 ////////////////////////////////////////////////////
 /// STATE MACHINES
@@ -149,11 +150,7 @@ enum THORQ_STATE_AUTH
 	THORQ_STATE_AUTH_NONE = THORQ_STATE_CRYPTO_ACTIVE,                           ///< Client has not been authenticated yet
 
 	THORQ_STATE_AUTH_HWID_REQUESTING,                                            ///< Server has requested hardwareID from client
-	THORQ_STATE_AUTH_HWID_CHECKING = THORQ_STATE_AUTH_HWID_REQUESTING,           ///< Client has sent SystemID to server and is awaiting a response
-
-	THORQ_STATE_AUTH_REGKEY_REQUESTING,                                          ///< Server has requested registration key from client
-	THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT = THORQ_STATE_AUTH_REGKEY_REQUESTING, ///< Client is requesting user input for a registration key
-	THORQ_STATE_AUTH_REGKEY_CHECKING,                                            ///< Client has semt registration key to server and is awaiting a response
+    THORQ_STATE_AUTH_HWID_CHECKING = THORQ_STATE_AUTH_HWID_REQUESTING,           ///< Client has sent SystemID to server and is awaiting a response
 
 	THORQ_STATE_AUTH_OK,                                                         ///< Server authenticated client, client can now access the api
 };

@@ -30,7 +30,7 @@
 #define SINGLETON_BASE
 #include "singletons.h"
 #include "account.h"
-#include "session.h"
+#include "instance.h"
 #include "eventhandlers.h"
 
 #define PARSE_PORT false

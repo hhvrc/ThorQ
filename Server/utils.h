@@ -3,8 +3,10 @@
 
 #include <vector>
 #include <QString>
-#include <typedefs.h>
-#include "singletons.h"
+
+#include <typedefs_global.h>
+
+#include "typedefs_server.h"
 
 QString enet_peer_address_str(const ENetPeer* addr);
 void broadcastNotification(std::vector<std::uint8_t>& message, bool reliable = true);
