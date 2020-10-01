@@ -266,32 +266,42 @@ void ThorQ::Account::setPassword(const QString& password)
 	qDebug() << "Hash:" << hash.c_str();
 }
 
-bool ThorQ::Account::verifyPassword(const QString& password)
+bool ThorQ::Account::verifyPassword(const QString& password) const
 {
-	return Botan::check_bcrypt(password.toStdString(), m_passwordHash.toStdString());
+    return Botan::check_bcrypt(password.toStdString(), m_passwordHash.toStdString());
 }
 
-QSet<ThorQ::Session*> ThorQ::Account::sessions()
+ThorQ::Account *ThorQ::Account::master() const
 {
-    l_sessions.lockForRead();
+
+}
+
+bool ThorQ::Account::isExclusive() const
+{
+
+}
+
+QSet<ThorQ::Session*> ThorQ::Account::sessions() const
+{
+    const_cast<QReadWriteLock*>(&l_sessions)->lockForRead();
     QSet<ThorQ::Session*> retval = m_sessions;
-    l_sessions.unlock();
+    const_cast<QReadWriteLock*>(&l_sessions)->unlock();
 
     return m_sessions;
 }
-QSet<ThorQ::Instance*> ThorQ::Account::instances()
+QSet<ThorQ::Instance*> ThorQ::Account::instances() const
 {
-    l_instances.lockForRead();
+    const_cast<QReadWriteLock*>(&l_instances)->lockForRead();
     QSet<ThorQ::Instance*> retval = m_instances;
-    l_instances.unlock();
+    const_cast<QReadWriteLock*>(&l_instances)->unlock();
 
     return retval;
 }
-QSet<ThorQ::Relationship*> ThorQ::Account::relationships()
+QSet<ThorQ::Relationship*> ThorQ::Account::relationships() const
 {
-    l_relationships.lockForRead();
+    const_cast<QReadWriteLock*>(&l_relationships)->lockForRead();
     QSet<ThorQ::Relationship*> retval = m_relationships;
-    l_relationships.unlock();
+    const_cast<QReadWriteLock*>(&l_relationships)->unlock();
 
     return retval;
 }

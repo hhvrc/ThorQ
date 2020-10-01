@@ -26,11 +26,14 @@ public:
 	void setUsername(const QString& username);
 
     void setPassword(const QString& password);
-	bool verifyPassword(const QString& password);
+    bool verifyPassword(const QString& password) const;
 
-    QSet<Session*> sessions();
-    QSet<Instance*> instances();
-    QSet<Relationship*> relationships();
+    Account* master() const;
+    bool isExclusive() const;
+
+    QSet<Session*> sessions() const;
+    QSet<Instance*> instances() const;
+    QSet<Relationship*> relationships() const;
 
     static void requestSession(Account* sender, Account* receiver);
     bool requestAcceptFrom(Instance* sender);
