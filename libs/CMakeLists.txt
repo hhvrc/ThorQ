@@ -53,20 +53,19 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/enums.h
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs.h
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_heartbeat.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_version.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_crypto.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_systemid.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_regkey.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_account.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_relation.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_heartbeat.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_version.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_crypto.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_systemid.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_account.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_block.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_friend.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_session.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_room.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_moderation.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_announcement.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_collar.h
-	${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_ack.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_moderation.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_announcement.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_collar.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_ack.h
 )
 
 # Stop botan from fucking up

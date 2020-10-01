@@ -30,7 +30,6 @@
 #include <thorq_payload_crypto.h>
 #include <thorq_payload_account.h>
 #include <thorq_payload_collar.h>
-#include <thorq_payload_regkey.h>
 #include <thorq_payload_version.h>
 #include <thorq_payload_systemid.h>
 #include <thorq_payload_heartbeat.h>
@@ -798,7 +797,7 @@ void Client::handlePayloadRegKey(std::vector<std::uint8_t>& payload)
 	thorq_payload_regkey_get_cmd(payload, cmd);
 
 	switch (cmd) {
-	case THORQ_PAYLOAD_REGKEY_REQ:
+	case THORQ_PAYLOAD_REGKEY_REQUEST:
 		thorq_payload_regkey_pack(response, THORQ_PAYLOAD_REGKEY_AWAITING_INPUT);
 		SendPayload(response);
 		SetAuthState(THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT);

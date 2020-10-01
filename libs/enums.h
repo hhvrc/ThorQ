@@ -45,9 +45,11 @@ enum THORQ_PAYLOAD_ACK : std::uint8_t
 	THORQ_PAYLOAD_ACK_NO_CHANGE,    ///< Command was ignored, because it didnt change anything
 
 	THORQ_PAYLOAD_ACK_DENIED,       ///< Command was denied
-	THORQ_PAYLOAD_ACK_INVALID,      ///< Command invalid
+    THORQ_PAYLOAD_ACK_INVALID,      ///< Command itself or its format is invalid
 	THORQ_PAYLOAD_ACK_LOGIN_NEEDED, ///< Client has not logged in
 	THORQ_PAYLOAD_ACK_UNAUTHORIZED, ///< Client has not authenticated (Crypto + Auth)
+
+    THORQ_PAYLOAD_ACK_ERROR         ///< Server experienced an error executing command
 };
 
 /// Id of a device or service that client has

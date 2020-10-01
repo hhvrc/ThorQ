@@ -1,8 +1,9 @@
 #ifndef THORQ_PAYLOAD_ACK_H
 #define THORQ_PAYLOAD_ACK_H
 
+#include <vector>
+#include <cstdint>
 #include <QString>
-#include <QByteArray>
 
 #include "enums.h"
 
@@ -11,11 +12,12 @@
  * @param payload
  * @return
  */
-inline bool thorq_payload_ack_is_valid(const QByteArray& payload)
+inline bool thorq_payload_ack_is_valid(const std::vector<std::uint8_t>& payload)
 {
-    return payload.size() >= 3
+    return payload.size() == 4
         && payload[0] == THORQ_PAYLOAD_ID_ACK
-        && payload[1] <  THORQ_PAYLOAD_ID_ACK; // payload id that gets acked can be anything else than an ack
+        && payload[1] <  THORQ_PAYLOAD_ID_ACK // payload id that gets acked can be anything else than an ack
+        && payload[3] <= THORQ_PAYLOAD_ACK_UNAUTHORIZED; // Enum max
 }
 
 /**
@@ -24,31 +26,13 @@ inline bool thorq_payload_ack_is_valid(const QByteArray& payload)
  * @param id
  * @param cmd
  */
-inline void thorq_payload_ack_pack(QByteArray& payload, THORQ_PAYLOAD_ID id, std::uint8_t cmd)
+inline void thorq_payload_ack_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ID id, std::uint8_t cmd, THORQ_PAYLOAD_ACK ack)
 {
-	payload.resize(3);
+    payload.resize(4);
 	payload[0] = THORQ_PAYLOAD_ID_ACK;
 	payload[1] = id;
 	payload[2] = cmd;
-}
-
-/**
- * @brief thorq_payload_ack_pack
- * @param payload
- * @param cmd
- * @param id
- * @param string
- */
-inline void thorq_payload_ack_pack(QByteArray& payload, std::uint8_t cmd, THORQ_PAYLOAD_ID id, const QString& string)
-{
-	QByteArray stringBytes = string.toUtf8();
-
-	payload.resize(3 + stringBytes.size());
-	payload[0] = THORQ_PAYLOAD_ID_ACK;
-	payload[1] = id;
-	payload[2] = cmd;
-
-	memcpy(payload.data() + 3, stringBytes.data(), stringBytes.size());
+    payload[3] = ack;
 }
 
 /**
@@ -56,7 +40,7 @@ inline void thorq_payload_ack_pack(QByteArray& payload, std::uint8_t cmd, THORQ_
  * @param payload
  * @param id
  */
-inline void thorq_payload_ack_get_id(const QByteArray& payload, THORQ_PAYLOAD_ID& id)
+inline void thorq_payload_ack_get_id(const std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ID& id)
 {
 	id = static_cast<THORQ_PAYLOAD_ID>(payload[1]);
 }
@@ -66,21 +50,19 @@ inline void thorq_payload_ack_get_id(const QByteArray& payload, THORQ_PAYLOAD_ID
  * @param payload
  * @param cmd
  */
-inline void thorq_payload_ack_get_cmd(const QByteArray& payload, std::uint8_t& cmd)
+inline void thorq_payload_ack_get_cmd(const std::vector<std::uint8_t>& payload, std::uint8_t& cmd)
 {
 	cmd = payload[2];
 }
 
 /**
- * @brief thorq_payload_ack_get_message
+ * @brief thorq_payload_ack_get_ack
  * @param payload
- * @param string
+ * @param cmd
  */
-inline void thorq_payload_ack_get_message(const QByteArray& payload, QString& string)
+inline void thorq_payload_ack_get_ack(const std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ACK& ack)
 {
-	string.resize(payload.size() - 3);
-
-	memcpy(string.data(), payload.data() + 3, payload.size() - 3);
+    ack = static_cast<THORQ_PAYLOAD_ACK>(payload[3]);
 }
 
 #endif // THORQ_PAYLOAD_ACK_H

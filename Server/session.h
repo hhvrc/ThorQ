@@ -14,16 +14,16 @@
 #include <typedefs.h>
 
 namespace ThorQ {
-class Session : public QObject
+class Instance : public QObject
 {
 	Q_OBJECT
 
-	Session(const Session&) = delete;
-	Session& operator=(const Session&) = delete;
+    Instance(const Instance&) = delete;
+    Instance& operator=(const Instance&) = delete;
 public:
-	Session(ENetPeer* peer, QObject* parent = nullptr);
-	Session(ENetPeer* peer, const std::string& name);
-	~Session();
+    Instance(ENetPeer* peer, QObject* parent = nullptr);
+    Instance(ENetPeer* peer, const std::string& name);
+    ~Instance();
 
 	void setAccount(Account* account);
 	Account* account() const;
@@ -32,22 +32,7 @@ public:
     const QByteArray& hwid() const;
 
 	void setPeer(ENetPeer* peer);
-	ENetPeer* peer() const;
-
-	void requestOn(Session* target);
-	bool requestAcceptFrom(Session* sender);
-	bool requestDenyFrom(Session* sender);
-	Session* partner() const;
-
-    void setIsInSteamVR(bool hasCollar);
-    void setHasCollar(bool hasCollar);
-
-    void setActivityState(quint8 state);
-    quint8 activityState() const;
-
-    bool isInSession() const;
-    bool isInSteamVR() const;
-    bool hasCollar() const;
+    ENetPeer* peer() const;
 
 	THORQ_STATE_CONNECTION connectionState() const;
 	void setConnectionState(THORQ_STATE_CONNECTION state);
@@ -56,10 +41,7 @@ public:
 	THORQ_STATE_AUTH authState() const;
 	void setAuthState(THORQ_STATE_AUTH state);
 	THORQ_STATE_LOGIN loginState() const;
-	void setLoginState(THORQ_STATE_LOGIN state);
-	THORQ_STATE_SESSION sessionState() const;
-	void setSessionState(THORQ_STATE_SESSION state);
-
+    void setLoginState(THORQ_STATE_LOGIN state);
 
 	void cryptoInit();
 	bool cryptoEstablish(const std::vector<std::uint8_t>& data);
@@ -88,10 +70,10 @@ private:
 	QByteArray m_hwid;
 	Account* m_account;
 
-	Session* m_partner;
+    Instance* m_partner;
 
-    QSet<Session*> m_incoming_requests;
-    QSet<Session*> m_outgoing_requests;
+    QSet<Instance*> m_incoming_requests;
+    QSet<Instance*> m_outgoing_requests;
 
 	Crypto* m_crypto;
     quint8 m_verificationData[THORQ_CRYPTO_VERIFICATION_DATA_LENGTH];

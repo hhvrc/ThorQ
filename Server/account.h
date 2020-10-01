@@ -26,7 +26,24 @@ public:
 	bool verifyPassword(const QString& password);
 
     QSet<Account*> friends();
-    QSet<Session*> instances();
+    QSet<Instance*> instances();
+
+    void requestOn(Instance* target);
+    bool requestAcceptFrom(Instance* sender);
+    bool requestDenyFrom(Instance* sender);
+    Instance* partner() const;
+
+    void setIsInSteamVR(bool hasCollar);
+    void setHasCollar(bool hasCollar);
+
+    THORQ_STATE_SESSION sessionState() const;
+    void setSessionState(THORQ_STATE_SESSION state);
+    void setActivityState(quint8 state);
+    quint8 activityState() const;
+
+    bool isInSession() const;
+    bool isInSteamVR() const;
+    bool hasCollar() const;
 signals:
 	void usernameChanged(const QString& username);
 private:
@@ -39,7 +56,7 @@ private:
 	bool m_isAdmin;
 
     QSet<Account*> m_friends;
-    QSet<Session*> m_instances;
+    QSet<Instance*> m_instances;
     QSet<Relationship*> m_relationships;
 };
 }

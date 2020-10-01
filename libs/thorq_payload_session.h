@@ -35,19 +35,31 @@ inline bool thorq_payload_session_is_valid(const std::vector<std::uint8_t>& payl
     return payload.size() > 2 && payload[1] == THORQ_PAYLOAD_SESSION_REQUEST;
 }
 
-inline void thorq_payload_session_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_SESSION cmd)
+inline void thorq_payload_session_cmd_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_SESSION cmd)
 {
     payload.resize(2);
     payload[0] = THORQ_PAYLOAD_ID_SESSION;
     payload[1] = cmd;
 }
 
-inline void thorq_payload_session_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_SESSION cmd, const QString& username)
+inline void thorq_payload_session_request_pack(std::vector<std::uint8_t>& payload, const QString& username)
 {
-    payload.resize(2 + username.size());
+    QByteArray usernameBytes = username.toUtf8();
+
+    payload.resize(2 + usernameBytes.size());
     payload[0] = THORQ_PAYLOAD_ID_SESSION;
-    payload[1] = cmd;
-    memcpy(payload.data() + 2, username.data());
+    payload[1] = THORQ_PAYLOAD_SESSION_REQUEST;
+    memcpy(payload.data() + 2, usernameBytes.data(), usernameBytes.size());
+}
+
+inline void thorq_payload_session_get_cmd(const std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_SESSION& cmd)
+{
+    cmd = static_cast<THORQ_PAYLOAD_SESSION>(payload[0]);
+}
+
+inline void thorq_payload_session_get_data(const std::vector<std::uint8_t>& payload, QString& username)
+{
+    username = QString::fromUtf8((char*)(payload.data() + 2), payload.size() - 2);
 }
 
 #endif // THORQ_PAYLOAD_SESSION_H

@@ -1,4 +1,0 @@
-#ifndef THORQ_PAYLOAD_ROOM_H
-#define THORQ_PAYLOAD_ROOM_H
-
-#endif // THORQ_PAYLOAD_ROOM_H

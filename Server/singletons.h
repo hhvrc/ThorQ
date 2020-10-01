@@ -14,7 +14,7 @@ QSet<ThorQ::Session*> g_sessions;
 extern ENetHost* g_server;
 extern QSet<ENetPeer*> g_peers;
 extern QSet<ThorQ::Account*> g_accounts;
-extern QSet<ThorQ::Session*> g_sessions;
+extern QSet<ThorQ::Instance*> g_sessions;
 #endif
 
 #endif // SINGETONS_H

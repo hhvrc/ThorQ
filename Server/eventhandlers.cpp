@@ -10,7 +10,6 @@
 #include <thorq_payload_version.h>
 #include <thorq_payload_crypto.h>
 #include <thorq_payload_systemid.h>
-#include <thorq_payload_regkey.h>
 #include <thorq_payload_account.h>
 #include <thorq_payload_session.h>
 //#include <thorq_payload_friend.h>
@@ -28,7 +27,7 @@
 void handleEventNewConnection(ENetPeer* peer)
 {
 	// Dont worry, this is ok
-	ThorQ::Session* instance = new ThorQ::Session(peer);
+    ThorQ::Instance* instance = new ThorQ::Instance(peer);
 	instance->setConnectionState(THORQ_STATE_CONNECTION_CONNECTED);
 
     std::vector<std::uint8_t> message;
@@ -55,7 +54,7 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 	if (peer->data == nullptr)
 		return;
 
-	auto instance = reinterpret_cast<ThorQ::Session*>(peer->data);
+    auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
 	if (instance->connectionState() != THORQ_STATE_CONNECTION_CONNECTED)
 		return;
@@ -163,7 +162,7 @@ void handleEventDisconnect(ENetPeer* peer)
 	if (peer->data == nullptr)
 		return;
 
-    auto instance = reinterpret_cast<ThorQ::Session*>(peer->data);
+    auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
     if (instance->account() != nullptr)
     {
@@ -187,7 +186,7 @@ void handleEventTimeout(ENetPeer* peer)
 	if (peer->data == nullptr)
 		return;
 
-    auto instance = reinterpret_cast<ThorQ::Session*>(peer->data);
+    auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
 
     if (instance->account() != nullptr)
     {

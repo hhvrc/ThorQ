@@ -75,7 +75,7 @@ void exitCleanup()
                 {
                     if (event.peer->data != nullptr)
                     {
-                        (reinterpret_cast<ThorQ::Session*>(event.peer->data))->setPeer(nullptr);
+                        (reinterpret_cast<ThorQ::Instance*>(event.peer->data))->setPeer(nullptr);
                     }
                     enet_peer_reset(event.peer);
                     auto it = std::find(g_peers.begin(), g_peers.end(), event.peer);
@@ -99,7 +99,7 @@ void exitCleanup()
     qDebug() << "All clients are disconnected,\nIf i crash now, that is totally ok!";
 
     // This is very likely to crash the server, so do this last
-    for (ThorQ::Session* instance : g_sessions)
+    for (ThorQ::Instance* instance : g_sessions)
         delete instance;
 }
 
@@ -158,16 +158,14 @@ int main(int argc, char** argv)
         db.exec("CREATE TABLE IF NOT EXISTS system_ids("
                 "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 "system_id TEXT NOT NULL UNIQUE,"
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)");   // Unique SystemID of a cmoputer
+                "banned_at DATETIME,"
+                "registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)");   // Unique SystemID of a cmoputer
         db.exec("CREATE TABLE IF NOT EXISTS auth_tokens("
                 "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 "auth_token TEXT NOT NULL UNIQUE,"
+                "system_id INTEGER NOT NULL,"
+                "account_id INTEGER NOT NULL,"
                 "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)"); // Authentication Token generated at login
-        db.exec("CREATE TABLE IF NOT EXISTS reg_keys("
-                "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                "reg_key TEXT NOT NULL UNIQUE,"
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-                "claimed_at DATETIME DEFAULT NULL)"); // Authentication Token generated at login
         db.exec("CREATE TABLE IF NOT EXISTS accounts("
                 "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 "username TEXT NOT NULL UNIQUE,"
@@ -175,7 +173,12 @@ int main(int argc, char** argv)
                 "is_admin BOOLEAN NOT NULL DEFAULT FALSE,"
                 "last_login DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                 "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-                "updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+                "updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                "deleted_at DATETIME)");
+        db.exec("CREATE TABLE IF NOT EXISTS systemid_account_map("
+                "systemid_id INTEGER NOT NULL,"
+                "account_id INTEGER NOT NULL,"
+                "established_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)");   // Unique SystemID of a cmoputer
         db.exec("CREATE TABLE IF NOT EXISTS account_blocks("
                 "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 "guid TEXT NOT NULL UNIQUE,"
@@ -189,19 +192,17 @@ int main(int argc, char** argv)
                 "receiver_id INTEGER NOT NULL,"
                 "pending BOOLEAN NOT NULL, "
                 "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)");
-        db.exec("CREATE TABLE IF NOT EXISTS authtoken_systemid_map("
-                "auth_token INTEGER NOT NULL UNIQUE,"
-                "system_id INTEGER NOT NULL,"
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-                "updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)"); // An authkey is only valid from one computer, but a computer can have several authKeys
+        db.exec("CREATE TABLE IF NOT EXISTS userLog("
+                "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,"
+                "system_id INTEGER,"
+                "account_id INTEGER,"
+                "info TEXT NOT NULL)");
 
         db.close();
 
         ThorQ::Account::NewAccount("yeet", "yeet", "yeet");
         ThorQ::Account::NewAccount("yeet1", "yeet1", "yeet1");
         ThorQ::Account::NewAccount("yeet2", "yeet2", "yeet2");
-        //db.exec("CREATE TABLE IF NOT EXISTS userLog(timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, system_id TEXT NOT NULL, username TEXT NOT NULL, text TEXT NOT NULL)");
-        //db.exec("CREATE TABLE IF NOT EXISTS systemIdUserLog(timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, system_id TEXT NOT NULL, userId INTEGER NOT NULL)");
         return EXIT_SUCCESS;
     }
 
