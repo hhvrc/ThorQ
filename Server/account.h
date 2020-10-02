@@ -38,7 +38,6 @@ public:
     static void requestSession(Account* sender, Account* receiver);
     bool requestAcceptFrom(Instance* sender);
     bool requestDenyFrom(Instance* sender);
-    Instance* partner() const;
 
     void setIsInSteamVR(bool hasCollar);
     void setHasCollar(bool hasCollar);
@@ -52,9 +51,11 @@ public:
     bool isInSteamVR() const;
     bool hasCollar() const;
 signals:
+    void usernameChanged(const QString& username);
+    void masterChanged(const Account* master);
+    void isExclusiveChanged(bool isExclusive);
     void isOnlineChanged(bool isOnline);
     void statusChanged();
-	void usernameChanged(const QString& username);
 public slots:
     void ban();
     void fuckYou();
@@ -67,14 +68,16 @@ private slots:
 private:
     int m_dbId;
 
+    QReadWriteLock l_basics;
 	QString m_username;
 	QString m_passwordHash;
 
     THORQ_STATE_SESSION m_sessionState;
     THORQ_ACCOUNT_AUTHORITY m_authority;
 
-    Account* m_master; // This persons master
-    bool m_exclusive;  // This person is exclusive to their master
+    QReadWriteLock l_master;
+    Account* m_master;    // This persons master
+    bool     m_exclusive; // This person is exclusive to their master
 
     QReadWriteLock l_sessions;
     QSet<Session*> m_sessions;

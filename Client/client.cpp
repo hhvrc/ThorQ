@@ -353,7 +353,7 @@ void Client::Service()
 
                 SCOPELOCK(l_loginInfo);
 				thorq_payload_account_logout_pack(payload);
-                SendPayload(payload, true, true);
+                SendPayload(payload, THORQ_CHANNEL_MAIN, true, true);
 
 				SetLoginState(THORQ_STATE_LOGIN_LOGGINGOUT);
             }
@@ -365,7 +365,7 @@ void Client::Service()
                 {
                     std::vector<std::uint8_t> payload;
                     thorq_payload_collar_pack(payload, collarState & 0xFF, (collarState >> 56) & 0xFF, (collarState >> 48) & 0xFF, (collarState >> 40) & 0xFF, (collarState >> 32) & 0xFF);
-                    SendPayload(payload, true, false);
+                    SendPayload(payload, THORQ_CHANNEL_IMPULSE, true, false);
                 }
                 else
                 {
@@ -373,13 +373,13 @@ void Client::Service()
                     {
                         std::vector<std::uint8_t> payload;
                         thorq_payload_session_pack(payload, THORQ_PAYLOAD_SESSION_REQUEST, m_requestedPartner);
-                        SendPayload(payload, true, true);
+                        SendPayload(payload, THORQ_CHANNEL_MAIN, true, true);
                     }
                     else if ((actions & ACTION_SessionAccept) != 0)
                     {
                         std::vector<std::uint8_t> payload;
                         thorq_payload_session_pack(payload, THORQ_PAYLOAD_SESSION_ACCEPT, m_requestedPartner);
-                        SendPayload(payload, true, true);
+                        SendPayload(payload, THORQ_CHANNEL_MAIN, true, true);
                         m_requestingPartner.clear();
                         SetSessionState(THORQ_STATE_SESSION_JOINING);
                     }
@@ -387,7 +387,7 @@ void Client::Service()
                     {
                         std::vector<std::uint8_t> payload;
                         thorq_payload_session_pack(payload, THORQ_PAYLOAD_SESSION_DENY, m_requestedPartner);
-                        SendPayload(payload, true, true);
+                        SendPayload(payload, THORQ_CHANNEL_MAIN, true, true);
                         m_requestingPartner.clear();
                         SetSessionState(THORQ_STATE_SESSION_NONE);
                     }
@@ -402,7 +402,7 @@ void Client::Service()
 
                 SCOPELOCK(l_loginInfo);
                 thorq_payload_account_login_pack(payload, m_username, m_password);
-                SendPayload(payload, true, true);
+                SendPayload(payload, THORQ_CHANNEL_MAIN, true, true);
 
                 SetLoginState(THORQ_STATE_LOGIN_LOGGINGIN);
             }

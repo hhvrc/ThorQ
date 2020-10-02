@@ -11,7 +11,7 @@ message("Configuring ${project}...")
 
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/parser.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/hasher.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/database.cpp
 
@@ -28,7 +28,7 @@ set(${project}_SOURCES
 )
 set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/server.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/parser.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.h
     ${CMAKE_CURRENT_SOURCE_DIR}/hasher.h
     ${CMAKE_CURRENT_SOURCE_DIR}/database.h
 

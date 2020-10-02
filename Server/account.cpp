@@ -258,18 +258,21 @@ void ThorQ::Account::setPassword(const QString& password)
 {
     PasswordHasher* hasher = new PasswordHasher(password, this);
 
-    connect(hasher, &PasswordHasher::hashingDone, this, &Account::onPasswordHashingDone);
-    connect(hasher, &QThread::finished, hasher, &QObject::deleteLater);
-    hasher->start(QThread::LowPriority);
-}
+    hasher->setAutoDelete(true);
 
+    connect(hasher, &PasswordHasher::finished, this, &Account::onPasswordHashingDone);
+
+    QThreadPool::globalInstance()->start(hasher);
+}
 void ThorQ::Account::verifyPassword(const QString& password) const
 {
-    PasswordVerifier* checker = new PasswordVerifier(m_passwordHash, password, const_cast<Account*>(this));
+    PasswordVerifier* verifier = new PasswordVerifier(m_passwordHash, password, const_cast<Account*>(this));
 
-    connect(checker, &PasswordVerifier::verificationDone, this, &Account::onPasswordVerificationDone);
-    connect(checker, &QThread::finished, checker, &QObject::deleteLater);
-    checker->start(QThread::LowPriority);
+    verifier->setAutoDelete(true);
+
+    connect(verifier, &PasswordVerifier::finished, this, &Account::onPasswordVerificationDone);
+
+    QThreadPool::globalInstance()->start(verifier);
 }
 
 ThorQ::Account *ThorQ::Account::master() const

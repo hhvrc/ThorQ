@@ -1,5 +1,7 @@
 #include "server.h"
 
+#include <cstdint>
+
 #include <QThread>
 #include <QDebug>
 
@@ -17,6 +19,7 @@
 #pragma GCC diagnostic pop
 #endif
 
+#include <thorq_message.h>
 #include <thorq_payload_version.h>
 #include <thorq_payload_heartbeat.h>
 
@@ -24,123 +27,118 @@
 #include "account.h"
 #include "instance.h"
 
-bool enet_was_initialized = false;
 
-QString ThorQ::Server::version()
+std::atomic<bool> g_initialized = false;
+
+QString ThorQ::Server::Version()
 {
     return QString("ENet-%1.%2.%3")
             .arg(ENET_VERSION_MAJOR)
             .arg(ENET_VERSION_MINOR)
             .arg(ENET_VERSION_PATCH);
 }
-bool ThorQ::Server::Init()
+bool ThorQ::Server::Initialize()
 {
-    if (!enet_was_initialized && enet_initialize() < 0)
+    if (!g_initialized && enet_initialize() < 0)
     {
         qWarning() << "Failed to initialize ENet\n";
         return false;
     }
-    enet_was_initialized = true;
+    g_initialized = true;
     return false;
 }
-void ThorQ::Server::DeInit()
+void ThorQ::Server::DeInitialize()
 {
     enet_deinitialize();
-    enet_was_initialized = false;
+    g_initialized = false;
 }
 
-ThorQ::Server::Server(QObject *parent)
-    : QThread(parent)
+bool ThorQ::Server::setup(uint16_t port, std::size_t maxPeers, uint8_t channelCount, bool noDelay)
 {
-}
+    ENetAddress address;
+    address.host = ENET_HOST_ANY;
+    address.port = port;
 
-bool ThorQ::Server::setup(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount)
-{
+    ENetHost* host = enet_host_create(&address, maxPeers, channelCount, 0, 0); // two channels: communication(tcp), and commands(udp)
 
-    if (m_host == nullptr)
+    if (host == nullptr)
     {
-        ENetAddress address;
-        address.host = ENET_HOST_ANY;
-        address.port = port;
-
-        m_host = enet_host_create(&address, maxPeers, channelCount, 0, 0); // two channels: communication(tcp), and commands(udp)
-
-        if (m_host == nullptr)
-        {
-            qWarning() << "An error occurred while trying to create an ENet server host";
-            return EXIT_FAILURE;
-        }
+        return false;
     }
+
+    enet_socket_set_option(host->socket, ENET_SOCKOPT_NODELAY, noDelay);
+
+    host->maximumPacketSize = THORQ_MESSAGE_LEN;
 
     return true;
 }
+
+bool ThorQ::Server::start()
+{
+
+}
+
+void ThorQ::Server::stop()
+{
+
+}
+
 void ThorQ::Server::cleanup()
 {
-    if (m_host != nullptr)
+    stop();
+
+    // Disconnect all clients
+    ENetPeer* firstPeer = m_host->peers;
+    ENetPeer* lastPeer  = m_host->peers + m_host->peerCount;
+
+    for (ENetPeer* peer = firstPeer; peer != lastPeer; peer++)
     {
-        for (ENetPeer* peer : m_peers)
-            enet_peer_disconnect(peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
-
-        ENetEvent event;
-        while (m_peers.size() != 0)
-        {
-            if (enet_host_service(m_host, &event, 0) > 0)
-            {
-                switch (event.type)
-                {
-                case ENET_EVENT_TYPE_CONNECT:
-                    event.peer->data = nullptr;
-                    enet_peer_disconnect_now(event.peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
-                    break;
-                case ENET_EVENT_TYPE_RECEIVE:
-                    enet_packet_destroy(event.packet);
-                    break;
-                case ENET_EVENT_TYPE_DISCONNECT:
-                case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-                {
-                    if (event.peer->data != nullptr)
-                    {
-                        (reinterpret_cast<ThorQ::Instance*>(event.peer->data))->setPeer(nullptr);
-                    }
-                    enet_peer_reset(event.peer);
-                    auto it = std::find(m_peers.begin(), m_peers.end(), event.peer);
-                    if (it != m_peers.end())
-                    {
-                        m_peers.erase(it);
-                    }
-                    break;
-                }
-                case ENET_EVENT_TYPE_NONE:
-                    break;
-                }
-            }
-        }
-
-        enet_host_destroy(m_host);
-        m_host = nullptr;
+        enet_peer_disconnect_now(peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
     }
+
+    enet_host_flush(m_host);
+    enet_host_destroy(m_host);
+
+    m_host = nullptr;
 }
 
-void ThorQ::Server::setNoDelay(bool enabled)
-{
-    enet_socket_set_option(m_host->socket, ENET_SOCKOPT_NODELAY, enabled);
-}
 
-uint16_t ThorQ::Server::heartbeatInterval() const
+
+
+uint16_t ThorQ::Server::HeartbeatInterval()
 {
     return m_heartbeatInterval;
 }
-
-void ThorQ::Server::setMaxPacketSize(size_t size)
+void ThorQ::Server::SetHeartbeatInterval(uint16_t msInterval)
 {
-    m_host->maximumPacketSize = size;
-}
-void ThorQ::Server::setHearbeatInterval(uint16_t interval)
-{
-    m_heartbeatInterval = interval;
+    m_heartbeatInterval = msInterval;
 }
 
-void ThorQ::Server::handleEventNewConnection(const ENetEvent& event)
+
+
+
+
+std::uint64_t ThorQ::Server::totalDataSent()
+{
+    return m_totalSentData;
+}
+std::uint64_t ThorQ::Server::totalPacketsSent()
+{
+    return m_totalSentPackets;
+}
+std::uint64_t ThorQ::Server::totalDataReceived()
+{
+    return m_totalReceivedData;
+}
+std::uint64_t ThorQ::Server::totalPacketsReceived()
+{
+    return m_totalReceivedPackets;
+}
+
+
+
+
+void ThorQ::Server::handleEventConnection(const ENetEvent& event)
 {
     // Dont worry, its ok to have a seemingly dangling pointer here (ENet keeps track of the pointer)
 
@@ -164,6 +162,12 @@ void ThorQ::Server::handleEventNewConnection(const ENetEvent& event)
                 .arg(enet_peer_address_str(event.peer))
                 .arg(event.peer->address.port);
 }
+
+void ThorQ::Server::handleEventMessage(const ENetEvent &event)
+{
+
+}
+
 void ThorQ::Server::handleEventDisconnect(const ENetEvent& event)
 {
     if (event.peer->data == nullptr)
@@ -185,12 +189,6 @@ void ThorQ::Server::handleEventDisconnect(const ENetEvent& event)
 
     // Automatically notifies others
     instance->deleteLater();
-
-    auto it = std::find(m_peers.begin(), m_peers.end(), event.peer);
-    if (it != m_peers.end())
-    {
-        m_peers.erase(it);
-    }
 }
 void ThorQ::Server::handleEventTimeout(const ENetEvent& event)
 {
@@ -205,11 +203,11 @@ void ThorQ::Server::handleEventTimeout(const ENetEvent& event)
     }
 }
 
-
-void ThorQ::Server::run()
+bool ThorQ::Server::Start(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount)
 {
+
     ENetEvent event;
-    std::uint16_t iterations = 0;
+    ::std::uint16_t iterations = 0;
     while (!isInterruptionRequested())
     {
         while (enet_host_service(m_host, &event, 0) > 0)
@@ -222,7 +220,6 @@ void ThorQ::Server::run()
                 break;
             case ENET_EVENT_TYPE_RECEIVE:
                 emit enetEvent(event);
-                enet_packet_destroy(event.packet);
                 break;
             case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
                 handleEventTimeout(event);
@@ -249,4 +246,6 @@ void ThorQ::Server::run()
             }
         }
     }
+
+    return true;
 }

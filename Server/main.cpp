@@ -6,20 +6,22 @@
 #include <atomic>
 #include <algorithm>
 
-#include <QtSql>
 #include <QDebug>
+#include <QCoreApplication>
+#include <QCommandLineParser>
 
 #if __linux__
 #include <unistd.h>
 #endif
 
 #include "server.h"
-#include "parser.h"
+#include "messagedispatcher.h"
 
 #define SINGLETON_BASE
 #include "singletons.h"
 #include "account.h"
 #include "instance.h"
+#include "database.h"
 #include "statistics.h"
 #include "eventhandlers.h"
 #include <thorq_message.h>
@@ -49,124 +51,68 @@ void exitCleanup()
 
 int main(int argc, char** argv)
 {
-    signal(SIGINT, exit_handler);
+    QCoreApplication app(argc, argv);
+    QCoreApplication::setApplicationName("ThorQ");
+    QCoreApplication::setApplicationName(THORQ_VERSION_SERVER.toString());
 
-    atexit(exitCleanup);
+    QCommandLineParser parser;
+    parser.setApplicationDescription("Server for ThorQ - A application for long range collar control");
+    parser.addHelpOption();
+    parser.addVersionOption();
 
+    parser.addOptions({
+                         { "port",  "Port for the server to run at" },
+                         { "config", "Configuration file for the server" }
+                      });
 
-    std::uint16_t port = 0;
+    parser.process(app);
+
 #if PARSE_PORT
-    if (argc < 2)
+    if (!parser.isSet("port"))
     {
-        qWarning() << "Please provide a port";
-        return EXIT_FAILURE;
-    }
-    else if (argc > 3)
-    {
-        qWarning() << "Too many arguments";
         return EXIT_FAILURE;
     }
 
-    try {
-        int i = std::stoi(argv[1]);
-        if (i < 1 || i > UINT16_MAX)
-        {
-            qWarning() << "Port must be in the range of 1-65535";
-            return EXIT_FAILURE;
-        }
-        port = i;
-    } catch (std::invalid_argument) {
-        qWarning() << "Port must be a number";
-        return EXIT_FAILURE;
-    } catch (std::out_of_range) {
-        qWarning() << "Port must be in the range of 1-65535";
-        return EXIT_FAILURE;
-    } catch (const std::exception& ex) {
-        qWarning() << "Exception occured while parsing argument:\n" << ex.what();
+    QVariant var(parser.value("port"));
+
+    bool success = false;
+
+    uint port = QVariant(parser.value("port")).toUInt(&success);
+
+    if (!success || port > UINT16_MAX)
+    {
+        qDebug() << "Failed to parse port!";
         return EXIT_FAILURE;
     }
 #else
-    (void)argc;
-    (void)argv;
-    port = THORQ_SERVER_PORT;
+    std::uint16_t port = 12345;
 #endif
-    {
-        QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-        db.setDatabaseName("database.db");
-        if (!db.open())
-        {
-            qWarning() << "Failed to open database:" << db.lastError();
-            return EXIT_FAILURE;
-        }
 
-        db.exec("CREATE TABLE IF NOT EXISTS system_ids("
-                "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                "system_id TEXT NOT NULL UNIQUE,"
-                "banned_at DATETIME,"
-                "registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)");   // Unique SystemID of a cmoputer
-        db.exec("CREATE TABLE IF NOT EXISTS auth_tokens("
-                "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                "auth_token TEXT NOT NULL UNIQUE,"
-                "system_id INTEGER NOT NULL,"
-                "account_id INTEGER NOT NULL,"
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)"); // Authentication Token generated at login
-        db.exec("CREATE TABLE IF NOT EXISTS accounts("
-                "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                "username TEXT NOT NULL UNIQUE,"
-                "password_hash TEXT NOT NULL,"
-                "is_admin BOOLEAN NOT NULL DEFAULT FALSE,"
-                "last_login DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-                "updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
-                "deleted_at DATETIME)");
-        db.exec("CREATE TABLE IF NOT EXISTS systemid_account_map("
-                "systemid_id INTEGER NOT NULL,"
-                "account_id INTEGER NOT NULL,"
-                "established_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)");   // Unique SystemID of a cmoputer
-        db.exec("CREATE TABLE IF NOT EXISTS account_blocks("
-                "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                "guid TEXT NOT NULL UNIQUE,"
-                "blocker_id INTEGER NOT NULL,"
-                "blockee_id INTEGER NOT NULL,"
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)");
-        db.exec("CREATE TABLE IF NOT EXISTS account_friends("
-                "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                "guid TEXT NOT NULL UNIQUE,"
-                "sender_id INTEGER NOT NULL,"
-                "receiver_id INTEGER NOT NULL,"
-                "pending BOOLEAN NOT NULL, "
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)");
-        db.exec("CREATE TABLE IF NOT EXISTS userLog("
-                "timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,"
-                "system_id INTEGER,"
-                "account_id INTEGER,"
-                "info TEXT NOT NULL)");
-
-        db.close();
-
-        ThorQ::Account::NewAccount("yeet", "yeet", "yeet");
-        ThorQ::Account::NewAccount("yeet1", "yeet1", "yeet1");
-        ThorQ::Account::NewAccount("yeet2", "yeet2", "yeet2");
-        return EXIT_SUCCESS;
-    }
-
-
-    qDebug().noquote().nospace()
-            << "Using " << ThorQ::Server::version();
-
-    ThorQ::Parser* parser = new ThorQ::Parser();
-    ThorQ::Server* server = new ThorQ::Server();
-
-    QObject::connect(server, &ThorQ::Server::enetEvent, parser, &ThorQ::Parser::handleEvent);
-
-    if (!server->setup(port, SERVER_MAX_CONNECTIONS, THORQ_CHANNEL_COUNT))
+    if (!ThorQ::DataBase::Initialize("database.db"))
     {
         return EXIT_FAILURE;
     }
 
-    server->setMaxPacketSize(THORQ_MESSAGE_LEN);
-
-    server->start(QThread::HighPriority);
-
+    ThorQ::Account::NewAccount("yeet", "yeet", "yeet");
+    ThorQ::Account::NewAccount("yeet1", "yeet1", "yeet1");
+    ThorQ::Account::NewAccount("yeet2", "yeet2", "yeet2");
     return EXIT_SUCCESS;
+
+    if (!ThorQ::Server::Initialize())
+    {
+            qDebug() << "Failed to initialize Server!";
+            return EXIT_FAILURE;
+    }
+
+    qDebug().noquote().nospace() << "Using" << ThorQ::Server::Version();
+
+    ThorQ::Server* server = new ThorQ::Server(&app);
+
+    if (!server->Start(port, SERVER_MAX_CONNECTIONS, THORQ_CHANNEL_COUNT))
+    {
+        qDebug() << "Failed to start Server!";
+        return EXIT_FAILURE;
+    }
+
+    return app.exec();
 }

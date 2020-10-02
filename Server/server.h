@@ -1,58 +1,51 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include <QThread>
+#include <QObject>
 #include <QSet>
 
 #include "typedefs_global.h"
 
 namespace ThorQ {
-class Server : public QThread
+class Server : public QObject
 {
     Q_OBJECT
 public:
-    static QString version();
-    static bool Init();
-    static void DeInit();
+    static QString Version();
+    static bool Initialize();
+    static void DeInitialize();
 
     Server(QObject* parent = nullptr);
+    ~Server();
 
-    bool setup(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount);
+    bool setup(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount, bool noDelay);
+
+    bool start();
+    void stop();
+
     void cleanup();
 
-    void setNoDelay(bool enabled);
+    std::uint16_t HeartbeatInterval();
+    void SetHeartbeatInterval(std::uint16_t msInterval);
 
-    std::uint16_t heartbeatInterval() const;
-
-    std::size_t maxPacketSize() const;
-
-    std::uint64_t totalDataSent() const;
-    std::uint64_t totalPacketsSent() const;
-    std::uint64_t totalDataReceived() const;
-    std::uint64_t totalPacketsReceived() const;
-signals:
-    void enetEvent(ENetEvent event);
-    void maxPacketSizeChanged(std::size_t size);
-public slots:
-    void setMaxPacketSize(std::size_t size);
-    void setHearbeatInterval(std::uint16_t interval);
-private slots:
-    void handleEventNewConnection(const ENetEvent& event);
-    void handleEventDisconnect(const ENetEvent& peer);
-    void handleEventTimeout(const ENetEvent& peer);
+    std::uint64_t totalDataSent();
+    std::uint64_t totalPacketsSent();
+    std::uint64_t totalDataReceived();
+    std::uint64_t totalPacketsReceived();
 private:
-    void run() override;
+    void handleEventConnection(const ENetEvent& event);
+    void handleEventMessage(const ENetEvent &event);
+    void handleEventDisconnect(const ENetEvent& event);
+    void handleEventTimeout(const ENetEvent& event);
 
     ENetHost* m_host;
-    QSet<ENetPeer*> m_peers;
 
-    std::uint16_t m_heartbeatInterval;
+    std::atomic<std::uint16_t> m_heartbeatInterval;
 
-    std::uint64_t m_totalSentData;
-    std::uint64_t m_totalSentPackets;
-
-    std::uint64_t m_totalReceivedData;
-    std::uint64_t m_totalReceivedPackets;
+    std::atomic<std::uint64_t> m_totalSentData;
+    std::atomic<std::uint64_t> m_totalSentPackets;
+    std::atomic<std::uint64_t> m_totalReceivedData;
+    std::atomic<std::uint64_t> m_totalReceivedPackets;
 };
 }
 
