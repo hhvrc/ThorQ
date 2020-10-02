@@ -26,7 +26,7 @@ public:
 	void setUsername(const QString& username);
 
     void setPassword(const QString& password);
-    bool verifyPassword(const QString& password) const;
+    void verifyPassword(const QString& password) const;
 
     Account* master() const;
     bool isExclusive() const;
@@ -61,6 +61,9 @@ public slots:
     void disconnectPeers();
     void sendMessage(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
     void sendMessageToFriends(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
+private slots:
+    void onPasswordHashingDone(const std::string& hash);
+    void onPasswordVerificationDone(bool result);
 private:
     int m_dbId;
 

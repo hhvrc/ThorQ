@@ -15,8 +15,6 @@
 /// @enum THORQ_PAYLOAD_ACCOUNT_CMD
 enum THORQ_PAYLOAD_ACCOUNT : std::uint8_t
 {
-	THORQ_PAYLOAD_ACCOUNT_RESERVE_DISCORDID, ///< Try to reserve a discordID
-	THORQ_PAYLOAD_ACCOUNT_RESERVE_USERNAME,  ///< Try to reserve a username
 	THORQ_PAYLOAD_ACCOUNT_REGISTER,          ///< Register an account
 	THORQ_PAYLOAD_ACCOUNT_DELETE,            ///< Delete an account (requires password)
 	THORQ_PAYLOAD_ACCOUNT_LOGIN,             ///< Log in normally
@@ -44,11 +42,7 @@ inline bool thorq_payload_account_is_valid(const std::vector<std::uint8_t>& payl
     if (thorq_payload_serialization_is_valid(payload))
     {
         switch (thorq_payload_serialization_get_cmd(payload)) {
-		case THORQ_PAYLOAD_ACCOUNT_RESERVE_DISCORDID:
-			return payload.size() >= THORQ_DISCORDID_LEN_MIN + 2 && payload.size() <= THORQ_DISCORDID_LEN_MAX + 2;
-		case THORQ_PAYLOAD_ACCOUNT_RESERVE_USERNAME:
-			return payload.size() >= THORQ_USERNAME_LEN_MIN + 2 && payload.size() <= THORQ_USERNAME_LEN_MAX + 2;
-		case THORQ_PAYLOAD_ACCOUNT_REGISTER:
+        case THORQ_PAYLOAD_ACCOUNT_REGISTER:
 			return payload.size() > 5
 					&& payload[2] >= THORQ_USERNAME_LEN_MIN
 					&& payload[2] <= THORQ_USERNAME_LEN_MAX
@@ -84,24 +78,6 @@ inline bool thorq_payload_account_is_valid(const std::vector<std::uint8_t>& payl
 inline THORQ_PAYLOAD_ACCOUNT thorq_payload_account_get_cmd(const std::vector<std::uint8_t>& payload)
 {
     return static_cast<THORQ_PAYLOAD_ACCOUNT>(thorq_payload_serialization_get_cmd(payload));
-}
-
-inline void thorq_payload_account_reserve_discordid_pack(std::vector<std::uint8_t>& payload, const QString& discordID)
-{
-    thorq_payload_serialization_pack_1string(payload, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_RESERVE_DISCORDID, discordID.leftRef(THORQ_DISCORDID_LEN_MAX));
-}
-inline void thorq_payload_account_reserve_discordid_unpack(const std::vector<std::uint8_t>& payload, QString& discordID)
-{
-    thorq_payload_serialization_unpack_1string(payload, discordID);
-}
-
-inline void thorq_payload_account_reserve_username_pack(std::vector<std::uint8_t>& payload, const QString& username)
-{
-    thorq_payload_serialization_pack_1string(payload, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_RESERVE_DISCORDID, username.leftRef(THORQ_USERNAME_LEN_MAX));
-}
-inline void thorq_payload_account_reserve_username_unpack(const std::vector<std::uint8_t>& payload, QString& username)
-{
-    thorq_payload_serialization_unpack_1string(payload, username);
 }
 
 inline void thorq_payload_account_register_pack(std::vector<std::uint8_t>& payload, const QString& username, const QString& password, const QString& discordID)

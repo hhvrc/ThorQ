@@ -24,30 +24,6 @@
 #include "instance.h"
 #include "messagehandlers.h"
 
-void handleEventNewConnection(ENetPeer* peer)
-{
-    // Dont worry, its ok to have a seemingly dangling pointer here (ENet keeps track of the pointer)
-
-    ThorQ::Instance* instance = new ThorQ::Instance(peer);
-
-    std::vector<std::uint8_t> message;
-
-    thorq_payload_version_pack(message, THORQ_APP_LINK, THORQ_VERSION_LINK);
-    instance->sendMessage(message, false, true);
-
-    thorq_payload_version_pack(message, THORQ_APP_CLIENT, THORQ_VERSION_CLIENT);
-    instance->sendMessage(message, false, true);
-
-    thorq_payload_version_pack(message, THORQ_APP_SERVER, THORQ_VERSION_SERVER);
-    instance->sendMessage(message, false, true);
-
-	thorq_payload_heartbeat_pack(message, 500); // TODO: get from config
-	instance->sendMessage(message, false, true);
-
-    qDebug() << QString("A new client connected from:\n\tIPV6: %1\n\tPORT: %2")
-                .arg(enet_peer_address_str(peer))
-                .arg(peer->address.port);
-}
 
 void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 {
@@ -138,50 +114,4 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 
 		break;
 	}
-}
-
-void handleEventDisconnect(ENetPeer* peer)
-{
-	if (peer->data == nullptr)
-		return;
-
-    auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
-
-    if (instance->account() != nullptr)
-    {
-        qDebug() << "User" << instance->account()->username()
-                 << "connected from [" << enet_peer_address_str(peer) << "] disconnected";
-    }
-    else
-    {
-        qDebug() << "User connected from [" << enet_peer_address_str(peer) << "] disconnected";
-    }
-
-	peer->data = nullptr;
-
-    // Automatically notifies others
-    instance->deleteLater();
-}
-
-void handleEventTimeout(ENetPeer* peer)
-{
-	if (peer->data == nullptr)
-		return;
-
-    auto instance = reinterpret_cast<ThorQ::Instance*>(peer->data);
-
-    if (instance->account() != nullptr)
-    {
-        qDebug() << "User" << instance->account()->username()
-                 << "connected from [" << enet_peer_address_str(peer) << "] timed out";
-    }
-    else
-    {
-        qDebug() << "User connected from [" << enet_peer_address_str(peer) << "] timed out";
-    }
-
-    peer->data = nullptr;
-
-    // Automatically notifies others
-    instance->deleteLater();
 }

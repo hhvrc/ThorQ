@@ -2,7 +2,7 @@
 
 #include <QtSql>
 
-#include <botan_all.h>
+#include "hasher.h"
 
 #include "utils.h"
 #include "instance.h"
@@ -76,7 +76,7 @@ ThorQ::Account* ThorQ::Account::GetAccount(const QString& username)
 		}
 
 		account->m_passwordHash = get_account.value(1).toString();
-		account->m_isAdmin = get_account.value(2).toBool();
+        account->m_authority = static_cast<THORQ_ACCOUNT_AUTHORITY>(get_account.value(2).toInt());
 	}
 	return account;
 }
@@ -256,19 +256,20 @@ void ThorQ::Account::setUsername(const QString& username)
 
 void ThorQ::Account::setPassword(const QString& password)
 {
-	std::string hash;
+    PasswordHasher* hasher = new PasswordHasher(password, this);
 
-	{
-		Botan::AutoSeeded_RNG rng = Botan::AutoSeeded_RNG();
-        hash = Botan::generate_bcrypt(password.toStdString(), rng);
-	}
-
-	qDebug() << "Hash:" << hash.c_str();
+    connect(hasher, &PasswordHasher::hashingDone, this, &Account::onPasswordHashingDone);
+    connect(hasher, &QThread::finished, hasher, &QObject::deleteLater);
+    hasher->start(QThread::LowPriority);
 }
 
-bool ThorQ::Account::verifyPassword(const QString& password) const
+void ThorQ::Account::verifyPassword(const QString& password) const
 {
-    return Botan::check_bcrypt(password.toStdString(), m_passwordHash.toStdString());
+    PasswordVerifier* checker = new PasswordVerifier(m_passwordHash, password, const_cast<Account*>(this));
+
+    connect(checker, &PasswordVerifier::verificationDone, this, &Account::onPasswordVerificationDone);
+    connect(checker, &QThread::finished, checker, &QObject::deleteLater);
+    checker->start(QThread::LowPriority);
 }
 
 ThorQ::Account *ThorQ::Account::master() const
@@ -311,7 +312,7 @@ void ThorQ::Account::requestSession(Account* sender, Account* receiver)
     std::vector<std::uint8_t> response;
 
     // If account already has a partner or target account is self
-    if (sender->pa != nullptr || target == this)
+    if (sender->partner() != nullptr || target == this)
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SESSION, THORQ_PAYLOAD_SESSION_REQUEST, THORQ_PAYLOAD_ACK_DENIED);
         sendMessage(response, true, true);
@@ -501,4 +502,14 @@ void ThorQ::Account::sendMessageToFriends(const std::vector<uint8_t> &message, b
     {
         relationship;
     }
+}
+
+void ThorQ::Account::onPasswordHashingDone(const std::string &hash)
+{
+    qDebug() << "Hash:" << hash.c_str();
+}
+
+void ThorQ::Account::onPasswordVerificationDone(bool result)
+{
+
 }

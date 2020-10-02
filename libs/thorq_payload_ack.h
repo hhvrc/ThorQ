@@ -28,7 +28,9 @@ inline bool thorq_payload_ack_is_valid(const std::vector<std::uint8_t>& payload)
  * @param cmd
  * @param ack
  */
-inline void thorq_payload_ack_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ID id, std::uint8_t cmd, THORQ_PAYLOAD_ACK ack)
+inline void thorq_payload_ack_pack(std::vector<std::uint8_t>& payload,
+                                   THORQ_PAYLOAD_ID id, std::uint8_t cmd,
+                                   THORQ_PAYLOAD_ACK ack, std::uint8_t reason = 0)
 {
     thorq_payload_serialization_bytes_pack(payload, THORQ_PAYLOAD_ID_ACK, ack, { id, cmd });
 }

@@ -10,33 +10,45 @@ project(
 message("Configuring ${project}...")
 
 set(${project}_SOURCES
-	${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/parser.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/hasher.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/database.cpp
 
-	${CMAKE_CURRENT_SOURCE_DIR}/account.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/instance.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/session.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
 
-        ${CMAKE_CURRENT_SOURCE_DIR}/relationship.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/account.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/instance.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/session.cpp
 
-	${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.cpp
-	${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/relationship.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.cpp
 )
 set(${project}_HEADERS
-        ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/server.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/parser.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/hasher.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/database.h
 
-	${CMAKE_CURRENT_SOURCE_DIR}/account.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/instance.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/session.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/config.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/statistics.h
 
-	${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.h
-	${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/account.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/instance.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/session.h
 
-	${CMAKE_CURRENT_SOURCE_DIR}/singletons.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.h
 
-	${CMAKE_CURRENT_SOURCE_DIR}/authtoken.h
-	${CMAKE_CURRENT_SOURCE_DIR}/relationship.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/singletons.h
 
-        ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_server.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/authtoken.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/relationship.h
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_server.h
 )
 
 include_directories(

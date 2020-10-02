@@ -306,9 +306,9 @@ void ThorQ::Instance::sendMessage(const std::vector<std::uint8_t>& message, bool
     sendRaw(copy, reliable);
 }
 
-void ThorQ::Instance::sendRaw(const std::vector<std::uint8_t>& raw, bool reliable)
+void ThorQ::Instance::sendRaw(const std::vector<std::uint8_t>& raw, THORQ_CHANNEL ch, bool reliable)
 {
-    enet_peer_send(m_peer, reliable ? 0 : 1, enet_packet_create(raw.data(), raw.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
+    enet_peer_send(m_peer, ch, enet_packet_create(raw.data(), raw.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
 }
 
 void ThorQ::Instance::disconnectPeer(std::uint32_t reason)

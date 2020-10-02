@@ -335,7 +335,7 @@ private slots:
      * @param encrypt
      * @param reliable
      */
-    void SendPayload(std::vector<std::uint8_t>& payload, bool encrypt = true, bool reliable = true);
+    void SendPayload(std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
 
     /**
      * @brief requestEncryptionHandshake

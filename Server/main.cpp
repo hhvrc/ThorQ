@@ -13,30 +13,20 @@
 #include <unistd.h>
 #endif
 
-#if defined(__GCC__) || defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wextra"
-#pragma GCC diagnostic ignored "-Wpedantic"
-#pragma GCC diagnostic ignored "-Wunknown-pragmas"
-#endif
-
-#define ENET_IMPLEMENTATION
-#include <enet.h>
-
-#if defined(__GCC__) || defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic pop
-#endif
+#include "server.h"
+#include "parser.h"
 
 #define SINGLETON_BASE
 #include "singletons.h"
 #include "account.h"
 #include "instance.h"
+#include "statistics.h"
 #include "eventhandlers.h"
+#include <thorq_message.h>
 
 #define PARSE_PORT false
 #define SERVER_MAX_CONNECTIONS 1024
 
-bool enet_was_initialized = false;
 std::atomic_bool runServer = true;
 
 void exit_handler(int s)
@@ -48,53 +38,7 @@ void exit_handler(int s)
 
 void exitCleanup()
 {
-    if (!enet_was_initialized)
-        return;
 
-    if (g_server != nullptr)
-    {
-        for (ENetPeer* peer : g_peers)
-            enet_peer_disconnect(peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
-
-        ENetEvent event;
-        while (g_peers.size() != 0)
-        {
-            if (enet_host_service(g_server, &event, 0) > 0)
-            {
-                switch (event.type)
-                {
-                case ENET_EVENT_TYPE_CONNECT:
-                    event.peer->data = nullptr;
-                    enet_peer_disconnect_now(event.peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
-                    break;
-                case ENET_EVENT_TYPE_RECEIVE:
-                    enet_packet_destroy(event.packet);
-                    break;
-                case ENET_EVENT_TYPE_DISCONNECT:
-                case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-                {
-                    if (event.peer->data != nullptr)
-                    {
-                        (reinterpret_cast<ThorQ::Instance*>(event.peer->data))->setPeer(nullptr);
-                    }
-                    enet_peer_reset(event.peer);
-                    auto it = std::find(g_peers.begin(), g_peers.end(), event.peer);
-                    if (it != g_peers.end())
-                    {
-                        g_peers.erase(it);
-                    }
-                    break;
-                }
-                case ENET_EVENT_TYPE_NONE:
-                    break;
-                }
-            }
-        }
-
-        enet_host_destroy(g_server);
-    }
-
-    enet_deinitialize();
 
     qDebug() << "All clients are disconnected,\nIf i crash now, that is totally ok!";
 
@@ -109,8 +53,8 @@ int main(int argc, char** argv)
 
     atexit(exitCleanup);
 
-    ENetAddress address;
-    address.host = ENET_HOST_ANY;
+
+    std::uint16_t port = 0;
 #if PARSE_PORT
     if (argc < 2)
     {
@@ -130,7 +74,7 @@ int main(int argc, char** argv)
             qWarning() << "Port must be in the range of 1-65535";
             return EXIT_FAILURE;
         }
-        address.port = i;
+        port = i;
     } catch (std::invalid_argument) {
         qWarning() << "Port must be a number";
         return EXIT_FAILURE;
@@ -144,7 +88,7 @@ int main(int argc, char** argv)
 #else
     (void)argc;
     (void)argv;
-    address.port = THORQ_SERVER_PORT;
+    port = THORQ_SERVER_PORT;
 #endif
     {
         QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
@@ -206,66 +150,23 @@ int main(int argc, char** argv)
         return EXIT_SUCCESS;
     }
 
-    if (enet_initialize() < 0)
+
+    qDebug().noquote().nospace()
+            << "Using " << ThorQ::Server::version();
+
+    ThorQ::Parser* parser = new ThorQ::Parser();
+    ThorQ::Server* server = new ThorQ::Server();
+
+    QObject::connect(server, &ThorQ::Server::enetEvent, parser, &ThorQ::Parser::handleEvent);
+
+    if (!server->setup(port, SERVER_MAX_CONNECTIONS, THORQ_CHANNEL_COUNT))
     {
-        qWarning() << "Failed to initialize ENet\n";
-        return EXIT_FAILURE;
-    }
-    enet_was_initialized = true;
-
-    qDebug() << QString("Using ENet-%1.%2.%3")
-                .arg(ENET_VERSION_MAJOR)
-                .arg(ENET_VERSION_MINOR)
-                .arg(ENET_VERSION_PATCH);
-
-    // Setup server
-    g_server = enet_host_create(&address, SERVER_MAX_CONNECTIONS, 2, 0, 0); // two channels: communication(tcp), and commands(udp)
-
-    if (g_server == nullptr)
-    {
-        qWarning() << "An error occurred while trying to create an ENet server host";
         return EXIT_FAILURE;
     }
 
-    ENetEvent event;
-    while (runServer.load()) {
-        while (enet_host_service(g_server, &event, 0) > 0)
-        {
-            switch (event.type)
-            {
-            case ENET_EVENT_TYPE_CONNECT:
-                g_peers.insert(event.peer);
-                handleEventNewConnection(event.peer);
-                break;
-            case ENET_EVENT_TYPE_RECEIVE:
-                handleEventMessage(event.peer, event.packet);
-                enet_packet_destroy(event.packet);
-                break;
-            case ENET_EVENT_TYPE_DISCONNECT:
-            {
-                handleEventDisconnect(event.peer);
-                auto it = std::find(g_peers.begin(), g_peers.end(), event.peer);
-                if (it != g_peers.end())
-                {
-                    g_peers.erase(it);
-                }
-                break;
-            }
-            case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-            {
-                handleEventTimeout(event.peer);
-                auto it = std::find(g_peers.begin(), g_peers.end(), event.peer);
-                if (it != g_peers.end())
-                {
-                    g_peers.erase(it);
-                }
-                break;
-            }
-            case ENET_EVENT_TYPE_NONE:
-                break;
-            }
-        }
-    }
+    server->setMaxPacketSize(THORQ_MESSAGE_LEN);
+
+    server->start(QThread::HighPriority);
 
     return EXIT_SUCCESS;
 }

@@ -10,6 +10,7 @@
 #include <account.h>
 #include <version.h>
 #include <systemid.h>
+#include <instance.h>
 #include <thorq_message.h>
 #include <thorq_payload_ack.h>
 #include <thorq_payload_version.h>
@@ -22,18 +23,21 @@
 #include <thorq_payload_collar.h>
 
 #include "utils.h"
+#include "config.h"
 #include "session.h"
 #include "singletons.h"
-
 
 void handleMessageHeartbeat(ThorQ::Instance *instance, const std::vector<std::uint8_t> &message)
 {
     std::uint16_t interval;
     thorq_payload_heartbeat_unpack(message, interval);
-    if (interval != 500) // HARDCODED
+
+    std::uint32_t setPoint = g_heartbeatSetPoint.load();
+
+    if (interval != setPoint)
     {
         std::vector<std::uint8_t> response;
-        thorq_payload_heartbeat_pack(response, 500); // HARDCODED
+        thorq_payload_heartbeat_pack(response, setPoint);
         instance->sendMessage(response, false, true);
     }
 }
@@ -191,8 +195,6 @@ void handleMessageAccount(ThorQ::Instance *instance, const std::vector<std::uint
     std::vector<std::uint8_t> response;
 
     switch (thorq_payload_account_get_cmd(message)) {
-    case THORQ_PAYLOAD_ACCOUNT_RESERVE_DISCORDID:
-    case THORQ_PAYLOAD_ACCOUNT_RESERVE_USERNAME:
     case THORQ_PAYLOAD_ACCOUNT_REGISTER:
     case THORQ_PAYLOAD_ACCOUNT_DELETE:
     case THORQ_PAYLOAD_ACCOUNT_LOGIN:
@@ -220,19 +222,19 @@ void handleMessageAccount(ThorQ::Instance *instance, const std::vector<std::uint
             instance->setAccount(*it);
             instance->setLoginState(THORQ_STATE_LOGIN_LOGGEDIN);
 
-            thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_LOGIN, 0, THORQ_PAYLOAD_ACK_OK, username);
+            thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN, THORQ_PAYLOAD_ACK_OK);
             instance->sendMessage(response, true, true);
         }
         else
         {
-            thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_LOGIN, 0, THORQ_PAYLOAD_ACK_DENIED, "Username/Password incorrect!");
+            thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN, THORQ_PAYLOAD_ACK_DENIED);
 
             instance->sendMessage(response, true, true);
         }
     }
     else
     {
-        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_LOGIN, 0, THORQ_PAYLOAD_ACK_NO_CHANGE, username);
+        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN, THORQ_PAYLOAD_ACK_NO_CHANGE);
         instance->sendMessage(response, true, true);
     }
 }

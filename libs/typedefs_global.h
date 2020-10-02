@@ -8,6 +8,7 @@ class QElapsedTimer;
 
 typedef struct _ENetPeer ENetPeer;
 typedef struct _ENetHost ENetHost;
+typedef struct _ENetEvent ENetEvent;
 typedef struct _ENetPacket ENetPacket;
 typedef struct _ENetAddress ENetAddress;
 

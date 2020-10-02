@@ -11,28 +11,35 @@ enum THORQ_APP : std::uint8_t
 	THORQ_APP_LINK,
 };
 
+enum THORQ_CHANNEL : std::uint8_t
+{
+    THORQ_CHANNEL_MAIN,      ///< Main channel (login/logout/friend/request)
+    THORQ_CHANNEL_EVENTS,    ///< Events (status/relation)
+    THORQ_CHANNEL_IMPULSE,   ///< Impulse data (collar/toys)
+    THORQ_CHANNEL_AUTHORITY, ///< Moderations/Announcements/Admin
+    THORQ_CHANNEL_COUNT
+};
+
 /// Flags to describe the payload of a message
 enum THORQ_PAYLOAD_ID : std::uint8_t
 {
+    // Main & Event channel
     THORQ_PAYLOAD_ID_HEARTBEAT,    ///< Heartbeat to keep connection alive and determine RTT
-
-	THORQ_PAYLOAD_ID_VERSION,      ///< Request updated version info
-
+    THORQ_PAYLOAD_ID_VERSION,      ///< Request updated version info
     THORQ_PAYLOAD_ID_CRYPTO,       ///< Cryptographic handshake messages
-
     THORQ_PAYLOAD_ID_SYSTEMID,     ///< SystemID messages
-
 	THORQ_PAYLOAD_ID_ACCOUNT,      ///< Create/Delete/Recover/Login/Logout
 	THORQ_PAYLOAD_ID_RELATION,     ///< Friend/Block/AcceptFriend/DenyFriend/UnFriend/GetRelations
-
     THORQ_PAYLOAD_ID_SESSION,      ///< Sessions with other people
+    THORQ_PAYLOAD_ID_ACK,          ///< Acknowledge
 
-	THORQ_PAYLOAD_ID_MODERATION,   ///< Bans/Reporting
-	THORQ_PAYLOAD_ID_ANNOUNCEMENT, ///< Server notifications/Admin notifications
+    // Impulse channel
+    THORQ_PAYLOAD_ID_TOY = 0, ///< Toys
+    THORQ_PAYLOAD_ID_COLLAR,  ///< Collars
 
-	THORQ_PAYLOAD_ID_COLLAR,       ///< Collar command
-
-	THORQ_PAYLOAD_ID_ACK, ///< Acknowledge
+    // Authority channel
+    THORQ_PAYLOAD_ID_MODERATION = 0, ///< Bans/Reporting
+    THORQ_PAYLOAD_ID_ANNOUNCEMENT,   ///< Server notifications/Admin notifications
 };
 
 
@@ -82,7 +89,7 @@ enum THORQ_DISCONNECT_REASON : std::uint8_t
 	THORQ_DISCONNECT_REASON_KICKED,
 	THORQ_DISCONNECT_REASON_TIMEDOUT,
 
-	THORQ_DISCONNECT_REASON_FUCK_YOU,
+    THORQ_DISCONNECT_REASON_FUCK_YOU
 };
 
 ////////////////////////////////////////////////////

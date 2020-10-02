@@ -1009,7 +1009,7 @@ void Client::handleMessageCollar(std::vector<std::uint8_t> &payload)
 	}
 }
 
-void Client::SendPayload(std::vector<std::uint8_t>& payload, bool encrypt, bool reliable)
+void Client::SendPayload(std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
 {
     if (encrypt)
 	{
@@ -1022,7 +1022,7 @@ void Client::SendPayload(std::vector<std::uint8_t>& payload, bool encrypt, bool 
 			return;
 	}
 
-    enet_peer_send(m_peer, reliable ? 0 : 1, enet_packet_create(payload.data(), payload.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
+    enet_peer_send(m_peer, ch, enet_packet_create(payload.data(), payload.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
 }
 
 void Client::requestEncryptionHandshake()
@@ -1035,7 +1035,7 @@ void Client::requestEncryptionHandshake()
 
     std::vector<std::uint8_t> payload;
     thorq_payload_crypto_request_pack(payload);
-    SendPayload(payload, false, true);
+    SendPayload(payload, THORQ_CHANNEL_MAIN, false, true);
 }
 
 void Client::handleDisconnect(quint32 reason)
