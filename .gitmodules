@@ -1,9 +1,6 @@
 [submodule "libs/enet"]
 	path = libs/enet
 	url = https://github.com/zpl-c/enet.git
-[submodule "libs/botan"]
-	path = libs/botan
-	url = https://github.com/randombit/botan.git
 [submodule "Client/openvr"]
 	path = Client/openvr
 	url = https://github.com/ValveSoftware/openvr.git
