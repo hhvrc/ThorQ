@@ -20,7 +20,7 @@ class Account : public QObject
 	Account(QObject* parent = nullptr);
 public:
 	static Account* GetAccount(const QString& username);
-	static Account* NewAccount(const QString& username, const QString& password, const QString& registrationKey);
+    static Account* NewAccount(const QString& username, const QString& password);
 public:
 	const QString& username() const;
 	void setUsername(const QString& username);
@@ -31,21 +31,19 @@ public:
     Account* master() const;
     bool isExclusive() const;
 
+
     QSet<Session*> sessions() const;
     QSet<Instance*> instances() const;
     QSet<Relationship*> relationships() const;
 
-    static void requestSession(Account* sender, Account* receiver);
-    bool requestAcceptFrom(Instance* sender);
-    bool requestDenyFrom(Instance* sender);
+    static void requestSession(Instance* source, Account* target);
+    bool requestAcceptFrom(Account* sender);
+    bool requestDenyFrom(Account* sender);
 
     void setIsInSteamVR(bool hasCollar);
     void setHasCollar(bool hasCollar);
 
-    THORQ_STATE_SESSION sessionState() const;
-    void setSessionState(THORQ_STATE_SESSION state);
-    void setActivityState(quint8 state);
-    quint8 activityState() const;
+    std::uint16_t status();
 
     bool isInSession() const;
     bool isInSteamVR() const;
@@ -57,6 +55,7 @@ signals:
     void isOnlineChanged(bool isOnline);
     void statusChanged();
 public slots:
+    void setStatus(std::uint16_t flags);
     void ban();
     void fuckYou();
     void disconnectPeers();
@@ -67,17 +66,24 @@ private slots:
     void onPasswordVerificationDone(bool result);
 private:
     int m_dbId;
+    QUuid m_publicId;
 
     QReadWriteLock l_basics;
 	QString m_username;
 	QString m_passwordHash;
+
+    quint8 m_activityState; // enum: thorq_user_activity_flag
 
     THORQ_STATE_SESSION m_sessionState;
     THORQ_ACCOUNT_AUTHORITY m_authority;
 
     QReadWriteLock l_master;
     Account* m_master;    // This persons master
-    bool     m_exclusive; // This person is exclusive to their master
+    std::atomic<bool> m_exclusive; // This person is exclusive to their master
+
+    QReadWriteLock  l_requests;
+    QSet<Instance*> m_requests_incoming;
+    QSet<Instance*> m_requests_outgoing;
 
     QReadWriteLock l_sessions;
     QSet<Session*> m_sessions;

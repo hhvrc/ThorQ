@@ -19,20 +19,13 @@
 
 ThorQ::Instance::Instance(ENetPeer* peer, QObject* parent)
     : QObject(parent)
-	, m_activityState(0)
-	, m_connectionState(THORQ_STATE_CONNECTION_DISCONNECTED)
 	, m_cryptoState(THORQ_STATE_CRYPTO_NONE)
-	, m_authState(THORQ_STATE_AUTH_NONE)
-	, m_loginState(THORQ_STATE_LOGIN_LOGGEDOUT)
-	, m_sessionState(THORQ_STATE_SESSION_NONE)
+    , m_authState(THORQ_STATE_AUTH_NONE)
 	, m_peer(peer)
-	, m_hwid()
-	, m_account(nullptr)
-	, m_partner(nullptr)
-    , m_incoming_requests()
-    , m_outgoing_requests()
+    , m_systemID()
+    , m_account(nullptr)
     , m_crypto(new Crypto())
-	, m_verificationData()
+    , m_verificationData(nullptr)
 {
     peer->data = this;
 }
@@ -55,21 +48,58 @@ void ThorQ::Instance::setAccount(Account* account)
 	{
 		m_account = account;
 
+        if (account->m_sessions.empty())
+        {
+
+        }
 	}
+
+    if (state != m_loginState)
+    {
+        m_loginState = state;
+
+        if (state < m_loginState)
+            setSessionState(THORQ_STATE_SESSION_NONE);
+
+        if (state == THORQ_STATE_LOGIN_LOGGEDIN)
+        {
+            qDebug() << tr("Sending login notification about [%1]").arg(account()->username());
+            std::vector<std::uint8_t> message;
+            thorq_payload_notification_pack(message, THORQ_NOTIFICATION_USER_ACTIVITY, account()->username(), activityState());
+            broadcastNotification(message, true);
+        }
+        else if (state == THORQ_STATE_LOGIN_LOGGEDOUT)
+        {
+            //if (account() != nullptr)
+            //	onlineInstances->remove(account()->username());
+
+            std::vector<std::uint8_t> message;
+            thorq_payload_notification_pack(message, THORQ_NOTIFICATION_USER_OFFLINE, account()->username());
+            broadcastNotification(message, true);
+
+            for (Instance* i : m_incoming_requests)
+            {
+                thorq_payload_ack_pack(message, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, account()->username() + " went offline");
+                i->sendMessage(message, true, true);
+            }
+
+            setAccount(nullptr);
+        }
+    }
 }
 
 void ThorQ::Instance::setHwid(const QByteArray& hwid)
 {
-	if (m_hwid != hwid)
+    if (m_systemID != hwid)
 	{
-		m_hwid = hwid;
+        m_systemID = hwid;
 
 	}
 }
 
 const QByteArray& ThorQ::Instance::hwid() const
 {
-	return m_hwid;
+    return m_systemID;
 }
 
 void ThorQ::Instance::setPeer(ENetPeer* peer)
@@ -102,55 +132,6 @@ THORQ_STATE_AUTH ThorQ::Instance::authState() const
     return m_authState;
 }
 
-void ThorQ::Instance::setAuthState(THORQ_STATE_AUTH state)
-{
-    if (state < m_authState)
-        setLoginState(THORQ_STATE_LOGIN_LOGGEDOUT);
-    m_authState = state;
-}
-THORQ_STATE_LOGIN ThorQ::Instance::loginState() const
-{
-	return m_loginState;
-}
-void ThorQ::Instance::setLoginState(THORQ_STATE_LOGIN state)
-{
-	if (state != m_loginState)
-    {
-		m_loginState = state;
-
-		if (state < m_loginState)
-			setSessionState(THORQ_STATE_SESSION_NONE);
-
-		if (state == THORQ_STATE_LOGIN_LOGGEDIN)
-        {
-			qDebug() << tr("Sending login notification about [%1]").arg(account()->username());
-            std::vector<std::uint8_t> message;
-            thorq_payload_notification_pack(message, THORQ_NOTIFICATION_USER_ACTIVITY, account()->username(), activityState());
-            broadcastNotification(message, true);
-		}
-		else if (state == THORQ_STATE_LOGIN_LOGGEDOUT)
-        {
-			//if (account() != nullptr)
-			//	onlineInstances->remove(account()->username());
-
-            std::vector<std::uint8_t> message;
-            thorq_payload_notification_pack(message, THORQ_NOTIFICATION_USER_OFFLINE, account()->username());
-            broadcastNotification(message, true);
-
-            for (Instance* i : m_incoming_requests)
-			{
-                thorq_payload_ack_pack(message, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, account()->username() + " went offline");
-                i->sendMessage(message, true, true);
-			}
-
-			setAccount(nullptr);
-		}
-	}
-}
-THORQ_STATE_SESSION ThorQ::Instance::sessionState() const
-{
-	return m_sessionState;
-}
 void ThorQ::Instance::setSessionState(THORQ_STATE_SESSION state)
 {
 	if (state != m_sessionState)
@@ -218,8 +199,8 @@ void ThorQ::Instance::cryptoInit()
     setCryptoState(THORQ_STATE_CRYPTO_ESTABLISHING);
 
     std::vector<std::uint8_t> message;
-    thorq_payload_crypto_pack(message, THORQ_PAYLOAD_CRYPTO_ESTABLISH, getCrypto()->publicKey());
-    sendMessage(message, false, true);
+    thorq_payload_crypto_establish_pack(message, getCrypto()->publicKey());
+    sendMessage(message, THORQ_CHANNEL_MAIN, true, true);
 }
 
 bool ThorQ::Instance::cryptoEstablish(const std::vector<std::uint8_t>& data)
@@ -228,8 +209,11 @@ bool ThorQ::Instance::cryptoEstablish(const std::vector<std::uint8_t>& data)
 	{
         if (getCrypto()->agree(data))
         {
+            m_verificationData = new std::uint8_t[THORQ_CRYPTO_VERIFICATION_DATA_LENGTH];
 			Crypto::RandomizeBytes(m_verificationData, THORQ_CRYPTO_VERIFICATION_DATA_LENGTH);
+
             std::vector<std::uint8_t> message;
+            thorq_payload_crypto_verify_pack(message, )
             thorq_payload_crypto_pack(message, THORQ_PAYLOAD_CRYPTO_VERIFY, m_verificationData, THORQ_CRYPTO_VERIFICATION_DATA_LENGTH);
             sendMessage(message, true, true);
             setCryptoState(THORQ_STATE_CRYPTO_VERIFYING);

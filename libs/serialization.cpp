@@ -22,6 +22,13 @@ std::uint8_t thorq_payload_serialization_get_cmd(const std::vector<std::uint8_t>
     return payload[1];
 }
 
+void thorq_payload_serialization_pack(std::vector<std::uint8_t> &payload, THORQ_PAYLOAD_ID id, std::uint8_t cmd)
+{
+    payload.resize(2);
+    payload[0] = id;
+    payload[1] = cmd;
+}
+
 void thorq_payload_serialization_bytes_pack(std::vector<std::uint8_t> &payload, THORQ_PAYLOAD_ID id, std::uint8_t cmd, std::initializer_list<std::uint8_t> bytes)
 {
     payload.resize(2 + bytes.size());

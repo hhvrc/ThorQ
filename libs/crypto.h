@@ -6,6 +6,10 @@
 #include <memory>
 #include <cstdint>
 
+
+#include <openssl/evp.h>
+
+
 namespace Botan {
 class StreamCipher;
 class AutoSeeded_RNG;
@@ -91,6 +95,9 @@ public:
      * @returns if the decryption was successful or not
      */
     bool decrypt(std::vector<std::uint8_t>& data, const std::uint8_t* iv);
+private:
+    const EVP_CIPHER* m_cipher;
+    EVP_CIPHER_CTX* m_ctx;
 };
 }
 

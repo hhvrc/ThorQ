@@ -10,6 +10,7 @@
 
 #include "constants.h"
 #include "enums.h"
+#include "serialization.h"
 
 enum THORQ_PAYLOAD_CRYPTO
 {
@@ -48,6 +49,8 @@ inline void thorq_payload_crypto_get_cmd(const std::vector<std::uint8_t>& payloa
 
 inline void thorq_payload_crypto_request_pack(std::vector<std::uint8_t>& payload)
 {
+    thorq_payload_serialization_prealloc(payload);
+    thorq_payload_serial
     payload.resize(2);
     payload[0] = THORQ_PAYLOAD_ID_CRYPTO;
     payload[1] = THORQ_PAYLOAD_CRYPTO_REQUEST;

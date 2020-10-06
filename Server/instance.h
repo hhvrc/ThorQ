@@ -38,9 +38,7 @@ public:
 	THORQ_STATE_CRYPTO cryptoState() const;
 	void setCryptoState(THORQ_STATE_CRYPTO state);
 	THORQ_STATE_AUTH authState() const;
-	void setAuthState(THORQ_STATE_AUTH state);
-	THORQ_STATE_LOGIN loginState() const;
-    void setLoginState(THORQ_STATE_LOGIN state);
+    void setAuthState(THORQ_STATE_AUTH state);
 
 	void cryptoInit();
 	bool cryptoEstablish(const std::vector<std::uint8_t>& data);
@@ -57,25 +55,16 @@ public:
 signals:
     void disconnecting();
 private:
-	QUuid m_id;
+    ENetPeer* m_peer;
+    ThorQ::Account* m_account;
 
-    quint8 m_activityState; // enum: thorq_user_activity_flag
+    ThorQ::Crypto* m_crypto;
+    std::uint8_t*  m_verificationData;
 
-    THORQ_STATE_CRYPTO     m_cryptoState;
-    THORQ_STATE_AUTH       m_authState;
-    THORQ_STATE_LOGIN      m_loginState;
+    QByteArray m_systemID;
 
-	ENetPeer* m_peer;
-	QByteArray m_hwid;
-	Account* m_account;
-
-    Instance* m_partner;
-
-    QSet<Instance*> m_incoming_requests;
-    QSet<Instance*> m_outgoing_requests;
-
-	Crypto* m_crypto;
-    quint8 m_verificationData[THORQ_CRYPTO_VERIFICATION_DATA_LENGTH];
+    THORQ_STATE_CRYPTO m_cryptoState;
+    THORQ_STATE_AUTH   m_authState;
 };
 }
 

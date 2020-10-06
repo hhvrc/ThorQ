@@ -81,7 +81,7 @@ ThorQ::Account* ThorQ::Account::GetAccount(const QString& username)
 	return account;
 }
 
-ThorQ::Account* ThorQ::Account::NewAccount(const QString& username, const QString& password_hash, const QString& registrationKey)
+ThorQ::Account* ThorQ::Account::NewAccount(const QString& username, const QString& password_hash)
 {
     QSqlDatabase db = GetDB(false);
 
@@ -98,45 +98,7 @@ ThorQ::Account* ThorQ::Account::NewAccount(const QString& username, const QStrin
 		qDebug() << "Failed to start transaction:" << db.lastError();
 		db.rollback();
 		return nullptr;
-	}
-
-	{
-		QSqlQuery use_regkey("UPDATE OR IGNORE reg_keys SET claimed_at = CURRENT_TIMESTAMP WHERE claimed_at = NULL AND reg_key = ?;SELECT changes();", db);
-		use_regkey.bindValue(0, registrationKey);
-
-		if (!use_regkey.exec() || !use_regkey.isValid())
-		{
-			qDebug() << "Failed to execute regkey query:" << db.lastError();
-
-			if (use_regkey.isActive()) use_regkey.clear();
-			db.rollback();
-
-			return nullptr;
-		}
-
-		if (!use_regkey.next())
-		{
-			qDebug() << "Query didnt return any values????";
-
-			if (use_regkey.isActive()) use_regkey.clear();
-			db.rollback();
-
-			return nullptr;
-		}
-
-		bool convOk;
-		int changes = use_regkey.value(0).toInt(&convOk);
-
-		if (!convOk || changes == 0)
-		{
-			qDebug() << "Regkey invalid/already used";
-
-			if (use_regkey.isActive()) use_regkey.clear();
-			db.rollback();
-
-			return nullptr;
-		}
-	}
+    }
 
 	{
 		QSqlQuery register_account("INSERT OR IGNORE INTO accounts(username, password_hash) VALUES (?, ?);SELECT changes();", db);
@@ -277,48 +239,40 @@ void ThorQ::Account::verifyPassword(const QString& password) const
 
 ThorQ::Account *ThorQ::Account::master() const
 {
-
+    QReadLocker l(const_cast<QReadWriteLock*>(&l_master));
+    return m_master;
 }
 
 bool ThorQ::Account::isExclusive() const
 {
-
+    return m_exclusive;
 }
 
 QSet<ThorQ::Session*> ThorQ::Account::sessions() const
 {
-    const_cast<QReadWriteLock*>(&l_sessions)->lockForRead();
-    QSet<ThorQ::Session*> retval = m_sessions;
-    const_cast<QReadWriteLock*>(&l_sessions)->unlock();
-
+    QReadLocker l(const_cast<QReadWriteLock*>(&l_sessions));
     return m_sessions;
 }
 QSet<ThorQ::Instance*> ThorQ::Account::instances() const
 {
-    const_cast<QReadWriteLock*>(&l_instances)->lockForRead();
-    QSet<ThorQ::Instance*> retval = m_instances;
-    const_cast<QReadWriteLock*>(&l_instances)->unlock();
-
-    return retval;
+    QReadLocker l(const_cast<QReadWriteLock*>(&l_instances));
+    return m_instances;
 }
 QSet<ThorQ::Relationship*> ThorQ::Account::relationships() const
 {
-    const_cast<QReadWriteLock*>(&l_relationships)->lockForRead();
-    QSet<ThorQ::Relationship*> retval = m_relationships;
-    const_cast<QReadWriteLock*>(&l_relationships)->unlock();
-
-    return retval;
+    QReadLocker l(const_cast<QReadWriteLock*>(&l_relationships));
+    return m_relationships;
 }
 
-void ThorQ::Account::requestSession(Account* sender, Account* receiver)
+void ThorQ::Account::requestSession(ThorQ::Instance* source, ThorQ::Account* target)
 {
     std::vector<std::uint8_t> response;
 
     // If account already has a partner or target account is self
-    if (sender->partner() != nullptr || target == this)
+    if (source->account() == target)
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SESSION, THORQ_PAYLOAD_SESSION_REQUEST, THORQ_PAYLOAD_ACK_DENIED);
-        sendMessage(response, true, true);
+        sender->sendMessage(response, true, true);
         return;
     }
 
@@ -353,7 +307,7 @@ void ThorQ::Account::requestSession(Account* sender, Account* receiver)
     thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_IN_PROGRESS, "Request sent");
     this->sendMessage(response, true, true);
 }
-bool ThorQ::Account::requestAcceptFrom(Account* sender)
+bool ThorQ::Account::requestAcceptFrom(ThorQ::Account* sender)
 {
     std::vector<std::uint8_t> response;
 
@@ -485,6 +439,11 @@ bool ThorQ::Account::isInSteamVR() const
 bool ThorQ::Account::hasCollar() const
 {
     return (m_activityState & THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT) != 0;
+}
+
+void ThorQ::Account::setStatus(std::uint16_t flags)
+{
+
 }
 
 void ThorQ::Account::sendMessage(const std::vector<std::uint8_t>& message, bool encrypt, bool reliable)

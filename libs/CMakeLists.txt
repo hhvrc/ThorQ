@@ -2,19 +2,22 @@ cmake_minimum_required(VERSION 3.5)
 
 set(project ThorQLib)
 project(
-	${project}
+        ${project}
 	DESCRIPTION "Files/Libraries that is used by both the server and the client"
 	LANGUAGES CXX
 )
 
 message("Configuring ${project}...")
 
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake;${CMAKE_MODULE_PATH}")
+find_package(LibreSSL REQUIRED)
+
 # --- Botan amalgamation build ---
 set(PYTHON_ARGS
     "${CMAKE_CURRENT_SOURCE_DIR}/botan/configure.py"
     "--os=${BUILD_OSL}"
     "--cc=${BUILD_COMPILER}"
-	"--cpu=x86_${VPTR_BITS}"
+        "--cpu=x86_${VPTR_BITS}"
     "--amalgamation"
     "--disable-shared"
     "--link-method=copy"
@@ -76,7 +79,7 @@ if(WIN32)
     list(APPEND ${project}_LIBS Crypt32 winmm ws2_32 Iphlpapi)
 
     # Stop botan from fucking up (on windows)
-	string(APPEND CMAKE_CXX_FLAGS " -bigobj -DNOMINMAX")
+        string(APPEND CMAKE_CXX_FLAGS " -bigobj -DNOMINMAX")
 endif()
 
 include_directories(
@@ -94,10 +97,11 @@ add_library(${project} STATIC
 target_link_libraries(${project}
     ${${project}_LIBS}
     ${Qt5Core_LIBRARIES}
+    LibreSSL::TLS
 )
 
 set(GLOB_INCLUDE_DIRS
-	${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/enet/include
 	${CMAKE_CURRENT_BINARY_DIR}
 
