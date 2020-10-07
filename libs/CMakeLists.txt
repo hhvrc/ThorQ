@@ -9,20 +9,28 @@ project(
 
 message("Configuring ${project}...")
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/CMake;${CMAKE_MODULE_PATH}")
-find_package(LibreSSL REQUIRED)
+# ------ Get OpenSSL ------
+find_package(OpenSSL REQUIRED)
+set(${project}_LIBS
+    OpenSSL::Crypto
+    OpenSSL::SSL
+)
+if(WIN32)
+    list(APPEND ${project}_LIBS Crypt32 winmm ws2_32 Iphlpapi)
+endif()
+# -------------------------
 
-# --- Botan amalgamation build ---
+# ------- Get Botan -------
 set(PYTHON_ARGS
     "${CMAKE_CURRENT_SOURCE_DIR}/botan/configure.py"
     "--os=${BUILD_OSL}"
     "--cc=${BUILD_COMPILER}"
-        "--cpu=x86_${VPTR_BITS}"
+    "--cpu=x86_${VPTR_BITS}"
     "--amalgamation"
     "--disable-shared"
     "--link-method=copy"
     "--minimized-build"
-    "--enable-modules=auto_rng,chacha_rng,chacha,chacha20poly1305,chacha_avx2,salsa20,seed,rdseed,sha2_32,stream,keypair,pubkey,ecdh,x509,bcrypt,kdf2,pbkdf2"
+    "--enable-modules=auto_rng,bcrypt"
     "--without-documentation"
 )
 message("Executing: ${PYTHON_ARGS}")
@@ -37,10 +45,18 @@ if (NOT ${py_result} EQUAL 0)
     message(FATAL_ERROR "Failed to build Botan")
 endif()
 
-set(${project}_SOURCES
-    ${CMAKE_CURRENT_BINARY_DIR}/botan_all.cpp
+# Stop botan from fucking up
+string(APPEND CMAKE_CXX_FLAGS " -DBOTAN_IS_BEING_BUILT -DBOTAN_NO_DEPRECATED_WARNINGS")
 
+# Stop botan from fucking up (on windows)
+if(WIN32)
+    string(APPEND CMAKE_CXX_FLAGS " -bigobj")
+endif()
+# -------------------------
+
+set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/hashing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/version.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid_${BUILD_OSL}.cpp
@@ -51,6 +67,7 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/hashing.h
     ${CMAKE_CURRENT_SOURCE_DIR}/version.h
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.h
     ${CMAKE_CURRENT_SOURCE_DIR}/serialization.h
@@ -72,16 +89,6 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_ack.h
 )
 
-# Stop botan from fucking up
-string(APPEND CMAKE_CXX_FLAGS " -DBOTAN_IS_BEING_BUILT -DBOTAN_NO_DEPRECATED_WARNINGS")
-
-if(WIN32)
-    list(APPEND ${project}_LIBS Crypt32 winmm ws2_32 Iphlpapi)
-
-    # Stop botan from fucking up (on windows)
-        string(APPEND CMAKE_CXX_FLAGS " -bigobj -DNOMINMAX")
-endif()
-
 include_directories(
     ${Qt5Core_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -97,7 +104,6 @@ add_library(${project} STATIC
 target_link_libraries(${project}
     ${${project}_LIBS}
     ${Qt5Core_LIBRARIES}
-    LibreSSL::TLS
 )
 
 set(GLOB_INCLUDE_DIRS

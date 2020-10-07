@@ -4,7 +4,7 @@
 
 void thorq_payload_serialization_prealloc(std::vector<std::uint8_t> &payload)
 {
-    payload.reserve(THORQ_MESSAGE_LEN);
+    payload.reserve(THORQ_PAYLOAD_CAP);
 }
 
 bool thorq_payload_serialization_is_valid(const std::vector<std::uint8_t> &payload)

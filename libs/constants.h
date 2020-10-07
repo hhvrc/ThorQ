@@ -21,14 +21,7 @@ constexpr std::uint8_t THORQ_VERSION_LINK_MINOR = 0;
 constexpr std::uint8_t THORQ_VERSION_LINK_PATCH = 132;
 constexpr ThorQ::Version THORQ_VERSION_LINK { THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH };
 
-constexpr const char* THORQ_CRYPTO_EC_ID = "secp256r1";
-constexpr std::size_t THORQ_CRYPTO_CIPHER_IV_LEN = 24; // StreamCipher::default_iv_length()
-constexpr const char* THORQ_CRYPTO_CIPHER_NAME = "ChaCha(20)";
-constexpr std::size_t THORQ_CRYPTO_KEY_LENGTH = 32;
-constexpr const char* THORQ_CRYPTO_KEY_DVFUNC = "KDF2(SHA-256)";
-constexpr std::size_t THORQ_CRYPTO_VERIFICATION_DATA_LENGTH = 256;
-
-constexpr std::size_t THORQ_PAYLOAD_LEN = 512; ///< Maximum payload length
+constexpr std::size_t THORQ_PAYLOAD_CAP = 512; ///< Maximum payload length
 constexpr std::size_t THORQ_AUTH_REGKEY_LEN = 32; ///< Fixed registration key length
 
 /* So according to the POSIX standard, a hostname is guaranteed not to exceed 255 bytes

@@ -84,7 +84,7 @@ if(MSVC)
     string(REGEX REPLACE "[/-]DEBUG:[a-zA-Z]+ ?" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
     # Enable max warnings
-    string(APPEND CMAKE_CXX_FLAGS " -W4")
+    string(APPEND CMAKE_CXX_FLAGS " -W4 -DNOMINMAX")
 
     if(${CMAKE_BUILD_TYPE} MATCHES "Release")
 	string(APPEND CMAKE_CXX_FLAGS " -MT -DEBUG:NONE -O2")

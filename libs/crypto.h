@@ -1,103 +1,76 @@
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
-#include <string>
-#include <vector>
-#include <memory>
+#include <QObject>
 #include <cstdint>
+#include <cstdlib>
+#include <openssl/ec.h>
 
-
-#include <openssl/evp.h>
-
-
-namespace Botan {
-class StreamCipher;
-class AutoSeeded_RNG;
-class Private_Key;
-}
+#define CRYPTO_CURVE_NID NID_secp256k1
+#define CRYPTO_AES_IV_LEN 12
+#define CRYPTO_ECDH_SHARED_KEY_LEN 32
+#define CRYPTO_ECDH_PUBLIC_KEY_LEN 65
+#define CRYPTO_ECDH_PRIVATE_KEY_LEN 32
 
 namespace ThorQ {
 /// Class to make cryptography extremely easy to deal with
-class Crypto
+class Crypto : public QObject
 {
-	bool m_ready;
-	Botan::AutoSeeded_RNG* m_rng;
-    Botan::Private_Key* m_key;
-	std::unique_ptr<Botan::StreamCipher> m_streamCipher;
-
-    Crypto(Botan::Private_Key* key);
+    Q_OBJECT
 public:
     /** Randomizes data using cryptographic functions
      * @param data Pointer to data to randomize
      * @param len Length of data to randomize
      */
-	static void RandomizeBytes(std::uint8_t* data, std::size_t len);
+    static bool RandomizeBytes(std::uint8_t* data, std::size_t len);
 
-    /** Loads a cryptographic key pair, from disk (requires a password)
-      * @param keyName Name of the file of the key pair (without the file extension)
-      * @param password Passord to decrypt the key pair
-      * @retval Returns a cryptoclass containing the key pair upon success, returns nullptr upon failure
-      */
-    static Crypto* load(const std::string& keyName, const std::string& password);
+    Crypto(QObject* parent = nullptr);
+    ~Crypto();
 
-    /** Saves a cryptographic key pair, to disk (requires a password)
-      * @param keyName Name of the file of the key pair (without the file extension)
-      * @param password Passord to encrypt the key pair
-      * @retval Returns if saving the key pair was a success
-      */
-    bool save(const std::string& keyName, const std::string& password) const;
-
-	Crypto();
-	~Crypto();
+    /**
+     * @brief Clear shared secret, and generate a new key pair
+     * @return
+     */
+    bool generateKeyPair();
 
     /** Get the public key
-     * @returns The generated public key
+     * @param publicKeyOut
+     * @param outLen
+     * @retval Returns if public key was successfully retrieved
      */
-    std::vector<std::uint8_t> publicKey() const;
+    bool getPublicKey(std::uint8_t* publicKeyOut, std::size_t outLen);
 
-    /** Checks if shared secret has been established
-     * @returns if shared secret is established
+    /** Establish secret key with foreign host
+     * @param foreignKey
+     * @param keySize
+     * @return
      */
-    bool ready() const;
+    bool agree(const std::uint8_t* foreignKey, std::size_t keySize);
 
-    /** Establish secret key with foreign friend
-     * @param data public key of foreign friend
-     * @returns if key agreement succeeded
+    /** Attempts to encrypt the data
+     * @param inputData
+     * @param outputData
+     * @param dataLen
+     * @param iv
+     * @return
      */
-    bool agree(const std::vector<std::uint8_t>& data);
+    bool encrypt(std::uint8_t* outputData, const std::uint8_t* inputData, std::size_t dataLen, std::uint8_t* iv);
 
-    /** Clear shared secret, and generate a new key pair
+    /** Attempts to decrypt the data
+     * @param inputData
+     * @param outputData
+     * @param dataLen
+     * @param iv
+     * @return
      */
-    void reset();
-
-    /** Attempts to encrypt a vector as a reference
-     * @param data Data to encrypt, this data will grow in size by a few bytes as a result of adding a IV to the end of it
-     * @returns if the encryption was successful or not
-     */
-    bool encrypt(std::vector<std::uint8_t>& data);
-
-    /** Attempts to encrypt a vector as a reference
-     * @param data Data to encrypt
-     * @param iv Data to write IV to
-     * @returns if the encryption was successful or not
-     */
-    bool encrypt(std::vector<std::uint8_t>& data, std::uint8_t* iv);
-
-    /** Attempts to decrypt a vector as a reference
-     * @param data Data to decrypt, this data will shrink in size by a few bytes as a result of removing the IV from the end of it
-     * @returns if the decryption was successful or not
-     */
-    bool decrypt(std::vector<std::uint8_t>& data);
-
-    /** Attempts to decrypt a vector as a reference
-     * @param data Data to decrypt
-     * @param iv Data to read IV from
-     * @returns if the decryption was successful or not
-     */
-    bool decrypt(std::vector<std::uint8_t>& data, const std::uint8_t* iv);
+    bool decrypt(std::uint8_t* outputData, const std::uint8_t* inputData, std::size_t dataLen, const std::uint8_t* iv);
 private:
-    const EVP_CIPHER* m_cipher;
     EVP_CIPHER_CTX* m_ctx;
+    const EC_GROUP* m_group;
+    const EVP_CIPHER* m_cipher;
+
+    EC_KEY* m_keyPair;
+    std::uint8_t m_sharedKey[CRYPTO_ECDH_SHARED_KEY_LEN];
 };
 }
 

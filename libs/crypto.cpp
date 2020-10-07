@@ -1,256 +1,215 @@
 #include "crypto.h"
 
-#include <fstream>
-#include <QDebug>
+#include <climits>
+#include <cstring>
+#include <algorithm>
 
-#include <botan_all.h>
-
-#include "constants.h"
-
+#include <openssl/ssl.h>
+#include <openssl/rand.h>
+#include <openssl/aes.h>
+#include <openssl/conf.h>
 #include <openssl/evp.h>
+#include <openssl/err.h>
+#include <openssl/bio.h>
+#include <openssl/lhash.h>
 
-bool afsa(std::uint8_t* key, std::uint8_t* iv, const std::vector<std::uint8_t>& data, std::vector<std::uint8_t>& out)
+#include <QFile>
+#include <QByteArray>
+
+// EC_ID:         NID_secp256k1
+// CIPHER_ID:     ChaCha20
+// KEY_DER_FN_ID: KDF2(SHA-256)
+
+bool ThorQ::Crypto::RandomizeBytes(uint8_t *data, std::size_t len)
 {
-    out.resize(data.size());
-
-    int outputLenght, tempLength;
-
-    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-
-    EVP_EncryptInit_ex(ctx, EVP_chacha20(), nullptr, key, iv);
-
-    if (!EVP_EncryptUpdate(ctx, out.data(), &outputLenght, data.data(), data.size()))
-    {
-        EVP_CIPHER_CTX_reset(ctx);
-        return false;
-    }
-
-    if (!EVP_EncryptFinal_ex(ctx, out.data() + outputLenght, &tempLength))
-    {
-         EVP_CIPHER_CTX_reset(ctx);
-         return false;
-     }
-
-     outputLenght += tempLength;
-
-     EVP_CIPHER_CTX_reset(ctx);
-
-     return true;
+    return RAND_bytes(data, len) == 1;
 }
 
-
-using namespace ThorQ;
-
-Crypto::Crypto(Botan::Private_Key *key)
-    : m_ready(false)
-    , m_rng(new Botan::AutoSeeded_RNG())
-    , m_key(key)
-    , m_streamCipher(Botan::StreamCipher::create(THORQ_CRYPTO_CIPHER_NAME))
-    , m_cipher(EVP_chacha20())
+ThorQ::Crypto::Crypto(QObject *parent)
+    : QObject(parent)
     , m_ctx(EVP_CIPHER_CTX_new())
+    , m_group(nullptr)
+    , m_cipher(EVP_chacha20())
+    , m_keyPair(nullptr)
 {
+    memset(m_sharedKey, 0, CRYPTO_ECDH_SHARED_KEY_LEN);
 }
 
-void Crypto::RandomizeBytes(std::uint8_t* data, std::size_t len)
+ThorQ::Crypto::~Crypto()
 {
-    if (data == nullptr || len == 0)
-        return;
+    if (m_keyPair != nullptr)
+    {
+        EC_KEY_free(m_keyPair);
+    }
 
-    Botan::AutoSeeded_RNG().randomize(data, len);
+    EVP_CIPHER_CTX_free(m_ctx);
 }
 
-Crypto* Crypto::load(const std::string &keyName, const std::string &password)
+bool ThorQ::Crypto::generateKeyPair()
 {
-    try
-    {
-        std::unique_ptr<Botan::AutoSeeded_RNG> rng = std::make_unique<Botan::AutoSeeded_RNG>();
+    //Generate keypair
+    m_keyPair = EC_KEY_new_by_curve_name(CRYPTO_CURVE_NID);
 
-        Botan::Private_Key* pk = Botan::PKCS8::load_key(keyName + ".sk", *rng, password);
+    // Get group
+    m_group = EC_KEY_get0_group(m_keyPair);
 
-        return new Crypto(pk);
-    }
-    catch (const Botan::Exception& ex)
+    // Generate keys
+    if (!EC_KEY_generate_key(m_keyPair))
     {
-        qDebug() << "Error while decoding key:" << ex.what();
-    }
-    catch (const std::exception& ex)
-    {
-        qDebug() << "Error while loading key:" << ex.what();
-    }
-
-    return nullptr;
-}
-
-bool Crypto::save(const std::string &keyName, const std::string &password) const
-{
-    try
-    {
-        std::string encoded = Botan::PKCS8::PEM_encode(*m_key, *m_rng, password);
-        std::ofstream out(keyName + ".sk");
-        out << encoded;
-        out.close();
-    }
-    catch (const Botan::Exception& ex)
-    {
-        qDebug() << "Error while encoding key:" << ex.what();
-        return false;
-    }
-    catch (const std::exception& ex)
-    {
-        qDebug() << "Error while saving key:" << ex.what();
+        EC_KEY_free(m_keyPair);
+        m_keyPair = nullptr;
+        m_group = nullptr;
         return false;
     }
 
     return true;
 }
 
-Crypto::Crypto()
-    : m_ready(false)
-    , m_rng(new Botan::AutoSeeded_RNG())
-    , m_key(new Botan::ECDH_PrivateKey(*m_rng, Botan::EC_Group(THORQ_CRYPTO_EC_ID)))
-    , m_streamCipher(Botan::StreamCipher::create(THORQ_CRYPTO_CIPHER_NAME))
-    , m_cipher(EVP_chacha20())
-    , m_ctx(EVP_CIPHER_CTX_new())
+bool ThorQ::Crypto::getPublicKey(std::uint8_t *publicKeyOut, std::size_t outLen)
 {
+    // Get public key
+    const EC_POINT* publicKey = EC_KEY_get0_public_key(m_keyPair);
+
+    // Encode public key
+    int len = EC_POINT_point2oct(m_group,
+                             publicKey,
+                             POINT_CONVERSION_UNCOMPRESSED,
+                             publicKeyOut,
+                             outLen,
+                             nullptr);
+
+    return len == CRYPTO_ECDH_PUBLIC_KEY_LEN;
 }
 
-Crypto::~Crypto()
+bool ThorQ::Crypto::agree(const std::uint8_t* keyData, std::size_t keySize)
 {
-    delete m_rng;
-    delete m_key;
-    EVP_CIPHER_CTX_free(m_ctx);
-}
+    int len = 0;
+    int ret = 0;
 
-std::vector<std::uint8_t> Crypto::publicKey() const
-{
-    return m_key->public_key_bits();
-}
+    EC_POINT* foreignKeyPoint = nullptr;
 
-bool Crypto::ready() const
-{
-    return m_ready;
-}
-
-bool Crypto::agree(const std::vector<std::uint8_t>& data)
-{
-    if (data.size() == m_key->public_key_bits().size())
+    // Create key
+    foreignKeyPoint = EC_POINT_new(m_group);
+    if (foreignKeyPoint == nullptr)
     {
-        try
-        {
-            Botan::PK_Key_Agreement ecdh(*m_key, *m_rng, THORQ_CRYPTO_KEY_DVFUNC);
-            m_streamCipher->set_key(ecdh.derive_key(THORQ_CRYPTO_KEY_LENGTH, data));
-            m_ready = true;
-            return true;
-        }
-        catch (const std::exception& ex)
-        {
-            qDebug() << "Error while doing key agreement:" << ex.what();
-        }
+        goto err;
     }
 
-    return false;
+    // Decode foreign key
+    ret = EC_POINT_oct2point(m_group, foreignKeyPoint, keyData, keySize, nullptr);
+    if (ret == 0)
+    {
+        goto err;
+    }
+
+    // Calculate shared secret
+    len = ECDH_compute_key(m_sharedKey, CRYPTO_ECDH_SHARED_KEY_LEN, foreignKeyPoint, m_keyPair, nullptr);
+    if (len != CRYPTO_ECDH_SHARED_KEY_LEN)
+    {
+        goto err;
+    }
+
+    ret = 1;
+err:
+    if (foreignKeyPoint != nullptr)
+    {
+        EC_POINT_free(foreignKeyPoint);
+    }
+
+    return ret == 1;
 }
 
-void Crypto::reset()
+bool ThorQ::Crypto::encrypt(std::uint8_t* outputData, const std::uint8_t* inputData, std::size_t dataLen, std::uint8_t* iv)
 {
-    try
+    if (!RandomizeBytes(iv, CRYPTO_AES_IV_LEN))
     {
-        m_ready = false;
-        Botan::Private_Key* oldKey = m_key;
-        m_key = new Botan::ECDH_PrivateKey(*m_rng, Botan::EC_Group(THORQ_CRYPTO_EC_ID));
-        delete oldKey;
-        m_streamCipher->clear();
+        return false;
     }
-    catch (const std::exception& ex)
+
+    bool ret = false;
+    int iterWrittenBytes = 0;
+    std::size_t totalWrittenBytes = 0;
+
+    // Initialize the cipher
+    if (EVP_EncryptInit_ex(m_ctx, m_cipher, nullptr, m_sharedKey, iv) == 0)
     {
-        qDebug() << "Error while resetting encryption:" << ex.what();
+        goto err;
     }
+
+    // Iterate for every 2.27 ish GB (INT_MAX)
+    while (totalWrittenBytes != dataLen)
+    {
+        // Prevent integer overflow
+        int bytesToWrite = std::min(
+                                dataLen - totalWrittenBytes,
+                                std::size_t(INT_MAX)
+                                    );
+
+        if (EVP_EncryptUpdate(m_ctx, outputData + totalWrittenBytes, &iterWrittenBytes, inputData + totalWrittenBytes, bytesToWrite) == 0)
+        {
+            goto err;
+        }
+
+        totalWrittenBytes += iterWrittenBytes;
+    }
+
+    // Fianlize the encryption
+    if (EVP_EncryptFinal_ex(m_ctx, outputData + totalWrittenBytes, &iterWrittenBytes) == 0)
+    {
+        goto err;
+    }
+
+    totalWrittenBytes += iterWrittenBytes;
+
+    // Check if everything got written
+    ret = (totalWrittenBytes == dataLen);
+
+err:
+    EVP_CIPHER_CTX_reset(m_ctx);
+    return ret;
 }
 
-bool Crypto::encrypt(std::vector<std::uint8_t>& data)
+bool ThorQ::Crypto::decrypt(std::uint8_t *outputData, const std::uint8_t *inputData, std::size_t dataLen, const std::uint8_t *iv)
 {
-    if (!data.empty())
+    bool ret = false;
+    int iterWrittenBytes = 0;
+    std::size_t totalWrittenBytes = 0;
+
+    // Initialize the cipher
+    if (EVP_DecryptInit_ex(m_ctx, m_cipher, nullptr, m_sharedKey, iv) == 0)
     {
-        try
-        {
-            data.reserve(data.size() + THORQ_CRYPTO_CIPHER_IV_LEN);
-
-            std::uint8_t iv[THORQ_CRYPTO_CIPHER_IV_LEN];
-            m_rng->randomize(iv, THORQ_CRYPTO_CIPHER_IV_LEN);
-            m_streamCipher->set_iv(iv, THORQ_CRYPTO_CIPHER_IV_LEN);
-
-            m_streamCipher->encrypt(data);
-
-            data.insert(data.end(), iv, &iv[THORQ_CRYPTO_CIPHER_IV_LEN]);
-
-            return true;
-        }
-        catch (const std::exception& ex)
-        {
-            qDebug() << "Error while doing encryption:" << ex.what();
-        }
+        goto err;
     }
-    return false;
-}
 
-bool Crypto::encrypt(std::vector<std::uint8_t> &data, std::uint8_t* iv)
-{
-    if (!data.empty())
+    // Iterate for every 2.27 ish GB (INT_MAX)
+    while (totalWrittenBytes != dataLen)
     {
-        try
-        {
-            m_rng->randomize(iv, THORQ_CRYPTO_CIPHER_IV_LEN);
-            m_streamCipher->set_iv(iv, THORQ_CRYPTO_CIPHER_IV_LEN);
+        // Prevent integer overflow
+        int bytesToWrite = std::min(
+                                dataLen - totalWrittenBytes,
+                                std::size_t(INT_MAX)
+                                    );
 
-            m_streamCipher->encrypt(data);
-            return true;
-        }
-        catch (const std::exception& ex)
+        if (EVP_DecryptUpdate(m_ctx, outputData + totalWrittenBytes, &iterWrittenBytes, inputData + totalWrittenBytes, bytesToWrite) == 0)
         {
-            qDebug() << "Error while doing encryption:" << ex.what();
+            goto err;
         }
+
+        totalWrittenBytes += iterWrittenBytes;
     }
-    return false;
-}
 
-bool Crypto::decrypt(std::vector<std::uint8_t>& data)
-{
-    if (data.size() > THORQ_CRYPTO_CIPHER_IV_LEN)
+    // Fianlize the encryption
+    if (EVP_DecryptFinal_ex(m_ctx, outputData + totalWrittenBytes, &iterWrittenBytes) == 0)
     {
-        try
-        {
-            std::size_t newSize = data.size() - THORQ_CRYPTO_CIPHER_IV_LEN;
-
-            m_streamCipher->set_iv(&data[newSize], THORQ_CRYPTO_CIPHER_IV_LEN);
-
-            data.resize(newSize);
-
-            m_streamCipher->decrypt(data);
-            return true;
-        }
-        catch (const std::exception& ex)
-        {
-            qDebug() << "Error while doing decryption:" << ex.what();
-        }
+        goto err;
     }
-    return false;
-}
 
-bool Crypto::decrypt(std::vector<std::uint8_t> &data, const std::uint8_t *iv)
-{
-    if (!data.empty())
-    {
-        try
-        {
-            m_streamCipher->set_iv(iv, THORQ_CRYPTO_CIPHER_IV_LEN);
+    totalWrittenBytes += iterWrittenBytes;
 
-            m_streamCipher->decrypt(data);
-            return true;
-        }
-        catch (const std::exception& ex)
-        {
-            qDebug() << "Error while doing decryption:" << ex.what();
-        }
-    }
-    return false;
+    // Check if everything got written
+    ret = (totalWrittenBytes == dataLen);
+
+err:
+    EVP_CIPHER_CTX_reset(m_ctx);
+    return ret;
 }

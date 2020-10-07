@@ -40,6 +40,8 @@ enum THORQ_PAYLOAD_ID : std::uint8_t
     // Authority channel
     THORQ_PAYLOAD_ID_MODERATION = 0, ///< Bans/Reporting
     THORQ_PAYLOAD_ID_ANNOUNCEMENT,   ///< Server notifications/Admin notifications
+
+    THORQ_PAYLOAD_ID__MAX = THORQ_PAYLOAD_ID_ACK
 };
 
 
