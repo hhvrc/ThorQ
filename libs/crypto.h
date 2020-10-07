@@ -54,7 +54,7 @@ public:
      * @param iv
      * @return
      */
-    bool encrypt(std::uint8_t* outputData, const std::uint8_t* inputData, std::size_t dataLen, std::uint8_t* iv);
+    bool encrypt(const std::uint8_t* inputData, std::uint8_t* outputData, std::size_t dataLen, std::uint8_t* iv);
 
     /** Attempts to decrypt the data
      * @param inputData
@@ -63,7 +63,7 @@ public:
      * @param iv
      * @return
      */
-    bool decrypt(std::uint8_t* outputData, const std::uint8_t* inputData, std::size_t dataLen, const std::uint8_t* iv);
+    bool decrypt(const std::uint8_t *inputData, std::uint8_t *outputData, std::size_t dataLen, const std::uint8_t *iv);
 private:
     EVP_CIPHER_CTX* m_ctx;
     const EC_GROUP* m_group;

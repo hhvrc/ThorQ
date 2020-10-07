@@ -103,7 +103,7 @@ bool ThorQ::Crypto::encrypt(const std::uint8_t* inputData, std::uint8_t* outputD
     int iterWrittenBytes = 0;
     std::size_t totalWrittenBytes = 0;
 
-    if (randomizeBytes(iv, CRYPTO_AES_IV_LEN))
+    if (RandomizeBytes(iv, CRYPTO_AES_IV_LEN))
     {
         // Initialize the cipher
         if (EVP_EncryptInit_ex(m_ctx, m_cipher, nullptr, m_sharedKey, iv) == 1)
