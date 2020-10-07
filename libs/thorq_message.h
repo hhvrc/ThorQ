@@ -46,6 +46,7 @@ constexpr std::size_t THORQ_MESSAGE_LEN =
 struct THORQ_PAYLOAD
 {
     THORQ_PAYLOAD_ID id;
+    std::uint32_t size;
     union
     {
         std::uint8_t raw[THORQ_PAYLOAD_CAP];
@@ -62,27 +63,27 @@ typedef std::uint8_t THORQ_MESSAGE[
 
 typedef std::uint8_t THORQ_MESSAGE[THORQ_MESSAGE_LEN];
 
-inline bool thorq_message_encode(const THORQ_PAYLOAD& payload, std::size_t payloadLen, THORQ_MESSAGE& messageOut)
+inline bool thorq_message_encode(const THORQ_PAYLOAD& payload, THORQ_MESSAGE& messageOut)
 {
-    if (payloadLen > THORQ_PAYLOAD_CAP)
+    if (payload.size > THORQ_PAYLOAD_CAP)
         return false;
 
     // Set header
     messageOut[0] = 0;
 
-    // Copy data
-    memcpy(messageOut + 5, &payload, payloadLen);
-
-    // Randomize all data after the payload (+iv)
-    ThorQ::Crypto::RandomizeBytes(messageOut + 5 + payloadLen, THORQ_PAYLOAD_CAP + CRYPTO_AES_IV_LEN - payloadLen);
-
     // Convert and copy size
     payloadLen = htonl(payloadLen);
     memcpy(messageOut + 1, &payloadLen, sizeof(payloadLen));
 
+    // Copy data
+    memcpy(messageOut + 5, &payload, payload.size +);
+
+    // Randomize all data after the payload (+iv)
+    ThorQ::Crypto::RandomizeBytes(messageOut + 5 + payloadLen, THORQ_PAYLOAD_CAP + CRYPTO_AES_IV_LEN - payloadLen);
+
 	return true;
 }
-inline bool thorq_message_encode(const THORQ_PAYLOAD& payload, std::size_t payloadLen, THORQ_MESSAGE& messageOut, ThorQ::Crypto* crypto)
+inline bool thorq_message_encode(const THORQ_PAYLOAD& payload, THORQ_MESSAGE& messageOut, ThorQ::Crypto* crypto)
 {
     if (payloadLen > THORQ_PAYLOAD_CAP)
 		return false;
