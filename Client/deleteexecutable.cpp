@@ -16,7 +16,7 @@
 void DelMe()
 {
 #if __linux__
-	char cmd[sizeof("rm ") + MAXPATHLEN];
+    char cmd[std::size("rm ") + MAXPATHLEN];
 
 	strcpy(&cmd[0], "rm ");
 

@@ -40,7 +40,7 @@ inline void unsmear(SystemID id)
 QByteArray ThorQ::systemid_generate()
 {
 	QByteArray sys_id(ThorQ::SystemID_Internal::getMachineName());
-	sys_id.resize(sys_id.size() + sizeof(SystemID));
+    sys_id.resize(sys_id.size() + std::size(system_id));
 
 	if (!computed)
 	{
@@ -66,18 +66,18 @@ QByteArray ThorQ::systemid_generate()
 		computed = true;
 	}
 
-	memcpy(sys_id.end() - sizeof(SystemID), system_id, sizeof(SystemID));
+    memcpy(sys_id.end() - std::size(system_id), system_id, std::size(system_id));
 
 	return sys_id;
 }
 
 bool ThorQ::systemid_validate(const QByteArray& sys_id)
 {
-	if (sys_id.size() <= (int)sizeof(SystemID))
+    if (sys_id.size() <= (int)std::size(system_id))
 		return false;
 
 	SystemID id;
-	memcpy(id, sys_id.end() - sizeof(SystemID), sizeof(SystemID));
+    memcpy(id, sys_id.end() - std::size(system_id), std::size(system_id));
 
 	unsmear(id);
 
@@ -93,9 +93,9 @@ QString ThorQ::systemid_to_string(QByteArray sys_id)
 	if (systemid_validate(sys_id))
 	{
 		SystemID bin_id;
-		memcpy(bin_id, sys_id.end() - sizeof(SystemID), sizeof(SystemID));
+        memcpy(bin_id, sys_id.end() - std::size(system_id), std::size(system_id));
 
-		int nameLen = sys_id.size() - sizeof(SystemID);
+        int nameLen = sys_id.size() - std::size(system_id);
 		sys_id.resize(nameLen + 25);
 
 		std::transform(sys_id.begin(), sys_id.begin() + nameLen, sys_id.begin(), ::toupper);

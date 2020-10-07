@@ -1,5 +1,7 @@
 #include "procmon.h"
 
+#include <iterator>
+
 #if __linux__
 #include <cstdio>
 #include <cstring>
@@ -14,7 +16,7 @@ bool ProcessIsRuning(const char* processName)
 #if __linux__
 	char buf[128];
 
-	snprintf(buf, sizeof(buf), "ps | grep %s > /dev/null", processName);
+    snprintf(buf, std::size(buf), "ps | grep %s > /dev/null", processName);
 
 	return system(buf) == 0;
 #elif _WIN32
