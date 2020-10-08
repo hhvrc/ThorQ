@@ -105,8 +105,8 @@ endif()
 
 add_subdirectory(libs)
 include_directories(${GLOB_INCLUDE_DIRS})
-add_subdirectory(Client)
-add_subdirectory(Server)
-add_subdirectory(Keygen)
+add_subdirectory(client)
+add_subdirectory(server)
+add_subdirectory(keygen)
 
 message("Building ${project} in ${CMAKE_BUILD_TYPE} mode for ${BUILD_OS} x86_${VPTR_BITS} with ${BUILD_COMPILER}")
