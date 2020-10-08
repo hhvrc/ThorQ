@@ -3,9 +3,9 @@
 #include <cstring>
 #include <algorithm>
 
-#if defined(_WIN32) || defined(_WIN64)
-#include <Windows.h>
-#else
+#if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
+#include <WinSock2.h>
+#elif __linux__
 #include <arpa/inet.h>
 #endif
 

@@ -6,6 +6,7 @@
 
 int main(int argc, char** argv)
 {
+    /*
     if (argc < 2)
     {
         qWarning() << "Please provide a password to encrypt the key with";
@@ -26,4 +27,5 @@ int main(int argc, char** argv)
         file.write(reinterpret_cast<char*>(dat.data()), dat.size());
     }
     file.close();
+    */
 }

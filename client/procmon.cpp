@@ -2,24 +2,18 @@
 
 #include <iterator>
 
-#if __linux__
+#if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
+#include <WinSock2.h>
+#include <tlhelp32.h>
+#elif __linux__
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
-#elif _WIN32
-#include <windows.h>
-#include <tlhelp32.h>
 #endif
 
 bool ProcessIsRuning(const char* processName)
 {
-#if __linux__
-	char buf[128];
-
-    snprintf(buf, std::size(buf), "ps | grep %s > /dev/null", processName);
-
-	return system(buf) == 0;
-#elif _WIN32
+#if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
     const char* p = strrchr(processName, '\\');
 
 	if(p)
@@ -44,5 +38,11 @@ bool ProcessIsRuning(const char* processName)
 
 	CloseHandle(processesSnapshot);
     return result;
+#elif __linux__
+    char buf[128];
+
+    snprintf(buf, std::size(buf), "ps | grep %s > /dev/null", processName);
+
+    return system(buf) == 0;
 #endif
 }

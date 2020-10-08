@@ -8,9 +8,9 @@
 #include "constants.h"
 
 // htonl/ntohl
-#ifdef WIN32
-#include <winsock.h>
-#else
+#if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
+#include <WinSock2.h>
+#elif __linux__
 #include <arpa/inet.h>
 #endif
 

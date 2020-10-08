@@ -2,15 +2,15 @@
 
 #include <QDebug>
 
-#if __linux__
+#if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
+#include <WinSock2.h>
+#elif __linux__
 #include <sys/param.h>
 #include <unistd.h>
 #include <cstring>
 #include <cstdio>
 #include <cerrno>
 #include <cstdlib>
-#elif _WIN32
-#include <Windows.h>
 #endif
 
 void DelMe()

@@ -1,10 +1,6 @@
 #ifndef OPENVROVERLAYCONTROLLER_H
 #define OPENVROVERLAYCONTROLLER_H
 
-#ifdef _WIN32
-#pragma once
-#endif
-
 #include "openvr.h"
 
 #include <QtCore/QtCore>
