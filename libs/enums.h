@@ -23,13 +23,14 @@ enum THORQ_CHANNEL : std::uint8_t
 /// Flags to describe the payload of a message
 enum THORQ_PAYLOAD_ID : std::uint8_t
 {
+
     // Main & Event channel
     THORQ_PAYLOAD_ID_HEARTBEAT,    ///< Heartbeat to keep connection alive and determine RTT
     THORQ_PAYLOAD_ID_VERSION,      ///< Request updated version info
     THORQ_PAYLOAD_ID_CRYPTO,       ///< Cryptographic handshake messages
     THORQ_PAYLOAD_ID_SYSTEMID,     ///< SystemID messages
-	THORQ_PAYLOAD_ID_ACCOUNT,      ///< Create/Delete/Recover/Login/Logout
-	THORQ_PAYLOAD_ID_RELATION,     ///< Friend/Block/AcceptFriend/DenyFriend/UnFriend/GetRelations
+    THORQ_PAYLOAD_ID_ACCOUNT,      ///< Create/Delete/Recover/Login/Logout
+    THORQ_PAYLOAD_ID_RELATION,     ///< Friend/Block/AcceptFriend/DenyFriend/UnFriend/GetRelations
     THORQ_PAYLOAD_ID_SESSION,      ///< Sessions with other people
     THORQ_PAYLOAD_ID_ACK,          ///< Acknowledge
 
@@ -41,7 +42,8 @@ enum THORQ_PAYLOAD_ID : std::uint8_t
     THORQ_PAYLOAD_ID_MODERATION = 0, ///< Bans/Reporting
     THORQ_PAYLOAD_ID_ANNOUNCEMENT,   ///< Server notifications/Admin notifications
 
-    THORQ_PAYLOAD_ID__MAX = THORQ_PAYLOAD_ID_ACK
+    THORQ_PAYLOAD_ID__MAX = THORQ_PAYLOAD_ID_ACK,
+    THORQ_PAYLOAD_ID__INVALID,
 };
 
 
@@ -152,22 +154,19 @@ enum THORQ_STATE_CRYPTO
 	THORQ_STATE_CRYPTO_ACTIVE,                                  ///< Hosts have a shared secret and can send encrypted data between themselves
 };
 
-/// @enum THORQ_STATE_AUTH
-/// State machine for client authentication
+/// @enum THORQ_STATE_HWID
+/// State machine for client hwid authentication
 enum THORQ_STATE_AUTH
 {
-	THORQ_STATE_AUTH_NONE = THORQ_STATE_CRYPTO_ACTIVE,                           ///< Client has not been authenticated yet
-
-	THORQ_STATE_AUTH_HWID_REQUESTING,                                            ///< Server has requested hardwareID from client
-    THORQ_STATE_AUTH_HWID_CHECKING = THORQ_STATE_AUTH_HWID_REQUESTING,           ///< Client has sent SystemID to server and is awaiting a response
-
-	THORQ_STATE_AUTH_OK,                                                         ///< Server authenticated client, client can now access the api
+    THORQ_STATE_HWID_NONE = THORQ_STATE_CRYPTO_ACTIVE,          ///< Client has not been authenticated yet
+    THORQ_STATE_HWID_REQUESTING,                                ///< Server has requested hardwareID from client / Client has sent SystemID to server and is awaiting a response
+    THORQ_STATE_HWID_OK,                                        ///< Server authenticated client, client can now access the api
 };
 
 /// State machine for login
 enum THORQ_STATE_LOGIN
 {
-	THORQ_STATE_LOGIN_LOGGEDOUT = THORQ_STATE_AUTH_OK,          ///< Client is logged out
+    THORQ_STATE_LOGIN_LOGGEDOUT = THORQ_STATE_HWID_OK,          ///< Client is logged out
 	THORQ_STATE_LOGIN_LOGGINGOUT,                               ///< Client has requested the server to log it out gracefully
 	THORQ_STATE_LOGIN_LOGGINGIN,                                ///< Client has requested to log in with a username, and waiting for the server to accept
 	THORQ_STATE_LOGIN_LOGGEDIN,                                 ///< Client is logged in with a username, and is discoverable by other online users

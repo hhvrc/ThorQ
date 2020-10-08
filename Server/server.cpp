@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include <QThread>
+#include <QThreadPool>
 #include <QDebug>
 
 #if defined(__GCC__) || defined(__GNUC__) || defined(__clang__)
@@ -27,6 +28,17 @@
 #include "account.h"
 #include "instance.h"
 
+// ceil(x / y) https://stackoverflow.com/questions/2745074/fast-ceiling-of-an-integer-division-in-c-c
+constexpr std::size_t ceilDiv(std::size_t x, std::size_t y)
+{
+    return (x + y - 1) / y;
+}
+
+// https://github.com/cameron314/concurrentqueue
+constexpr std::size_t blockSize = moodycamel::ConcurrentQueueDefaultTraits::BLOCK_SIZE;
+constexpr std::size_t queueCapicity = 1024;
+constexpr std::size_t queueSizeIn  = (ceilDiv(queueCapicity, blockSize) + 1) * 16 * blockSize;
+constexpr std::size_t queueSizeOut = (ceilDiv(queueCapicity, blockSize) + 1) *  1 * blockSize;
 
 std::atomic<bool> g_initialized = false;
 
@@ -39,21 +51,44 @@ QString ThorQ::Server::Version()
 }
 bool ThorQ::Server::Initialize()
 {
-    if (!g_initialized && enet_initialize() < 0)
+    if (!g_initialized)
     {
-        qWarning() << "Failed to initialize ENet\n";
-        return false;
+        g_initialized = (enet_initialize() == 0);
     }
-    g_initialized = true;
-    return false;
+    return g_initialized;
 }
 void ThorQ::Server::DeInitialize()
 {
-    enet_deinitialize();
-    g_initialized = false;
+    if (g_initialized)
+    {
+        enet_deinitialize();
+        g_initialized = false;
+    }
 }
 
-bool ThorQ::Server::setup(uint16_t port, std::size_t maxPeers, uint8_t channelCount, bool noDelay)
+ThorQ::Server::Server(QObject *parent)
+    : QObject(parent)
+    , QRunnable()
+    , m_host(nullptr)
+    , m_shouldRun(false)
+    , m_status(ServerStatus::Stopped)
+    , m_heartbeatInterval(500)
+    , m_totalSentData(0)
+    , m_totalSentPackets(0)
+    , m_totalReceivedData(0)
+    , m_totalReceivedPackets(0)
+    , m_receivedMessages(queueSizeIn)
+    , m_queuedMessages(queueSizeOut)
+    , m_queuedBroadcasts()
+{
+    setAutoDelete(false);
+}
+ThorQ::Server::~Server()
+{
+
+}
+
+bool ThorQ::Server::setup(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount, bool noDelay)
 {
     ENetAddress address;
     address.host = ENET_HOST_ANY;
@@ -75,12 +110,20 @@ bool ThorQ::Server::setup(uint16_t port, std::size_t maxPeers, uint8_t channelCo
 
 bool ThorQ::Server::start()
 {
-
+    m_status = ServerStatus::Starting;
+    QThreadPool::globalInstance()->start(this, QThread::HighestPriority);
 }
-
 void ThorQ::Server::stop()
 {
+    m_shouldRun = true;
+    m_status = ServerStatus::Stopping;
 
+    while (m_status != ServerStatus::Stopped) { std::this_thread::sleep_for(std::chrono::milliseconds(10)); };
+}
+
+ThorQ::Server::ServerStatus ThorQ::Server::status()
+{
+    return m_status;
 }
 
 void ThorQ::Server::cleanup()
@@ -102,21 +145,14 @@ void ThorQ::Server::cleanup()
     m_host = nullptr;
 }
 
-
-
-
 uint16_t ThorQ::Server::HeartbeatInterval()
 {
     return m_heartbeatInterval;
 }
-void ThorQ::Server::SetHeartbeatInterval(uint16_t msInterval)
+void ThorQ::Server::SetHeartbeatInterval(std::uint16_t msInterval)
 {
     m_heartbeatInterval = msInterval;
 }
-
-
-
-
 
 std::uint64_t ThorQ::Server::totalDataSent()
 {
@@ -135,8 +171,81 @@ std::uint64_t ThorQ::Server::totalPacketsReceived()
     return m_totalReceivedPackets;
 }
 
+void ThorQ::Server::broadcastAnnouncement(const ThorQ::THORQ_PAYLOAD& payload, bool reliable, bool unsequenced)
+{
+    ENetPacket* packet = ThorQ::packetEncode(payload, (ENET_PACKET_FLAG_RELIABLE * reliable) | (ENET_PACKET_FLAG_UNSEQUENCED * unsequenced));
 
+    if (packet != nullptr)
+    {
+        m_queuedBroadcasts.enqueue(packet);
+    }
+}
 
+bool ThorQ::Server::tryGetMessage(ThorQ::Server::QueuedMessage &message)
+{
+    return m_receivedMessages.try_dequeue(message);
+}
+void ThorQ::Server::queueMessage(const QueuedMessage& message)
+{
+    m_queuedMessages.enqueue(message);
+}
+
+void ThorQ::Server::run()
+{
+    ENetEvent event;
+    std::uint16_t iterations = 0;
+    m_status = ServerStatus::Started;
+    while (m_shouldRun)
+    {
+        while (enet_host_service(m_host, &event, 0) > 0)
+        {
+            switch (event.type)
+            {
+            case ENET_EVENT_TYPE_CONNECT:
+                handleEventConnection(event);
+                break;
+            case ENET_EVENT_TYPE_RECEIVE:
+                handleEventMessage(event);
+                break;
+            case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
+                handleEventTimeout(event);
+            case ENET_EVENT_TYPE_DISCONNECT:
+                handleEventDisconnect(event);
+                break;
+            case ENET_EVENT_TYPE_NONE:
+                break;
+            }
+
+            ENetPacket* queuedBroadcast;
+            if (m_queuedBroadcasts.try_dequeue(queuedBroadcast))
+            {
+
+            }
+
+            QueuedMessage queuedMessage;
+            if (m_queuedMessages.try_dequeue(queuedMessage))
+            {
+                enet_peer_send(queuedMessage.peer, queuedMessage.channel, queuedMessage.packet);
+            }
+
+            if (++iterations > 100)
+            {
+                m_totalSentData += m_host->totalSentData;
+                m_host->totalSentData = 0;
+
+                m_totalSentPackets += m_host->totalSentPackets;
+                m_host->totalSentPackets = 0;
+
+                m_totalReceivedData += m_host->totalReceivedData;
+                m_host->totalReceivedData = 0;
+
+                m_totalReceivedPackets += m_host->totalReceivedPackets;
+                m_host->totalReceivedPackets = 0;
+            }
+        }
+    }
+    m_status = ServerStatus::Stopped;
+}
 
 void ThorQ::Server::handleEventConnection(const ENetEvent& event)
 {
@@ -162,12 +271,10 @@ void ThorQ::Server::handleEventConnection(const ENetEvent& event)
                 .arg(enet_peer_address_str(event.peer))
                 .arg(event.peer->address.port);
 }
-
 void ThorQ::Server::handleEventMessage(const ENetEvent &event)
 {
-
+    m_receivedMessages.enqueue(QueuedMessage{ event.peer, event.packet, event.channelID });
 }
-
 void ThorQ::Server::handleEventDisconnect(const ENetEvent& event)
 {
     if (event.peer->data == nullptr)
@@ -201,51 +308,4 @@ void ThorQ::Server::handleEventTimeout(const ENetEvent& event)
     {
         qDebug() << instance->account()->username() << "timed out";
     }
-}
-
-bool ThorQ::Server::Start(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount)
-{
-
-    ENetEvent event;
-    ::std::uint16_t iterations = 0;
-    while (!isInterruptionRequested())
-    {
-        while (enet_host_service(m_host, &event, 0) > 0)
-        {
-            switch (event.type)
-            {
-            case ENET_EVENT_TYPE_CONNECT:
-                m_peers.insert(event.peer);
-                handleEventNewConnection(event);
-                break;
-            case ENET_EVENT_TYPE_RECEIVE:
-                emit enetEvent(event);
-                break;
-            case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-                handleEventTimeout(event);
-            case ENET_EVENT_TYPE_DISCONNECT:
-                handleEventDisconnect(event);
-                break;
-            case ENET_EVENT_TYPE_NONE:
-                break;
-            }
-
-            if (++iterations > 100)
-            {
-                m_totalSentData += m_host->totalSentData;
-                m_host->totalSentData = 0;
-
-                m_totalSentPackets += m_host->totalSentPackets;
-                m_host->totalSentPackets = 0;
-
-                m_totalReceivedData += m_host->totalReceivedData;
-                m_host->totalReceivedData = 0;
-
-                m_totalReceivedPackets += m_host->totalReceivedPackets;
-                m_host->totalReceivedPackets = 0;
-            }
-        }
-    }
-
-    return true;
 }

@@ -97,7 +97,7 @@ bool ThorQ::Crypto::agree(const std::uint8_t* keyData, std::size_t keySize)
     return ret;
 }
 
-bool ThorQ::Crypto::encrypt(const std::uint8_t* inputData, std::uint8_t* outputData, std::size_t dataLen, std::uint8_t* iv)
+bool ThorQ::Crypto::encrypt(std::uint8_t* outputData, const std::uint8_t* inputData, std::size_t dataLen, std::uint8_t* iv)
 {
     bool ret = false;
     int iterWrittenBytes = 0;
@@ -139,7 +139,7 @@ err:
     return ret;
 }
 
-bool ThorQ::Crypto::decrypt(const std::uint8_t *inputData, std::uint8_t *outputData, std::size_t dataLen, const std::uint8_t *iv)
+bool ThorQ::Crypto::decrypt(std::uint8_t* outputData, const std::uint8_t* inputData, std::size_t dataLen, const std::uint8_t *iv)
 {
     bool ret = false;
     int iterWrittenBytes = 0;

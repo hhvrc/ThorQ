@@ -20,8 +20,6 @@ const char* uiStatusList[][2]
     { "● Encryped\n%1 ms",          "font-size: 16px; color: #00FF00" }, // THORQ_STATE_AUTH_NONE
 
     { "● Authenticating...\n%1 ms", "font-size: 16px; color: #FFA500" }, // THORQ_STATE_AUTH_HWID_CHECKING
-    { "● Awaiting key...\n%1 ms",   "font-size: 16px; color: #FFA500" }, // THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT
-    { "● Registering...\n%1 ms",    "font-size: 16px; color: #FFA500" }, // THORQ_STATE_AUTH_REGKEY_CHECKING
     { "● Authenticated\n%1 ms",     "font-size: 16px; color: #00FF00" }, // THORQ_STATE_AUTH_OK
 
     { "● Logging out...\n%1 ms",    "font-size: 16px; color: #FFA500" }, // THORQ_STATE_LOGIN_LOGGINGOUT
@@ -64,14 +62,7 @@ LoginWidget::LoginWidget(QWidget* parent)
         if (m_textInput->text().isEmpty())
             return;
 
-        if (m_state == THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT)
-        {
-            emit regkeyEntered(m_textInput->text());
-        }
-        else
-        {
-            emit usernameEntered(m_textInput->text());
-        }
+        emit usernameEntered(m_textInput->text());
     });
 
     updateUiState();
@@ -140,17 +131,7 @@ void LoginWidget::updateUiState()
         m_onlineStatus->setText(tr(uiStatusList[m_state][0]).arg(m_ping));
     }
 
-    if (m_state == THORQ_STATE_AUTH_REGKEY_AWAITING_INPUT)
-    {
-        m_textInput->setText("");
-        m_textInput->show();
-
-        m_acceptButton->setText(tr("Submit"));
-        m_acceptButton->show();
-
-        adjustSize();
-    }
-    else if (m_state == THORQ_STATE_LOGIN_LOGGEDOUT)
+    if (m_state == THORQ_STATE_LOGIN_LOGGEDOUT)
     {
         m_textInput->setText("");
         m_textInput->show();

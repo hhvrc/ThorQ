@@ -61,6 +61,8 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid_${BUILD_OSL}.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/serialization.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.cpp
 )
 set(${project}_HEADERS
     ${CMAKE_CURRENT_BINARY_DIR}/botan_all.h

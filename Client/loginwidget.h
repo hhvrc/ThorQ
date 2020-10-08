@@ -22,7 +22,6 @@ public:
 	LoginWidget(QWidget* parent = nullptr);
 	~LoginWidget();
 signals:
-	void regkeyEntered(const QString& username);
 	void usernameEntered(const QString& username);
 public slots:
     void setConnectionState(THORQ_STATE_CONNECTION state);

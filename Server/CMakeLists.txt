@@ -49,14 +49,17 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/relationship.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_server.h
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/concurrentqueue/concurrentqueue.h
 )
 
 include_directories(
     ${Qt5Core_INCLUDE_DIRS}
     ${Qt5Sql_INCLUDE_DIRS}
     ${Qt5Concurrent_INCLUDE_DIRS}
-    ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/concurrentqueue
 )
 
 add_executable(${project}

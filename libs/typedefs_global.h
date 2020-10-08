@@ -12,6 +12,9 @@ typedef struct _ENetEvent ENetEvent;
 typedef struct _ENetPacket ENetPacket;
 typedef struct _ENetAddress ENetAddress;
 
-namespace ThorQ { class Crypto; }
+namespace ThorQ {
+class Crypto;
+typedef struct _THORQ_PAYLOAD THORQ_PAYLOAD;
+}
 
 #endif // TYPEDEFS_GLOBAL_H

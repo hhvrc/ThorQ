@@ -22,7 +22,6 @@ constexpr std::uint8_t THORQ_VERSION_LINK_PATCH = 132;
 constexpr ThorQ::Version THORQ_VERSION_LINK { THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH };
 
 constexpr std::size_t THORQ_PAYLOAD_CAP = 512; ///< Maximum payload length
-constexpr std::size_t THORQ_AUTH_REGKEY_LEN = 32; ///< Fixed registration key length
 
 /* So according to the POSIX standard, a hostname is guaranteed not to exceed 255 bytes
  * Also a hostname can minimum be 1 character long

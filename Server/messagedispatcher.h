@@ -11,7 +11,7 @@ class MessageDispatcher : public QObject
     Q_OBJECT
 public:
     MessageDispatcher(QObject* parent = nullptr);
-public slots:
+
     void DispatchMessage(ENetEvent event);
 private:
 };

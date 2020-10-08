@@ -34,7 +34,7 @@ void handleEventMessage(ENetPeer* peer, ENetPacket* packet)
 
 	std::vector<std::uint8_t> message(packet->data, packet->data + packet->dataLength);
 
-    if (!thorq_message_decode(message, instance->getCrypto()))
+    if (!thorqPacketDecode(message, instance->getCrypto()))
         return;
 
     switch (message[0]) {

@@ -575,7 +575,7 @@ void Client::HandleMessage(ENetPacket* packet)
 
 	std::vector<std::uint8_t> message(packet->data, packet->data + packet->dataLength);
 
-    if (!thorq_message_decode(message, m_crypto))
+    if (!thorqPacketDecode(message, m_crypto))
 	{
         return;
 	}
@@ -1013,12 +1013,12 @@ void Client::SendPayload(std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, b
 {
     if (encrypt)
 	{
-        if (!thorq_message_encode(payload, m_crypto))
+        if (!thorqPacketDecode(payload, m_crypto))
 			return;
 	}
     else
 	{
-        if (!thorq_message_encode(payload))
+        if (!thorqPacketDecode(payload))
 			return;
 	}
 

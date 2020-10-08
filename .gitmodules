@@ -7,3 +7,6 @@
 [submodule "libs/botan"]
 	path = libs/botan
 	url = https://github.com/randombit/botan.git
+[submodule "Server/concurrentqueue"]
+	path = Server/concurrentqueue
+	url = https://github.com/cameron314/concurrentqueue
