@@ -219,7 +219,7 @@ void ThorQ::Server::run()
             ENetPacket* queuedBroadcast;
             if (m_queuedBroadcasts.try_dequeue(queuedBroadcast))
             {
-
+                enet_host_broadcast(m_host, THORQ_CHANNEL_AUTHORITY, queuedBroadcast);
             }
 
             QueuedMessage queuedMessage;
