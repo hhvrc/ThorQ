@@ -40,13 +40,7 @@ void exit_handler(int s)
 
 void exitCleanup()
 {
-
-
-    qDebug() << "All clients are disconnected,\nIf i crash now, that is totally ok!";
-
-    // This is very likely to crash the server, so do this last
-    for (ThorQ::Instance* instance : g_sessions)
-        delete instance;
+    g_server.cleanup();
 }
 
 int main(int argc, char** argv)
@@ -108,11 +102,9 @@ int main(int argc, char** argv)
 
     ThorQ::Server* server = new ThorQ::Server(&app);
 
-    if (!server->Start(port, SERVER_MAX_CONNECTIONS, THORQ_CHANNEL_COUNT))
-    {
-        qDebug() << "Failed to start Server!";
-        return EXIT_FAILURE;
-    }
+    server->setup(port, SERVER_MAX_CONNECTIONS, THORQ_CHANNEL_COUNT, true);
+
+    server->start();
 
     return app.exec();
 }

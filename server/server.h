@@ -28,7 +28,7 @@ public:
 
     bool setup(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount, bool noDelay);
 
-    bool start();
+    void start();
     void stop();
 
     enum class ServerStatus
@@ -42,8 +42,8 @@ public:
 
     void cleanup();
 
-    std::uint16_t HeartbeatInterval();
-    void SetHeartbeatInterval(std::uint16_t msInterval);
+    std::uint32_t HeartbeatInterval();
+    void SetHeartbeatInterval(std::uint32_t msInterval);
 
     std::uint64_t totalDataSent();
     std::uint64_t totalPacketsSent();
@@ -51,6 +51,9 @@ public:
     std::uint64_t totalPacketsReceived();
 
     void broadcastAnnouncement(const ThorQ::THORQ_PAYLOAD& payload, bool reliable, bool unsequenced);
+signals:
+    void statusChanged(const ServerStatus& status);
+    void heartbeatChanged(const std::uint32_t& status);
 protected:
     friend Instance;
     friend MessageDispatcher;
@@ -65,6 +68,8 @@ protected:
     bool tryGetMessage(QueuedMessage& message);
     void queueMessage(const QueuedMessage& message);
 private:
+    void setStatus(ServerStatus status);
+
     void run() override;
 
     void handleEventConnection(const ENetEvent& event);
@@ -77,7 +82,7 @@ private:
     std::atomic<bool> m_shouldRun;
     std::atomic<ServerStatus> m_status;
 
-    std::atomic<std::uint16_t> m_heartbeatInterval;
+    std::atomic<std::uint32_t> m_heartbeatInterval;
 
     std::atomic<std::uint64_t> m_totalSentData;
     std::atomic<std::uint64_t> m_totalSentPackets;
