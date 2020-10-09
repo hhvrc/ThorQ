@@ -53,7 +53,14 @@ bool ThorQ::Server::Initialize()
 {
     if (!g_initialized)
     {
-        g_initialized = (enet_initialize() == 0);
+        ENetCallbacks callbacks;
+
+        callbacks.malloc = malloc;
+        callbacks.free = free;
+
+        callbacks.packet_create
+
+        g_initialized = (enet_initialize_with_callbacks(ENET_VERSION, &callbacks) == 0);
     }
     return g_initialized;
 }

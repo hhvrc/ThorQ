@@ -14,7 +14,7 @@ typedef struct _ENetAddress ENetAddress;
 
 namespace ThorQ {
 class Crypto;
-typedef struct _THORQ_PAYLOAD THORQ_PAYLOAD;
+class Payload;
 }
 
 #endif // TYPEDEFS_GLOBAL_H

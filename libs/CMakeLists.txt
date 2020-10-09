@@ -63,6 +63,7 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/serialization.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload.cpp
 )
 set(${project}_HEADERS
     ${CMAKE_CURRENT_BINARY_DIR}/botan_all.h
@@ -78,6 +79,7 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_global.h
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_heartbeat.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_version.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_crypto.h
