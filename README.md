@@ -11,7 +11,6 @@ Server and Client to control a shock-collar remotely from anywhere in the world.
 ```console
 $ git clone https://github.com/hhvrc/CollarControl.git
 $ cd CollarControl
-$ git checkout ThorQ++
 $ git submodule update --init
 $ mkdir build
 $ cd build
@@ -22,7 +21,6 @@ $ make -4
 ```powershell
 > git clone https://github.com/hhvrc/CollarControl.git
 > cd CollarControl
-> git checkout ThorQ++
 > git submodule update --init
 ```
 Open Visual Studio 2019
@@ -36,9 +34,11 @@ CMake will now configure the project
 Then do Ctrl+Shift+B, or click "Build all" to build
 
 ## Libraries used
-| Use Case | Name | Link |
-| ------ | ------ | ------ |
-| Networking | ENet | https://github.com/zpl-c/enet |
-| Encryption | Botan | https://github.com/randombit/botan |
-| GUI | Qt | https://www.qt.io/ |
-| VR UI | OpenVR | https://github.com/ValveSoftware/openvr |
+| Use Case         | Name            | Home Link                                     | Download Windows                                | Apt                 |
+| ---------------- | --------------- | --------------------------------------------- | ----------------------------------------------- | ------------------- |
+| Networking       | ENet            | http://enet.bespin.org/                       | https://github.com/zpl-c/enet                   |                     |
+| Encryption       | OpenSSL         | https://www.openssl.org/                      | https://slproweb.com/products/Win32OpenSSL.html | libssl-dev          |
+| Password Hashing | Botan           | https://botan.randombit.net/                  | https://github.com/randombit/botan              | botan               |
+| GUI              | Qt              | https://www.qt.io/                            | https://www.qt.io/download-qt-installer         | qt5-default         |
+| VR UI            | OpenVR          | https://www.steamvr.com/en/                   | https://github.com/ValveSoftware/openvr         | libopenvr-dev       |
+| Message queueing | ConcurrentQueue | https://github.com/cameron314/concurrentqueue | https://github.com/cameron314/concurrentqueue   |                     |
