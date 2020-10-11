@@ -14,7 +14,7 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/hasher.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/database.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/memorypool.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/memorymanager.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
 
@@ -32,7 +32,7 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.h
     ${CMAKE_CURRENT_SOURCE_DIR}/hasher.h
     ${CMAKE_CURRENT_SOURCE_DIR}/database.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/memorypool.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/memorymanager.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
     ${CMAKE_CURRENT_SOURCE_DIR}/config.h

@@ -3,12 +3,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <atomic>
+#include <memory>
 
-struct MetaData
-{
-    std::size_t size{0};
-    std::atomic<std::uint32_t> refcount{1};
-};
 
 MetaData* getMeta(void* ptr)
 {
@@ -30,10 +26,22 @@ const std::uint8_t* getData(const void* ptr)
 ThorQ::Payload::Payload(std::size_t size)
 {
     m_ptr = (std::uint8_t*)malloc(sizeof(MetaData) + size) + sizeof(MetaData);
-    MetaData* meta = (MetaData*)ptr;
-    new(meta) MetaData;
+
+    // Set metadata
+    MetaData* meta = (MetaData*)m_ptr;
+    new(meta) MetaData();
 
     m_ptr = data;
+}
+
+ThorQ::Payload* ThorQ::Payload::Create(size_t size)
+{
+    ThorQ::Payload* payload = (ThorQ::Payload*)malloc(sizeof(MetaData) + size);
+}
+
+void ThorQ::Payload::Destroy(ThorQ::Payload* payload)
+{
+
 }
 
 ThorQ::Payload::~Payload()

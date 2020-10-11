@@ -40,8 +40,16 @@ constexpr std::size_t queueCapicity = 1024;
 constexpr std::size_t queueSizeIn  = (ceilDiv(queueCapicity, blockSize) + 1) * 16 * blockSize;
 constexpr std::size_t queueSizeOut = (ceilDiv(queueCapicity, blockSize) + 1) *  1 * blockSize;
 
-std::atomic<bool> g_initialized = false;
+ENetPacket* allocPacket(const void *data, size_t dataLength, enet_uint32 flags)
+{
 
+}
+void freePacket(ENetPacket *packet)
+{
+
+}
+
+std::atomic<bool> g_initialized = false;
 QString ThorQ::Server::Version()
 {
     return QString("ENet-%1.%2.%3")

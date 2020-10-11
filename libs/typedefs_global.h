@@ -11,6 +11,7 @@ typedef struct _ENetHost ENetHost;
 typedef struct _ENetEvent ENetEvent;
 typedef struct _ENetPacket ENetPacket;
 typedef struct _ENetAddress ENetAddress;
+typedef struct _ENetCallbacks ENetCallbacks;
 
 namespace ThorQ {
 class Crypto;

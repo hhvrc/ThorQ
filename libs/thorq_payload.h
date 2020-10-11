@@ -2,12 +2,15 @@
 #define THORQ_PAYLOAD_H
 
 #include <memory>
+#include <atomic>
 #include <cstdint>
 
 namespace ThorQ {
 class Payload
 {
-    Payload(std::size_t size);
+public:
+    static Payload* Create(std::size_t size);
+    static void Destroy(Payload* payload);
     ~Payload();
 
     const std::uint8_t* data() const;
@@ -15,7 +18,8 @@ class Payload
 
     void Resize(std::size_t newSize);
 private:
-    void* m_ptr;
+    std::size_t m_size;
+    std::atomic<std::uint32_t> m_refcount;
 };
 }
 
