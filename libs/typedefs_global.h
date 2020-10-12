@@ -15,7 +15,6 @@ typedef struct _ENetCallbacks ENetCallbacks;
 
 namespace ThorQ {
 class Crypto;
-class Payload;
 }
 
 #endif // TYPEDEFS_GLOBAL_H

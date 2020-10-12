@@ -6,7 +6,6 @@
 #include "enums.h"
 #include "crypto.h"
 #include "constants.h"
-#include "thorq_payload.h"
 
 // htonl/ntohl
 #if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
@@ -16,6 +15,15 @@
 #endif
 
 #include "enet/include/enet.h"
+
+struct Content
+{
+    std::uint8_t  flags;
+    std::uint64_t counter;
+    std::uint8_t  data[1024 * 64];
+    std::uint8_t  hmac[32];
+    std::uint8_t  iv[12];
+};
 
 /// Flags to describe the state of a message
 enum PREENCRYPTION_FLAG : std::uint8_t
@@ -30,63 +38,42 @@ enum PREENCRYPTION_FLAG : std::uint8_t
     PREENCRYPTION_FLAG_RESERVED_8 = 1 << 7,
 };
 
-void DestroyENetPacket(void* ptr)
+bool ThorQ::packetEncode(ENetPacket* packet, const std::vector<std::uint8_t>& payload)
 {
-    ENetPacket* packet = reinterpret_cast<ENetPacket*>(ptr);
-
-    // Free allocated data
-    delete[] packet->data;
-
-    // Free struct
-    delete packet;
-}
-ENetPacket* CreateENetPacket(std::size_t size, std::uint8_t flags)
-{
-    ENetPacket* packet = new ENetPacket();
-
-    packet->data = new enet_uint8[size];
-    packet->dataLength = size;
-
-    packet->flags = flags | ENET_PACKET_FLAG_NO_ALLOCATE;
-
-    packet->freeCallback = &DestroyENetPacket;
-    packet->referenceCount = 0;
-
-    return packet;
-}
-
-ENetPacket* ThorQ::packetEncode(const ThorQ::Payload& payload, std::uint8_t flags, ThorQ::Crypto* crypto)
-{
-    if (payload.dataSize() <= THORQ_PAYLOAD_CAP)
+    if (payload.size() > THORQ_PAYLOAD_LEN_MAX || payload.size() < THORQ_PAYLOAD_LEN_MIN)
     {
-        ENetPacket* packet = CreateENetPacket(payload.dataSize(), flags & (ENET_PACKET_FLAG_RELIABLE | ENET_PACKET_FLAG_UNSEQUENCED));
-
-        // Set data
-        if (crypto != nullptr)
-        {
-            // Set header
-            packet->data[0] = PREENCRYPTION_FLAG_ENCRYPTED;
-
-            // Encrpyt the data, this will copy it and the generated IV into messageOut
-            if (crypto->encrypt(packet->data + 1, (const std::uint8_t*)&payload, sizeof(THORQ_PAYLOAD), &packet->data[1 + sizeof(THORQ_PAYLOAD)]))
-            {
-                return packet;
-            }
-        }
-        else
-        {
-            // Set header
-            packet->data[0] = 0;
-
-            memcpy(packet->data + 1, &payload, sizeof(THORQ_PAYLOAD));
-
-            return packet;
-        }
-
-        DestroyENetPacket(packet);
+        return false;
     }
 
-    return nullptr;
+    // Set header
+    packet->data[0] = 0;
+
+    // Copy data
+    memcpy(packet->data + 1, payload.data(), payload.size());
+
+    // Set size
+    packet->dataLength = payload.size();
+
+    return true;
+}
+
+bool ThorQ::packetEncode(ENetPacket* packet, const std::vector<std::uint8_t>& payload, ThorQ::Crypto* crypto)
+{
+    if (payload.size() > THORQ_PAYLOAD_LEN_MAX || payload.size() < THORQ_PAYLOAD_LEN_MIN)
+    {
+        return false;
+    }
+
+    // Set header
+    packet->data[0] = PREENCRYPTION_FLAG_ENCRYPTED;
+
+    // Encrpyt the data, this will copy it and the generated IV into messageOut
+    if (crypto->encrypt(packet->data + 1, payload.data(), payload.size(), packet->data + 1 + payload.size()))
+    {
+        return packet;
+    }
+
+    return true;
 }
 
 ThorQ::Payload ThorQ::packetDecode(const ENetPacket* packet, ThorQ::Crypto *crypto)
@@ -105,7 +92,7 @@ ThorQ::Payload ThorQ::packetDecode(const ENetPacket* packet, ThorQ::Crypto *cryp
         memcpy(&payload, packet->data + 1, sizeof(THORQ_PAYLOAD));
     }
 
-    if (payload.payloadId() > THORQ_PAYLOAD_ID__MAX || payload.dataSize() > THORQ_PAYLOAD_CAP)
+    if (payload.payloadId() > THORQ_PAYLOAD_ID__MAX || payload.dataSize() > THORQ_PAYLOAD_LEN_MAX)
     {
         return {};
     }

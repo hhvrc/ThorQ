@@ -6,12 +6,14 @@
 #define THORQ_MESSAGE_H
 
 #include <cstdint>
+#include <vector>
 
 #include "typedefs_global.h"
 
 namespace ThorQ {
-ENetPacket* packetEncode(const ThorQ::Payload& payload, std::uint8_t flags, ThorQ::Crypto* crypto = nullptr);
-ThorQ::Payload packetDecode(const ENetPacket* packet, ThorQ::Crypto* crypto);
+bool packetEncode(ENetPacket* pakcet, const std::vector<std::uint8_t>& payload);
+bool packetEncode(ENetPacket* pakcet, const std::vector<std::uint8_t>& payload, ThorQ::Crypto* crypto);
+bool packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& payload, ThorQ::Crypto* crypto);
 }
 
 #endif // THORQ_MESSAGE_H

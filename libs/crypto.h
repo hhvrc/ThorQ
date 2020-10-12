@@ -4,7 +4,11 @@
 #include <QObject>
 #include <cstdint>
 #include <cstdlib>
-#include <openssl/ec.h>
+
+typedef struct evp_cipher_ctx_st EVP_CIPHER_CTX;
+typedef struct ec_group_st EC_GROUP;
+typedef struct evp_cipher_st EVP_CIPHER;
+typedef struct ec_key_st EC_KEY;
 
 #define CRYPTO_CURVE_NID NID_secp256k1
 #define CRYPTO_AES_IV_LEN 12
