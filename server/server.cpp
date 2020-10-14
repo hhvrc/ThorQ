@@ -27,6 +27,7 @@
 #include "utils.h"
 #include "account.h"
 #include "instance.h"
+#include "memorymanager.h"
 
 // ceil(x / y) https://stackoverflow.com/questions/2745074/fast-ceiling-of-an-integer-division-in-c-c
 constexpr std::size_t ceilDiv(std::size_t x, std::size_t y)
@@ -49,24 +50,19 @@ void freePacket(ENetPacket *packet)
 
 }
 
-std::atomic<bool> g_initialized = false;
-QString ThorQ::Server::Version()
+#define VER_STRING(MAJOR, MINOR, PATCH) #MAJOR "." #MINOR "." #PATCH
+const char* ThorQ::Server::Version()
 {
-    return QString("ENet-%1.%2.%3")
-            .arg(ENET_VERSION_MAJOR)
-            .arg(ENET_VERSION_MINOR)
-            .arg(ENET_VERSION_PATCH);
+    return "ENet-" VER_STRING(ENET_VERSION_MAJOR, ENET_VERSION_MINOR, ENET_VERSION_PATCH);
 }
+
+
+std::atomic<bool> g_initialized = false;
 bool ThorQ::Server::Initialize()
 {
     if (!g_initialized)
     {
-        ENetCallbacks callbacks;
-
-        callbacks.malloc = malloc;
-        callbacks.free = free;
-
-        callbacks.packet_create
+        ENetCallbacks callbacks = ThorQ::Memory::Initialize();
 
         g_initialized = (enet_initialize_with_callbacks(ENET_VERSION, &callbacks) == 0);
     }
@@ -81,102 +77,90 @@ void ThorQ::Server::DeInitialize()
     }
 }
 
-ThorQ::Server::Server(QObject *parent)
-    : QObject(parent)
-    , QRunnable()
-    , m_host(nullptr)
-    , m_shouldRun(false)
-    , m_status(ServerStatus::Stopped)
+ThorQ::Server::Server(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount, bool noDelay)
+    : m_host(nullptr)
+    , m_thread(nullptr)
     , m_heartbeatInterval(500)
     , m_totalSentData(0)
     , m_totalSentPackets(0)
     , m_totalReceivedData(0)
     , m_totalReceivedPackets(0)
-    , m_receivedMessages(queueSizeIn)
-    , m_queuedMessages(queueSizeOut)
-    , m_queuedBroadcasts()
+    , m_txQueue()
+    , m_txToken(m_txQueue)
+    , m_rxQueue()
+    , m_rxToken(m_rxQueue)
+    , m_broadcastQueue()
+    , m_broadcastToken(m_broadcastQueue)
 {
-    setAutoDelete(false);
+    try
+    {
+        ENetAddress address;
+        address.host = ENET_HOST_ANY;
+        address.port = port;
+
+        m_host = enet_host_create(&address, maxPeers, channelCount, 0, 0); // two channels: communication(tcp), and commands(udp)
+
+        if (m_host != nullptr)
+        {
+            enet_socket_set_option(m_host->socket, ENET_SOCKOPT_NODELAY, noDelay);
+
+            m_host->maximumPacketSize = 65536; // 64kB (enough to hold a 80x80 rgba image, and enough to hold a compiled arduino program)
+        }
+    }
+    catch (...)
+    {
+        m_host = nullptr;
+    }
 }
 ThorQ::Server::~Server()
 {
-    cleanup();
-}
-
-bool ThorQ::Server::setup(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount, bool noDelay)
-{
-    ENetAddress address;
-    address.host = ENET_HOST_ANY;
-    address.port = port;
-
-    ENetHost* host = enet_host_create(&address, maxPeers, channelCount, 0, 0); // two channels: communication(tcp), and commands(udp)
-
-    if (host == nullptr)
+    try
     {
-        return false;
-    }
-
-    enet_socket_set_option(host->socket, ENET_SOCKOPT_NODELAY, noDelay);
-
-    host->maximumPacketSize = 65536; // 64kB (enough to hold a 80x80 rgba image, and enough to hold a compiled arduino program)
-
-    return true;
-}
-
-void ThorQ::Server::start()
-{
-    if (!m_shouldRun.exchange(true))
-    {
-        setStatus(ServerStatus::Starting);
-        QThreadPool::globalInstance()->start(this, QThread::HighestPriority);
-
-        while (m_status != ServerStatus::Started) { std::this_thread::sleep_for(std::chrono::milliseconds(10)); };
-    }
-}
-void ThorQ::Server::stop()
-{
-    if (m_shouldRun.exchange(false))
-    {
-        setStatus(ServerStatus::Stopping);
-
-        while (m_status != ServerStatus::Stopped) { std::this_thread::sleep_for(std::chrono::milliseconds(10)); };
-    }
-}
-
-ThorQ::Server::ServerStatus ThorQ::Server::status()
-{
-    return m_status;
-}
-void ThorQ::Server::setStatus(ServerStatus status)
-{
-    if (m_status != status)
-    {
-        m_status = status;
-        emit statusChanged(status);
-    }
-}
-
-void ThorQ::Server::cleanup()
-{
-    stop();
-
-    ENetHost* host = m_host;
-    if (host != nullptr)
-    {
-        m_host = nullptr;
-
         // Disconnect all clients
-        ENetPeer* firstPeer = host->peers;
-        ENetPeer* lastPeer  = host->peers + host->peerCount;
+        ENetPeer* firstPeer = m_host->peers;
+        ENetPeer* lastPeer  = m_host->peers + m_host->peerCount;
 
         for (ENetPeer* peer = firstPeer; peer != lastPeer; peer++)
         {
             enet_peer_disconnect_now(peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
         }
 
-        enet_host_flush(host);
-        enet_host_destroy(host);
+        enet_host_flush(m_host);
     }
+    catch (const std::exception& ex)
+    {
+        qDebug() << "Exception occured disconnecting clients:" << ex.what();
+    }
+    catch (int i)
+    {
+        qDebug() << "Exception occured disconnecting clients:" << strerror(i);
+    }
+    catch (...)
+    {
+
+    }
+
+    try
+    {
+        enet_host_destroy(m_host);
+    }
+    catch (const std::exception& ex)
+    {
+        qDebug() << "Exception occured destroying host:" << ex.what();
+    }
+    catch (int i)
+    {
+        qDebug() << "Exception occured destroying host:" << strerror(i);
+    }
+    catch (...)
+    {
+
+    }
+}
+
+bool ThorQ::Server::ready()
+{
+    return m_host != nullptr;
 }
 
 uint32_t ThorQ::Server::HeartbeatInterval()
@@ -209,9 +193,10 @@ std::uint64_t ThorQ::Server::totalPacketsReceived()
     return m_totalReceivedPackets;
 }
 
-void ThorQ::Server::broadcastAnnouncement(const ThorQ::THORQ_PAYLOAD& payload, bool reliable, bool unsequenced)
+void ThorQ::Server::broadcastAnnouncement(const std::vector<std::uint8_t>& payload, bool reliable, bool unsequenced)
 {
-    ENetPacket* packet = ThorQ::packetEncode(payload, (ENET_PACKET_FLAG_RELIABLE * reliable) | (ENET_PACKET_FLAG_UNSEQUENCED * unsequenced));
+    ENetPacket* packet;
+    ThorQ::packetEncode(payload, (ENET_PACKET_FLAG_RELIABLE * reliable) | (ENET_PACKET_FLAG_UNSEQUENCED * unsequenced));
 
     if (packet != nullptr)
     {

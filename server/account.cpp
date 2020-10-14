@@ -2,14 +2,15 @@
 
 #include <QtSql>
 
-#include "hasher.h"
+#include <hasher.h>
+#include <thorq_payload_ack.h>
+#include <thorq_payload_session.h>
 
 #include "utils.h"
 #include "instance.h"
 
-ThorQ::Account::Account(QObject* parent)
-	: QObject(parent)
-	, m_dbId(-1)
+ThorQ::Account::Account()
+    : m_dbId(-1)
 	, m_username()
 	, m_passwordHash()
     , l_sessions(QReadWriteLock::Recursive)
@@ -21,7 +22,7 @@ ThorQ::Account::Account(QObject* parent)
 {
 }
 
-ThorQ::Account* ThorQ::Account::GetAccount(const QString& username)
+ThorQ::Account* ThorQ::Account::GetAccount(const std::string& username)
 {
     QSqlDatabase db = GetDB(true);
 
@@ -81,7 +82,7 @@ ThorQ::Account* ThorQ::Account::GetAccount(const QString& username)
 	return account;
 }
 
-ThorQ::Account* ThorQ::Account::NewAccount(const QString& username, const QString& password_hash)
+ThorQ::Account* ThorQ::Account::NewAccount(const std::string& username, const std::string& password_hash)
 {
     QSqlDatabase db = GetDB(false);
 
@@ -151,12 +152,12 @@ ThorQ::Account* ThorQ::Account::NewAccount(const QString& username, const QStrin
 	return account;
 }
 
-const QString& ThorQ::Account::username() const
+const std::string& ThorQ::Account::username() const
 {
 	return m_username;
 }
 
-void ThorQ::Account::setUsername(const QString& username)
+void ThorQ::Account::setUsername(const std::string& username)
 {
 	if (m_username != username && m_dbId != -1)
 	{
@@ -216,7 +217,7 @@ void ThorQ::Account::setUsername(const QString& username)
 	}
 }
 
-void ThorQ::Account::setPassword(const QString& password)
+void ThorQ::Account::setPassword(const std::string& password)
 {
     PasswordHasher* hasher = new PasswordHasher(password, this);
 
@@ -226,7 +227,7 @@ void ThorQ::Account::setPassword(const QString& password)
 
     QThreadPool::globalInstance()->start(hasher);
 }
-void ThorQ::Account::verifyPassword(const QString& password) const
+void ThorQ::Account::verifyPassword(const std::string& password) const
 {
     PasswordVerifier* verifier = new PasswordVerifier(m_passwordHash, password, const_cast<Account*>(this));
 
@@ -272,21 +273,21 @@ void ThorQ::Account::requestSession(ThorQ::Instance* source, ThorQ::Account* tar
     if (source->account() == target)
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SESSION, THORQ_PAYLOAD_SESSION_REQUEST, THORQ_PAYLOAD_ACK_DENIED);
-        sender->sendMessage(response, true, true);
+        source->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
 
     if ()
     {
-        thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, "Cannot request on self");
-        sendMessage(response, true, true);
+        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SESSION, THORQ_PAYLOAD_SESSION_REQUEST, THORQ_COMMAND_ACK_DENIED);
+        source->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
 
     if (target->isInSession())
     {
         thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, target->account()->username() + " is already in another session");
-        sendMessage(response, true, true);
+        source->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
 
@@ -294,7 +295,7 @@ void ThorQ::Account::requestSession(ThorQ::Instance* source, ThorQ::Account* tar
     if (m_outgoing_requests.contains(target))
     {
         thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_NO_CHANGE);
-        sendMessage(response, true, true);
+        source->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
     m_outgoing_requests.insert(target);
@@ -376,10 +377,6 @@ bool ThorQ::Account::requestDenyFrom(ThorQ::Account *sender)
     this->sendMessage(response, true, true);
 
     return true;
-}
-ThorQ::Account* ThorQ::Account::partner() const
-{
-    return m_partner;
 }
 
 void ThorQ::Account::setIsInSteamVR(bool value)

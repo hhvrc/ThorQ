@@ -10,3 +10,6 @@
 [submodule "Server/concurrentqueue"]
 	path = server/concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue
+[submodule "server/sqlitecpp"]
+	path = server/sqlitecpp
+	url = https://github.com/SRombauts/SQLiteCpp.git

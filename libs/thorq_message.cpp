@@ -76,26 +76,26 @@ bool ThorQ::packetEncode(ENetPacket* packet, const std::vector<std::uint8_t>& pa
     return true;
 }
 
-ThorQ::Payload ThorQ::packetDecode(const ENetPacket* packet, ThorQ::Crypto *crypto)
+bool ThorQ::packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& payload, ThorQ::Crypto *crypto)
 {
-    ThorQ::Payload payload;
+    if (packet->dataLength > THORQ_PAYLOAD_LEN_MAX || packet->dataLength < THORQ_PAYLOAD_LEN_MIN)
+    {
+        return false;
+    }
+
+    payload.resize(packet->dataLength);
 
     if ((packet->data[0] & PREENCRYPTION_FLAG_ENCRYPTED) != 0)
     {
-        if (!crypto->decrypt((std::uint8_t*)&payload, packet->data + 1, sizeof(ThorQ::THORQ_PAYLOAD), packet->data + 1 + sizeof(ThorQ::THORQ_PAYLOAD)))
+        if (!crypto->decrypt(payload.data(), packet->data + 1, THORQ_PAYLOAD_LEN_MAX, packet->data + 1 + THORQ_PAYLOAD_LEN_MAX))
         {
-            return {};
+            return false;
         }
     }
     else
     {
-        memcpy(&payload, packet->data + 1, sizeof(THORQ_PAYLOAD));
+        memcpy(payload.data(), packet->data + 1, packet->dataLength);
     }
 
-    if (payload.payloadId() > THORQ_PAYLOAD_ID__MAX || payload.dataSize() > THORQ_PAYLOAD_LEN_MAX)
-    {
-        return {};
-    }
-
-    return payload;
+    return true;
 }

@@ -13,24 +13,21 @@
 #include "typedefs_server.h"
 
 namespace ThorQ {
-class Account : public QObject
+class Account
 {
-	Q_OBJECT
-
-	Account(QObject* parent = nullptr);
+    Account();
 public:
-	static Account* GetAccount(const QString& username);
-    static Account* NewAccount(const QString& username, const QString& password);
+    static Account* GetAccount(const std::string& username);
+    static Account* NewAccount(const std::string& username, const std::string& password);
 public:
-	const QString& username() const;
-	void setUsername(const QString& username);
+    const std::string& username() const;
+    void setUsername(const std::string& username);
 
-    void setPassword(const QString& password);
-    void verifyPassword(const QString& password) const;
+    void setPassword(const std::string& password);
+    void verifyPassword(const std::string& password) const;
 
     Account* master() const;
     bool isExclusive() const;
-
 
     QSet<Session*> sessions() const;
     QSet<Instance*> instances() const;
@@ -43,38 +40,31 @@ public:
     void setIsInSteamVR(bool hasCollar);
     void setHasCollar(bool hasCollar);
 
+    void setStatus(std::uint16_t flags);
     std::uint16_t status();
 
     bool isInSession() const;
     bool isInSteamVR() const;
     bool hasCollar() const;
-signals:
-    void usernameChanged(const QString& username);
-    void masterChanged(const Account* master);
-    void isExclusiveChanged(bool isExclusive);
-    void isOnlineChanged(bool isOnline);
-    void statusChanged();
-public slots:
-    void setStatus(std::uint16_t flags);
+
     void ban();
     void fuckYou();
     void disconnectPeers();
     void sendMessage(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
     void sendMessageToFriends(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
-private slots:
+private:
     void onPasswordHashingDone(const std::string& hash);
     void onPasswordVerificationDone(bool result);
-private:
+
     int m_dbId;
     QUuid m_publicId;
 
     QReadWriteLock l_basics;
-	QString m_username;
-	QString m_passwordHash;
+    std::string m_username;
+    std::string m_passwordHash;
 
-    quint8 m_activityState; // enum: thorq_user_activity_flag
+    std::uint16_t m_activityState; // enum: thorq_user_activity_flag
 
-    THORQ_STATE_SESSION m_sessionState;
     THORQ_ACCOUNT_AUTHORITY m_authority;
 
     QReadWriteLock l_master;

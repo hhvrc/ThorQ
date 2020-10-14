@@ -1,10 +1,11 @@
 #include "serialization.h"
 
+#include "constants.h"
 #include "thorq_message.h"
 
-void thorq_payload_serialization_prealloc(std::vector<std::uint8_t> &payload)
+void thorq_payload_serialization_prealloc(std::vector<std::uint8_t>& payload)
 {
-    payload.reserve(THORQ_PAYLOAD_CAP);
+    payload.reserve(THORQ_PAYLOAD_LEN_MAX);
 }
 
 bool thorq_payload_serialization_is_valid(const std::vector<std::uint8_t> &payload)

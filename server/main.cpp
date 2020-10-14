@@ -100,7 +100,7 @@ int main(int argc, char** argv)
 
     qDebug().noquote().nospace() << "Using" << ThorQ::Server::Version();
 
-    ThorQ::Server* server = new ThorQ::Server(&app);
+    ThorQ::Server* server = new ThorQ::Server();
 
     server->setup(port, SERVER_MAX_CONNECTIONS, THORQ_CHANNEL_COUNT, true);
 

@@ -8,8 +8,9 @@
 #include <vector>
 #include <QByteArray>
 
-#include "constants.h"
 #include "enums.h"
+#include "crypto.h"
+#include "constants.h"
 #include "serialization.h"
 
 enum THORQ_PAYLOAD_CRYPTO
@@ -31,9 +32,9 @@ inline bool thorq_payload_crypto_is_valid(const std::vector<std::uint8_t>& paylo
         case THORQ_PAYLOAD_CRYPTO_OK:
             return payload.size() == 2;
         case THORQ_PAYLOAD_CRYPTO_ESTABLISH:
-            return payload.size() == 2 + THORQ_CRYPTO_KEY_LENGTH;
+            return payload.size() == 2 + CRYPTO_ECDH_PUBLIC_KEY_LEN;
         case THORQ_PAYLOAD_CRYPTO_VERIFY:
-            return payload.size() == 2 + THORQ_CRYPTO_VERIFICATION_DATA_LENGTH;
+            return payload.size() == 2 + THORQ_CRYPTO_VERIFICATION_DATA_LEN;
         default:
             return false;
         }
@@ -49,8 +50,6 @@ inline void thorq_payload_crypto_get_cmd(const std::vector<std::uint8_t>& payloa
 
 inline void thorq_payload_crypto_request_pack(std::vector<std::uint8_t>& payload)
 {
-    thorq_payload_serialization_prealloc(payload);
-    thorq_payload_serial
     payload.resize(2);
     payload[0] = THORQ_PAYLOAD_ID_CRYPTO;
     payload[1] = THORQ_PAYLOAD_CRYPTO_REQUEST;
