@@ -2,8 +2,7 @@
 #define VERSION_H
 
 #include <cstdint>
-
-#include <QString>
+#include <string>
 
 namespace ThorQ {
 /// Version type
@@ -13,7 +12,7 @@ struct Version
     std::uint8_t minor;
     std::uint8_t patch;
 
-    QString toString() const;
+    std::string toString() const;
 
     inline Version operator- (const Version& other)
     {

@@ -1,5 +1,25 @@
 #include "relationship.h"
 
+ThorQ::Relationship::Relationship(int privateId, uuids::uuid publicId, ThorQ::Account *source, ThorQ::Account *target, THORQ_RELATIONSHIP_STATUS status, THORQ_RELATIONSHIP_AUTHORITY authority)
+    : m_privId(privateId)
+    , m_publicId(publicId)
+    , m_source(source)
+    , m_target(target)
+    , m_status(status)
+    , m_authority(authority)
+{
+}
+
+ThorQ::Relationship::~Relationship()
+{
+
+}
+
+uuids::uuid ThorQ::Relationship::publicId() const
+{
+    return m_publicId;
+}
+
 ThorQ::Account* ThorQ::Relationship::source() const
 {
     return m_source;

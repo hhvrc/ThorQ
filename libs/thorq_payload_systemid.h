@@ -8,8 +8,6 @@
 #include <vector>
 #include <cstdint>
 
-#include <QByteArray>
-
 #include "constants.h"
 #include "enums.h"
 

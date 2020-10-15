@@ -4,9 +4,6 @@
 #include <queue>
 #include <unordered_set>
 
-#include <QThread>
-#include <QReadWriteLock>
-
 #include "enums.h"
 #include "typedefs_global.h"
 #include "typedefs_server.h"

@@ -10,3 +10,9 @@
 [submodule "Server/concurrentqueue"]
 	path = server/concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue
+[submodule "server/cxxopts"]
+	path = server/cxxopts
+	url = https://github.com/jarro2783/cxxopts.git
+[submodule "libs/stduuid"]
+	path = libs/stduuid
+	url = https://github.com/mariusbancila/stduuid.git

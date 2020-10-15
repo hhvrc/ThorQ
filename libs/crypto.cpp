@@ -19,9 +19,8 @@ bool ThorQ::Crypto::RandomizeBytes(uint8_t *data, std::size_t len)
     return RAND_bytes(data, len) == 1;
 }
 
-ThorQ::Crypto::Crypto(QObject* parent)
-    : QObject(parent)
-    , m_ctx(EVP_CIPHER_CTX_new())
+ThorQ::Crypto::Crypto()
+    : m_ctx(EVP_CIPHER_CTX_new())
     , m_group(nullptr)
     , m_cipher(EVP_chacha20())
     , m_keyPair(nullptr)

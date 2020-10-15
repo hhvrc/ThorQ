@@ -6,7 +6,6 @@
 #define THORQ_PAYLOAD_CRYPTO_H
 
 #include <vector>
-#include <QByteArray>
 
 #include "enums.h"
 #include "crypto.h"

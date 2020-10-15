@@ -5,7 +5,6 @@
 #ifndef THORQ_PAYLOAD_ACCOUNT_H
 #define THORQ_PAYLOAD_ACCOUNT_H
 
-#include <QString>
 #include <vector>
 
 #include "enums.h"

@@ -7,8 +7,6 @@
 
 #include <vector>
 
-#include <QString>
-
 #include "enums.h"
 #include "serialization.h"
 

@@ -38,29 +38,7 @@ elseif (${BUILD_COMPILER} STREQUAL "intel")
 endif()
 # --------------------------------
 
-# --- Find and configure Qt ---
-find_package(
-    Qt5
-    COMPONENTS
-        Core
-		Gui
-		OpenGL
-		Widgets
-		SerialPort
-		Concurrent
-		Sql
-    REQUIRED
-)
-if (NOT Qt5Core_FOUND)
-    message(FATAL_ERROR "No Qt installation found, aborting")
-endif()
-message("Found Qt ${Qt5Core_VERSION}")
-# -----------------------------
-
 # --- Set global C++ CMake settings ---
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

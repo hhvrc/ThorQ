@@ -7,9 +7,8 @@
 const char* create_system_ids    = "CREATE TABLE IF NOT EXISTS system_ids(db_id INTEGER PRIMARY KEY AUTOINCREMENT, system_id TEXT NOT NULL UNIQUE, banned_at DATETIME, registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)"; // Unique SystemID of a cmoputer
 const char* create_auth_tokens   = "CREATE TABLE IF NOT EXISTS auth_tokens(db_id INTEGER PRIMARY KEY AUTOINCREMENT, auth_token TEXT NOT NULL UNIQUE, system_id INTEGER NOT NULL, account_id INTEGER NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)"; // Authentication Token generated at login
 const char* create_accounts      = "CREATE TABLE IF NOT EXISTS accounts(db_id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, authority INTEGER NOT NULL DEFAULT 0, last_login DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, deleted_at DATETIME)";
+const char* create_relationships = "CREATE TABLE IF NOT EXISTS relationships(db_id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT NOT NULL UNIQUE, source INTEGER NOT NULL, target INTEGER NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)";
 const char* create_systemid_account_map = "CREATE TABLE IF NOT EXISTS systemid_account_map(systemid_id INTEGER NOT NULL, account_id INTEGER NOT NULL, established_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)";
-const char* create_account_blocks = "CREATE TABLE IF NOT EXISTS account_blocks(db_id INTEGER PRIMARY KEY AUTOINCREMENT, guid TEXT NOT NULL UNIQUE, blocker_id INTEGER NOT NULL, blockee_id INTEGER NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)";
-const char* create_account_friends = "CREATE TABLE IF NOT EXISTS account_friends(db_id INTEGER PRIMARY KEY AUTOINCREMENT, guid TEXT NOT NULL UNIQUE, sender_id INTEGER NOT NULL, receiver_id INTEGER NOT NULL, pending BOOLEAN NOT NULL,  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)";
 const char* create_user_log = "CREATE TABLE IF NOT EXISTS userLog(timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, system_id INTEGER, account_id INTEGER, info TEXT NOT NULL)";
 
 
@@ -104,14 +103,8 @@ bool ThorQ::SQLite::Initialize(const char* path) noexcept
     }
     catch (...)
     {
-        *err = "unknown exception occured";
         return false;
     }
 
     return true;
-}
-
-bool ThorQ::Connection::ExecuteNonQuery(const char *statement)
-{
-
 }

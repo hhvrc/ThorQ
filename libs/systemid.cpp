@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 #endif
 
-typedef quint16 SystemID[5];
+typedef std::uint16_t SystemID[5];
 
 constexpr SystemID mask = { 0x4e25, 0xf4a1, 0x5437, 0xab41, 0x0000 };
 static SystemID system_id = { 0, 0, 0, 0, 0 };
@@ -17,29 +17,29 @@ static bool computed = false;
 
 inline void smear(SystemID id)
 {
-    for (quint32 i = 0; i < 5; i++)
-        for (quint32 j = i; j < 5; j++)
+    for (std::uint32_t i = 0; i < 5; i++)
+        for (std::uint32_t j = i; j < 5; j++)
             if (i != j)
 				id[i] ^= id[j];
 
-    for (quint32 i = 0; i < 5; i++ )
+    for (std::uint32_t i = 0; i < 5; i++ )
 		id[i] ^= mask[i];
 }
 
 inline void unsmear(SystemID id)
 {
-    for (quint32 i = 0; i < 5; i++)
+    for (std::uint32_t i = 0; i < 5; i++)
 		id[i] ^= mask[i];
 
-    for (quint32 i = 0; i < 5; i++ )
-        for (quint32 j = 0; j < i; j++)
+    for (std::uint32_t i = 0; i < 5; i++ )
+        for (std::uint32_t j = 0; j < i; j++)
             if (i != j)
 				id[4-i] ^= id[4-j];
 }
 
-QByteArray ThorQ::systemid_generate()
+std::vector<std::uint8_t> ThorQ::systemid_generate()
 {
-	QByteArray sys_id(ThorQ::SystemID_Internal::getMachineName());
+    std::vector<std::uint8_t> sys_id(ThorQ::SystemID_Internal::getMachineName());
     sys_id.resize(sys_id.size() + std::size(system_id));
 
 	if (!computed)
@@ -71,7 +71,7 @@ QByteArray ThorQ::systemid_generate()
 	return sys_id;
 }
 
-bool ThorQ::systemid_validate(const QByteArray& sys_id)
+bool ThorQ::systemid_validate(const std::vector<std::uint8_t>& sys_id)
 {
     if (sys_id.size() <= (int)std::size(system_id))
 		return false;
@@ -81,14 +81,14 @@ bool ThorQ::systemid_validate(const QByteArray& sys_id)
 
 	unsmear(id);
 
-    quint16 checkSum = 0;
+    std::uint16_t checkSum = 0;
 	for (int i = 0; i < 4; i++)
 		checkSum += ntohs(id[i]);
 
 	return checkSum == ntohs(id[4]);
 }
 
-QString ThorQ::systemid_to_string(QByteArray sys_id)
+std::string ThorQ::systemid_to_string(std::vector<std::uint8_t> sys_id)
 {
 	if (systemid_validate(sys_id))
 	{

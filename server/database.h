@@ -35,7 +35,7 @@ private:
 class Query
 {
 private:
-    sqlite3_stmt* m_stmt:
+    sqlite3_stmt* m_stmt;
 };
 class Value
 {

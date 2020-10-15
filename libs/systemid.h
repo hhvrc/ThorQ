@@ -1,8 +1,9 @@
 #ifndef SYSTEMID_H
 #define SYSTEMID_H
 
-#include <QString>
-#include <QByteArray>
+#include <cstdint>
+#include <vector>
+#include <string>
 
 namespace ThorQ {
 namespace SystemID_Internal {
@@ -12,19 +13,19 @@ namespace SystemID_Internal {
  * @param mac1
  * @param mac2
  */
-void getMacHash(quint16& mac1, quint16& mac2);
+void getMacHash(std::uint16_t& mac1, std::uint16_t& mac2);
 
 /**
  * @brief getVolumeHash
  * @return
  */
-quint16 getVolumeHash();
+std::uint16_t getVolumeHash();
 
 /**
  * @brief getCpuHash
  * @return
  */
-quint16 getCpuHash();
+std::uint16_t getCpuHash();
 
 /**
  * @brief getMachineName
@@ -37,21 +38,21 @@ const char* getMachineName();
  * @brief systemid_generate
  * @return
  */
-QByteArray systemid_generate();
+std::vector<std::uint8_t> systemid_generate();
 
 /**
  * @brief systemid_validate
  * @param sys_id
  * @return
  */
-bool systemid_validate(const QByteArray& sys_id);
+bool systemid_validate(const std::vector<std::uint8_t>& sys_id);
 
 /**
  * @brief systemid_to_string
  * @param sys_id
  * @return
  */
-QString systemid_to_string(QByteArray sys_id);
+std::string systemid_to_string(std::vector<std::uint8_t> sys_id);
 }
 
 #endif // SYSTEMID_H

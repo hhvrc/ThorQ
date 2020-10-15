@@ -8,8 +8,6 @@
 #include <vector>
 #include <cstdint>
 
-#include <QString>
-
 #include "enums.h"
 
 /// @enum THORQ_PAYLOAD_SESSION

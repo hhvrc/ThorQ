@@ -1,7 +1,6 @@
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
-#include <QObject>
 #include <cstdint>
 #include <cstdlib>
 
@@ -18,9 +17,8 @@ typedef struct ec_key_st EC_KEY;
 
 namespace ThorQ {
 /// Class to make cryptography extremely easy to deal with
-class Crypto : public QObject
+class Crypto
 {
-    Q_OBJECT
 public:
     /** Randomizes data using cryptographic functions
      * @param data Pointer to data to randomize
@@ -28,7 +26,7 @@ public:
      */
     static bool RandomizeBytes(std::uint8_t* data, std::size_t len);
 
-    Crypto(QObject* parent = nullptr);
+    Crypto();
     ~Crypto();
 
     /**

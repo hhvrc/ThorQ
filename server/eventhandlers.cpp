@@ -1,8 +1,5 @@
 #include "eventhandlers.h"
 
-#include <QDebug>
-#include <QString>
-
 #include <enet.h>
 
 #include <thorq_message.h>

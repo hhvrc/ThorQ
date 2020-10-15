@@ -5,10 +5,7 @@
 #include <stdio.h>
 #include <atomic>
 #include <algorithm>
-
-#include <QDebug>
-#include <QCoreApplication>
-#include <QCommandLineParser>
+#include <cstdio>
 
 #if __linux__
 #include <unistd.h>
@@ -16,6 +13,8 @@
 
 #include "server.h"
 #include "messagedispatcher.h"
+
+#include "cxxopts.hpp"
 
 #define SINGLETON_BASE
 #include "singletons.h"
@@ -33,7 +32,10 @@ std::atomic_bool runServer = true;
 
 void exit_handler(int s)
 {
-    qDebug() << "Caught signal" << s;
+    char buf[64];
+    strerror_s(buf, 64, s);
+
+    printf("Caught signal %s\n", buf);
 
     runServer.store(false);
 }
@@ -45,19 +47,25 @@ void exitCleanup()
 
 int main(int argc, char** argv)
 {
+    printf("ThorQ Server %s\n", THORQ_VERSION_SERVER.toString().)
+
+    cxxopts::Options options(THORQ_APPLICATION_NAME, "Server for ThorQ - A application for long range collar control");
+    options.add_options("", {
+                            { "port",  "Port for the server to run at" },
+                            { "config", "Configuration file for the server" }
+                         });
+    cxxopts::ParseResult result = options.parse(argc, argv);
+
     QCoreApplication app(argc, argv);
     QCoreApplication::setApplicationName("ThorQ");
     QCoreApplication::setApplicationName(THORQ_VERSION_SERVER.toString());
 
     QCommandLineParser parser;
-    parser.setApplicationDescription("Server for ThorQ - A application for long range collar control");
+    parser.setApplicationDescription("");
     parser.addHelpOption();
     parser.addVersionOption();
 
-    parser.addOptions({
-                         { "port",  "Port for the server to run at" },
-                         { "config", "Configuration file for the server" }
-                      });
+    parser.addOptions();
 
     parser.process(app);
 

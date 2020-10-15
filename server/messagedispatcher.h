@@ -1,16 +1,13 @@
 #ifndef MESSAGEDISPATCHER_H
 #define MESSAGEDISPATCHER_H
 
-#include <QObject>
-
 #include "typedefs_global.h"
 
 namespace ThorQ {
-class MessageDispatcher : public QObject
+class MessageDispatcher
 {
-    Q_OBJECT
 public:
-    MessageDispatcher(QObject* parent = nullptr);
+    MessageDispatcher();
 
     void DispatchMessage(ENetEvent event);
 private:

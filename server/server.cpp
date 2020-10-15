@@ -1,11 +1,5 @@
 #include "server.h"
 
-#include <cstdint>
-
-#include <QThread>
-#include <QThreadPool>
-#include <QDebug>
-
 #if defined(__GCC__) || defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wextra"

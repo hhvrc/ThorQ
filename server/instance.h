@@ -1,12 +1,8 @@
 #ifndef INSTANCE_H
 #define INSTANCE_H
 
-#include <QSet>
-#include <QObject>
-#include <QString>
-#include <QByteArray>
-#include <QUuid>
 #include <cstdint>
+#include <vector>
 
 #include <enums.h>
 #include <constants.h>
@@ -20,15 +16,15 @@ class Instance
     Instance(const Instance&) = delete;
     Instance& operator=(const Instance&) = delete;
 public:
-    Instance(ENetPeer* peer, QObject* parent = nullptr);
+    Instance(ENetPeer* peer);
     Instance(ENetPeer* peer, const std::string& name);
     ~Instance();
 
 	void setAccount(Account* account);
 	Account* account() const;
 
-	void setHwid(const QByteArray& hwid);
-    const QByteArray& hwid() const;
+    void setHwid(const std::vector<std::uint8_t>& hwid);
+    const std::vector<std::uint8_t>& hwid() const;
 
 	void setPeer(ENetPeer* peer);
     ENetPeer* peer() const;
@@ -48,8 +44,8 @@ public:
     void sendMessage(const std::vector<std::uint8_t>& message, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
     void sendRaw(const std::vector<std::uint8_t>& raw, THORQ_CHANNEL ch, bool reliable = true);
 
-    void disconnectPeer(quint32 reason);
-    void disconnectPeerForcibly(quint32 reason);
+    void disconnectPeer(std::uint32_t reason);
+    void disconnectPeerForcibly(std::uint32_t reason);
 signals:
     void disconnecting();
 private:
@@ -59,7 +55,7 @@ private:
     ThorQ::Crypto* m_crypto;
     std::uint8_t*  m_verificationData;
 
-    QByteArray m_systemID;
+    std::vector<std::uint8_t> m_systemID;
 
     THORQ_STATE_CRYPTO m_cryptoState;
     THORQ_STATE_AUTH   m_authState;

@@ -2,12 +2,8 @@
 #define ACCOUNT_H
 
 #include <memory>
+#include <atomic>
 #include <unordered_set>
-
-#include <QObject>
-#include <QUuid>
-#include <QSet>
-#include <QReadWriteLock>
 
 #include <enums.h>
 #include "typedefs_server.h"
@@ -29,9 +25,9 @@ public:
     Account* master() const;
     bool isExclusive() const;
 
-    QSet<Session*> sessions() const;
-    QSet<Instance*> instances() const;
-    QSet<Relationship*> relationships() const;
+    std::unordered_set<Session*> sessions() const;
+    std::unordered_set<Instance*> instances() const;
+    std::unordered_set<Relationship*> relationships() const;
 
     static void requestSession(Instance* source, Account* target);
     bool requestAcceptFrom(Account* sender);
@@ -71,17 +67,17 @@ private:
     std::atomic<bool> m_exclusive; // This person is exclusive to their master
 
     QReadWriteLock  l_requests;
-    QSet<Instance*> m_requests_incoming;
-    QSet<Instance*> m_requests_outgoing;
+    std::unordered_set<Instance*> m_requests_incoming;
+    std::unordered_set<Instance*> m_requests_outgoing;
 
     QReadWriteLock l_sessions;
-    QSet<Session*> m_sessions;
+    std::unordered_set<Session*> m_sessions;
 
     QReadWriteLock  l_instances;
-    QSet<Instance*> m_instances;
+    std::unordered_set<Instance*> m_instances;
 
     QReadWriteLock      l_relationships;
-    QSet<Relationship*> m_relationships;
+    std::unordered_set<Relationship*> m_relationships;
 };
 }
 

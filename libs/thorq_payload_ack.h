@@ -3,7 +3,6 @@
 
 #include <vector>
 #include <cstdint>
-#include <QString>
 
 #include "enums.h"
 #include "serialization.h"

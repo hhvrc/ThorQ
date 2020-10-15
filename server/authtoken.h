@@ -3,31 +3,27 @@
 
 #include <array>
 #include <vector>
+#include <chrono>
 #include <cstdint>
-
-#include <QString>
-#include <QByteArray>
-#include <QDateTime>
 
 #include <crypto.h>
 #include <systemid.h>
 
 struct AuthToken
 {
-    QByteArray token; // 128-bit B64-Encoded authtoken
-	QByteArray systemID;
-	QDateTime createdAt;
+    std::uint8_t token[32]; // 256-bit Hex-Encoded authtoken
+    std::vector<std::uint8_t> systemID;
+    std::chrono::time_point createdAt; // YYYY/MM/DD/HH/MM/SS
 };
 
-inline AuthToken CreateAuthToken(const QByteArray& systemID)
+inline AuthToken CreateAuthToken(const std::vector<std::uint8_t>& systemID)
 {
     AuthToken authToken;
 
-    authToken.token.resize(16);
-    ThorQ::Crypto::RandomizeBytes((std::uint8_t*)authToken.token.data(), 16);
+    ThorQ::Crypto::RandomizeBytes(authToken.token, 32);
 
     authToken.systemID = systemID;
-    authToken.createdAt = QDateTime::currentDateTimeUtc();
+    authToken.createdAt = std::chrono::now();
 
     return authToken;
 }

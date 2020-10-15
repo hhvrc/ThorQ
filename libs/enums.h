@@ -2,7 +2,6 @@
 #define ENUMS_H
 
 #include <cstdint>
-#include <QMetaEnum>
 
 enum THORQ_APP : std::uint8_t
 {

@@ -2,8 +2,6 @@
 
 #include <iostream>
 
-#include <QDebug>
-
 #include <enet.h>
 #include <enums.h>
 #include <crypto.h>
@@ -17,9 +15,8 @@
 #include "utils.h"
 #include "account.h"
 
-ThorQ::Instance::Instance(ENetPeer* peer, QObject* parent)
-    : QObject(parent)
-	, m_cryptoState(THORQ_STATE_CRYPTO_NONE)
+ThorQ::Instance::Instance(ENetPeer* peer)
+    : m_cryptoState(THORQ_STATE_CRYPTO_NONE)
     , m_authState(THORQ_STATE_AUTH_NONE)
 	, m_peer(peer)
     , m_systemID()

@@ -14,6 +14,30 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/headers)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/lib/${BUILD_OS}${VPTR_BITS}) # eg. win64 / linux32
 # --------------
 
+# --- Find and configure Qt ---
+find_package(
+    Qt5
+    COMPONENTS
+        Core
+	        Gui
+		OpenGL
+		Widgets
+		SerialPort
+		Concurrent
+		Sql
+    REQUIRED
+)
+if (NOT Qt5Core_FOUND)
+    message(FATAL_ERROR "No Qt installation found, aborting")
+endif()
+
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+
+message("Found Qt ${Qt5Core_VERSION}")
+# -----------------------------
+
 # --- Build ---
 set(${project}_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/user.cpp

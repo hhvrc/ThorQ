@@ -47,8 +47,6 @@ ENetPacket *enet_packet_create(const void *data, size_t dataLength, enet_uint32 
     packet->referenceCount = 0;
     packet->flags        = flags;
     packet->dataLength   = dataLength;
-    packet->freeCallback = NULL;
-    packet->userData     = NULL;
 
     return packet;
 }

@@ -6,17 +6,17 @@
 
 // we just need this for purposes of unique machine id.
 // So any one or two mac's is fine.
-quint16 hashMacAddress(PIP_ADAPTER_INFO info)
+std::uint16_t hashMacAddress(PIP_ADAPTER_INFO info)
 {
-    quint16 hash = 0;
-    for ( quint32 i = 0; i < info->AddressLength; i++ )
+    std::uint16_t hash = 0;
+    for ( std::uint32_t i = 0; i < info->AddressLength; i++ )
 	{
 		hash += ( info->Address[i] << (( i & 1 ) * 8 ));
 	}
 	return hash;
 }
 
-void ThorQ::SystemID_Internal::getMacHash(quint16& mac1, quint16& mac2)
+void ThorQ::SystemID_Internal::getMacHash(std::uint16_t& mac1, std::uint16_t& mac2)
 {
 	IP_ADAPTER_INFO AdapterInfo[32];
 	DWORD dwBufLen = sizeof( AdapterInfo );
@@ -34,30 +34,30 @@ void ThorQ::SystemID_Internal::getMacHash(quint16& mac1, quint16& mac2)
 	// both macs if they just change order.
 	if ( mac1 > mac2 )
 	{
-        quint16 tmp = mac2;
+        std::uint16_t tmp = mac2;
 		mac2 = mac1;
 		mac1 = tmp;
 	}
 }
 
-quint16 ThorQ::SystemID_Internal::getVolumeHash()
+std::uint16_t ThorQ::SystemID_Internal::getVolumeHash()
 {
 	DWORD serialNum = 0;
 
 	// Determine if this volume uses an NTFS file system.
 	GetVolumeInformation( "c:\\", NULL, 0, &serialNum, NULL, NULL, NULL, 0 );
-    quint16 hash = (quint16)(( serialNum + ( serialNum >> 16 )) & 0xFFFF );
+    std::uint16_t hash = (std::uint16_t)(( serialNum + ( serialNum >> 16 )) & 0xFFFF );
 
 	return hash;
 }
 
-quint16 ThorQ::SystemID_Internal::getCpuHash()
+std::uint16_t ThorQ::SystemID_Internal::getCpuHash()
 {
 	int cpuinfo[4] = { 0, 0, 0, 0 };
 	__cpuid( cpuinfo, 0 );
-    quint16 hash = 0;
-    quint16* ptr = (quint16*)(&cpuinfo[0]);
-    for ( quint32 i = 0; i < 8; i++ )
+    std::uint16_t hash = 0;
+    std::uint16_t* ptr = (std::uint16_t*)(&cpuinfo[0]);
+    for ( std::uint32_t i = 0; i < 8; i++ )
 		hash += ptr[i];
 
 	return hash;

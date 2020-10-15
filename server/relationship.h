@@ -3,45 +3,35 @@
 
 #include <atomic>
 
-#include <QObject>
-#include <QUuid>
-
 #include <enums.h>
+#include <uuid.h>
+
 #include "typedefs_server.h"
 
 namespace ThorQ {
-class Relationship : public QObject
+class Relationship
 {
-    Q_OBJECT
 public:
-    Relationship(int privateId, QUuid publicId, Account* source, Account* target, THORQ_RELATIONSHIP_STATUS status, THORQ_RELATIONSHIP_AUTHORITY authority, QObject* parent = nullptr)
-        : QObject(parent)
-        , publicId(publicId)
-        , m_privId(privateId)
-        , m_source(source)
-        , m_target(target)
-        , m_status(status)
-        , m_authority(authority)
-    {
-    }
+    Relationship(int privateId, uuids::uuid publicId, Account* target, THORQ_RELATIONSHIP_STATUS status, THORQ_RELATIONSHIP_AUTHORITY authority);
+    ~Relationship();
 
-    const QUuid publicId;
+    uuids::uuid publicId() const;
 
     Account* source() const;
     Account* target() const;
+    Relationship* mirror() const;
 
     THORQ_RELATIONSHIP_STATUS status() const;
-    THORQ_RELATIONSHIP_AUTHORITY authority() const;
-signals:
-    void statusChanged(THORQ_RELATIONSHIP_STATUS status);
-    void authorityChanged(THORQ_RELATIONSHIP_AUTHORITY authority);
-public slots:
     void setStatus(THORQ_RELATIONSHIP_STATUS status);
+
+    THORQ_RELATIONSHIP_AUTHORITY authority() const;
     void setAuthority(THORQ_RELATIONSHIP_AUTHORITY authority);
 private:
     int m_privId;
+    uuids::uuid m_publicId;
     Account* m_source;
     Account* m_target;
+    Relationship* m_mirror;
     std::atomic<THORQ_RELATIONSHIP_STATUS>    m_status;
     std::atomic<THORQ_RELATIONSHIP_AUTHORITY> m_authority;
 };

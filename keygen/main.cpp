@@ -1,7 +1,5 @@
 #include <fstream>
 
-#include <QDebug>
-
 #include <crypto.h>
 
 int main(int argc, char** argv)

@@ -9,10 +9,12 @@ project(
 
 message("Configuring ${project}...")
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cxxopts)
+
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/hasher.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/hashing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/database.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memorymanager.cpp
 
@@ -33,7 +35,7 @@ set(${project}_SOURCES
 set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/server.h
     ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/hasher.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/hashing.h
     ${CMAKE_CURRENT_SOURCE_DIR}/database.h
     ${CMAKE_CURRENT_SOURCE_DIR}/memorymanager.h
 
@@ -63,7 +65,7 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/concurrentqueue
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlitecpp/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/cxxopts/include
 )
 
 add_executable(${project}
@@ -74,4 +76,5 @@ add_executable(${project}
 
 target_link_libraries(${project}
     ThorQLib
+    cxxopts
 )

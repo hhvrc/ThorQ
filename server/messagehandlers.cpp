@@ -1,9 +1,5 @@
 #include "messagehandlers.h"
 
-#include <QDebug>
-#include <QSqlQuery>
-#include <QSqlDatabase>
-
 #include <utils.h>
 #include <enums.h>
 #include <crypto.h>
