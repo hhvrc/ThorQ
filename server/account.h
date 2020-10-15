@@ -15,10 +15,10 @@
 namespace ThorQ {
 class Account
 {
-    Account();
+    Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const char* username, const char* passwordHash);
 public:
-    static Account* GetAccount(const std::string& username);
-    static Account* NewAccount(const std::string& username, const std::string& password);
+    static Account* GetAccount(const char* username);
+    static Account* NewAccount(const char* username, const char* password);
 public:
     const std::string& username() const;
     void setUsername(const std::string& username);
@@ -56,8 +56,7 @@ private:
     void onPasswordHashingDone(const std::string& hash);
     void onPasswordVerificationDone(bool result);
 
-    int m_dbId;
-    QUuid m_publicId;
+    std::int64_t m_dbId;
 
     QReadWriteLock l_basics;
     std::string m_username;

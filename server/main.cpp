@@ -82,7 +82,7 @@ int main(int argc, char** argv)
     std::uint16_t port = 12345;
 #endif
 
-    if (!ThorQ::DataBase::Initialize("database.db"))
+    if (!ThorQ::Connection::Initialize("database.db"))
     {
         return EXIT_FAILURE;
     }

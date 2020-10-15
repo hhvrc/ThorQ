@@ -9,8 +9,6 @@ project(
 
 message("Configuring ${project}...")
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sqlitecpp)
-
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.cpp
@@ -28,6 +26,9 @@ set(${project}_SOURCES
 
     ${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3/shell.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3/sqlite3.c
 )
 set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/server.h
@@ -53,6 +54,9 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/relationship.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_server.h
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3/sqlite3.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3/sqlite3ext.h
 )
 
 include_directories(
@@ -70,5 +74,4 @@ add_executable(${project}
 
 target_link_libraries(${project}
     ThorQLib
-    SQLiteCpp
 )

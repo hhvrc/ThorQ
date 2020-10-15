@@ -15,10 +15,8 @@
 #include "typedefs_server.h"
 
 namespace ThorQ {
-class Instance : public QObject
+class Instance
 {
-	Q_OBJECT
-
     Instance(const Instance&) = delete;
     Instance& operator=(const Instance&) = delete;
 public:

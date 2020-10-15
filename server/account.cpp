@@ -1,18 +1,19 @@
 #include "account.h"
 
-#include <QtSql>
-
 #include <hasher.h>
 #include <thorq_payload_ack.h>
 #include <thorq_payload_session.h>
 
+#include "sqlite3/sqlite3.h"
+
 #include "utils.h"
 #include "instance.h"
 
-ThorQ::Account::Account()
-    : m_dbId(-1)
-	, m_username()
-	, m_passwordHash()
+ThorQ::Account::Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const char* username, const char* passwordHash)
+    : m_dbId(dbId)
+    , m_username(username)
+    , m_passwordHash(passwordHash)
+    , m_authority(authority)
     , l_sessions(QReadWriteLock::Recursive)
     , m_sessions()
     , l_instances(QReadWriteLock::Recursive)
@@ -22,47 +23,88 @@ ThorQ::Account::Account()
 {
 }
 
-ThorQ::Account* ThorQ::Account::GetAccount(const std::string& username)
+ThorQ::Account* ThorQ::Account::GetAccount(const char* username)
 {
-    QSqlDatabase db = GetDB(true);
+    sqlite3* db             = nullptr;
+    sqlite3_stmt* db_stmt   = nullptr;
+    sqlite3_value* db_value = nullptr;
+    Account* account        = nullptr;
 
-	Account* account = nullptr;
+    if (sqlite3_open_v2("database.db", &db, SQLITE_OPEN_READONLY|SQLITE_OPEN_NOMUTEX, "") != SQLITE_OK)
+    {
+        goto ret_err;
+    }
 
-	if (!db.open())
 	{
-		qDebug() << "Failed to open database:" << db.lastError();
-		return nullptr;
-	}
+        const char* tail;
+        const char* query = "SELECT db_id, password_hash, authority FROM accounts WHERE username = ?1;";
 
-	{
-		QSqlQuery get_account("SELECT db_id, password_hash, is_admin FROM accounts WHERE username = ?;", db);
-		get_account.bindValue(0, username);
+        // Compile query
+        sqlite3_prepare_v3(db, query, sizeof(query), 0, &db_stmt, &tail);
 
-		if (!get_account.exec() || !get_account.isValid())
+        // Bind values
+        sqlite3_bind_text(db_stmt, 1, username, -1, nullptr);
+
+        // Execute query
+        if (sqlite3_step(db_stmt) != SQLITE_OK)
 		{
 			qDebug() << "Failed to execute account query:" << db.lastError();
 
-			if (get_account.isActive()) get_account.clear();
-			db.rollback();
 
 			return nullptr;
-		}
+        }
 
-		if (!get_account.next())
-		{
-			qDebug() << "Query didnt return any values????";
+        // Sanity check query columns
+        if (sqlite3_column_count(db_stmt)   != 3)
+        {
+            return nullptr;
+        }
 
-			if (get_account.isActive()) get_account.clear();
-			db.rollback();
+        // Get database ID
+        std::int64_t dbId;
+        {
+            db_value = sqlite3_column_value(db_stmt, 0);
+            if (sqlite3_value_type(db_value) != SQLITE_INTEGER)
+            {
+                sqlite3_value_free(db_value);
+                sqlite3_finalize(db_stmt);
+                sqlite3_close_v2(db);
+                return nullptr;
+            }
+            dbId = sqlite3_value_int64(db_value);
+            sqlite3_value_free(db_value);
+        }
 
-			return nullptr;
-		}
+        // Get authority
+        db_value = sqlite3_column_value(db_stmt, 2);
+        if (sqlite3_value_type(db_value) != SQLITE_INTEGER)
+        {
+            return nullptr;
+        }
+        int authority = sqlite3_value_int(db_value);
+        if (authority < THORQ_ACCOUNT_AUTHORITY_NONE || authority > THORQ_ACCOUNT_AUTHORITY_FOUNDER)
+        {
+            return nullptr;
+        }
 
-		account = new Account();
+        // Get password hash
+        db_value = sqlite3_column_value(db_stmt, 1);
+        if (sqlite3_value_type(db_value) != SQLITE_TEXT)
+        {
+            return nullptr;
+        }
 
+        account = new Account(
+                              dbId,
+                              (THORQ_ACCOUNT_AUTHORITY)authority,
+                              username,
+                              (const char*)sqlite3_value_text(db_value)
+                             );
+
+        sqlite3_val
 		bool convOk;
 		account->m_username = username;
-		account->m_dbId = get_account.value(0).toInt(&convOk);
+        account->m_dbId = sqlite3_ret get_account.value(0).toInt(&convOk);
 
 		if (!convOk)
 		{
@@ -79,10 +121,20 @@ ThorQ::Account* ThorQ::Account::GetAccount(const std::string& username)
 		account->m_passwordHash = get_account.value(1).toString();
         account->m_authority = static_cast<THORQ_ACCOUNT_AUTHORITY>(get_account.value(2).toInt());
 	}
-	return account;
+
+    return account;
+ret_err:
+    const char* errStr = sqlite3_errmsg(db);
+    fprintf(stderr, "SQL error: %s\n", errStr);
+
+    if (account  != nullptr) delete account;
+    if (db_value != nullptr) sqlite3_value_free(db_value);
+    if (db_stmt  != nullptr) sqlite3_finalize(db_stmt);
+    if (db       != nullptr) sqlite3_close_v2(db);
+    return nullptr;
 }
 
-ThorQ::Account* ThorQ::Account::NewAccount(const std::string& username, const std::string& password_hash)
+ThorQ::Account* ThorQ::Account::NewAccount(const char* username, const char* password_hash)
 {
     QSqlDatabase db = GetDB(false);
 
