@@ -1,6 +1,6 @@
 #ifndef TYPEDEFS_SERVER_H
 #define TYPEDEFS_SERVER_H
 
-namespace ThorQ { class Server; class Account; class Relationship; class Instance; class Session; class MessageDispatcher; }
+namespace ThorQ { class Server; class Account; class Relationship; class Instance; class Session; class MessageDispatcher; namespace SQLite { class Connection; class Query; }}
 
 #endif // TYPEDEFS_SERVER_H

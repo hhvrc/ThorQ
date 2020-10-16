@@ -30,6 +30,51 @@
 
 std::atomic_bool runServer = true;
 
+const char* create_system_ids    = "CREATE TABLE IF NOT EXISTS system_ids(db_id INTEGER PRIMARY KEY AUTOINCREMENT, system_id TEXT NOT NULL UNIQUE, banned_at DATETIME, registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)"; // Unique SystemID of a cmoputer
+const char* create_auth_tokens   = "CREATE TABLE IF NOT EXISTS auth_tokens(db_id INTEGER PRIMARY KEY AUTOINCREMENT, auth_token TEXT NOT NULL UNIQUE, system_id INTEGER NOT NULL, account_id INTEGER NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)"; // Authentication Token generated at login
+const char* create_accounts      = "CREATE TABLE IF NOT EXISTS accounts(db_id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, authority INTEGER NOT NULL DEFAULT 0, last_login DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, deleted_at DATETIME)";
+const char* create_relationships = "CREATE TABLE IF NOT EXISTS relationships(db_id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT NOT NULL UNIQUE, source INTEGER NOT NULL, target INTEGER NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)";
+const char* create_systemid_account_map = "CREATE TABLE IF NOT EXISTS systemid_account_map(systemid_id INTEGER NOT NULL, account_id INTEGER NOT NULL, established_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)";
+const char* create_user_log = "CREATE TABLE IF NOT EXISTS userLog(timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, system_id INTEGER, account_id INTEGER, info TEXT NOT NULL)";
+
+
+bool ThorQ::SQLite::Initialize(const char* path) noexcept
+{
+    sqlite3* db;
+
+    try
+    {
+        sqlite3_enable_shared_cache(true);
+
+        if (sqlite3_open_v2(path, &db, SQLITE_OPEN_CREATE|SQLITE_OPEN_READWRITE|SQLITE_OPEN_NOMUTEX, "") != SQLITE_OK)
+        {
+            sqlite3_close_v2(db);
+            return false;
+        }
+
+        if (
+            execSimple(db, create_system_ids,           sizeof(create_system_ids))           &&
+            execSimple(db, create_auth_tokens,          sizeof(create_auth_tokens))          &&
+            execSimple(db, create_accounts,             sizeof(create_accounts))             &&
+            execSimple(db, create_systemid_account_map, sizeof(create_systemid_account_map)) &&
+            execSimple(db, create_account_blocks,       sizeof(create_account_blocks))       &&
+            execSimple(db, create_account_friends,      sizeof(create_account_friends))      &&
+            execSimple(db, create_user_log,             sizeof(create_user_log))
+           )
+        {
+            sqlite3_close_v2(db);
+            return false;
+        }
+
+        sqlite3_close_v2(db);
+    }
+    catch (...)
+    {
+        return false;
+    }
+
+    return true;
+}
 void exit_handler(int s)
 {
     char buf[64];

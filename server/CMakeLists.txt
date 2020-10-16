@@ -15,7 +15,6 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/hashing.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/database.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memorymanager.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
@@ -29,14 +28,16 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.cpp
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3/shell.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3/sqlite3.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/value.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/query.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/connection.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/internal/shell.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/internal/sqlite3.c
 )
 set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/server.h
     ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.h
     ${CMAKE_CURRENT_SOURCE_DIR}/hashing.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/database.h
     ${CMAKE_CURRENT_SOURCE_DIR}/memorymanager.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
@@ -57,8 +58,11 @@ set(${project}_HEADERS
 
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_server.h
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3/sqlite3.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite3/sqlite3ext.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/value.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/query.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/connection.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/internal/sqlite3.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/internal/sqlite3ext.h
 )
 
 include_directories(

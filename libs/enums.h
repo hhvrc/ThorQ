@@ -102,13 +102,10 @@ enum THORQ_DISCONNECT_REASON : std::uint8_t
 /// Friend relationship status
 enum THORQ_RELATIONSHIP_STATUS : std::uint8_t
 {
-    THORQ_RELATIONSHIP_STATUS_MUTUAL_BLOCK, ///< Both accounts have each other blocked
-    THORQ_RELATIONSHIP_STATUS_BLOCKED,      ///< This account is being blocked by the other account
-    THORQ_RELATIONSHIP_STATUS_BLOCKING,     ///< This account is blocking the other account
-    THORQ_RELATIONSHIP_STATUS_NONE,         ///< No friendship status
-    THORQ_RELATIONSHIP_STATUS_FRIENDED,     ///< Incoming friend-request
-    THORQ_RELATIONSHIP_STATUS_FRIENDING,    ///< Outgoing friend-request
-    THORQ_RELATIONSHIP_STATUS_FRIENDS,      ///< Account is friended
+    THORQ_RELATIONSHIP_STATUS_BLOCKED, ///< Target is blocked
+    THORQ_RELATIONSHIP_STATUS_NONE,    ///< No relationship status
+    THORQ_RELATIONSHIP_STATUS_PENDING, ///< Outgoing friend-request
+    THORQ_RELATIONSHIP_STATUS_FRIENDS, ///< Account is friended
 };
 
 /// Actions to be taken on session requested
