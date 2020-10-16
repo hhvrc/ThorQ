@@ -1,10 +1,12 @@
 #include "account.h"
 
-#include <hasher.h>
+#include <hashing.h>
 #include <thorq_payload_ack.h>
 #include <thorq_payload_session.h>
 
-#include "sqlite3/sqlite3.h"
+#include "sqlite/connection.h"
+#include "sqlite/transaction.h"
+#include "sqlite/query.h"
 
 #include "utils.h"
 #include "instance.h"
@@ -14,113 +16,101 @@ ThorQ::Account::Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, co
     , m_username(username)
     , m_passwordHash(passwordHash)
     , m_authority(authority)
-    , l_sessions(QReadWriteLock::Recursive)
+    , l_sessions()
     , m_sessions()
-    , l_instances(QReadWriteLock::Recursive)
+    , l_instances()
     , m_instances()
-    , l_relationships(QReadWriteLock::Recursive)
+    , l_relationships()
     , m_relationships()
 {
 }
 
 ThorQ::Account* ThorQ::Account::GetAccount(const char* username)
 {
-    sqlite3* db             = nullptr;
-    sqlite3_stmt* db_stmt   = nullptr;
-    sqlite3_value* db_value = nullptr;
-    Account* account        = nullptr;
+    Account* account = nullptr;
 
-    if (sqlite3_open_v2("database.db", &db, SQLITE_OPEN_READONLY|SQLITE_OPEN_NOMUTEX, "") != SQLITE_OK)
+    SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
+
+    if (!connection.isOpen())
     {
-        goto ret_err;
+        return account;
     }
 
-	{
-        const char* tail;
-        const char* query = "SELECT db_id, password_hash, authority FROM accounts WHERE username = ?1;";
+    SQLite::Query query = connection.query("SELECT db_id, password_hash, authority FROM accounts WHERE username = ?");
 
-        // Compile query
-        sqlite3_prepare_v3(db, query, sizeof(query), 0, &db_stmt, &tail);
+    query.bind(1, username);
 
-        // Bind values
-        sqlite3_bind_text(db_stmt, 1, username, -1, nullptr);
+    if (!query.step())
+    {
+        return nullptr;
+    }
 
-        // Execute query
-        if (sqlite3_step(db_stmt) != SQLITE_OK)
-		{
-			qDebug() << "Failed to execute account query:" << db.lastError();
+    if (query.columnCount() != 3)
+    {
+        return nullptr;
+    }
 
 
-			return nullptr;
-        }
-
-        // Sanity check query columns
-        if (sqlite3_column_count(db_stmt)   != 3)
-        {
-            return nullptr;
-        }
-
-        // Get database ID
-        std::int64_t dbId;
-        {
-            db_value = sqlite3_column_value(db_stmt, 0);
-            if (sqlite3_value_type(db_value) != SQLITE_INTEGER)
-            {
-                sqlite3_value_free(db_value);
-                sqlite3_finalize(db_stmt);
-                sqlite3_close_v2(db);
-                return nullptr;
-            }
-            dbId = sqlite3_value_int64(db_value);
-            sqlite3_value_free(db_value);
-        }
-
-        // Get authority
-        db_value = sqlite3_column_value(db_stmt, 2);
+    // Get database ID
+    std::int64_t dbId;
+    {
+        db_value = sqlite3_column_value(db_stmt, 0);
         if (sqlite3_value_type(db_value) != SQLITE_INTEGER)
         {
+            sqlite3_value_free(db_value);
+            sqlite3_finalize(db_stmt);
+            sqlite3_close_v2(db);
             return nullptr;
         }
-        int authority = sqlite3_value_int(db_value);
-        if (authority < THORQ_ACCOUNT_AUTHORITY_NONE || authority > THORQ_ACCOUNT_AUTHORITY_FOUNDER)
-        {
-            return nullptr;
-        }
+        dbId = sqlite3_value_int64(db_value);
+        sqlite3_value_free(db_value);
+    }
 
-        // Get password hash
-        db_value = sqlite3_column_value(db_stmt, 1);
-        if (sqlite3_value_type(db_value) != SQLITE_TEXT)
-        {
-            return nullptr;
-        }
+    // Get authority
+    db_value = sqlite3_column_value(db_stmt, 2);
+    if (sqlite3_value_type(db_value) != SQLITE_INTEGER)
+    {
+        return nullptr;
+    }
+    int authority = sqlite3_value_int(db_value);
+    if (authority < THORQ_ACCOUNT_AUTHORITY_NONE || authority > THORQ_ACCOUNT_AUTHORITY_FOUNDER)
+    {
+        return nullptr;
+    }
 
-        account = new Account(
-                              dbId,
-                              (THORQ_ACCOUNT_AUTHORITY)authority,
-                              username,
-                              (const char*)sqlite3_value_text(db_value)
-                             );
+    // Get password hash
+    db_value = sqlite3_column_value(db_stmt, 1);
+    if (sqlite3_value_type(db_value) != SQLITE_TEXT)
+    {
+        return nullptr;
+    }
 
-        sqlite3_val
-		bool convOk;
-		account->m_username = username;
-        account->m_dbId = sqlite3_ret get_account.value(0).toInt(&convOk);
+    account = new Account(
+                          dbId,
+                          (THORQ_ACCOUNT_AUTHORITY)authority,
+                          username,
+                          (const char*)sqlite3_value_text(db_value)
+                         );
 
-		if (!convOk)
-		{
-			account->deleteLater();
+    sqlite3_val
+    bool convOk;
+    account->m_username = username;
+    account->m_dbId = sqlite3_ret get_account.value(0).toInt(&convOk);
 
-			qDebug() << "Failed to get dbId";
+    if (!convOk)
+    {
+        account->deleteLater();
 
-			if (get_account.isActive()) get_account.clear();
-			db.rollback();
+        qDebug() << "Failed to get dbId";
 
-			return nullptr;
-		}
+        if (get_account.isActive()) get_account.clear();
+        db.rollback();
 
-		account->m_passwordHash = get_account.value(1).toString();
-        account->m_authority = static_cast<THORQ_ACCOUNT_AUTHORITY>(get_account.value(2).toInt());
-	}
+        return nullptr;
+    }
+
+    account->m_passwordHash = get_account.value(1).toString();
+    account->m_authority = static_cast<THORQ_ACCOUNT_AUTHORITY>(get_account.value(2).toInt());
 
     return account;
 ret_err:
@@ -136,68 +126,63 @@ ret_err:
 
 ThorQ::Account* ThorQ::Account::NewAccount(const char* username, const char* password_hash)
 {
-    QSqlDatabase db = GetDB(false);
+    Account* account = nullptr;
 
-	Account* account = nullptr;
+    SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
 
-	if (!db.open())
+    if (!connection.isOpen())
+    {
+        return account;
+    }
+
+    SQLite::Transaction transaction = connection.transaction();
+
+    if (!transaction.isOpen())
 	{
-		qDebug() << "Failed to open database:" << db.lastError();
-		return nullptr;
-	}
-
-	if (!db.transaction())
-	{
-		qDebug() << "Failed to start transaction:" << db.lastError();
-		db.rollback();
+        printf("Failed to start transaction: %s\n", connection.lastError());
 		return nullptr;
     }
 
+    SQLite::Query query("INSERT OR IGNORE INTO accounts(username, password_hash) VALUES (?, ?);SELECT changes();", connection);
+    register_account.bindValue(0, username);
+    register_account.bindValue(1, password_hash);
+
+    if (!register_account.exec() || !register_account.isValid())
+    {
+        qDebug() << "Failed to execute account query:" << db.lastError();
+
+        if (register_account.isActive()) register_account.clear();
+        db.rollback();
+
+        return nullptr;
+    }
+
+    if (!register_account.next())
+    {
+        qDebug() << "Query didnt return any values????";
+
+        if (register_account.isActive()) register_account.clear();
+        db.rollback();
+
+        return nullptr;
+    }
+
+    bool convOk;
+    int changes = register_account.value(0).toInt(&convOk);
+
+    if (!convOk || changes == 0)
+    {
+        qDebug() << "Account invalid/already used";
+
+        if (register_account.isActive()) register_account.clear();
+        db.rollback();
+
+        return nullptr;
+    }
+
+    if (!transaction.commit())
 	{
-		QSqlQuery register_account("INSERT OR IGNORE INTO accounts(username, password_hash) VALUES (?, ?);SELECT changes();", db);
-		register_account.bindValue(0, username);
-		register_account.bindValue(1, password_hash);
-
-		if (!register_account.exec() || !register_account.isValid())
-		{
-			qDebug() << "Failed to execute account query:" << db.lastError();
-
-			if (register_account.isActive()) register_account.clear();
-			db.rollback();
-
-			return nullptr;
-		}
-
-		if (!register_account.next())
-		{
-			qDebug() << "Query didnt return any values????";
-
-			if (register_account.isActive()) register_account.clear();
-			db.rollback();
-
-			return nullptr;
-		}
-
-		bool convOk;
-		int changes = register_account.value(0).toInt(&convOk);
-
-		if (!convOk || changes == 0)
-		{
-			qDebug() << "Account invalid/already used";
-
-			if (register_account.isActive()) register_account.clear();
-			db.rollback();
-
-			return nullptr;
-		}
-	}
-
-	if (!db.commit())
-	{
-		qDebug() << "Failed to commit account!";
-
-		db.rollback();
-
+        printf("Failed to commit account!\n");
 		return nullptr;
 	}
 
@@ -212,14 +197,15 @@ const std::string& ThorQ::Account::username() const
 void ThorQ::Account::setUsername(const std::string& username)
 {
 	if (m_username != username && m_dbId != -1)
-	{
-        QSqlDatabase db = GetDB(false);
+    {
+        SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
 
-		if (!db.open())
-		{
-			qDebug() << "Failed to open database:" << db.lastError();
-			return;
-		}
+        if (!connection.isOpen())
+        {
+            return nullptr;
+        }
+
+        Account* account = nullptr;
 
 		if (!db.transaction())
 		{

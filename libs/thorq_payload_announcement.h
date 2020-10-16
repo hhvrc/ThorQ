@@ -37,7 +37,7 @@ inline bool thorq_payload_announcement_is_valid(const std::vector<std::uint8_t>&
  * @param type
  * @param message
  */
-inline void thorq_payload_announcement_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ANNOUNCEMENT type, const QString& message)
+inline void thorq_payload_announcement_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ANNOUNCEMENT type, const std::string& message)
 {
     thorq_payload_serialization_pack_1string(payload, THORQ_PAYLOAD_ID_ANNOUNCEMENT, type, message);
 }
@@ -48,7 +48,7 @@ inline void thorq_payload_announcement_pack(std::vector<std::uint8_t>& payload, 
  * @param type
  * @param message
  */
-inline void thorq_payload_announcement_unpack(const std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ANNOUNCEMENT& type, QString& message)
+inline void thorq_payload_announcement_unpack(const std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ANNOUNCEMENT& type, std::string& message)
 {
     type = static_cast<THORQ_PAYLOAD_ANNOUNCEMENT>(thorq_payload_serialization_get_cmd(payload));
     thorq_payload_serialization_unpack_1string(payload, message);

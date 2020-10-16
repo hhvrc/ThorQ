@@ -46,8 +46,6 @@ public:
 
     void disconnectPeer(std::uint32_t reason);
     void disconnectPeerForcibly(std::uint32_t reason);
-signals:
-    void disconnecting();
 private:
     ENetPeer* m_peer;
     ThorQ::Account* m_account;

@@ -6,6 +6,7 @@
 #define THORQ_PAYLOAD_SESSION_H
 
 #include <vector>
+#include <string>
 #include <cstdint>
 
 #include "enums.h"
@@ -33,14 +34,12 @@ inline bool thorq_payload_session_is_valid(const std::vector<std::uint8_t>& payl
     return payload.size() > 2 && payload[1] == THORQ_PAYLOAD_SESSION_REQUEST;
 }
 
-inline void thorq_payload_session_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_SESSION cmd, const QString& username)
+inline void thorq_payload_session_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_SESSION cmd, const std::string& username)
 {
-    QByteArray usernameBytes = username.toUtf8();
-
-    payload.resize(2 + usernameBytes.size());
+    payload.resize(2 + username.size());
     payload[0] = THORQ_PAYLOAD_ID_SESSION;
     payload[1] = THORQ_PAYLOAD_SESSION_REQUEST;
-    memcpy(payload.data() + 2, usernameBytes.data(), usernameBytes.size());
+    memcpy(payload.data() + 2, username.data(), username.size());
 }
 
 inline void thorq_payload_session_get_cmd(const std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_SESSION& cmd)
@@ -48,9 +47,9 @@ inline void thorq_payload_session_get_cmd(const std::vector<std::uint8_t>& paylo
     cmd = static_cast<THORQ_PAYLOAD_SESSION>(payload[0]);
 }
 
-inline void thorq_payload_session_get_data(const std::vector<std::uint8_t>& payload, QString& username)
+inline void thorq_payload_session_get_data(const std::vector<std::uint8_t>& payload, std::string& username)
 {
-    username = QString::fromUtf8((char*)payload.data() + 2, payload.size() - 2);
+    username = std::string((char*)payload.data() + 2, payload.size() - 2);
 }
 
 #endif // THORQ_PAYLOAD_SESSION_H

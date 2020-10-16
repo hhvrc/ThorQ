@@ -2,8 +2,7 @@
 
 #include "enet.h"
 
-ThorQ::MessageDispatcher::MessageDispatcher(QObject *parent)
-    : QObject(parent)
+ThorQ::MessageDispatcher::MessageDispatcher()
 {
 
 }

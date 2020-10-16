@@ -2,47 +2,48 @@
 
 #include "internal/sqlite3.h"
 
+#include "transaction.h"
 #include "query.h"
 #include "value.h"
 
-ThorQ::SQLite::Connection::Connection(sqlite3* connection)
-    : m_db(connection)
+ThorQ::SQLite::Connection::Connection(const char* apFilename,
+                                      int aFlags,             /* = OpenMode::READONLY */
+                                      int aBusyTimeoutMs,     /* = 0                  */
+                                      const char* apVfs       /* = nullptr            */)
+    : m_db(nullptr)
+    , m_transaction(nullptr)
 {
-}
-
-std::optional<ThorQ::SQLite::Connection> ThorQ::SQLite::Connection::Open(const char* apFilename,
-                                                            int aFlags,             /* = OpenMode::READONLY */
-                                                            int aBusyTimeoutMs,     /* = 0                  */
-                                                            const char* apVfs       /* = nullptr            */)
-{
-    if (apFilename == nullptr)
+    if (apFilename != nullptr)
     {
-        return {};
+        if (sqlite3_open_v2(apFilename, &m_db, aFlags, apVfs) != SQLITE_OK)
+        {
+            sqlite3_close_v2(m_db);
+            m_db = nullptr;
+            return;
+        }
+
+        if (aBusyTimeoutMs > 0)
+        {
+            setBusyTimeout(aBusyTimeoutMs);
+        }
     }
-
-    sqlite3* db;
-    if (sqlite3_open_v2(apFilename, &db, aFlags, apVfs) != SQLITE_OK)
-    {
-        sqlite3_close_v2(db);
-        return {};
-    }
-
-    ThorQ::SQLite::Connection connection(db);
-
-    if (aBusyTimeoutMs > 0)
-    {
-        connection.setBusyTimeout(aBusyTimeoutMs);
-    }
-
-    return connection;
 }
 
 ThorQ::SQLite::Connection::~Connection()
 {
+    if (m_transaction != nullptr)
+    {
+        m_transaction->rollback();
+    }
     if (m_db != nullptr)
     {
         sqlite3_close_v2(m_db);
     }
+}
+
+bool ThorQ::SQLite::Connection::isOpen() const
+{
+    return m_db != nullptr;
 }
 
 bool ThorQ::SQLite::Connection::setBusyTimeout(int aBusyTimeoutMs)
@@ -55,9 +56,14 @@ bool ThorQ::SQLite::Connection::setBusyTimeout(int aBusyTimeoutMs)
     return false;
 }
 
+ThorQ::SQLite::Transaction ThorQ::SQLite::Connection::transaction()
+{
+    return Transaction(*this);
+}
+
 ThorQ::SQLite::Query ThorQ::SQLite::Connection::query(const char* statement)
 {
-    return Query(this, statement);
+    return Query(statement, *this);
 }
 
 bool ThorQ::SQLite::Connection::execute(const char* statement)
@@ -67,13 +73,13 @@ bool ThorQ::SQLite::Connection::execute(const char* statement)
 
 bool ThorQ::SQLite::Connection::tableExists(const char* apTableName)
 {
-    Query query(this, "SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?");
+    Query query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?", *this);
     query.bind(1, apTableName);
     (void)query.step(); // Cannot return false, as the above query always return a result
     return (1 == query.getColumn(0).getInt());
 }
 
-uint64_t ThorQ::SQLite::Connection::lastInsertedRowId()
+uint64_t ThorQ::SQLite::Connection::lastInsertedRowId() const
 {
     if (m_db != nullptr)
     {
@@ -81,4 +87,14 @@ uint64_t ThorQ::SQLite::Connection::lastInsertedRowId()
     }
 
     return 0;
+}
+
+const char *ThorQ::SQLite::Connection::lastError() const
+{
+    if (m_db != nullptr)
+    {
+        return sqlite3_errmsg(m_db);
+    }
+
+    return "Database is not open!";
 }

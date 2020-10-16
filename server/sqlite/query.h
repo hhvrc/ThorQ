@@ -3,7 +3,8 @@
 
 #include <cstdint>
 #include <string>
-#include <optional>
+
+#include "type.h"
 
 typedef struct sqlite3_stmt sqlite3_stmt;
 
@@ -11,28 +12,32 @@ namespace ThorQ {
 namespace SQLite {
 
 class Connection;
+class Column;
 class Value;
 
 class Query
 {
     friend Connection;
-    Query() = default;
+    friend Column;
+
+    Query();
     Query(const Query& other) = default;
-    Query& operator=(const Query& other) = default;
+    Query& operator=(const SQLite::Query& other) = default;
 public:
-    Query(Connection* connection, const char* statement);
+    Query(const char* statement, SQLite::Connection& connection);
 
-    bool isValid();
+    bool isValid() const;
 
-    void bind(int index, const Value& value);
-    void bind(int index, const char* value);
+    bool bind(int index, const Value& value);
+    bool bind(int index, const char* value);
 
-    void step();
+    bool step();
 
-    Value getColumn(int col);
+    int columnCount() const;
+    SQLite::Column getColumn(int col);
 private:
-    Connection* m_connection;
     sqlite3_stmt* m_stmt;
+    int m_ncols;
 };
 }
 }

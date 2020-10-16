@@ -3,27 +3,43 @@
 
 #include <cstdint>
 #include <string>
-#include <optional>
+#include <vector>
+
+#include "type.h"
 
 typedef struct sqlite3_value sqlite3_value;
 
 namespace ThorQ {
 namespace SQLite {
 class Query;
+class Column;
 
 class Value
 {
-    friend Query;
+    friend SQLite::Query;
+    friend SQLite::Column;
 
-    Value() = default;
-    Value(const Value& other) = default;
-    Value& operator=(const Value& other) = default;
+    Value(const sqlite3_value* value);
 public:
-    enum Type
-    {
+    Value(); ///< Constructs a NULL value
+    Value(std::int32_t val);
+    Value(std::int64_t val);
+    Value(double val);
+    Value(const std::string& text);
+    Value(const std::vector<std::uint8_t>& blob);
+    Value(const Value& other);
 
-    };
-    Type type();
+    void null();
+    Value& operator=(std::int32_t val);
+    Value& operator=(std::int64_t val);
+    Value& operator=(double val);
+    Value& operator=(const std::string& text);
+    Value& operator=(const std::vector<std::uint8_t>& blob);
+    Value& operator=(const Value& other);
+
+    bool isValid() const;
+
+    SQLite::Type type() const;
 
     int getInt();
     const char* getString();

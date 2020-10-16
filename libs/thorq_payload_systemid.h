@@ -34,7 +34,7 @@ inline void thorq_payload_systemid_cmd_pack(std::vector<std::uint8_t>& payload, 
 	payload[0] = THORQ_PAYLOAD_ID_SYSTEMID;
 	payload[1] = static_cast<std::uint8_t>(cmd);
 }
-inline void thorq_payload_systemid_data_pack(std::vector<std::uint8_t>& payload, const QByteArray& systemid)
+inline void thorq_payload_systemid_data_pack(std::vector<std::uint8_t>& payload, const std::vector<std::uint8_t>& systemid)
 {
 	payload.resize(2 + systemid.size());
 	payload[0] = THORQ_PAYLOAD_ID_SYSTEMID;
@@ -46,7 +46,7 @@ inline void thorq_payload_systemid_get_cmd(const std::vector<std::uint8_t>& payl
 {
 	cmd = static_cast<THORQ_PAYLOAD_SYSTEMID>(payload[1]);
 }
-inline void thorq_payload_systemid_submit_unpack(const std::vector<std::uint8_t>& payload, QByteArray& systemid)
+inline void thorq_payload_systemid_submit_unpack(const std::vector<std::uint8_t>& payload, std::vector<std::uint8_t>& systemid)
 {
 	systemid.resize(payload.size() - 2);
 	memcpy(systemid.data(), payload.data() + 2, payload.size() - 2);
