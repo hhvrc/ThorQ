@@ -23,27 +23,6 @@
 #include "instance.h"
 #include "memorymanager.h"
 
-// ceil(x / y) https://stackoverflow.com/questions/2745074/fast-ceiling-of-an-integer-division-in-c-c
-constexpr std::size_t ceilDiv(std::size_t x, std::size_t y)
-{
-    return (x + y - 1) / y;
-}
-
-// https://github.com/cameron314/concurrentqueue
-constexpr std::size_t blockSize = moodycamel::ConcurrentQueueDefaultTraits::BLOCK_SIZE;
-constexpr std::size_t queueCapicity = 1024;
-constexpr std::size_t queueSizeIn  = (ceilDiv(queueCapicity, blockSize) + 1) * 16 * blockSize;
-constexpr std::size_t queueSizeOut = (ceilDiv(queueCapicity, blockSize) + 1) *  1 * blockSize;
-
-ENetPacket* allocPacket(const void *data, size_t dataLength, enet_uint32 flags)
-{
-
-}
-void freePacket(ENetPacket *packet)
-{
-
-}
-
 #define VER_STRING(MAJOR, MINOR, PATCH) #MAJOR "." #MINOR "." #PATCH
 const char* ThorQ::Server::Version()
 {
@@ -123,15 +102,17 @@ ThorQ::Server::~Server()
     }
     catch (const std::exception& ex)
     {
-        qDebug() << "Exception occured disconnecting clients:" << ex.what();
+        fprintf(stderr, "Exception occured disconnecting clients: %s\n", ex.what());
     }
     catch (int i)
     {
-        qDebug() << "Exception occured disconnecting clients:" << strerror(i);
+        char buf[64]{0};
+        strerror_s(buf, 63, i);
+        fprintf(stderr, "Exception occured disconnecting clients: %s\n", buf);
     }
     catch (...)
     {
-
+        fprintf(stderr, "Unknown Exception occured disconnecting clients\n");
     }
 
     try
@@ -140,15 +121,17 @@ ThorQ::Server::~Server()
     }
     catch (const std::exception& ex)
     {
-        qDebug() << "Exception occured destroying host:" << ex.what();
+        fprintf(stderr, "Exception occured destroying host: %s\n", ex.what());
     }
     catch (int i)
     {
-        qDebug() << "Exception occured destroying host:" << strerror(i);
+        char buf[64]{0};
+        strerror_s(buf, 63, i);
+        fprintf(stderr, "Exception occured destroying host: %s\n", buf);
     }
     catch (...)
     {
-
+        fprintf(stderr, "Unknown Exception occured destroying host\n");
     }
 }
 
@@ -166,7 +149,6 @@ void ThorQ::Server::SetHeartbeatInterval(std::uint32_t msInterval)
     if (msInterval != m_heartbeatInterval)
     {
         m_heartbeatInterval = msInterval;
-        emit heartbeatChanged(msInterval);
     }
 }
 
@@ -189,22 +171,22 @@ std::uint64_t ThorQ::Server::totalPacketsReceived()
 
 void ThorQ::Server::broadcastAnnouncement(const std::vector<std::uint8_t>& payload, bool reliable, bool unsequenced)
 {
-    ENetPacket* packet;
-    ThorQ::packetEncode(payload, (ENET_PACKET_FLAG_RELIABLE * reliable) | (ENET_PACKET_FLAG_UNSEQUENCED * unsequenced));
+    ENetPacket* packet = ThorQ::Memory::packetGet(payload.size(), (ENET_PACKET_FLAG_RELIABLE * reliable) | (ENET_PACKET_FLAG_UNSEQUENCED * unsequenced));
 
     if (packet != nullptr)
     {
-        m_queuedBroadcasts.enqueue(packet);
+        ThorQ::packetEncode(packet, payload);
+        m_broadcastQueue.enqueue(QueuedMessage{ nullptr, packet, THORQ_CHANNEL_AUTHORITY });
     }
 }
 
 bool ThorQ::Server::tryGetMessage(ThorQ::Server::QueuedMessage &message)
 {
-    return m_receivedMessages.try_dequeue(message);
+    return m_rxQueue.try_dequeue(message);
 }
-void ThorQ::Server::queueMessage(const QueuedMessage& message)
+bool ThorQ::Server::tryQueueMessage(const QueuedMessage& message)
 {
-    m_queuedMessages.enqueue(message);
+    return m_txQueue.enqueue(message);
 }
 
 void ThorQ::Server::run()
@@ -287,13 +269,11 @@ void ThorQ::Server::handleEventConnection(const ENetEvent& event)
     thorq_payload_heartbeat_pack(message, 500); // TODO: get from config
     instance->sendMessage(message, THORQ_CHANNEL_MAIN, false, true);
 
-    qDebug() << QString("A new client connected from:\n\tIPV6: %1\n\tPORT: %2")
-                .arg(enet_peer_address_str(event.peer))
-                .arg(event.peer->address.port);
+    printf("[%s] Connected", enet_peer_address_str(event.peer).c_str());
 }
 void ThorQ::Server::handleEventMessage(const ENetEvent &event)
 {
-    m_receivedMessages.enqueue(QueuedMessage{ event.peer, event.packet, event.channelID });
+    m_rxQueue.enqueue(QueuedMessage{ event.peer, event.packet, event.channelID });
 }
 void ThorQ::Server::handleEventDisconnect(const ENetEvent& event)
 {
@@ -302,15 +282,7 @@ void ThorQ::Server::handleEventDisconnect(const ENetEvent& event)
 
     auto instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
 
-    if (instance->account() != nullptr)
-    {
-        qDebug() << "User" << instance->account()->username()
-                 << "connected from [" << enet_peer_address_str(event.peer) << "] disconnected";
-    }
-    else
-    {
-        qDebug() << "User connected from [" << enet_peer_address_str(event.peer) << "] disconnected";
-    }
+    printf("[%s] disconnected\n", enet_peer_address_str(event.peer).c_str());
 
     event.peer->data = nullptr;
 
@@ -324,8 +296,5 @@ void ThorQ::Server::handleEventTimeout(const ENetEvent& event)
 
     ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
 
-    if (instance->account() != nullptr)
-    {
-        qDebug() << instance->account()->username() << "timed out";
-    }
+    printf("[%s] timed out\n", enet_peer_address_str(event.peer).c_str());
 }

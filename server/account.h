@@ -12,16 +12,16 @@
 namespace ThorQ {
 class Account
 {
-    Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const char* username, const char* passwordHash);
+    Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const std::string& username, const std::string& passwordHash);
 public:
-    static Account* GetAccount(const char* username);
-    static Account* NewAccount(const char* username, const char* password);
+    static Account* GetAccount(const std::string& username);
+    static Account* NewAccount(const std::string& username, const std::string& passwordHash);
 public:
-    const std::string& username() const;
-    void setUsername(const std::string& username);
+    std::string username() const;
+    bool setUsername(const std::string& username);
 
-    void setPassword(const std::string& password);
-    void verifyPassword(const std::string& password) const;
+    std::string passwordHash() const;
+    bool setPasswordHash(const std::string& passwordHash);
 
     Account* master() const;
     bool isExclusive() const;
@@ -50,9 +50,6 @@ public:
     void sendMessage(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
     void sendMessageToFriends(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
 private:
-    void onPasswordHashingDone(const std::string& hash);
-    void onPasswordVerificationDone(bool result);
-
     std::int64_t m_dbId;
 
     std::shared_mutex l_basics;

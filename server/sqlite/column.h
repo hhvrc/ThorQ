@@ -18,11 +18,10 @@ class Column
 {
     friend SQLite::Query;
     friend SQLite::Value;
-
+public:
     Column(SQLite::Query* query, int col);
     Column(const Column& other) = default;
     Column& operator=(const Column& other) = default;
-public:
     bool isValid() const;
 
     SQLite::Type type() const;
@@ -30,8 +29,8 @@ public:
     std::int32_t getInt();
     std::int64_t getInt64();
     double       getDouble();
-    void getText(std::string& textOut);
-    void getBlob(std::vector<std::uint8_t>& blobOut);
+    std::string  getText();
+    std::vector<std::uint8_t> getBlob();
 
     SQLite::Value getValue(); ///< Allocates a copy of the value at the row, making it independant from the Query
 private:

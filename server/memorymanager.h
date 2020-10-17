@@ -8,7 +8,7 @@
 namespace ThorQ {
 namespace Memory {
 ENetCallbacks Initialize();
-ENetPacket* packetGet(const void* data, std::size_t dataLength, std::uint32_t flags);
+ENetPacket* packetGet(std::size_t size, std::uint32_t flags);
 void packetFree(ENetPacket* packet);
 }
 }

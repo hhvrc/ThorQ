@@ -34,20 +34,56 @@ bool ThorQ::SQLite::Query::isValid() const
     return m_stmt != nullptr;
 }
 
+bool ThorQ::SQLite::Query::bind(int index, int32_t value)
+{
+    if (isValid())
+    {
+        return sqlite3_bind_int(m_stmt, index, value) == SQLITE_OK;
+    }
+    return false;
+}
+
+bool ThorQ::SQLite::Query::bind(int index, int64_t value)
+{
+    if (isValid())
+    {
+        return sqlite3_bind_int64(m_stmt, index, value) == SQLITE_OK;
+    }
+    return false;
+}
+
+bool ThorQ::SQLite::Query::bind(int index, double value)
+{
+    if (isValid())
+    {
+        return sqlite3_bind_double(m_stmt, index, value) == SQLITE_OK;
+    }
+    return false;
+}
+
+bool ThorQ::SQLite::Query::bind(int index, const std::string& value)
+{
+    if (isValid())
+    {
+        return sqlite3_bind_text(m_stmt, index, value.data(), value.size(), nullptr) == SQLITE_OK;
+    }
+    return false;
+}
+
+bool ThorQ::SQLite::Query::bind(int index, const std::vector<uint8_t> &value)
+{
+    if (isValid())
+    {
+        return sqlite3_bind_blob(m_stmt, index, value.data(), value.size(), nullptr) == SQLITE_OK;
+    }
+    return false;
+}
+
 bool ThorQ::SQLite::Query::bind(int index, const ThorQ::SQLite::Value &value)
 {
     if (isValid())
     {
         return sqlite3_bind_value(m_stmt, index, value.m_value) == SQLITE_OK;
-    }
-    return false;
-}
-
-bool ThorQ::SQLite::Query::bind(int index, const char *value)
-{
-    if (isValid())
-    {
-        return sqlite3_bind_text(m_stmt, index, value, -1, nullptr) == SQLITE_OK;
     }
     return false;
 }
@@ -68,7 +104,16 @@ int ThorQ::SQLite::Query::columnCount() const
     return m_ncols;
 }
 
-ThorQ::SQLite::Column ThorQ::SQLite::Query::getColumn(int col)
+ThorQ::SQLite::Type ThorQ::SQLite::Query::getType(int col)
+{
+    if (isValid())
+    {
+        return (SQLite::Type)sqlite3_column_type(m_stmt, col);
+    }
+    return SQLite::Type::Invalid;
+}
+
+ThorQ::SQLite::Column ThorQ::SQLite::Query::column(int col)
 {
     return ThorQ::SQLite::Column(this, col);
 }

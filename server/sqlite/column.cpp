@@ -24,7 +24,7 @@ ThorQ::SQLite::Type ThorQ::SQLite::Column::type() const
     {
         return (SQLite::Type)sqlite3_column_type(m_query->m_stmt, m_col);
     }
-    return SQLite::Type::INVALID;
+    return SQLite::Type::Invalid;
 }
 
 std::int32_t ThorQ::SQLite::Column::getInt()
@@ -42,18 +42,18 @@ double ThorQ::SQLite::Column::getDouble()
     return sqlite3_column_double(m_query->m_stmt, m_col);
 }
 
-void ThorQ::SQLite::Column::getText(std::string& textOut)
+std::string ThorQ::SQLite::Column::getText()
 {
-    textOut.resize(sqlite3_column_bytes(m_query->m_stmt, m_col));
+    const char* ptr = (const char*)sqlite3_column_blob(m_query->m_stmt, m_col);
 
-    memcpy(textOut.data(), sqlite3_column_text(m_query->m_stmt, m_col), textOut.size());
+    return std::string(ptr, ptr + sqlite3_column_bytes(m_query->m_stmt, m_col));
 }
 
-void ThorQ::SQLite::Column::getBlob(std::vector<std::uint8_t>& blobOut)
+std::vector<std::uint8_t> ThorQ::SQLite::Column::getBlob()
 {
-    blobOut.resize(sqlite3_column_bytes(m_query->m_stmt, m_col));
+    const uint8_t* ptr = (const std::uint8_t*)sqlite3_column_blob(m_query->m_stmt, m_col);
 
-    memcpy(blobOut.data(), sqlite3_column_blob(m_query->m_stmt, m_col), blobOut.size());
+    return std::vector<std::uint8_t>(ptr, ptr + sqlite3_column_bytes(m_query->m_stmt, m_col));
 }
 
 ThorQ::SQLite::Value ThorQ::SQLite::Column::getValue()

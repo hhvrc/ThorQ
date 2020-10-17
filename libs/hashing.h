@@ -6,10 +6,12 @@
 #include <cstdint>
 
 namespace ThorQ {
+namespace Security {
 namespace Hashing {
 bool Sha256_Hash(std::uint8_t* data, std::size_t size, std::uint8_t* hashOut);
 std::string BCrypt_Hash(const std::string& password);
 bool BCrypt_Verify(const std::string& password, const std::string& hash);
+}
 }
 }
 

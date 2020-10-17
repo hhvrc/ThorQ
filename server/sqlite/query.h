@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "type.h"
 
@@ -28,13 +29,18 @@ public:
 
     bool isValid() const;
 
+    bool bind(int index, std::int32_t value);
+    bool bind(int index, std::int64_t value);
+    bool bind(int index, double value);
+    bool bind(int index, const std::string& value);
+    bool bind(int index, const std::vector<std::uint8_t>& value);
     bool bind(int index, const Value& value);
-    bool bind(int index, const char* value);
 
     bool step();
 
     int columnCount() const;
-    SQLite::Column getColumn(int col);
+    SQLite::Type getType(int col);
+    SQLite::Column column(int col);
 private:
     sqlite3_stmt* m_stmt;
     int m_ncols;

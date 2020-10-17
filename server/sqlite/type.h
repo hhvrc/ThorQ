@@ -5,12 +5,12 @@ namespace ThorQ {
 namespace SQLite {
 enum class Type : int
 {
-    INVALID = 0,
-    INTEGER = 1,
-    FLOAT   = 2,
-    TEXT    = 3,
-    BLOB    = 4,
-    NULL    = 5
+    Invalid  = 0,
+    Integer = 1,
+    Float    = 2,
+    Text     = 3,
+    Blob     = 4,
+    Null     = 5
 };
 }
 }

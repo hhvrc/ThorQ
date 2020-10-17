@@ -20,7 +20,7 @@
 #include "singletons.h"
 #include "account.h"
 #include "instance.h"
-#include "database.h"
+#include "sqlite/connection.h"
 #include "statistics.h"
 #include "eventhandlers.h"
 #include <thorq_message.h>
@@ -38,42 +38,16 @@ const char* create_systemid_account_map = "CREATE TABLE IF NOT EXISTS systemid_a
 const char* create_user_log = "CREATE TABLE IF NOT EXISTS userLog(timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, system_id INTEGER, account_id INTEGER, info TEXT NOT NULL)";
 
 
-bool ThorQ::SQLite::Initialize(const char* path) noexcept
+bool InitializeDB(const char* path) noexcept
 {
-    sqlite3* db;
+    ThorQ::SQLite::Connection con(path, ThorQ::SQLite::Connection::CREATE | ThorQ::SQLite::Connection::READWRITE);
 
-    try
-    {
-        sqlite3_enable_shared_cache(true);
-
-        if (sqlite3_open_v2(path, &db, SQLITE_OPEN_CREATE|SQLITE_OPEN_READWRITE|SQLITE_OPEN_NOMUTEX, "") != SQLITE_OK)
-        {
-            sqlite3_close_v2(db);
-            return false;
-        }
-
-        if (
-            execSimple(db, create_system_ids,           sizeof(create_system_ids))           &&
-            execSimple(db, create_auth_tokens,          sizeof(create_auth_tokens))          &&
-            execSimple(db, create_accounts,             sizeof(create_accounts))             &&
-            execSimple(db, create_systemid_account_map, sizeof(create_systemid_account_map)) &&
-            execSimple(db, create_account_blocks,       sizeof(create_account_blocks))       &&
-            execSimple(db, create_account_friends,      sizeof(create_account_friends))      &&
-            execSimple(db, create_user_log,             sizeof(create_user_log))
-           )
-        {
-            sqlite3_close_v2(db);
-            return false;
-        }
-
-        sqlite3_close_v2(db);
-    }
-    catch (...)
-    {
-        return false;
-    }
-
-    return true;
+    return con.execute(create_system_ids)
+        && con.execute(create_auth_tokens)
+        && con.execute(create_accounts)
+        && con.execute(create_relationships)
+        && con.execute(create_systemid_account_map)
+        && con.execute(create_user_log);
 }
 void exit_handler(int s)
 {
@@ -87,55 +61,30 @@ void exit_handler(int s)
 
 void exitCleanup()
 {
-    g_server.cleanup();
+    // g_server->cleanup();
+
+    delete g_server;
 }
 
 int main(int argc, char** argv)
 {
-    printf("ThorQ Server %s\n", THORQ_VERSION_SERVER.toString().)
+    printf("ThorQ Server %s\n", THORQ_VERSION_SERVER.toString().c_str());
+    printf("Using link %s\n", THORQ_VERSION_LINK.toString().c_str());
+    printf("Expecting client %s\n", THORQ_VERSION_CLIENT.toString().c_str());
 
     cxxopts::Options options(THORQ_APPLICATION_NAME, "Server for ThorQ - A application for long range collar control");
-    options.add_options("", {
-                            { "port",  "Port for the server to run at" },
-                            { "config", "Configuration file for the server" }
-                         });
+    options.add_options()
+            ( "p,port", "Port for the server to run at", cxxopts::value<std::uint16_t>())
+            ( "c,conf", "Configuration file for the server", cxxopts::value<std::string>())
+            ;
     cxxopts::ParseResult result = options.parse(argc, argv);
-
-    QCoreApplication app(argc, argv);
-    QCoreApplication::setApplicationName("ThorQ");
-    QCoreApplication::setApplicationName(THORQ_VERSION_SERVER.toString());
-
-    QCommandLineParser parser;
-    parser.setApplicationDescription("");
-    parser.addHelpOption();
-    parser.addVersionOption();
-
-    parser.addOptions();
-
-    parser.process(app);
-
 #if PARSE_PORT
-    if (!parser.isSet("port"))
-    {
-        return EXIT_FAILURE;
-    }
-
-    QVariant var(parser.value("port"));
-
-    bool success = false;
-
-    uint port = QVariant(parser.value("port")).toUInt(&success);
-
-    if (!success || port > UINT16_MAX)
-    {
-        qDebug() << "Failed to parse port!";
-        return EXIT_FAILURE;
-    }
+    std::uint16_t port = result["port"].as<std::uint16_t>();
 #else
     std::uint16_t port = 12345;
 #endif
 
-    if (!ThorQ::Connection::Initialize("database.db"))
+    if (!InitializeDB("database.db"))
     {
         return EXIT_FAILURE;
     }
@@ -147,17 +96,17 @@ int main(int argc, char** argv)
 
     if (!ThorQ::Server::Initialize())
     {
-            qDebug() << "Failed to initialize Server!";
+            printf("Failed to initialize Server!\n");
             return EXIT_FAILURE;
     }
 
-    qDebug().noquote().nospace() << "Using" << ThorQ::Server::Version();
+    g_server = new ThorQ::Server(port, 1024, THORQ_CHANNEL_COUNT, true);
 
-    ThorQ::Server* server = new ThorQ::Server();
+    if (!g_server->ready())
+    {
+            printf("Failed to start Server!\n");
+            return EXIT_FAILURE;
+    }
 
-    server->setup(port, SERVER_MAX_CONNECTIONS, THORQ_CHANNEL_COUNT, true);
-
-    server->start();
-
-    return app.exec();
+    while (runServer) { std::this_thread::sleep_for(std::chrono::milliseconds(500)); }
 }

@@ -51,9 +51,9 @@ ENetPacket *enet_packet_create(const void *data, size_t dataLength, enet_uint32 
     return packet;
 }
 
-ENetPacket* ThorQ::Memory::packetGet(const void* data, std::size_t dataLength, std::uint32_t flags)
+ENetPacket* ThorQ::Memory::packetGet(std::size_t size, std::uint32_t flags)
 {
-    if (dataLength < THORQ_PAYLOAD_LEN_MAX)
+    if (size < THORQ_PAYLOAD_LEN_MAX)
     {
         ENetPacket* packet;
 
@@ -70,16 +70,10 @@ ENetPacket* ThorQ::Memory::packetGet(const void* data, std::size_t dataLength, s
         // Initialize struct
         new(packet) ENetPacket;
 
-        // Set data
-        if (data != nullptr)
-        {
-            memcpy(packet->data, data, dataLength);
-        }
-
         // Set rest of data
         packet->referenceCount = 0;
         packet->flags        = flags;
-        packet->dataLength   = dataLength;
+        packet->dataLength   = size;
 
         return packet;
     }

@@ -16,7 +16,7 @@ std::uint16_t hashMacAddress(PIP_ADAPTER_INFO info)
 	return hash;
 }
 
-void ThorQ::SystemID_Internal::getMacHash(std::uint16_t& mac1, std::uint16_t& mac2)
+void ThorQ::SystemID::Internal::getMacHash(std::uint16_t& mac1, std::uint16_t& mac2)
 {
 	IP_ADAPTER_INFO AdapterInfo[32];
 	DWORD dwBufLen = sizeof( AdapterInfo );
@@ -40,7 +40,7 @@ void ThorQ::SystemID_Internal::getMacHash(std::uint16_t& mac1, std::uint16_t& ma
 	}
 }
 
-std::uint16_t ThorQ::SystemID_Internal::getVolumeHash()
+std::uint16_t ThorQ::SystemID::Internal::getVolumeHash()
 {
 	DWORD serialNum = 0;
 
@@ -51,7 +51,7 @@ std::uint16_t ThorQ::SystemID_Internal::getVolumeHash()
 	return hash;
 }
 
-std::uint16_t ThorQ::SystemID_Internal::getCpuHash()
+std::uint16_t ThorQ::SystemID::Internal::getCpuHash()
 {
 	int cpuinfo[4] = { 0, 0, 0, 0 };
 	__cpuid( cpuinfo, 0 );
@@ -63,10 +63,10 @@ std::uint16_t ThorQ::SystemID_Internal::getCpuHash()
 	return hash;
 }
 
-const char* ThorQ::SystemID_Internal::getMachineName()
+std::string ThorQ::SystemID::Internal::getMachineName()
 {
 	static char computerName[1024];
 	DWORD size = 1024;
 	GetComputerName( computerName, &size );
-	return &(computerName[0]);
+    return std::string(computerName, size);
 }

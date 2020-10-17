@@ -44,7 +44,7 @@ protected:
     };
 
     bool tryGetMessage(QueuedMessage& message);
-    void queueMessage(const QueuedMessage& message);
+    bool tryQueueMessage(const QueuedMessage& message);
 private:
     void run();
 

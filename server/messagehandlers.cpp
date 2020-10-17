@@ -22,6 +22,10 @@
 #include "config.h"
 #include "session.h"
 #include "singletons.h"
+#include "sqlite/connection.h"
+#include "sqlite/column.h"
+#include "sqlite/query.h"
+
 
 void handleMessageHeartbeat(ThorQ::Instance *instance, const std::vector<std::uint8_t> &message)
 {
@@ -34,7 +38,7 @@ void handleMessageHeartbeat(ThorQ::Instance *instance, const std::vector<std::ui
     {
         std::vector<std::uint8_t> response;
         thorq_payload_heartbeat_pack(response, setPoint);
-        instance->sendMessage(response, false, true);
+        instance->sendMessage(response, THORQ_CHANNEL_MAIN, false, true);
     }
 }
 
@@ -62,21 +66,18 @@ void handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint
 		currentVersion = THORQ_VERSION_LINK;
 		break;
 	default:
-        qDebug().nospace() << QString("Got invalid version %1[%2]").arg(app).arg(version.toString());
+        printf("Client expects invalid version %i[%s]\n", app, version.toString().c_str());
 		return;
 	}
 
-
-    qDebug().nospace() << QString("Client expects %1[%2], current is %1[%2]")
-                          .arg(name).arg(version.toString())
-                          .arg(name).arg(currentVersion.toString());
+    printf("Client expects %s[%s], current is %s[%s]\n", name, version.toString().c_str(), name, currentVersion.toString().c_str());
 
     instance->disconnectPeer(THORQ_DISCONNECT_REASON_VERSION_INCOMPATIBLE);
 }
 
 void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
-    qDebug() << "message crypto!";
+    printf("[MSG] Crypto!");
     std::vector<std::uint8_t> response;
 
     THORQ_PAYLOAD_CRYPTO cmd;
@@ -85,45 +86,45 @@ void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8
     switch (cmd) {
     case THORQ_PAYLOAD_CRYPTO_REQUEST:
 	{
-        qDebug() <<  "Got crypto request!";
+        printf("[MSG] Crypto request!");
 		instance->cryptoInit();
         break;
     }
     case THORQ_PAYLOAD_CRYPTO_ESTABLISH:
 	{
-        qDebug() <<  "Got crypto establish!";
+        printf("[MSG] Crypto establish!");
         std::vector<std::uint8_t> data;
         thorq_payload_crypto_establish_unpack(message, data);
 
 		if (!instance->cryptoEstablish(data))
         {
-            qWarning() <<  "Failed to create shared secret with" << enet_peer_address_str(instance->peer());
+            fprintf(stderr, "Failed to create shared secret with %s\n", enet_peer_address_str(instance->peer()).c_str());
             instance->disconnectPeer(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
         }
         break;
     }
     case THORQ_PAYLOAD_CRYPTO_VERIFY:
 	{
-        qDebug() <<  "Got crypto verify!";
+        printf("[MSG] Crypto verify!");
         std::vector<std::uint8_t> data;
         thorq_payload_crypto_verify_unpack(message, data);
 
         if (instance->cryptoVerify(data))
 		{
-            qDebug() <<  "Verified!";
+            printf("[MSG] Crypto verified!");
             thorq_payload_systemid_cmd_pack(response, THORQ_PAYLOAD_SYSTEMID_REQUEST);
-            instance->sendMessage(response, true, true);
-            instance->setAuthState(THORQ_STATE_AUTH_HWID_REQUESTING);
+            instance->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
+            instance->setAuthState(THORQ_STATE_HWID_REQUESTING);
         }
         else
         {
-            qWarning() <<  "Failed to verify with" << enet_peer_address_str(instance->peer());
+            fprintf(stderr, "Failed to verify with %s\n", enet_peer_address_str(instance->peer()).c_str());
             instance->disconnectPeer(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
         }
         break;
     }
 	default:
-        qWarning() << "Crypt???";
+        printf("[MSG] Crypto \?\?\?!");
 		return;
     }
 }
@@ -138,46 +139,46 @@ void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uin
     if (cmd != THORQ_PAYLOAD_SYSTEMID_SUBMIT)
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SYSTEMID, static_cast<std::uint8_t>(cmd), THORQ_PAYLOAD_ACK_INVALID);
-        instance->sendMessage(response, true, true);
+        instance->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
 
-    QByteArray data;
+    std::vector<std::uint8_t> data;
     thorq_payload_systemid_submit_unpack(message, data);
 
 
     if (!ThorQ::systemid_validate(data))
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SYSTEMID, THORQ_PAYLOAD_SYSTEMID_SUBMIT, THORQ_PAYLOAD_ACK_DENIED);
-        instance->sendMessage(response, true, true);
+        instance->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
 
-    QString systemID = ThorQ::systemid_to_string(data);
+    std::string systemID = ThorQ::systemid_to_string(data);
 
-    qDebug() << "SystemID:" << systemID;
+    printf("SystemID: %s\n", systemID.c_str());
 
-    QSqlDatabase db = GetDB(false);
+    ThorQ::SQLite::Connection connection("database.db", ThorQ::SQLite::Connection::READWRITE);
 
-    if (!db.open())
+    if (!connection.isOpen())
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SYSTEMID, THORQ_PAYLOAD_SYSTEMID_SUBMIT, THORQ_PAYLOAD_ACK_ERROR);
-        instance->sendMessage(response, true, true);
+        instance->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
 
-    QSqlQuery query("INSERT OR IGNORE INTO system_ids(system_id) VALUES (:id);"
-                           "SELECT banned_at FROM system_ids WHERE system_id = :id;", db);
-    query.bindValue(":id", systemID);
+    ThorQ::SQLite::Query query = connection.query("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?1);"
+                                                  "SELECT banned_at FROM system_ids WHERE system_id = ?1;");
+    query.bind(1, systemID.c_str());
 
-    if (!query.exec() || !query.isValid())
+    if (!query.step() || query.columnCount() == 0)
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SYSTEMID, THORQ_PAYLOAD_SYSTEMID_SUBMIT, THORQ_PAYLOAD_ACK_ERROR);
-        instance->sendMessage(response, true, true);
+        instance->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
 
-    bool isBanned = query.value(0).isNull();
+    bool isBanned = (query.column(0).type() == ThorQ::SQLite::Type::Null);
 
     if (isBanned)
     {
@@ -200,7 +201,7 @@ void handleMessageAccount(ThorQ::Instance *instance, const std::vector<std::uint
         break;
     }
 
-    QString username, password;
+    std::string username, password;
     thorq_payload_login_get_username(message, username);
     thorq_payload_login_get_password(message, password);
 
@@ -257,7 +258,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
             thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_COMMAND, cmd, THORQ_PAYLOAD_ACK_OK);
             instance->sendMessage(response, true, true);
 
-            QList<ThorQ::Instance*> instances = g_sessions.toList();
+            std::vector<ThorQ::Instance*> instances = g_sessions.toList();
 
             for (ThorQ::Instance* i : instances)
             {
@@ -279,7 +280,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
     {
         if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
         {
-            QString username;
+            std::string username;
             thorq_payload_command_get_data(message, username);
 
             auto it = std::find_if(g_accounts.begin(), g_accounts.end(), [&](const ThorQ::Account* account) -> bool
@@ -294,7 +295,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
                 return;
             }
 
-            QSet<ThorQ::Instance*> targetInstances = (*it)->instances();
+            std::unordered_setThorQ::Instance*> targetInstances = (*it)->instances();
 
             if (targetInstances.isEmpty())
             {
@@ -317,7 +318,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
     {
         if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
         {
-            QString name;
+            std::string name;
             thorq_payload_command_get_data(message, name);
 
             ThorQ::Instance* otherInstance = g_sessions->get(name);
@@ -342,7 +343,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
     {
         if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
         {
-            QString name;
+            std::string name;
             thorq_payload_
             thorq_payload_command_get_data(message, name);
 
@@ -413,12 +414,12 @@ void handleMessageSession(ThorQ::Instance *instance)
     {
         instance->setLoginState(THORQ_STATE_LOGIN_LOGGEDOUT);
 
-        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_LOGOUT, 0, THORQ_PAYLOAD_ACK_OK);
+        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGOUT, THORQ_PAYLOAD_ACK_OK);
         instance->sendMessage(response, true, true);
     }
     else
     {
-        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_LOGOUT, 0, THORQ_PAYLOAD_ACK_NO_CHANGE);
+        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGOUT, THORQ_PAYLOAD_ACK_NO_CHANGE);
         instance->sendMessage(response, true, true);
     }
 }
@@ -442,5 +443,5 @@ void handleMessageAck(ThorQ::Instance* instance, const std::vector<std::uint8_t>
 {
     (void)instance;
     (void)message;
-    thorq_debug("Unexpected ack message...")
+    printf("Unexpected ack message...\n");
 }

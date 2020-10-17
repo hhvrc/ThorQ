@@ -1,17 +1,21 @@
 #include "account.h"
 
+#include <thread>
+#include <future>
+
 #include <hashing.h>
 #include <thorq_payload_ack.h>
 #include <thorq_payload_session.h>
 
 #include "sqlite/connection.h"
 #include "sqlite/transaction.h"
+#include "sqlite/column.h"
 #include "sqlite/query.h"
 
 #include "utils.h"
 #include "instance.h"
 
-ThorQ::Account::Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const char* username, const char* passwordHash)
+ThorQ::Account::Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const std::string& username, const std::string& passwordHash)
     : m_dbId(dbId)
     , m_username(username)
     , m_passwordHash(passwordHash)
@@ -25,106 +29,56 @@ ThorQ::Account::Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, co
 {
 }
 
-ThorQ::Account* ThorQ::Account::GetAccount(const char* username)
+ThorQ::Account* ThorQ::Account::GetAccount(const std::string& username)
 {
-    Account* account = nullptr;
-
     SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
 
     if (!connection.isOpen())
     {
-        return account;
+        fprintf(stderr, "SQL error: %s\n", connection.lastError());
+        return nullptr;
     }
 
     SQLite::Query query = connection.query("SELECT db_id, password_hash, authority FROM accounts WHERE username = ?");
 
-    query.bind(1, username);
+    if (!query.bind(1, username))
+    {
+        fprintf(stderr, "SQL error: %s\n", connection.lastError());
+        return nullptr;
+    }
 
     if (!query.step())
     {
+        fprintf(stderr, "SQL error: %s\n", connection.lastError());
         return nullptr;
     }
 
     if (query.columnCount() != 3)
     {
+        fprintf(stderr, "SQL error: %s\n", connection.lastError());
         return nullptr;
     }
 
-
     // Get database ID
-    std::int64_t dbId;
+    SQLite::Column col = query.column(0);
+    if (query.getType(0) != SQLite::Type::Integer ||
+        query.getType(1) != SQLite::Type::Text    ||
+        query.getType(2) != SQLite::Type::Integer)
     {
-        db_value = sqlite3_column_value(db_stmt, 0);
-        if (sqlite3_value_type(db_value) != SQLITE_INTEGER)
-        {
-            sqlite3_value_free(db_value);
-            sqlite3_finalize(db_stmt);
-            sqlite3_close_v2(db);
-            return nullptr;
-        }
-        dbId = sqlite3_value_int64(db_value);
-        sqlite3_value_free(db_value);
+        return nullptr;
     }
 
     // Get authority
-    db_value = sqlite3_column_value(db_stmt, 2);
-    if (sqlite3_value_type(db_value) != SQLITE_INTEGER)
-    {
-        return nullptr;
-    }
-    int authority = sqlite3_value_int(db_value);
+    int authority = col.getInt();
     if (authority < THORQ_ACCOUNT_AUTHORITY_NONE || authority > THORQ_ACCOUNT_AUTHORITY_FOUNDER)
     {
         return nullptr;
     }
 
-    // Get password hash
-    db_value = sqlite3_column_value(db_stmt, 1);
-    if (sqlite3_value_type(db_value) != SQLITE_TEXT)
-    {
-        return nullptr;
-    }
-
-    account = new Account(
-                          dbId,
-                          (THORQ_ACCOUNT_AUTHORITY)authority,
-                          username,
-                          (const char*)sqlite3_value_text(db_value)
-                         );
-
-    sqlite3_val
-    bool convOk;
-    account->m_username = username;
-    account->m_dbId = sqlite3_ret get_account.value(0).toInt(&convOk);
-
-    if (!convOk)
-    {
-        account->deleteLater();
-
-        qDebug() << "Failed to get dbId";
-
-        if (get_account.isActive()) get_account.clear();
-        db.rollback();
-
-        return nullptr;
-    }
-
-    account->m_passwordHash = get_account.value(1).toString();
-    account->m_authority = static_cast<THORQ_ACCOUNT_AUTHORITY>(get_account.value(2).toInt());
-
-    return account;
-ret_err:
-    const char* errStr = sqlite3_errmsg(db);
-    fprintf(stderr, "SQL error: %s\n", errStr);
-
-    if (account  != nullptr) delete account;
-    if (db_value != nullptr) sqlite3_value_free(db_value);
-    if (db_stmt  != nullptr) sqlite3_finalize(db_stmt);
-    if (db       != nullptr) sqlite3_close_v2(db);
-    return nullptr;
+    return new Account(query.column(0).getInt64(), (THORQ_ACCOUNT_AUTHORITY)authority, username, query.column(1).getText());
 }
 
-ThorQ::Account* ThorQ::Account::NewAccount(const char* username, const char* password_hash)
+ThorQ::Account* ThorQ::Account::NewAccount(const std::string& username, const std::string& passwordHash)
 {
     Account* account = nullptr;
 
@@ -143,40 +97,35 @@ ThorQ::Account* ThorQ::Account::NewAccount(const char* username, const char* pas
 		return nullptr;
     }
 
-    SQLite::Query query("INSERT OR IGNORE INTO accounts(username, password_hash) VALUES (?, ?);SELECT changes();", connection);
-    register_account.bindValue(0, username);
-    register_account.bindValue(1, password_hash);
+    SQLite::Query query = connection.query("INSERT OR IGNORE INTO accounts(username, password_hash) VALUES (?, ?);SELECT changes();");
 
-    if (!register_account.exec() || !register_account.isValid())
+    if (!query.bind(1, username))
     {
-        qDebug() << "Failed to execute account query:" << db.lastError();
-
-        if (register_account.isActive()) register_account.clear();
-        db.rollback();
-
+        printf("Failed to bind username: %s\n", connection.lastError());
         return nullptr;
     }
 
-    if (!register_account.next())
+    if (!query.bind(2, passwordHash))
     {
-        qDebug() << "Query didnt return any values????";
-
-        if (register_account.isActive()) register_account.clear();
-        db.rollback();
-
+        printf("Failed to bind passwordHash: %s\n", connection.lastError());
         return nullptr;
     }
 
-    bool convOk;
-    int changes = register_account.value(0).toInt(&convOk);
-
-    if (!convOk || changes == 0)
+    if (!query.step())
     {
-        qDebug() << "Account invalid/already used";
+        printf("Failed to execute account query: %s\n", connection.lastError());
+        return nullptr;
+    }
 
-        if (register_account.isActive()) register_account.clear();
-        db.rollback();
+    if (query.columnCount() != 1)
+    {
+        printf("Query didnt return any values\?\?\?\?\n");
+        return nullptr;
+    }
 
+    if (query.column(1).getInt() == 0)
+    {
+        printf("account invalid/already used\n");
         return nullptr;
     }
 
@@ -189,96 +138,142 @@ ThorQ::Account* ThorQ::Account::NewAccount(const char* username, const char* pas
 	return account;
 }
 
-const std::string& ThorQ::Account::username() const
+std::string ThorQ::Account::username() const
 {
 	return m_username;
 }
 
-void ThorQ::Account::setUsername(const std::string& username)
+bool ThorQ::Account::setUsername(const std::string& username)
 {
-	if (m_username != username && m_dbId != -1)
+    if (m_username == username)
     {
-        SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
+        return true;
+    }
 
-        if (!connection.isOpen())
-        {
-            return nullptr;
-        }
+    if ( m_dbId <= 0)
+    {
+        return false;
+    }
 
-        Account* account = nullptr;
+    SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
 
-		if (!db.transaction())
-		{
-			qDebug() << "Failed to start transaction:" << db.lastError();
-			db.rollback();
-			return;
-		}
+    if (!connection.isOpen())
+    {
+        return false;
+    }
 
-		{
-			QSqlQuery set_username("UPDATE OR IGNORE accounts SET username = ? WHERE db_id = ? LIMIT 1;SELECT changes();", db);
-			set_username.bindValue(0, username);
-			set_username.bindValue(1, m_dbId);
+    SQLite::Query query = connection.query("UPDATE OR IGNORE accounts SET username = ? WHERE db_id = ? LIMIT 1;SELECT changes();");
 
-			if (!set_username.exec() || !set_username.isValid())
-			{
-				qDebug() << "Failed to execute regkey query:" << db.lastError();
-				if (set_username.isActive()) set_username.clear();
-				db.rollback();
-				return;
-			}
+    if (!query.isValid())
+    {
+        printf("Failed to create query: %s\n", connection.lastError());
+        return false;
+    }
 
-			if (!set_username.next())
-			{
-				qDebug() << "Query didnt return any values????";
-				if (set_username.isActive()) set_username.clear();
-				db.rollback();
-				return;
-			}
+    if (!query.bind(1, username))
+    {
+        printf("Failed to bind username: %s\n", connection.lastError());
+        return false;
+    }
 
-			bool convOk;
-			int changes = set_username.value(0).toInt(&convOk);
+    if (!query.bind(2, m_dbId))
+    {
+        printf("Failed to bind dbID: %s\n", connection.lastError());
+        return false;
+    }
 
-			if (!convOk || changes == 0)
-			{
-				qDebug() << "Regkey invalid/already used";
-				if (set_username.isActive()) set_username.clear();
-				db.rollback();
-				return;
-			}
-		}
+    if (!query.step())
+    {
+        printf("Failed to execute username query: %s\n", connection.lastError());
+        return false;
+    }
 
-		if (db.commit())
-		{
-			m_username = username;
-			emit usernameChanged(username);
-		}
-	}
+    if (query.columnCount() != 1)
+    {
+        printf("Query didnt return any values\?\?\?\?\n");
+        return false;
+    }
+
+    if (query.column(1).getInt() == 0)
+    {
+        printf("account invalid/already used\n");
+        return false;
+    }
+
+    std::unique_lock l(l_basics);
+    m_username = username;
+    return true;
 }
 
-void ThorQ::Account::setPassword(const std::string& password)
+std::string ThorQ::Account::passwordHash() const
 {
-    PasswordHasher* hasher = new PasswordHasher(password, this);
-
-    hasher->setAutoDelete(true);
-
-    connect(hasher, &PasswordHasher::finished, this, &Account::onPasswordHashingDone);
-
-    QThreadPool::globalInstance()->start(hasher);
+    return m_passwordHash;
 }
-void ThorQ::Account::verifyPassword(const std::string& password) const
+bool ThorQ::Account::setPasswordHash(const std::string& passwordHash)
 {
-    PasswordVerifier* verifier = new PasswordVerifier(m_passwordHash, password, const_cast<Account*>(this));
+    if (m_passwordHash == passwordHash)
+    {
+        return true;
+    }
 
-    verifier->setAutoDelete(true);
+    if ( m_dbId <= 0)
+    {
+        return false;
+    }
 
-    connect(verifier, &PasswordVerifier::finished, this, &Account::onPasswordVerificationDone);
+    SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
 
-    QThreadPool::globalInstance()->start(verifier);
+    if (!connection.isOpen())
+    {
+        return false;
+    }
+
+    SQLite::Query query = connection.query("UPDATE OR IGNORE accounts SET password_hash = ? WHERE db_id = ? LIMIT 1;SELECT changes();");
+
+    if (!query.isValid())
+    {
+        printf("Failed to create query: %s\n", connection.lastError());
+        return false;
+    }
+
+    if (!query.bind(1, passwordHash))
+    {
+        printf("Failed to bind username: %s\n", connection.lastError());
+        return false;
+    }
+
+    if (!query.bind(2, m_dbId))
+    {
+        printf("Failed to bind dbID: %s\n", connection.lastError());
+        return false;
+    }
+
+    if (!query.step())
+    {
+        printf("Failed to execute username query: %s\n", connection.lastError());
+        return false;
+    }
+
+    if (query.columnCount() != 1)
+    {
+        printf("Query didnt return any values\?\?\?\?\n");
+        return false;
+    }
+
+    if (query.column(1).getInt() == 0)
+    {
+        printf("account invalid/already used\n");
+        return false;
+    }
+
+    std::unique_lock l(l_basics);
+    m_passwordHash = passwordHash;
+    return true;
 }
 
 ThorQ::Account *ThorQ::Account::master() const
 {
-    QReadLocker l(const_cast<QReadWriteLock*>(&l_master));
+    std::shared_lock l(l_master);
     return m_master;
 }
 
@@ -287,19 +282,19 @@ bool ThorQ::Account::isExclusive() const
     return m_exclusive;
 }
 
-QSet<ThorQ::Session*> ThorQ::Account::sessions() const
+std::unordered_set<ThorQ::Session*> ThorQ::Account::sessions() const
 {
-    QReadLocker l(const_cast<QReadWriteLock*>(&l_sessions));
+    std::shared_lock l(l_sessions);
     return m_sessions;
 }
-QSet<ThorQ::Instance*> ThorQ::Account::instances() const
+std::unordered_set<ThorQ::Instance*> ThorQ::Account::instances() const
 {
-    QReadLocker l(const_cast<QReadWriteLock*>(&l_instances));
+    std::shared_lock l(l_instances);
     return m_instances;
 }
-QSet<ThorQ::Relationship*> ThorQ::Account::relationships() const
+std::unordered_set<ThorQ::Relationship*> ThorQ::Account::relationships() const
 {
-    QReadLocker l(const_cast<QReadWriteLock*>(&l_relationships));
+    std::shared_lock l(l_relationships);
     return m_relationships;
 }
 
@@ -499,14 +494,4 @@ void ThorQ::Account::sendMessageToFriends(const std::vector<uint8_t> &message, b
     {
         relationship;
     }
-}
-
-void ThorQ::Account::onPasswordHashingDone(const std::string &hash)
-{
-    qDebug() << "Hash:" << hash.c_str();
-}
-
-void ThorQ::Account::onPasswordVerificationDone(bool result)
-{
-
 }

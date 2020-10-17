@@ -3,7 +3,7 @@
 #include <openssl/evp.h>
 #include "botan_all.h"
 
-bool ThorQ::Hashing::Sha256_Hash(std::uint8_t *data, std::size_t size, std::uint8_t *hashOut)
+bool ThorQ::Security::Hashing::Sha256_Hash(std::uint8_t *data, std::size_t size, std::uint8_t *hashOut)
 {
     int ret = 0;
     unsigned int outSize = 0;
@@ -40,13 +40,13 @@ err:
     return ret == 1;
 }
 
-std::string ThorQ::Hashing::BCrypt_Hash(const std::string& password)
+std::string ThorQ::Security::Hashing::BCrypt_Hash(const std::string& password)
 {
     Botan::AutoSeeded_RNG rng = Botan::AutoSeeded_RNG();
     return Botan::generate_bcrypt(password, rng);
 }
 
-bool ThorQ::Hashing::BCrypt_Verify(const std::string& password, const std::string& hash)
+bool ThorQ::Security::Hashing::BCrypt_Verify(const std::string& password, const std::string& hash)
 {
     return Botan::check_bcrypt(password, hash);
 }

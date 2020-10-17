@@ -14,7 +14,6 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cxxopts)
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/hashing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/memorymanager.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
@@ -39,7 +38,6 @@ set(${project}_SOURCES
 set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/server.h
     ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/hashing.h
     ${CMAKE_CURRENT_SOURCE_DIR}/memorymanager.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.h

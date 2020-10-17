@@ -9,13 +9,13 @@
 #include <arpa/inet.h>
 #endif
 
-typedef std::uint16_t SystemID[5];
+typedef std::uint16_t SysHID[5];
 
-constexpr SystemID mask = { 0x4e25, 0xf4a1, 0x5437, 0xab41, 0x0000 };
-static SystemID system_id = { 0, 0, 0, 0, 0 };
+constexpr SysHID mask = { 0x4e25, 0xf4a1, 0x5437, 0xab41, 0x0000 };
+static SysHID sysHid = { 0, 0, 0, 0, 0 };
 static bool computed = false;
 
-inline void smear(SystemID id)
+inline void smear(SysHID id)
 {
     for (std::uint32_t i = 0; i < 5; i++)
         for (std::uint32_t j = i; j < 5; j++)
@@ -26,7 +26,7 @@ inline void smear(SystemID id)
 		id[i] ^= mask[i];
 }
 
-inline void unsmear(SystemID id)
+inline void unsmear(SysHID id)
 {
     for (std::uint32_t i = 0; i < 5; i++)
 		id[i] ^= mask[i];
@@ -37,75 +37,83 @@ inline void unsmear(SystemID id)
 				id[4-i] ^= id[4-j];
 }
 
-std::vector<std::uint8_t> ThorQ::systemid_generate()
+std::vector<std::uint8_t> ThorQ::SystemID::systemid_generate()
 {
-    std::vector<std::uint8_t> sys_id(ThorQ::SystemID_Internal::getMachineName());
-    sys_id.resize(sys_id.size() + std::size(system_id));
+    std::string machineName = ThorQ::SystemID::Internal::getMachineName();
+
+    std::vector<std::uint8_t> sys_id;
+    sys_id.resize(machineName.size() + sizeof(SysHID));
+
+    memcpy(sys_id.data(), machineName.data(), machineName.size());
 
 	if (!computed)
 	{
-		memset(system_id, 0, 10);
+        memset(sysHid, 0, sizeof(SysHID));
 
-		system_id[0] = ThorQ::SystemID_Internal::getCpuHash();
-		system_id[1] = ThorQ::SystemID_Internal::getVolumeHash();
-		ThorQ::SystemID_Internal::getMacHash(system_id[2], system_id[3]);
+        sysHid[0] = ThorQ::SystemID::Internal::getCpuHash();
+        sysHid[1] = ThorQ::SystemID::Internal::getVolumeHash();
+        ThorQ::SystemID::Internal::getMacHash(sysHid[2], sysHid[3]);
 
 		for (int i = 0; i < 4; i++)
 		{
 			// fifth block is some checksum
-			system_id[4] += system_id[i];
+            sysHid[4] += sysHid[i];
 
 			// convert to network order
-			system_id[i] = htons(system_id[i]);
+            sysHid[i] = htons(sysHid[i]);
 		}
 
-		system_id[4] = htons(system_id[4]);
+        sysHid[4] = htons(sysHid[4]);
 
-		smear(system_id);
+        smear(sysHid);
 
 		computed = true;
 	}
 
-    memcpy(sys_id.end() - std::size(system_id), system_id, std::size(system_id));
+    memcpy(sys_id.data() + machineName.size(), sysHid, sizeof(SysHID));
 
 	return sys_id;
 }
 
-bool ThorQ::systemid_validate(const std::vector<std::uint8_t>& sys_id)
+bool ThorQ::SystemID::systemid_validate(const std::vector<std::uint8_t>& sys_id)
 {
-    if (sys_id.size() <= (int)std::size(system_id))
+    if (sys_id.size() <= (int)std::size(sysHid))
 		return false;
 
-	SystemID id;
-    memcpy(id, sys_id.end() - std::size(system_id), std::size(system_id));
+    SysHID hid;
+    memcpy(hid, sys_id.data() + sys_id.size() - sizeof(SysHID), sizeof(SysHID));
 
-	unsmear(id);
+    unsmear(hid);
 
     std::uint16_t checkSum = 0;
 	for (int i = 0; i < 4; i++)
-		checkSum += ntohs(id[i]);
+        checkSum += ntohs(hid[i]);
 
-	return checkSum == ntohs(id[4]);
+    return checkSum == ntohs(hid[4]);
 }
 
-std::string ThorQ::systemid_to_string(std::vector<std::uint8_t> sys_id)
+std::string ThorQ::SystemID::systemid_to_string(const std::vector<std::uint8_t>& bin_id)
 {
-	if (systemid_validate(sys_id))
+    std::string str_id;
+
+    if (systemid_validate(bin_id))
 	{
-		SystemID bin_id;
-        memcpy(bin_id, sys_id.end() - std::size(system_id), std::size(system_id));
+        SysHID hid;
 
-        int nameLen = sys_id.size() - std::size(system_id);
-		sys_id.resize(nameLen + 25);
+        int nameLen = bin_id.size() - sizeof(SysHID);
 
-		std::transform(sys_id.begin(), sys_id.begin() + nameLen, sys_id.begin(), ::toupper);
+        memcpy(hid, bin_id.data() + nameLen, sizeof(SysHID));
 
-		snprintf(sys_id.begin() + nameLen, 26, "-%04X-%04X-%04X-%04X-%04X", bin_id[0], bin_id[1], bin_id[2], bin_id[3], bin_id[4]);
+        str_id.resize(nameLen + 25);
+
+        std::transform(bin_id.begin(), bin_id.begin() + nameLen, str_id.begin(), ::toupper);
+
+        snprintf(str_id.data() + nameLen, 26, "-%04X-%04X-%04X-%04X-%04X", hid[0], hid[1], hid[2], hid[3], hid[4]);
 	}
 	else
 	{
-		sys_id = "INVALID";
+        str_id = "INVALID";
 	}
 
-	return sys_id;
+    return str_id;
 }

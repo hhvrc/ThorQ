@@ -3,6 +3,7 @@
 #include "internal/sqlite3.h"
 
 #include "transaction.h"
+#include "column.h"
 #include "query.h"
 #include "value.h"
 
@@ -15,7 +16,7 @@ ThorQ::SQLite::Connection::Connection(const char* apFilename,
 {
     if (apFilename != nullptr)
     {
-        if (sqlite3_open_v2(apFilename, &m_db, aFlags, apVfs) != SQLITE_OK)
+        if (sqlite3_open_v2(apFilename, &m_db, aFlags | SQLITE_OPEN_NOMUTEX, apVfs) != SQLITE_OK)
         {
             sqlite3_close_v2(m_db);
             m_db = nullptr;
@@ -76,7 +77,7 @@ bool ThorQ::SQLite::Connection::tableExists(const char* apTableName)
     Query query("SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?", *this);
     query.bind(1, apTableName);
     (void)query.step(); // Cannot return false, as the above query always return a result
-    return (1 == query.getColumn(0).getInt());
+    return (1 == query.column(0).getInt());
 }
 
 uint64_t ThorQ::SQLite::Connection::lastInsertedRowId() const

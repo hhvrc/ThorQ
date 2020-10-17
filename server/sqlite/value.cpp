@@ -66,6 +66,6 @@ bool ThorQ::SQLite::Value::isValid() const
 ThorQ::SQLite::Type ThorQ::SQLite::Value::type() const
 {
     if (isValid()) return (SQLite::Type)sqlite3_value_type(m_value);
-    return SQLite::Type::INVALID;
+    return SQLite::Type::Invalid;
 }
 
