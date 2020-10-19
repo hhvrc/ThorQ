@@ -129,66 +129,6 @@ THORQ_STATE_AUTH ThorQ::Instance::authState() const
     return m_authState;
 }
 
-void ThorQ::Instance::setSessionState(THORQ_STATE_SESSION state)
-{
-	if (state != m_sessionState)
-    {
-        m_sessionState = state;
-
-        Instance* partner = m_partner;
-
-        if (state == THORQ_STATE_SESSION_ACTIVE)
-        {
-            if (partner != nullptr)
-            {
-                partner->m_partner = this;
-
-                partner->setSessionState(THORQ_STATE_SESSION_ACTIVE);
-
-                // Set activity flag
-                m_activityState |= THORQ_USER_ACTIVITY_FLAG_IN_SESSION;
-
-                std::vector<std::uint8_t> message;
-
-                thorq_payload_event_pack(message, THORQ_EVENT_SESSION_STARTED, account()->username());
-                sendMessage(message, true, true);
-
-                thorq_payload_notification_pack(message, THORQ_NOTIFICATION_USER_ACTIVITY, account()->username(), m_activityState);
-                broadcastNotification(message, true);
-            }
-            else
-            {
-                setSessionState(THORQ_STATE_SESSION_NONE);
-            }
-        }
-        else if (state == THORQ_STATE_SESSION_NONE)
-        {
-            if (partner != nullptr)
-            {
-                // clear partner
-                m_partner = nullptr;
-
-				// Clear self from partner, so that it doesnt call recursivley
-                partner->m_partner = nullptr;
-
-				// Run partner session disconnection
-                partner->setSessionState(THORQ_STATE_SESSION_NONE);
-            }
-
-            // Set activity flag
-            m_activityState &= ~THORQ_USER_ACTIVITY_FLAG_IN_SESSION;
-
-            std::vector<std::uint8_t> message;
-
-            thorq_payload_event_pack(message, THORQ_EVENT_SESSION_STOPPED, account()->username());
-            sendMessage(message, true, true);
-
-            thorq_payload_notification_pack(message, THORQ_NOTIFICATION_USER_ACTIVITY, account()->username(), m_activityState);
-            broadcastNotification(message, true);
-        }
-    }
-}
-
 void ThorQ::Instance::cryptoInit()
 {
     getCrypto()->reset();

@@ -79,40 +79,40 @@ inline THORQ_PAYLOAD_ACCOUNT thorq_payload_account_get_cmd(const std::vector<std
     return static_cast<THORQ_PAYLOAD_ACCOUNT>(thorq_payload_serialization_get_cmd(payload));
 }
 
-inline void thorq_payload_account_register_pack(std::vector<std::uint8_t>& payload, const std::string& username, const std::string& password, const std::string& discordID)
+inline void thorq_payload_account_register_pack(std::vector<std::uint8_t>& payload, const std::string& username, const std::string& password)
 {
-    thorq_payload_serialization_pack_3string(payload, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_REGISTER, username, password, discordID);
+    thorq_payload_serialization_pack_string(payload, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_REGISTER, username, password);
 }
-inline void thorq_payload_account_register_unpack(const std::vector<std::uint8_t>& payload, std::string& username, std::string& password, std::string& discordID)
+inline void thorq_payload_account_register_unpack(const std::vector<std::uint8_t>& payload, std::string& username, std::string& password)
 {
-    thorq_payload_serialization_unpack_3string(payload, username, password, discordID);
+    thorq_payload_serialization_unpack_string(payload, username, password);
 }
 
 inline void thorq_payload_account_delete_pack(std::vector<std::uint8_t>& payload, const std::string& password)
 {
-    thorq_payload_serialization_pack_1string(payload, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_DELETE, password.leftRef(THORQ_PASSWORD_LEN_MAX));
+    thorq_payload_serialization_pack_string(payload, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_DELETE, std::string(password, THORQ_PASSWORD_LEN_MAX));
 }
 inline void thorq_payload_account_delete_unpack(const std::vector<std::uint8_t>& payload, std::string& password)
 {
-    thorq_payload_serialization_unpack_1string(payload, password);
+    thorq_payload_serialization_unpack_string(payload, password);
 }
 
 inline void thorq_payload_account_login_pack(std::vector<std::uint8_t>& payload, const std::string& username, const std::string& password)
 {
-    thorq_payload_serialization_pack_2string(payload, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN, username.leftRef(THORQ_USERNAME_LEN_MAX), password.leftRef(THORQ_PASSWORD_LEN_MAX));
+    thorq_payload_serialization_pack_string(payload, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN, std::string(username, THORQ_USERNAME_LEN_MAX), std::string(password, THORQ_PASSWORD_LEN_MAX));
 }
 inline void thorq_payload_account_login_unpack(const std::vector<std::uint8_t>& payload, std::string& username, std::string& password)
 {
-    thorq_payload_serialization_unpack_2string(payload, username, password);
+    thorq_payload_serialization_unpack_string(payload, username, password);
 }
 
-inline void thorq_payload_account_login_authtoken_pack(std::vector<std::uint8_t>& payload, const std::vector<std::uint8_t>& authtoken)
+inline void thorq_payload_account_login_authtoken_pack(std::vector<std::uint8_t>& payload, const std::string& username, const std::string& authtoken)
 {
-    thorq_payload_serialization_pack_bytearray(payload, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN_AUTHTOKEN, authtoken);
+    thorq_payload_serialization_pack_string(payload, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN_AUTHTOKEN, username, authtoken);
 }
-inline void thorq_payload_account_login_authtoken_unpack(const std::vector<std::uint8_t>& payload, std::vector<std::uint8_t>& authtoken)
+inline void thorq_payload_account_login_authtoken_unpack(const std::vector<std::uint8_t>& payload, std::string& username, std::string& authtoken)
 {
-    thorq_payload_serialization_unpack_bytearray(payload, authtoken);
+    thorq_payload_serialization_unpack_string(payload, username, authtoken);
 }
 
 inline void thorq_payload_account_logout_pack(std::vector<std::uint8_t>& payload, std::uint8_t options = THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_NONE)

@@ -1,19 +1,41 @@
 #include "relationship.h"
 
 #include "sqlite/connection.h"
+#include "sqlite/column.h"
+#include "sqlite/query.h"
+
+#include "account.h"
 
 ThorQ::Relationship* ThorQ::Relationship::NewRelationship(ThorQ::Account* account1, ThorQ::Account* account2)
 {
-    auto optional = ThorQ::SQLite::Connection::Open("database.db", ThorQ::SQLite::Connection::READWRITE);
+    ThorQ::SQLite::Connection connection("database.db", ThorQ::SQLite::Connection::READWRITE);
 
-    if (!optional.has_value())
+    if (!connection.isOpen())
     {
         return nullptr;
     }
 
-    ThorQ::SQLite::Connection con = optional.value();
+    SQLite::Query ensure = connection.query("INSERT OR IGNORE INTO relationships(uuid, source, target) VALUES (?1, ?3, ?4),(?2, ?4, ?3);");
+    ensure.bind(1, "please generate some text");
+    ensure.bind(2, "and some more generated text");
+    ensure.bind(3, account1->databaseId());
+    ensure.bind(4, account2->databaseId());
+    ensure.step();
+    ensure.finalize();
 
-    con.execute("INSERT OR IGNORE INTO relationships() VALUES (?1, ?2);");
+    SQLite::Query fetch = connection.query("SELECT db_id, uuid, source, target, status, authority FROM relationships WHERE uuid LIKE ?1 OR ?2;");
+    fetch.bind(1, "please generate some text");
+    fetch.bind(2, "and some more generated text");
+    fetch.step();
+
+    SQLite::Column dbIdCol = fetch.column(0);
+    SQLite::Column uuidCol = fetch.column(1);
+    SQLite::Column sourceCol = fetch.column(2);
+    SQLite::Column targetCol = fetch.column(3);
+    SQLite::Column statusCol = fetch.column(4);
+    SQLite::Column authorityCol = fetch.column(5);
+
+    ThorQ::Relationship
 }
 
 ThorQ::Relationship *ThorQ::Relationship::GetRelationship(int64_t dbId)

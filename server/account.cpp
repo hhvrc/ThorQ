@@ -6,6 +6,7 @@
 #include <hashing.h>
 #include <thorq_payload_ack.h>
 #include <thorq_payload_session.h>
+#include <thorq_payload_relation.h>
 
 #include "sqlite/connection.h"
 #include "sqlite/transaction.h"
@@ -135,7 +136,12 @@ ThorQ::Account* ThorQ::Account::NewAccount(const std::string& username, const st
 		return nullptr;
 	}
 
-	return account;
+    return account;
+}
+
+int64_t ThorQ::Account::databaseId() const
+{
+    return m_dbId;
 }
 
 std::string ThorQ::Account::username() const
@@ -300,6 +306,7 @@ std::unordered_set<ThorQ::Relationship*> ThorQ::Account::relationships() const
 
 void ThorQ::Account::requestSession(ThorQ::Instance* source, ThorQ::Account* target)
 {
+    /*
     std::vector<std::uint8_t> response;
 
     // If account already has a partner or target account is self
@@ -384,9 +391,11 @@ bool ThorQ::Account::requestAcceptFrom(ThorQ::Account* sender)
     this->sendMessage(response, true, true);
 
     return true;
+    */
 }
 bool ThorQ::Account::requestDenyFrom(ThorQ::Account *sender)
 {
+    /*
     std::vector<std::uint8_t> response;
 
     if (sender == this)
@@ -410,6 +419,7 @@ bool ThorQ::Account::requestDenyFrom(ThorQ::Account *sender)
     this->sendMessage(response, true, true);
 
     return true;
+    */
 }
 
 void ThorQ::Account::setIsInSteamVR(bool value)
@@ -422,7 +432,7 @@ void ThorQ::Account::setIsInSteamVR(bool value)
             m_activityState &= ~THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT;
 
         std::vector<std::uint8_t> message;
-        thorq_payload_notification_pack(message, THORQ_NOTIFICATION_USER_ACTIVITY, account()->username(), m_activityState);
+        thorq_payload_ _pack(message, THORQ_PAYLOAD_FRIEND_EVENT_STATUS, username(), m_activityState);
         broadcastNotification(message, true);
     }
 }
@@ -440,20 +450,6 @@ void ThorQ::Account::setHasCollar(bool value)
         thorq_payload_notification_pack(message, THORQ_NOTIFICATION_USER_ACTIVITY, account()->username(), m_activityState);
         broadcastNotification(message, true);
     }
-}
-
-void ThorQ::Account::setActivityState(uint8_t state)
-{
-    m_activityState = state;
-
-    std::vector<std::uint8_t> message;
-    thorq_payload_notification_pack(message, THORQ_NOTIFICATION_USER_ACTIVITY, account()->username(), m_activityState);
-    broadcastNotification(message, true);
-}
-
-uint8_t ThorQ::Account::activityState() const
-{
-    return m_activityState;
 }
 
 bool ThorQ::Account::isInSession() const

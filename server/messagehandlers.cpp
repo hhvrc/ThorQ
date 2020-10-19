@@ -147,14 +147,14 @@ void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uin
     thorq_payload_systemid_submit_unpack(message, data);
 
 
-    if (!ThorQ::systemid_validate(data))
+    if (!ThorQ::SystemID::systemid_validate(data))
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SYSTEMID, THORQ_PAYLOAD_SYSTEMID_SUBMIT, THORQ_PAYLOAD_ACK_DENIED);
         instance->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
 
-    std::string systemID = ThorQ::systemid_to_string(data);
+    std::string systemID = ThorQ::SystemID::systemid_to_string(data);
 
     printf("SystemID: %s\n", systemID.c_str());
 
@@ -187,14 +187,23 @@ void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uin
     }
 }
 
-void handleMessageAccount(ThorQ::Instance *instance, const std::vector<std::uint8_t> &message)
+void handleMessageAccount(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
     std::vector<std::uint8_t> response;
 
     switch (thorq_payload_account_get_cmd(message)) {
     case THORQ_PAYLOAD_ACCOUNT_REGISTER:
+        std::string username, password;
+        thorq_payload_account_register_unpack(message, username, password);
+        break;
     case THORQ_PAYLOAD_ACCOUNT_DELETE:
+        std::string username, password;
+        thorq_payload_account_login_unpack(message, username, password);
+        break;
     case THORQ_PAYLOAD_ACCOUNT_LOGIN:
+        std::string username, password;
+        thorq_payload_account_login_unpack(message, username, password);
+        break;
     case THORQ_PAYLOAD_ACCOUNT_LOGIN_AUTHTOKEN:
     case THORQ_PAYLOAD_ACCOUNT_LOGOUT:
     default:

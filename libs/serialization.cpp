@@ -64,7 +64,7 @@ void thorq_payload_serialization_unpack_bytearray(const std::vector<std::uint8_t
     memcpy(data.data(), payload.data() + 2, payload.size() - 2);
 }
 
-void thorq_payload_serialization_pack_1string(std::vector<std::uint8_t> &payload, THORQ_PAYLOAD_ID id, std::uint8_t cmd, const std::string &string)
+void thorq_payload_serialization_pack_string(std::vector<std::uint8_t> &payload, THORQ_PAYLOAD_ID id, std::uint8_t cmd, const std::string &string)
 {
     payload.resize(2 + string.size());
     payload[0] = id;
@@ -73,12 +73,12 @@ void thorq_payload_serialization_pack_1string(std::vector<std::uint8_t> &payload
     memcpy(payload.data() + 2, string.data(), string.size());
 }
 
-void thorq_payload_serialization_unpack_1string(const std::vector<std::uint8_t> &payload, std::string &string)
+void thorq_payload_serialization_unpack_string(const std::vector<std::uint8_t> &payload, std::string &string)
 {
     string = std::string((const char*)payload.data() + 2, payload.size() - 2);
 }
 
-void thorq_payload_serialization_pack_2string(std::vector<std::uint8_t> &payload, THORQ_PAYLOAD_ID id, std::uint8_t cmd, const std::string &string1, const std::string &string2)
+void thorq_payload_serialization_pack_string(std::vector<std::uint8_t> &payload, THORQ_PAYLOAD_ID id, std::uint8_t cmd, const std::string &string1, const std::string &string2)
 {
     payload.resize(4 + string1.size() + string2.size());
     payload[0] = id;
@@ -90,7 +90,7 @@ void thorq_payload_serialization_pack_2string(std::vector<std::uint8_t> &payload
     memcpy(payload.data() + 4 + string1.size(), string2.data(), string2.size());
 }
 
-void thorq_payload_serialization_unpack_2string(const std::vector<std::uint8_t> &payload, std::string &string1, std::string &string2)
+void thorq_payload_serialization_unpack_string(const std::vector<std::uint8_t> &payload, std::string &string1, std::string &string2)
 {
     const char* data = (const char*)payload.data() + 5;
 
@@ -101,7 +101,7 @@ void thorq_payload_serialization_unpack_2string(const std::vector<std::uint8_t> 
     data += payload[3];
 }
 
-void thorq_payload_serialization_pack_3string(std::vector<std::uint8_t> &payload, THORQ_PAYLOAD_ID id, std::uint8_t cmd, const std::string &string1, const std::string &string2, const std::string &string3)
+void thorq_payload_serialization_pack_string(std::vector<std::uint8_t> &payload, THORQ_PAYLOAD_ID id, std::uint8_t cmd, const std::string &string1, const std::string &string2, const std::string &string3)
 {
     payload.resize(5 + string1.size() + string2.size() + string3.size());
     payload[0] = id;
@@ -115,7 +115,7 @@ void thorq_payload_serialization_pack_3string(std::vector<std::uint8_t> &payload
     memcpy(payload.data() + 5 + string1.size() + string2.size(), string3.data(), string3.size());
 }
 
-void thorq_payload_serialization_unpack_3string(const std::vector<std::uint8_t> &payload, std::string &string1, std::string &string2, std::string &string3)
+void thorq_payload_serialization_unpack_string(const std::vector<std::uint8_t> &payload, std::string &string1, std::string &string2, std::string &string3)
 {
     const char* data = (const char*)payload.data() + 5;
 

@@ -84,7 +84,7 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_crypto.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_systemid.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_account.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_relation.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_relationship.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_session.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_moderation.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_announcement.h

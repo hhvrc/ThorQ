@@ -12,7 +12,22 @@ ThorQ::SQLite::Query::Query()
     : m_stmt(nullptr)
     , m_ncols(0)
 {
+}
 
+ThorQ::SQLite::Query::Query(const ThorQ::SQLite::Query& other)
+    : m_stmt(other.m_stmt)
+    , m_ncols(other.m_ncols)
+{
+}
+
+ThorQ::SQLite::Query& ThorQ::SQLite::Query::operator=(const ThorQ::SQLite::Query& other)
+{
+    sqlite3_finalize(m_stmt);
+
+    m_stmt = other.m_stmt;
+    m_ncols = other.m_ncols;
+
+    return *this;
 }
 
 ThorQ::SQLite::Query::Query(const char *statement, ThorQ::SQLite::Connection& connection)
@@ -27,6 +42,11 @@ ThorQ::SQLite::Query::Query(const char *statement, ThorQ::SQLite::Connection& co
         sqlite3_finalize(m_stmt);
         m_stmt = nullptr;
     }
+}
+
+ThorQ::SQLite::Query::~Query()
+{
+    sqlite3_finalize(m_stmt);
 }
 
 bool ThorQ::SQLite::Query::isValid() const
@@ -116,4 +136,11 @@ ThorQ::SQLite::Type ThorQ::SQLite::Query::getType(int col)
 ThorQ::SQLite::Column ThorQ::SQLite::Query::column(int col)
 {
     return ThorQ::SQLite::Column(this, col);
+}
+
+void ThorQ::SQLite::Query::finalize()
+{
+    sqlite3_finalize(m_stmt);
+    m_stmt = nullptr;
+    m_ncols = 0;
 }

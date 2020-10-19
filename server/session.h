@@ -9,10 +9,20 @@ namespace ThorQ {
 class Session
 {
 public:
+    enum class Type
+    {
+        Direct,
+        FreeForAll,
+    } ;
+
     Session();
 private:
-    Account* m_leader;
-    std::unordered_set<Account*> m_members;
+    struct Participant
+    {
+        Account* account;
+        std::uint8_t permissions;
+    };
+    std::unordered_set<Participant> m_participants;
 };
 }
 

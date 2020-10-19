@@ -22,10 +22,11 @@ class Query
     friend Column;
 
     Query();
-    Query(const Query& other) = default;
-    Query& operator=(const SQLite::Query& other) = default;
+    Query(const Query& other);
+    Query& operator=(const SQLite::Query& other);
 public:
     Query(const char* statement, SQLite::Connection& connection);
+    ~Query();
 
     bool isValid() const;
 
@@ -41,6 +42,8 @@ public:
     int columnCount() const;
     SQLite::Type getType(int col);
     SQLite::Column column(int col);
+
+    void finalize();
 private:
     sqlite3_stmt* m_stmt;
     int m_ncols;

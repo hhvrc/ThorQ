@@ -17,6 +17,8 @@ public:
     static Account* GetAccount(const std::string& username);
     static Account* NewAccount(const std::string& username, const std::string& passwordHash);
 public:
+    std::int64_t databaseId() const;
+
     std::string username() const;
     bool setUsername(const std::string& username);
 
