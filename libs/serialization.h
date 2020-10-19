@@ -9,9 +9,44 @@
 
 void thorq_payload_serialization_prealloc(std::vector<std::uint8_t>& payload);
 
-bool thorq_payload_serialization_is_valid(const std::vector<std::uint8_t>& payload);
+enum class THORQ_TYPE : std::uint8_t
+{
+    NONE,
+
+    INT8,
+    INT16,
+    INT32,
+    INT64,
+
+    UINT8,
+    UINT16,
+    UINT32,
+    UINT64,
+
+    BLOB,
+    STRING,
+
+    ENUM_MAX
+};
+
 std::uint8_t thorq_payload_serialization_get_id(const std::vector<std::uint8_t>& payload);
 std::uint8_t thorq_payload_serialization_get_cmd(const std::vector<std::uint8_t>& payload);
+THORQ_TYPE thorq_payload_serialization_get_type(std::vector<std::uint8_t>& payload, std::size_t& pos);
+
+std::int8_t thorq_payload_serialization_get_int8(std::vector<std::uint8_t>& payload, std::size_t& pos);
+std::int16_t thorq_payload_serialization_get_int16(std::vector<std::uint8_t>& payload, std::size_t& pos);
+std::int32_t thorq_payload_serialization_get_int32(std::vector<std::uint8_t>& payload, std::size_t& pos);
+std::int64_t thorq_payload_serialization_get_int64(std::vector<std::uint8_t>& payload, std::size_t& pos);
+
+std::uint8_t thorq_payload_serialization_get_uint8(std::vector<std::uint8_t>& payload, std::size_t& pos);
+std::uint16_t thorq_payload_serialization_get_uint16(std::vector<std::uint8_t>& payload, std::size_t& pos);
+std::uint32_t thorq_payload_serialization_get_uint32(std::vector<std::uint8_t>& payload, std::size_t& pos);
+std::uint64_t thorq_payload_serialization_get_uint64(std::vector<std::uint8_t>& payload, std::size_t& pos);
+
+std::int8_t thorq_payload_serialization_get_int8(std::vector<std::uint8_t>& payload, std::size_t& pos);
+std::int16_t thorq_payload_serialization_get_int16(std::vector<std::uint8_t>& payload, std::size_t& pos);
+std::int32_t thorq_payload_serialization_get_int32(std::vector<std::uint8_t>& payload, std::size_t& pos);
+std::int64_t thorq_payload_serialization_get_int64(std::vector<std::uint8_t>& payload, std::size_t& pos);
 
 void thorq_payload_serialization_bytes_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ID id, std::uint8_t cmd, std::initializer_list<std::uint8_t> bytes);
 std::uint8_t thorq_payload_serialization_bytes_get(const std::vector<std::uint8_t>& payload, std::size_t index);

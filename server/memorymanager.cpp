@@ -7,7 +7,32 @@
 
 #include "concurrentqueue.h"
 
-moodycamel::ConcurrentQueue<ENetPacket*> g_packets;
+moodycamel::ConcurrentQueue<ENetPacket*> g_packetPool;
+
+
+ENetPacket *packetGetEnet(const void *data, size_t dataLength, enet_uint32 flags)
+{
+    ENetPacket *packet = ThorQ::Memory::packetGet(dataLength, flags);
+
+    if (packet != nullptr)
+    {
+        if (flags & ENET_PACKET_FLAG_NO_ALLOCATE)
+        {
+            packet->data = (std::uint8_t*)data;
+        }
+        else
+        {
+            packet->data = (std::uint8_t*)packet + sizeof(ENetPacket);
+
+            if (data != nullptr)
+            {
+                memcpy(packet->data, data, dataLength);
+            }
+        }
+    }
+
+    return packet;
+}
 
 ENetCallbacks Initialize()
 {
@@ -15,40 +40,10 @@ ENetCallbacks Initialize()
 
     callbacks.free = free;
     callbacks.malloc = malloc;
-    callbacks.packet_create = ThorQ::Memory::packetGet;
+    callbacks.packet_create = packetGetEnet;
     callbacks.packet_destroy = ThorQ::Memory::packetFree;
 
     return callbacks;
-}
-
-ENetPacket *enet_packet_create(const void *data, size_t dataLength, enet_uint32 flags) {
-    ENetPacket *packet;
-    if (flags & ENET_PACKET_FLAG_NO_ALLOCATE) {
-        packet = (ENetPacket *)enet_malloc(sizeof (ENetPacket));
-        if (packet == NULL) {
-            return NULL;
-        }
-
-        packet->data = (enet_uint8 *)data;
-    }
-    else {
-        packet = (ENetPacket *)enet_malloc(sizeof (ENetPacket) + dataLength);
-        if (packet == NULL) {
-            return NULL;
-        }
-
-        packet->data = (enet_uint8 *)packet + sizeof(ENetPacket);
-
-        if (data != NULL) {
-            memcpy(packet->data, data, dataLength);
-        }
-    }
-
-    packet->referenceCount = 0;
-    packet->flags        = flags;
-    packet->dataLength   = dataLength;
-
-    return packet;
 }
 
 ENetPacket* ThorQ::Memory::packetGet(std::size_t size, std::uint32_t flags)
@@ -58,7 +53,7 @@ ENetPacket* ThorQ::Memory::packetGet(std::size_t size, std::uint32_t flags)
         ENetPacket* packet;
 
         // Get or allocate packet
-        if (!g_packets.try_dequeue(packet))
+        if (!g_packetPool.try_dequeue(packet))
         {
             packet = (ENetPacket *)malloc(sizeof(ENetPacket) + THORQ_PAYLOAD_LEN_MAX);
             if (packet == nullptr)
@@ -85,6 +80,6 @@ void ThorQ::Memory::packetFree(ENetPacket *packet)
     if (packet != nullptr)
     {
         packet->~_ENetPacket();
-        g_packets.enqueue(packet);
+        g_packetPool.enqueue(packet);
     }
 }

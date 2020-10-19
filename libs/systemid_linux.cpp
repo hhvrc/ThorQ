@@ -36,7 +36,7 @@ std::uint16_t hashMacAddress(std::uint8_t* mac)
 	return hash;
 }
 
-void ThorQ::SystemID_Internal::getMacHash(std::uint16_t& mac1, std::uint16_t& mac2)
+void ThorQ::SystemID::Internal::getMacHash(std::uint16_t& mac1, std::uint16_t& mac2)
 {
 	mac1 = 0;
 	mac2 = 0;
@@ -88,15 +88,17 @@ void ThorQ::SystemID_Internal::getMacHash(std::uint16_t& mac1, std::uint16_t& ma
 	}
 }
 
-std::uint16_t ThorQ::SystemID_Internal::getVolumeHash()
+std::uint16_t ThorQ::SystemID::Internal::getVolumeHash()
 {
 	// we don't have a 'volume serial number' like on windows.
 	// Lets hash the system name instead.
-	std::uint8_t* sysname = (std::uint8_t*)ThorQ::SystemID_Internal::getMachineName();
+    std::string sysname = ThorQ::SystemID::Internal::getMachineName();
 
 	std::uint16_t hash = 0;
-	for (int i = 0; sysname[i] != 0; i++)
-		hash += (sysname[i] << (( i & 1 ) * 8 ));
+    for (std::size_t i = 0; i < sysname.length(); i++)
+    {
+        hash += ((std::uint8_t)sysname[i] << (( i & 1 ) * 8 ));
+    }
 
 	return hash;
 }
@@ -115,7 +117,7 @@ static inline void getCpuid( std::uint32_t* p, std::uint32_t ax )
 		);
 }
 
-std::uint16_t ThorQ::SystemID_Internal::getCpuHash()
+std::uint16_t ThorQ::SystemID::Internal::getCpuHash()
 {
 	std::uint32_t cpuinfo[4]{0};
 	getCpuid(cpuinfo, 0);
@@ -127,7 +129,7 @@ std::uint16_t ThorQ::SystemID_Internal::getCpuHash()
 	return hash;
 }
 
-const char* ThorQ::SystemID_Internal::getMachineName()
+std::string ThorQ::SystemID::Internal::getMachineName()
 {
 	static struct utsname u;
 

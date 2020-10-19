@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "enums.h"
+#include "serialization.h"
 
 /**
  * @brief thorq_payload_heartbeat_is_valid

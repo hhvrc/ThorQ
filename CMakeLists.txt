@@ -71,7 +71,7 @@ if(MSVC)
     endif()
 else()
     # 64-bit, threading, and verbose
-    string(APPEND CMAKE_CXX_FLAGS " -m64 -pthread -Wall -Wextra -pedantic")
+    string(APPEND CMAKE_CXX_FLAGS " -m64 -pthread -Wall -Wextra -pedantic -Wconversion -Wsign-conversion")
 
     if(${CMAKE_BUILD_TYPE} MATCHES "Release")
 	string(APPEND CMAKE_CXX_FLAGS " -fstack-protector -O3 -g0 -s")

@@ -6,7 +6,7 @@
 #include <hashing.h>
 #include <thorq_payload_ack.h>
 #include <thorq_payload_session.h>
-#include <thorq_payload_relation.h>
+#include <thorq_payload_relationship.h>
 
 #include "sqlite/connection.h"
 #include "sqlite/transaction.h"

@@ -10,6 +10,16 @@
 #include "enums.h"
 #include "constants.h"
 #include "serialization.h"
+#include "proto/generated/fbe.h"
+#include "proto/generated/fbe_models.h"
+#include "proto/generated/ThorQ_models.h"
+
+void e()
+{
+    ThorQ::Account e(ThorQ::AccountCommand::LoginPassword, "myUserName", "myPassword");
+    FBE::ThorQ::AccountModel e;
+
+}
 
 /// @enum THORQ_PAYLOAD_ACCOUNT_CMD
 enum THORQ_PAYLOAD_ACCOUNT : std::uint8_t

@@ -8,11 +8,6 @@ void thorq_payload_serialization_prealloc(std::vector<std::uint8_t>& payload)
     payload.reserve(THORQ_PAYLOAD_LEN_MAX);
 }
 
-bool thorq_payload_serialization_is_valid(const std::vector<std::uint8_t> &payload)
-{
-    return payload.size() >= 2;
-}
-
 std::uint8_t thorq_payload_serialization_get_id(const std::vector<std::uint8_t> &payload)
 {
     return payload[0];
@@ -22,6 +17,17 @@ std::uint8_t thorq_payload_serialization_get_cmd(const std::vector<std::uint8_t>
 {
     return payload[1];
 }
+
+THORQ_TYPE thorq_payload_serialization_get_type(std::vector<uint8_t>& payload, std::size_t& pos)
+{
+    if (pos < payload.size() && payload[pos] < (std::uint8_t)THORQ_TYPE::ENUM_MAX)
+    {
+        return (THORQ_TYPE)payload[pos];
+    }
+
+    return THORQ_TYPE::NONE;
+}
+
 
 void thorq_payload_serialization_pack(std::vector<std::uint8_t> &payload, THORQ_PAYLOAD_ID id, std::uint8_t cmd)
 {
