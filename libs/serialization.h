@@ -9,6 +9,34 @@
 
 void thorq_payload_serialization_prealloc(std::vector<std::uint8_t>& payload);
 
+constexpr std::size_t get_size_needed(int32_t) { return 4; }
+
+template<typename A, typename... Args>
+inline std::size_t get_size_needed(A arg1, Args... args)
+{
+  return get_size_needed(arg1) + get_size_needed(args...);
+}
+
+template<typename A, typename... Args>
+inline void serialize(const std::vector<std::uint8_t>& dataIn, A arg1, Args... args)
+{
+    serialize(dataIn, arg1);
+    serialize(dataIn, args...);
+}
+template<typename A, typename... Args>
+inline void deserialize(std::vector<std::uint8_t>& dataOut, A arg1, Args... args)
+{
+    serialize(dataOut, arg1);
+    serialize(dataOut, args...);
+}
+
+template<typename... Args>
+inline void reserve_and_serialize(std::vector<std::uint8_t>& dataOut, Args... args)
+{
+  dataOut.reserve(get_size_needed(args...));
+  serialize(dataOut, args...);
+}
+
 enum class THORQ_TYPE : std::uint8_t
 {
     NONE,
