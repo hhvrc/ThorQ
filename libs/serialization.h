@@ -13,15 +13,13 @@ void thorq_payload_serialization_prealloc(std::vector<std::uint8_t>& payload);
 
 template <typename T>
     requires std::integral<T> || std::floating_point<T>
-std::size_t get_size_needed_for_type(const T& value)
+constexpr std::size_t get_size_needed_for_type(const T& value)
 {
     return sizeof(value);
 }
-std::size_t get_size_needed_for_type(const std::ranges::range auto& value)
+constexpr std::size_t get_size_needed_for_type(const std::ranges::range auto& value)
 {
-    auto sizes = value
-           | std::views::transform([](auto&& v) { return get_size_needed_for_type(v); })
-           | std::views::common;
+    auto sizes = value | std::views::transform([](auto&& v) { return get_size_needed_for_type(v); }) | std::views::common;
     return std::accumulate(std::ranges::begin(sizes), std::ranges::end(sizes), std::size_t{ 0 });
 }
 
@@ -39,20 +37,20 @@ inline void serialize(std::vector<std::uint8_t>& dataIn, const T& value)
 }
 
 template<typename A, typename... Args>
-inline void serialize(std::vector<std::uint8_t>& dataIn, A arg1, Args... args)
+inline void serialize(std::vector<std::uint8_t>& dataIn, const A& arg1, const Args&... args)
 {
     serialize(dataIn, arg1);
     serialize(dataIn, args...);
 }
 template<typename A, typename... Args>
-inline void deserialize(std::vector<std::uint8_t>& dataOut, A arg1, Args... args)
+inline void deserialize(const std::vector<std::uint8_t>& dataOut, A& arg1, Args&... args)
 {
     serialize(dataOut, arg1);
     serialize(dataOut, args...);
 }
 
 template<typename... Args>
-inline void reserve_and_serialize(std::vector<std::uint8_t>& dataOut, Args... args)
+inline void reserve_and_serialize(std::vector<std::uint8_t>& dataOut, const Args&... args)
 {
   dataOut.reserve(get_size_needed(args...));
   serialize(dataOut, args...);
