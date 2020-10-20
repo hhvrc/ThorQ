@@ -9,12 +9,39 @@
 
 void thorq_payload_serialization_prealloc(std::vector<std::uint8_t>& payload);
 
-constexpr std::size_t get_size_needed(int32_t) { return 4; }
 
-template<typename A, typename... Args>
-inline std::size_t get_size_needed(A arg1, Args... args)
+template <class ContainerType>
+concept Container = requires(ContainerType container)
 {
-  return get_size_needed(arg1) + get_size_needed(args...);
+    requires std::regular<ContainerType>;
+    requires std::swappable<ContainerType>;
+    requires std::destructible<typename ContainerType::value_type>;
+    requires std::same_as<typename ContainerType::reference, typename ContainerType::value_type &>;
+    requires std::same_as<typename ContainerType::const_reference, const typename ContainerType::value_type &>;
+    requires std::forward_iterator<typename ContainerType::iterator>;
+    requires std::forward_iterator<typename ContainerType::const_iterator>;
+    requires std::signed_integral<typename ContainerType::difference_type>;
+    requires std::unsigned_integral<typename ContainerType::size_type>;
+//  { container.begin()    } -> typename ContainerType::iterator;
+//  { container.end()      } -> typename ContainerType::iterator;
+//  { container.begin()    } -> typename ContainerType::const_iterator;
+//  { container.end()      } -> typename ContainerType::const_iterator;
+//  { container.cbegin()   } -> typename ContainerType::const_iterator;
+//  { container.cend()     } -> typename ContainerType::const_iterator;
+    { container.size()     } -> std::same_as<std::size_t>;
+    { container.max_size() } -> std::same_as<std::size_t>;
+    { container.empty()    } -> std::same_as<bool>;
+};
+std::size_t get_size_needed(const Container auto& value)
+{
+    return std::size(value) * sizeof(decltype(*value.begin()));
+}
+
+template<typename A>
+requires std::is_fundamental<A>;
+std::size_t get_size_needed(const A&)
+{
+    return sizeof(A);
 }
 
 template<typename A, typename... Args>
