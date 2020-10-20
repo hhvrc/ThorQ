@@ -4,48 +4,42 @@
 #include <vector>
 #include <cstdint>
 #include <string>
+#include <ranges>
+#include <numeric>
 
 #include "enums.h"
 
 void thorq_payload_serialization_prealloc(std::vector<std::uint8_t>& payload);
 
-
-template <class ContainerType>
-concept Container = requires(ContainerType container)
+template <typename T>
+    requires std::integral<T> || std::floating_point<T>
+std::size_t get_size_needed_for_type(const T& value)
 {
-    requires std::regular<ContainerType>;
-    requires std::swappable<ContainerType>;
-    requires std::destructible<typename ContainerType::value_type>;
-    requires std::same_as<typename ContainerType::reference, typename ContainerType::value_type &>;
-    requires std::same_as<typename ContainerType::const_reference, const typename ContainerType::value_type &>;
-    requires std::forward_iterator<typename ContainerType::iterator>;
-    requires std::forward_iterator<typename ContainerType::const_iterator>;
-    requires std::signed_integral<typename ContainerType::difference_type>;
-    requires std::unsigned_integral<typename ContainerType::size_type>;
-//  { container.begin()    } -> typename ContainerType::iterator;
-//  { container.end()      } -> typename ContainerType::iterator;
-//  { container.begin()    } -> typename ContainerType::const_iterator;
-//  { container.end()      } -> typename ContainerType::const_iterator;
-//  { container.cbegin()   } -> typename ContainerType::const_iterator;
-//  { container.cend()     } -> typename ContainerType::const_iterator;
-    { container.size()     } -> std::same_as<std::size_t>;
-    { container.max_size() } -> std::same_as<std::size_t>;
-    { container.empty()    } -> std::same_as<bool>;
-};
-std::size_t get_size_needed(const Container auto& value)
+    return sizeof(value);
+}
+std::size_t get_size_needed_for_type(const std::ranges::range auto& value)
 {
-    return std::size(value) * sizeof(decltype(*value.begin()));
+    auto sizes = value
+           | std::views::transform([](auto&& v) { return get_size_needed_for_type(v); })
+           | std::views::common;
+    return std::accumulate(std::ranges::begin(sizes), std::ranges::end(sizes), std::size_t{ 0 });
 }
 
-template<typename A>
-requires std::is_fundamental<A>;
-std::size_t get_size_needed(const A&)
+template <typename... Args>
+std::size_t get_size_needed(const Args&... args) {
+  return (... + get_size_needed_for_type(args));
+}
+
+template <typename T>
+    requires std::integral<T> || std::floating_point<T>
+inline void serialize(std::vector<std::uint8_t>& dataIn, const T& value)
 {
-    return sizeof(A);
+    dataIn.resize(dataIn.size() + sizeof(value));
+    memcpy(dataIn.data() + dataIn.size() - sizeof(value), &value, sizeof(value));
 }
 
 template<typename A, typename... Args>
-inline void serialize(const std::vector<std::uint8_t>& dataIn, A arg1, Args... args)
+inline void serialize(std::vector<std::uint8_t>& dataIn, A arg1, Args... args)
 {
     serialize(dataIn, arg1);
     serialize(dataIn, args...);
