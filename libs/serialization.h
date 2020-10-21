@@ -11,6 +11,28 @@
 
 void thorq_payload_serialization_prealloc(std::vector<std::uint8_t>& payload);
 
+#ifdef _MSC_VER // /std:c++latest /O2
+#include <type_traits>
+template <typename T>
+constexpr std::size_t get_size_needed_for_type(const T& value)
+{
+    if constexpr (std::is_arithmetic_v<T>)
+    {
+        return sizeof(value);
+    }
+    else if constexpr (std::is_class_v<T> || std::is_union_v<T>)
+    {
+        return std::accumulate(value.cbegin(), value.cend(), std::size_t{ 0 }, [](std::size_t acc, const auto& v)
+        {
+            return acc + get_size_needed_for_type(v);
+        });
+    }
+    else
+    {
+        static_assert(false, "Unsupported type for serialization!");
+    }
+}
+#else           // -std=c++2a -O3
 template <typename T>
     requires std::integral<T> || std::floating_point<T>
 constexpr std::size_t get_size_needed_for_type(const T& value)
@@ -19,12 +41,15 @@ constexpr std::size_t get_size_needed_for_type(const T& value)
 }
 constexpr std::size_t get_size_needed_for_type(const std::ranges::range auto& value)
 {
-    auto sizes = value | std::views::transform([](auto&& v) { return get_size_needed_for_type(v); }) | std::views::common;
-    return std::accumulate(std::ranges::begin(sizes), std::ranges::end(sizes), std::size_t{ 0 });
+    return std::accumulate(value.cbegin(), value.cend(), std::size_t{ 0 }, [](std::size_t acc, const auto& v)
+    {
+        return acc + get_size_needed_for_type(v);
+    });
 }
+#endif
 
 template <typename... Args>
-std::size_t get_size_needed(const Args&... args) {
+constexpr std::size_t get_size_needed(const Args&... args) {
   return (... + get_size_needed_for_type(args));
 }
 
@@ -43,7 +68,7 @@ inline void serialize(std::vector<std::uint8_t>& dataIn, const A& arg1, const Ar
     serialize(dataIn, args...);
 }
 template<typename A, typename... Args>
-inline void deserialize(const std::vector<std::uint8_t>& dataOut, A& arg1, Args&... args)
+inline void deserialize(std::vector<std::uint8_t>& dataOut, const A& arg1, const Args&... args)
 {
     serialize(dataOut, arg1);
     serialize(dataOut, args...);
