@@ -45,6 +45,7 @@ ThorQ::Account* ThorQ::Account::GetAccount(const std::string& username)
             return *it;
         }
     }
+
     SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
 
     if (!connection.isOpen())
@@ -94,6 +95,16 @@ ThorQ::Account* ThorQ::Account::GetAccount(const std::string& username)
 
 ThorQ::Account* ThorQ::Account::NewAccount(const std::string& username, const std::string& passwordHash)
 {
+    {
+        std::shared_lock l(g_accounts_lock);
+        auto it = std::find_if(g_accounts.begin(), g_accounts.end(), [username](const Account* account) -> bool { return account->username() == username; });
+
+        if (it != g_accounts.end())
+        {
+            return *it;
+        }
+    }
+
     Account* account = nullptr;
 
     SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);

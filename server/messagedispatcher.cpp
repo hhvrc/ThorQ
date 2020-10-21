@@ -21,7 +21,7 @@
 #include "instance.h"
 #include "messagehandlers.h"
 
-ThorQ::MessageDispatcher::MessageDispatcher(size_t bufferSize)
+ThorQ::MessageDispatcher::MessageDispatcher(ThorQ::Server *serverInstance)
 {
 
 }

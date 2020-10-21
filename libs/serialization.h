@@ -43,7 +43,9 @@ constexpr std::size_t get_size_needed_for_type(const std::ranges::range auto& va
 {
     return std::accumulate(value.cbegin(), value.cend(), std::size_t{ 0 }, [](std::size_t acc, const auto& v)
     {
-        return acc + get_size_needed_for_type(v);
+        return acc +                        // Accumulated size
+               sizeof(std::uint32_t) +      // Space for size descriptor
+               get_size_needed_for_type(v); // Space for data
     });
 }
 #endif
