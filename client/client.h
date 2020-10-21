@@ -1,12 +1,15 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include <QObject>
-#include <enums.h>
 #include <atomic>
 #include <mutex>
 #include <vector>
 
+#include <QObject>
+#include <QTimer>
+#include <QElapsedTimer>
+
+#include <enums.h>
 #include <typedefs_global.h>
 #include <thorq_payload_version.h>
 

@@ -279,7 +279,7 @@ bool ThorQ::Account::setPasswordHash(const std::string& passwordHash)
 
 ThorQ::Account *ThorQ::Account::master() const
 {
-    std::shared_lock l(l_master);
+    std::shared_lock l(const_cast<std::shared_mutex&>(l_master));
     return m_master;
 }
 
@@ -290,17 +290,17 @@ bool ThorQ::Account::isExclusive() const
 
 std::unordered_set<ThorQ::Session*> ThorQ::Account::sessions() const
 {
-    std::shared_lock l(l_sessions);
+    std::shared_lock l(const_cast<std::shared_mutex&>(l_sessions));
     return m_sessions;
 }
 std::unordered_set<ThorQ::Instance*> ThorQ::Account::instances() const
 {
-    std::shared_lock l(l_instances);
+    std::shared_lock l(const_cast<std::shared_mutex&>(l_instances));
     return m_instances;
 }
 std::unordered_set<ThorQ::Relationship*> ThorQ::Account::relationships() const
 {
-    std::shared_lock l(l_relationships);
+    std::shared_lock l(const_cast<std::shared_mutex&>(l_relationships));
     return m_relationships;
 }
 

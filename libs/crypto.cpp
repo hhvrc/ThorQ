@@ -38,6 +38,11 @@ ThorQ::Crypto::~Crypto()
     EVP_CIPHER_CTX_free(m_ctx);
 }
 
+bool ThorQ::Crypto::ready() const
+{
+    return m_keyPair != nullptr && m_group != nullptr;
+}
+
 bool ThorQ::Crypto::generateKeyPair()
 {
     //Generate keypair

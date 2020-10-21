@@ -683,30 +683,30 @@ void Client::handlePayloadVersion(std::vector<std::uint8_t>& payload)
 	switch (app) {
 	case THORQ_APP_SERVER:
 		if (version > THORQ_VERSION_SERVER)
-        { qDebug() << tr("Server has updated from %1 to %2").arg(THORQ_VERSION_SERVER.toString()).arg(version.toString()); }
+        { qDebug() << tr("Server has updated from %1 to %2").arg(THORQ_VERSION_SERVER.toString().c_str()).arg(version.toString().c_str()); }
 		else if (version < THORQ_VERSION_SERVER)
-        { qDebug() << tr("Server had downdated from %1 to %2").arg(THORQ_VERSION_SERVER.toString()).arg(version.toString()); }
+        { qDebug() << tr("Server had downdated from %1 to %2").arg(THORQ_VERSION_SERVER.toString().c_str()).arg(version.toString().c_str()); }
 		else
 		{ qDebug() << tr("Server version compatible"); }
 		break;
 	case THORQ_APP_CLIENT:
 		if (version > THORQ_VERSION_CLIENT)
-        { qDebug() << tr("Client has updated from %1 to %2").arg(THORQ_VERSION_CLIENT.toString()).arg(version.toString()); emit Error(tr("New update available!\nClient v%1").arg(version.toString())); }
+        { qDebug() << tr("Client has updated from %1 to %2").arg(THORQ_VERSION_CLIENT.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("New update available!\nClient v%1").arg(version.toString().c_str())); }
 		else if (version < THORQ_VERSION_CLIENT)
-        { qDebug() << tr("Client has downgraded from %1 to %2").arg(THORQ_VERSION_CLIENT.toString()).arg(version.toString()); emit Error(tr("Hello future-person!\nServer expects: Client v%1\nYou have: Client v%2").arg(version.toString()).arg(THORQ_VERSION_CLIENT.toString())); }
+        { qDebug() << tr("Client has downgraded from %1 to %2").arg(THORQ_VERSION_CLIENT.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("Hello future-person!\nServer expects: Client v%1\nYou have: Client v%2").arg(version.toString().c_str()).arg(THORQ_VERSION_CLIENT.toString().c_str())); }
 		else
 		{ qDebug() << tr("Client version compatible"); }
 		break;
 	case THORQ_APP_LINK:
 		if (version > THORQ_VERSION_LINK)
-        { qDebug() << tr("Protocol has updated from %1 to %2").arg(THORQ_VERSION_LINK.toString()).arg(version.toString()); emit Error(tr("Version incompatible!\nPlease upgrade")); }
+        { qDebug() << tr("Protocol has updated from %1 to %2").arg(THORQ_VERSION_LINK.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("Version incompatible!\nPlease upgrade")); }
 		else if (version < THORQ_VERSION_LINK)
-        { qDebug() << tr("Protocol has downgraded from %1 to %2").arg(THORQ_VERSION_LINK.toString()).arg(version.toString()); emit Error(tr("Version inompatible!\nPlease downgrade")); }
+        { qDebug() << tr("Protocol has downgraded from %1 to %2").arg(THORQ_VERSION_LINK.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("Version inompatible!\nPlease downgrade")); }
 		else
 		{ qDebug() << tr("Protocol version compatible"); }
 		break;
 	default:
-        qDebug() << tr("Got ivalid version %1[%2]").arg(app).arg(version.toString());
+        qDebug() << tr("Got ivalid version %1[%2]").arg(app).arg(version.toString().c_str());
 		return;
 	}
 }

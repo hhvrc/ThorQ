@@ -30,29 +30,25 @@
 
 std::atomic_bool runServer = true;
 
-const char* create_system_ids    = "CREATE TABLE IF NOT EXISTS system_ids(db_id INTEGER PRIMARY KEY AUTOINCREMENT, system_id TEXT NOT NULL UNIQUE, banned_at DATETIME, registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)"; // Unique SystemID of a cmoputer
-const char* create_auth_tokens   = "CREATE TABLE IF NOT EXISTS auth_tokens(db_id INTEGER PRIMARY KEY AUTOINCREMENT, auth_token TEXT NOT NULL UNIQUE, system_id INTEGER NOT NULL, account_id INTEGER NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)"; // Authentication Token generated at login
-const char* create_accounts      = "CREATE TABLE IF NOT EXISTS accounts(db_id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, authority INTEGER NOT NULL DEFAULT 0, last_login DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, deleted_at DATETIME)";
-const char* create_relationships = "CREATE TABLE IF NOT EXISTS relationships(db_id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT NOT NULL UNIQUE, source INTEGER NOT NULL REFERENCES accounts, target INTEGER NOT NULL REFERENCES account, status INTEGER NOT NULL, authority INTEGER, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)";
-const char* create_systemid_account_map = "CREATE TABLE IF NOT EXISTS systemid_account_map(systemid_id INTEGER NOT NULL, account_id INTEGER NOT NULL, established_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)";
-const char* create_user_log = "CREATE TABLE IF NOT EXISTS userLog(timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, system_id INTEGER, account_id INTEGER, info TEXT NOT NULL)";
-
-
 bool InitializeDB(const char* path) noexcept
 {
     ThorQ::SQLite::Connection con(path, ThorQ::SQLite::Connection::CREATE | ThorQ::SQLite::Connection::READWRITE);
 
-    return con.execute(create_system_ids)
-        && con.execute(create_auth_tokens)
-        && con.execute(create_accounts)
-        && con.execute(create_relationships)
-        && con.execute(create_systemid_account_map)
-        && con.execute(create_user_log);
+    return con.execute("CREATE TABLE IF NOT EXISTS system_ids(db_id INTEGER PRIMARY KEY AUTOINCREMENT, system_id TEXT NOT NULL UNIQUE, banned_at DATETIME, registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)") // Unique SystemID of a cmoputer
+        && con.execute("CREATE TABLE IF NOT EXISTS auth_tokens(db_id INTEGER PRIMARY KEY AUTOINCREMENT, auth_token TEXT NOT NULL UNIQUE, system_id INTEGER NOT NULL, account_id INTEGER NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)") // Authentication Token generated at login
+        && con.execute("CREATE TABLE IF NOT EXISTS accounts(db_id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT NOT NULL UNIQUE, password_hash TEXT NOT NULL, authority INTEGER NOT NULL DEFAULT 0, last_login DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, deleted_at DATETIME)")
+        && con.execute("CREATE TABLE IF NOT EXISTS relationships(db_id INTEGER PRIMARY KEY AUTOINCREMENT, uuid TEXT NOT NULL UNIQUE, source INTEGER NOT NULL REFERENCES accounts, target INTEGER NOT NULL REFERENCES account, status INTEGER NOT NULL, authority INTEGER, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)")
+        && con.execute("CREATE TABLE IF NOT EXISTS systemid_account_map(systemid_id INTEGER NOT NULL, account_id INTEGER NOT NULL, established_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)")
+        && con.execute("CREATE TABLE IF NOT EXISTS userLog(timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, system_id INTEGER, account_id INTEGER, info TEXT NOT NULL)");
 }
 void exit_handler(int s)
 {
     char buf[64];
-    strerror_s(buf, 64, s);
+#ifdef _WIN32
+    strerror_s(buf, sizeof(buf), s);
+#else
+    strerror_r(s, buf, sizeof(buf));
+#endif
 
     printf("Caught signal %s\n", buf);
 

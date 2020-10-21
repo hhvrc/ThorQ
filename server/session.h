@@ -1,6 +1,7 @@
 #ifndef SESSION_H
 #define SESSION_H
 
+#include <cstdint>
 #include <unordered_set>
 
 #include "typedefs_server.h"
@@ -19,8 +20,8 @@ public:
 private:
     struct Participant
     {
-        Account* account;
-        std::uint8_t permissions;
+        Account* account = nullptr;
+        std::uint8_t permissions = 0;
     };
     std::unordered_set<Participant> m_participants;
 };

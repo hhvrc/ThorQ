@@ -1,9 +1,11 @@
 #include "user.h"
 
+#include <QObject>
+
 #include "client.h"
 
 ThorQ::User::User(Client* client)
-    : QObject(client)
+    : QObject((QObject*)client)
     , m_name()
 {
 

@@ -29,6 +29,8 @@ public:
     Crypto();
     ~Crypto();
 
+    bool ready() const;
+
     /**
      * @brief Clear shared secret, and generate a new key pair
      * @return

@@ -1,5 +1,8 @@
 #include "serialization.h"
 
+#include <memory>
+#include <cstring>
+
 #include "constants.h"
 #include "thorq_message.h"
 
