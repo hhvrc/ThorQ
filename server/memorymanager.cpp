@@ -34,7 +34,7 @@ ENetPacket *packetGetEnet(const void *data, size_t dataLength, enet_uint32 flags
     return packet;
 }
 
-ENetCallbacks Initialize()
+ENetCallbacks ThorQ::Memory::Initialize()
 {
     ENetCallbacks callbacks;
 

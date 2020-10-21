@@ -40,8 +40,7 @@ public:
 
 	Crypto* getCrypto();
 
-    void sendMessage(std::vector<std::uint8_t>& message, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
-    void sendMessage(const std::vector<std::uint8_t>& message, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
+    void sendPayload(const std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
     void sendRaw(const std::vector<std::uint8_t>& raw, THORQ_CHANNEL ch, bool reliable = true);
 
     void disconnectPeer(std::uint32_t reason);

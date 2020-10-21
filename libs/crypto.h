@@ -42,7 +42,7 @@ public:
      * @param outLen
      * @retval Returns if public key was successfully retrieved
      */
-    bool getPublicKey(std::uint8_t* publicKeyOut, std::size_t outLen);
+    bool getPublicKey(std::uint8_t* publicKeyOut, std::size_t outLen) const;
 
     /** Establish secret key with foreign host
      * @param foreignKey

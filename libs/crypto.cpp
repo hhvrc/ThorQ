@@ -63,7 +63,7 @@ bool ThorQ::Crypto::generateKeyPair()
     return true;
 }
 
-bool ThorQ::Crypto::getPublicKey(std::uint8_t *publicKeyOut, std::size_t outLen)
+bool ThorQ::Crypto::getPublicKey(std::uint8_t *publicKeyOut, std::size_t outLen) const
 {
     // Get public key
     const EC_POINT* publicKey = EC_KEY_get0_public_key(m_keyPair);

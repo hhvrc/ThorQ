@@ -1,5 +1,6 @@
 #include "account.h"
 
+#include <set>
 #include <thread>
 #include <future>
 
@@ -15,6 +16,9 @@
 
 #include "utils.h"
 #include "instance.h"
+
+std::shared_mutex g_accounts_lock;
+std::set<ThorQ::Account*> g_accounts;
 
 ThorQ::Account::Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const std::string& username, const std::string& passwordHash)
     : m_dbId(dbId)
@@ -32,6 +36,15 @@ ThorQ::Account::Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, co
 
 ThorQ::Account* ThorQ::Account::GetAccount(const std::string& username)
 {
+    {
+        std::shared_lock l(g_accounts_lock);
+        auto it = std::find_if(g_accounts.begin(), g_accounts.end(), [username](const Account* account) -> bool { return account->username() == username; });
+
+        if (it != g_accounts.end())
+        {
+            return *it;
+        }
+    }
     SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
 
     if (!connection.isOpen())
@@ -478,7 +491,7 @@ void ThorQ::Account::sendMessage(const std::vector<std::uint8_t>& message, bool 
 
     for (Instance* instance : recepients)
     {
-        instance->sendMessage(message, encrypt, reliable);
+        instance->sendPayload(message, encrypt, reliable);
     }
 }
 

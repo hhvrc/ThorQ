@@ -12,6 +12,7 @@
 namespace ThorQ {
 class Account
 {
+    friend Instance;
     Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const std::string& username, const std::string& passwordHash);
 public:
     static Account* GetAccount(const std::string& username);
@@ -48,7 +49,7 @@ public:
 
     void ban();
     void fuckYou();
-    void disconnectPeers();
+    void disconnectAllInstances();
     void sendMessage(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
     void sendMessageToFriends(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
 private:

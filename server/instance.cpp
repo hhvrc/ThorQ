@@ -11,6 +11,7 @@
 #include <thorq_payload_crypto.h>
 #include <thorq_payload_session.h>
 
+#include "memorymanager.h"
 #include "singletons.h"
 #include "utils.h"
 #include "account.h"
@@ -77,7 +78,7 @@ void ThorQ::Instance::setAccount(Account* account)
             for (Instance* i : m_incoming_requests)
             {
                 thorq_payload_ack_pack(message, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, account()->username() + " went offline");
-                i->sendMessage(message, true, true);
+                i->sendPayload(message, true, true);
             }
 
             setAccount(nullptr);
@@ -137,7 +138,7 @@ void ThorQ::Instance::cryptoInit()
 
     std::vector<std::uint8_t> message;
     thorq_payload_crypto_establish_pack(message, getCrypto()->publicKey());
-    sendMessage(message, THORQ_CHANNEL_MAIN, true, true);
+    sendPayload(message, THORQ_CHANNEL_MAIN, true, true);
 }
 
 bool ThorQ::Instance::cryptoEstablish(const std::vector<std::uint8_t>& data)
@@ -152,7 +153,7 @@ bool ThorQ::Instance::cryptoEstablish(const std::vector<std::uint8_t>& data)
             std::vector<std::uint8_t> message;
             thorq_payload_crypto_verify_pack(message, )
             thorq_payload_crypto_pack(message, THORQ_PAYLOAD_CRYPTO_VERIFY, m_verificationData, THORQ_CRYPTO_VERIFICATION_DATA_LENGTH);
-            sendMessage(message, true, true);
+            sendPayload(message, true, true);
             setCryptoState(THORQ_STATE_CRYPTO_VERIFYING);
 			return true;
 		}
@@ -174,7 +175,7 @@ bool ThorQ::Instance::cryptoVerify(const std::vector<std::uint8_t>& data)
 		{
             std::vector<std::uint8_t> message;
             thorq_payload_crypto_pack(message, THORQ_PAYLOAD_CRYPTO_OK);
-            sendMessage(message, true, true);
+            sendPayload(message, true, true);
             setCryptoState(THORQ_STATE_CRYPTO_ACTIVE);
 
 			return true;
@@ -194,42 +195,50 @@ ThorQ::Crypto* ThorQ::Instance::getCrypto()
 	return m_crypto;
 }
 
-void ThorQ::Instance::sendMessage(std::vector<std::uint8_t>& message, bool encrypt, bool reliable)
+void ThorQ::Instance::sendPayload(const std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
 {
-	if (encrypt)
-	{
-        if (!thorq_payload_encode(message, m_crypto))
-			return;
-	}
-	else
-	{
-        if (!thorq_payload_encode(message))
-			return;
-	}
+    ENetPacket* packet = ThorQ::Memory::packetGet(payload.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED);
 
-    sendRaw(message, reliable);
-}
-void ThorQ::Instance::sendMessage(const std::vector<std::uint8_t>& message, bool encrypt, bool reliable)
-{
-    std::vector<std::uint8_t> copy = message;
+    if (packet != nullptr)
+    {
+        if (encrypt)
+        {
+            if (!ThorQ::packetEncode(packet, payload, m_crypto))
+            {
+                fprintf(stderr, "Failed to encode packet!");
+                return;
+            }
+        }
+        else
+        {
+            if (!ThorQ::packetEncode(packet, payload))
+            {
+                fprintf(stderr, "Failed to encode packet!");
+                return;
+            }
+        }
 
-	if (encrypt)
-	{
-        if (!thorq_payload_encode(copy, m_crypto))
-			return;
-	}
-	else
-	{
-        if (!thorq_payload_encode(copy))
-			return;
-	}
-
-    sendRaw(copy, reliable);
+        enet_peer_send(m_peer, ch, packet);
+    }
+    else
+    {
+        fprintf(stderr, "Failed to allocate packet!");
+    }
 }
 
-void ThorQ::Instance::sendRaw(const std::vector<std::uint8_t>& raw, THORQ_CHANNEL ch, bool reliable)
+void ThorQ::Instance::sendRaw(const std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool reliable)
 {
-    enet_peer_send(m_peer, ch, enet_packet_create(raw.data(), raw.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
+    ENetPacket* packet = ThorQ::Memory::packetGet(payload.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED);
+
+    if (packet != nullptr)
+    {
+        memcpy(packet->data, payload.data(), payload.size());
+        enet_peer_send(m_peer, ch, packet);
+    }
+    else
+    {
+        fprintf(stderr, "Failed to allocate packet!");
+    }
 }
 
 void ThorQ::Instance::disconnectPeer(std::uint32_t reason)

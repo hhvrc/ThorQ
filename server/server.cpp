@@ -258,16 +258,16 @@ void ThorQ::Server::handleEventConnection(const ENetEvent& event)
     std::vector<std::uint8_t> message;
 
     thorq_payload_version_pack(message, THORQ_APP_LINK, THORQ_VERSION_LINK);
-    instance->sendMessage(message, THORQ_CHANNEL_MAIN, false, true);
+    instance->sendPayload(message, THORQ_CHANNEL_MAIN, false, true);
 
     thorq_payload_version_pack(message, THORQ_APP_CLIENT, THORQ_VERSION_CLIENT);
-    instance->sendMessage(message, THORQ_CHANNEL_MAIN, false, true);
+    instance->sendPayload(message, THORQ_CHANNEL_MAIN, false, true);
 
     thorq_payload_version_pack(message, THORQ_APP_SERVER, THORQ_VERSION_SERVER);
-    instance->sendMessage(message, THORQ_CHANNEL_MAIN, false, true);
+    instance->sendPayload(message, THORQ_CHANNEL_MAIN, false, true);
 
     thorq_payload_heartbeat_pack(message, 500); // TODO: get from config
-    instance->sendMessage(message, THORQ_CHANNEL_MAIN, false, true);
+    instance->sendPayload(message, THORQ_CHANNEL_MAIN, false, true);
 
     printf("[%s] Connected", enet_peer_address_str(event.peer).c_str());
 }

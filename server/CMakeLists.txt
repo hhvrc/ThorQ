@@ -24,7 +24,6 @@ set(${project}_SOURCES
 
     ${CMAKE_CURRENT_SOURCE_DIR}/relationship.cpp
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/value.cpp
@@ -48,7 +47,6 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/session.h
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/eventhandlers.h
     ${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/singletons.h
