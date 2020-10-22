@@ -51,7 +51,7 @@ void ThorQ::Server::DeInitialize()
     }
 }
 
-ThorQ::Server::Server(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount, bool noDelay)
+ThorQ::Server::Server()
     : m_host(nullptr)
     , m_thread(nullptr)
     , m_heartbeatInterval(500)
@@ -66,28 +66,11 @@ ThorQ::Server::Server(std::uint16_t port, std::size_t maxPeers, std::uint8_t cha
     , m_broadcastQueue()
     , m_broadcastToken(m_broadcastQueue)
 {
-    try
-    {
-        ENetAddress address;
-        address.host = ENET_HOST_ANY;
-        address.port = port;
-
-        m_host = enet_host_create(&address, maxPeers, channelCount, 0, 0); // two channels: communication(tcp), and commands(udp)
-
-        if (m_host != nullptr)
-        {
-            enet_socket_set_option(m_host->socket, ENET_SOCKOPT_NODELAY, noDelay);
-
-            m_host->maximumPacketSize = 65536; // 64kB (enough to hold a 80x80 rgba image, and enough to hold a compiled arduino program)
-        }
-    }
-    catch (...)
-    {
-        m_host = nullptr;
-    }
 }
 ThorQ::Server::~Server()
 {
+    if (m_host == nullptr) return;
+
     try
     {
         // Disconnect all clients
@@ -144,12 +127,40 @@ ThorQ::Server::~Server()
     }
 }
 
-bool ThorQ::Server::ready()
+ThorQ::Server::ServerStatus ThorQ::Server::status() const
 {
-    return m_host != nullptr;
+    return m_status;
 }
 
-uint32_t ThorQ::Server::HeartbeatInterval()
+bool ThorQ::Server::start(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount, bool noDelay)
+{
+    try
+    {
+        ENetAddress address;
+        address.host = ENET_HOST_ANY;
+        address.port = port;
+
+        m_host = enet_host_create(&address, maxPeers, channelCount, 0, 0); // two channels: communication(tcp), and commands(udp)
+
+        if (m_host != nullptr)
+        {
+            enet_socket_set_option(m_host->socket, ENET_SOCKOPT_NODELAY, noDelay);
+
+            m_host->maximumPacketSize = 65536; // 64kB (enough to hold a 80x80 rgba image, and enough to hold a compiled arduino program)
+        }
+    }
+    catch (...)
+    {
+        m_host = nullptr;
+    }
+}
+
+bool ThorQ::Server::stop()
+{
+
+}
+
+uint32_t ThorQ::Server::HeartbeatInterval() const
 {
     return m_heartbeatInterval;
 }
@@ -161,19 +172,19 @@ void ThorQ::Server::SetHeartbeatInterval(std::uint32_t msInterval)
     }
 }
 
-std::uint64_t ThorQ::Server::totalDataSent()
+std::uint64_t ThorQ::Server::totalDataSent() const
 {
     return m_totalSentData;
 }
-std::uint64_t ThorQ::Server::totalPacketsSent()
+std::uint64_t ThorQ::Server::totalPacketsSent() const
 {
     return m_totalSentPackets;
 }
-std::uint64_t ThorQ::Server::totalDataReceived()
+std::uint64_t ThorQ::Server::totalDataReceived() const
 {
     return m_totalReceivedData;
 }
-std::uint64_t ThorQ::Server::totalPacketsReceived()
+std::uint64_t ThorQ::Server::totalPacketsReceived() const
 {
     return m_totalReceivedPackets;
 }
@@ -191,11 +202,11 @@ void ThorQ::Server::broadcastAnnouncement(const std::vector<std::uint8_t>& paylo
 
 bool ThorQ::Server::tryGetMessage(ThorQ::Server::QueuedMessage &message)
 {
-    return m_rxQueue.try_dequeue(message);
+    return m_rxQueue.try_dequeue(m_rxToken, message);
 }
 bool ThorQ::Server::tryQueueMessage(const QueuedMessage& message)
 {
-    return m_txQueue.enqueue(message);
+    return m_txQueue.enqueue(m_txToken, message);
 }
 
 void ThorQ::Server::run()
@@ -203,9 +214,9 @@ void ThorQ::Server::run()
     ENetEvent event;
     std::uint16_t iterations = 0;
 
-    setStatus(ServerStatus::Started);
+    m_status = ServerStatus::Running;
 
-    while (m_shouldRun)
+    while (m_status == ServerStatus::Running)
     {
         while (enet_host_service(m_host, &event, 0) > 0)
         {
@@ -226,18 +237,6 @@ void ThorQ::Server::run()
                 break;
             }
 
-            ENetPacket* queuedBroadcast;
-            if (m_queuedBroadcasts.try_dequeue(queuedBroadcast))
-            {
-                enet_host_broadcast(m_host, THORQ_CHANNEL_AUTHORITY, queuedBroadcast);
-            }
-
-            QueuedMessage queuedMessage;
-            if (m_queuedMessages.try_dequeue(queuedMessage))
-            {
-                enet_peer_send(queuedMessage.peer, queuedMessage.channel, queuedMessage.packet);
-            }
-
             if (++iterations > 100)
             {
                 m_totalSentData += m_host->totalSentData;
@@ -253,9 +252,21 @@ void ThorQ::Server::run()
                 m_host->totalReceivedPackets = 0;
             }
         }
+
+        ENetPacket* queuedBroadcast;
+        while (m_broadcastQueue.try_dequeue(queuedBroadcast))
+        {
+            enet_host_broadcast(m_host, THORQ_CHANNEL_AUTHORITY, queuedBroadcast);
+        }
+
+        QueuedMessage queuedMessage;
+        while (m_txQueue.try_dequeue(queuedMessage))
+        {
+            enet_peer_send(queuedMessage.peer, queuedMessage.channel, queuedMessage.packet);
+        }
     }
 
-    setStatus(ServerStatus::Stopped);
+    m_status = ServerStatus::Stopped;
 }
 
 void ThorQ::Server::handleEventConnection(const ENetEvent& event)

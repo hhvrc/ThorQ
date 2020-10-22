@@ -18,18 +18,30 @@ public:
     static bool Initialize();
     static void DeInitialize();
 
-    Server(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount, bool noDelay);
+    Server();
     ~Server();
 
-    bool ready();
+    enum class ServerStatus
+    {
+        Error,
+        Stopped,
+        Starting,
+        Running,
+        Stopping
+    };
 
-    std::uint32_t HeartbeatInterval();
+    ServerStatus status() const;
+
+    bool start(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount, bool noDelay);
+    bool stop();
+
+    std::uint32_t HeartbeatInterval() const;
     void SetHeartbeatInterval(std::uint32_t msInterval);
 
-    std::uint64_t totalDataSent();
-    std::uint64_t totalPacketsSent();
-    std::uint64_t totalDataReceived();
-    std::uint64_t totalPacketsReceived();
+    std::uint64_t totalDataSent() const;
+    std::uint64_t totalPacketsSent() const;
+    std::uint64_t totalDataReceived() const;
+    std::uint64_t totalPacketsReceived() const;
 
     void broadcastAnnouncement(const std::vector<std::uint8_t>& packet, bool reliable, bool unsequenced);
 protected:
@@ -57,12 +69,14 @@ private:
 
     std::thread* m_thread;
 
-    std::atomic<std::uint32_t> m_heartbeatInterval;
+    std::atomic<ServerStatus> m_status;
 
-    std::atomic<std::uint64_t> m_totalSentData;
-    std::atomic<std::uint64_t> m_totalSentPackets;
-    std::atomic<std::uint64_t> m_totalReceivedData;
-    std::atomic<std::uint64_t> m_totalReceivedPackets;
+    std::atomic_uint32_t m_heartbeatInterval;
+
+    std::atomic_uint64_t m_totalSentData;
+    std::atomic_uint64_t m_totalSentPackets;
+    std::atomic_uint64_t m_totalReceivedData;
+    std::atomic_uint64_t m_totalReceivedPackets;
 
     moodycamel::ConcurrentQueue<QueuedMessage> m_txQueue;
     moodycamel::ProducerToken m_txToken;

@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <enet.h>
+#include <fmt/core.h>
 #include <enums.h>
 #include <crypto.h>
 #include <constants.h>
@@ -205,7 +206,7 @@ void ThorQ::Instance::sendPayload(const std::vector<std::uint8_t>& payload, THOR
         {
             if (!ThorQ::packetEncode(packet, payload, m_crypto))
             {
-                fprintf(stderr, "Failed to encode packet!");
+                fmt::print(stderr, "Failed to encode packet!");
                 return;
             }
         }
@@ -213,7 +214,7 @@ void ThorQ::Instance::sendPayload(const std::vector<std::uint8_t>& payload, THOR
         {
             if (!ThorQ::packetEncode(packet, payload))
             {
-                fprintf(stderr, "Failed to encode packet!");
+                fmt::print(stderr, "Failed to encode packet!");
                 return;
             }
         }
@@ -222,7 +223,7 @@ void ThorQ::Instance::sendPayload(const std::vector<std::uint8_t>& payload, THOR
     }
     else
     {
-        fprintf(stderr, "Failed to allocate packet!");
+        fmt::print(stderr, "Failed to allocate packet!");
     }
 }
 
@@ -237,7 +238,7 @@ void ThorQ::Instance::sendRaw(const std::vector<std::uint8_t>& payload, THORQ_CH
     }
     else
     {
-        fprintf(stderr, "Failed to allocate packet!");
+        fmt::print(stderr, "Failed to allocate packet!");
     }
 }
 

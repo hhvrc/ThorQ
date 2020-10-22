@@ -197,37 +197,37 @@ bool ThorQ::Account::setUsername(const std::string& username)
 
     if (!query.isValid())
     {
-        printf("Failed to create query: %s\n", connection.lastError());
+        fmt::print("Failed to create query: {}\n", connection.lastError());
         return false;
     }
 
     if (!query.bind(1, username))
     {
-        printf("Failed to bind username: %s\n", connection.lastError());
+        fmt::print("Failed to bind username: {}\n", connection.lastError());
         return false;
     }
 
     if (!query.bind(2, m_dbId))
     {
-        printf("Failed to bind dbID: %s\n", connection.lastError());
+        fmt::print("Failed to bind dbID: {}\n", connection.lastError());
         return false;
     }
 
     if (!query.step())
     {
-        printf("Failed to execute username query: %s\n", connection.lastError());
+        fmt::print("Failed to execute username query: {}\n", connection.lastError());
         return false;
     }
 
     if (query.columnCount() != 1)
     {
-        printf("Query didnt return any values\?\?\?\?\n");
+        fmt::print("Query didnt return any values\?\?\?\?\n");
         return false;
     }
 
     if (query.column(1).getInt() == 0)
     {
-        printf("account invalid/already used\n");
+        fmt::print("account invalid/already used\n");
         return false;
     }
 
@@ -263,37 +263,37 @@ bool ThorQ::Account::setPasswordHash(const std::string& passwordHash)
 
     if (!query.isValid())
     {
-        printf("Failed to create query: %s\n", connection.lastError());
+        fmt::print("Failed to create query: {}\n", connection.lastError());
         return false;
     }
 
     if (!query.bind(1, passwordHash))
     {
-        printf("Failed to bind username: %s\n", connection.lastError());
+        fmt::print("Failed to bind username: {}\n", connection.lastError());
         return false;
     }
 
     if (!query.bind(2, m_dbId))
     {
-        printf("Failed to bind dbID: %s\n", connection.lastError());
+        fmt::print("Failed to bind dbID: {}\n", connection.lastError());
         return false;
     }
 
     if (!query.step())
     {
-        printf("Failed to execute username query: %s\n", connection.lastError());
+        fmt::print("Failed to execute username query: {}\n", connection.lastError());
         return false;
     }
 
     if (query.columnCount() != 1)
     {
-        printf("Query didnt return any values\?\?\?\?\n");
+        fmt::print("Query didnt return any values\?\?\?\?\n");
         return false;
     }
 
     if (query.column(1).getInt() == 0)
     {
-        printf("account invalid/already used\n");
+        fmt::print("account invalid/already used\n");
         return false;
     }
 

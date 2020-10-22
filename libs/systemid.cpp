@@ -108,7 +108,7 @@ std::string ThorQ::SystemID::systemid_to_string(const std::vector<std::uint8_t>&
         std::string name(nameLen, ' ');
         std::transform(bin_id.begin(), bin_id.begin() + nameLen, name.begin(), ::toupper);
 
-        str_id = fmt::format("{}-{:04X}-{:04X}-{:04X}-{:04X}-{:04X}", name, hid[0], hid[1], hid[2], hid[3], hid[4]);
+        str_id = fmt::format("{}-{:04X}-{:04X}-{:04X}-{:04X}-{:04X}", name, (*hid)[0], (*hid)[1], (*hid)[2], (*hid)[3], (*hid)[4]);
 	}
 	else
 	{

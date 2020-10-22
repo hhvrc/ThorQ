@@ -1,10 +1,8 @@
 #include "utils.h"
 
-#include <enet.h>
-#include <thorq_message.h>
+#include <string>
 
-#include "singletons.h"
-#include "instance.h"
+#include <enet.h>
 
 std::string enet_peer_address_str(const ENetPeer* addr)
 {

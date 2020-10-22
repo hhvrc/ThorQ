@@ -14,8 +14,6 @@
 #include <fmt/core.h>
 #include <thorq_message.h>
 
-#define SINGLETON_BASE
-#include "singletons.h"
 #include "cxxopts.hpp"
 #include "sqlite/connection.h"
 #include "server.h"
@@ -54,18 +52,11 @@ void exit_handler(int s)
     runServer.store(false);
 }
 
-void exitCleanup()
-{
-    // g_server->cleanup();
-
-    delete g_server;
-}
-
 int main(int argc, char** argv)
 {
-    fmt::print("ThorQ Server {}\n", THORQ_VERSION_SERVER.toString().c_str());
-    fmt::print("Using link {}\n", THORQ_VERSION_LINK.toString().c_str());
-    fmt::print("Expecting client {}\n", THORQ_VERSION_CLIENT.toString().c_str());
+    fmt::print("ThorQ Server {}\n", THORQ_VERSION_SERVER.toString());
+    fmt::print("Using link {}\n", THORQ_VERSION_LINK.toString());
+    fmt::print("Expecting client {}\n", THORQ_VERSION_CLIENT.toString());
 
     cxxopts::Options options(THORQ_APPLICATION_NAME, "Server for ThorQ - A application for long range collar control");
     options.add_options()
@@ -95,13 +86,15 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
     }
 
-    g_server = new ThorQ::Server(port, 1024, THORQ_CHANNEL_COUNT, true);
+    ThorQ::Server server(port, 1024, THORQ_CHANNEL_COUNT, true);
 
-    if (!g_server->ready())
+    if (!server.start())
     {
             fmt::print("Failed to start Server!\n");
             return EXIT_FAILURE;
     }
 
     while (runServer) { std::this_thread::sleep_for(std::chrono::milliseconds(500)); }
+
+    server.stop();
 }
