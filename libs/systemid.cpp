@@ -9,6 +9,9 @@
 #include <arpa/inet.h>
 #endif
 
+#include <fmt/core.h>
+#include <fmt/format.h>
+
 typedef std::uint16_t SysHID[5];
 
 constexpr SysHID mask = { 0x4e25, 0xf4a1, 0x5437, 0xab41, 0x0000 };
@@ -97,18 +100,15 @@ std::string ThorQ::SystemID::systemid_to_string(const std::vector<std::uint8_t>&
     std::string str_id;
 
     if (systemid_validate(bin_id))
-	{
-        SysHID hid;
+    {
+        std::size_t nameLen = bin_id.size() - sizeof(SysHID);
 
-        int nameLen = bin_id.size() - sizeof(SysHID);
+        const SysHID* hid = reinterpret_cast<const SysHID*>(bin_id.data() + nameLen);
 
-        memcpy(hid, bin_id.data() + nameLen, sizeof(SysHID));
+        std::string name(nameLen, ' ');
+        std::transform(bin_id.begin(), bin_id.begin() + nameLen, name.begin(), ::toupper);
 
-        str_id.resize(nameLen + 25);
-
-        std::transform(bin_id.begin(), bin_id.begin() + nameLen, str_id.begin(), ::toupper);
-
-        snprintf(str_id.data() + nameLen, 26, "-%04X-%04X-%04X-%04X-%04X", hid[0], hid[1], hid[2], hid[3], hid[4]);
+        str_id = fmt::format("{}-{:04X}-{:04X}-{:04X}-{:04X}-{:04X}", name, hid[0], hid[1], hid[2], hid[3], hid[4]);
 	}
 	else
 	{

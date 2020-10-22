@@ -14,6 +14,7 @@
 #pragma GCC diagnostic pop
 #endif
 
+#include <fmt/core.h>
 #include <thorq_message.h>
 #include <thorq_payload_version.h>
 #include <thorq_payload_heartbeat.h>
@@ -102,17 +103,21 @@ ThorQ::Server::~Server()
     }
     catch (const std::exception& ex)
     {
-        fprintf(stderr, "Exception occured disconnecting clients: %s\n", ex.what());
+        fmt::print(stderr, "Exception occured disconnecting clients: {}\n", ex.what());
     }
     catch (int i)
     {
         char buf[64]{0};
+#ifdef _WIN32
         strerror_s(buf, 63, i);
-        fprintf(stderr, "Exception occured disconnecting clients: %s\n", buf);
+#else
+        strerror_r(i, buf, 63);
+#endif
+        fmt::print(stderr, "Exception occured disconnecting clients: {}\n", buf);
     }
     catch (...)
     {
-        fprintf(stderr, "Unknown Exception occured disconnecting clients\n");
+        fmt::print(stderr, "Unknown Exception occured disconnecting clients\n");
     }
 
     try
@@ -121,17 +126,21 @@ ThorQ::Server::~Server()
     }
     catch (const std::exception& ex)
     {
-        fprintf(stderr, "Exception occured destroying host: %s\n", ex.what());
+        fmt::print(stderr, "Exception occured destroying host: {}\n", ex.what());
     }
     catch (int i)
     {
         char buf[64]{0};
+#ifdef _WIN32
         strerror_s(buf, 63, i);
-        fprintf(stderr, "Exception occured destroying host: %s\n", buf);
+#else
+        strerror_r(i, buf, 63);
+#endif
+        fmt::print(stderr, "Exception occured destroying host: {}\n", buf);
     }
     catch (...)
     {
-        fprintf(stderr, "Unknown Exception occured destroying host\n");
+        fmt::print(stderr, "Unknown Exception occured destroying host\n");
     }
 }
 
@@ -269,7 +278,7 @@ void ThorQ::Server::handleEventConnection(const ENetEvent& event)
     thorq_payload_heartbeat_pack(message, 500); // TODO: get from config
     instance->sendPayload(message, THORQ_CHANNEL_MAIN, false, true);
 
-    printf("[%s] Connected", enet_peer_address_str(event.peer).c_str());
+    fmt::print("[{}] Connected", enet_peer_address_str(event.peer));
 }
 void ThorQ::Server::handleEventMessage(const ENetEvent &event)
 {
@@ -282,7 +291,7 @@ void ThorQ::Server::handleEventDisconnect(const ENetEvent& event)
 
     auto instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
 
-    printf("[%s] disconnected\n", enet_peer_address_str(event.peer).c_str());
+    fmt::print("[{}] disconnected\n", enet_peer_address_str(event.peer));
 
     event.peer->data = nullptr;
 
@@ -296,5 +305,5 @@ void ThorQ::Server::handleEventTimeout(const ENetEvent& event)
 
     ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
 
-    printf("[%s] timed out\n", enet_peer_address_str(event.peer).c_str());
+    fmt::print("[{}] timed out\n", enet_peer_address_str(event.peer));
 }

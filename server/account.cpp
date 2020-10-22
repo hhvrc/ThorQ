@@ -3,6 +3,7 @@
 #include <set>
 #include <thread>
 #include <future>
+#include <fmt/core.h>
 
 #include <hashing.h>
 #include <thorq_payload_ack.h>
@@ -50,7 +51,7 @@ ThorQ::Account* ThorQ::Account::GetAccount(const std::string& username)
 
     if (!connection.isOpen())
     {
-        fprintf(stderr, "SQL error: %s\n", connection.lastError());
+        fmt::print(stderr, "SQL error: {}\n", connection.lastError());
         return nullptr;
     }
 
@@ -58,19 +59,19 @@ ThorQ::Account* ThorQ::Account::GetAccount(const std::string& username)
 
     if (!query.bind(1, username))
     {
-        fprintf(stderr, "SQL error: %s\n", connection.lastError());
+        fmt::print(stderr, "SQL error: {}\n", connection.lastError());
         return nullptr;
     }
 
     if (!query.step())
     {
-        fprintf(stderr, "SQL error: %s\n", connection.lastError());
+        fmt::print(stderr, "SQL error: {}\n", connection.lastError());
         return nullptr;
     }
 
     if (query.columnCount() != 3)
     {
-        fprintf(stderr, "SQL error: %s\n", connection.lastError());
+        fmt::print(stderr, "SQL error: {}\n", connection.lastError());
         return nullptr;
     }
 
@@ -118,7 +119,7 @@ ThorQ::Account* ThorQ::Account::NewAccount(const std::string& username, const st
 
     if (!transaction.isOpen())
 	{
-        printf("Failed to start transaction: %s\n", connection.lastError());
+        fmt::print(stderr, "SQL Failed to start transaction: {}\n", connection.lastError());
 		return nullptr;
     }
 
@@ -126,37 +127,37 @@ ThorQ::Account* ThorQ::Account::NewAccount(const std::string& username, const st
 
     if (!query.bind(1, username))
     {
-        printf("Failed to bind username: %s\n", connection.lastError());
+        fmt::print(stderr, "SQL Failed to bind username: {}\n", connection.lastError());
         return nullptr;
     }
 
     if (!query.bind(2, passwordHash))
     {
-        printf("Failed to bind passwordHash: %s\n", connection.lastError());
+        fmt::print(stderr, "SQL Failed to bind passwordHash: {}\n", connection.lastError());
         return nullptr;
     }
 
     if (!query.step())
     {
-        printf("Failed to execute account query: %s\n", connection.lastError());
+        fmt::print(stderr, "SQL Failed to execute account query: {}\n", connection.lastError());
         return nullptr;
     }
 
     if (query.columnCount() != 1)
     {
-        printf("Query didnt return any values\?\?\?\?\n");
+        fmt::print(stderr, "SQL Query didnt return any values\?\?\?\? lastError: {}\n", connection.lastError());
         return nullptr;
     }
 
     if (query.column(1).getInt() == 0)
     {
-        printf("account invalid/already used\n");
+        fmt::print(stderr, "account [{}] invalid/already used\n", username, connection.lastError());
         return nullptr;
     }
 
     if (!transaction.commit())
 	{
-        printf("Failed to commit account!\n");
+        fmt::print(stderr, "SQL Failed to commit account: {}\n", connection.lastError());
 		return nullptr;
 	}
 

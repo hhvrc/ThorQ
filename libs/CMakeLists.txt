@@ -9,6 +9,8 @@ project(
 
 message("Configuring ${project}...")
 
+add_subdirectory(fmt)
+
 # ------ Get OpenSSL ------
 find_package(OpenSSL REQUIRED)
 set(${project}_LIBS
@@ -105,11 +107,13 @@ add_library(${project} STATIC
 # Link libraries
 target_link_libraries(${project}
     ${${project}_LIBS}
+    fmt
 )
 
 set(GLOB_INCLUDE_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/fmt/include
     ${CMAKE_CURRENT_SOURCE_DIR}/enet/include
     ${CMAKE_CURRENT_SOURCE_DIR}/stduuid/include
 

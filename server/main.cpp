@@ -11,19 +11,18 @@
 #include <unistd.h>
 #endif
 
-#include "server.h"
-#include "messagedispatcher.h"
-
-#include "cxxopts.hpp"
+#include <fmt/core.h>
+#include <thorq_message.h>
 
 #define SINGLETON_BASE
 #include "singletons.h"
+#include "cxxopts.hpp"
+#include "sqlite/connection.h"
+#include "server.h"
 #include "account.h"
 #include "instance.h"
-#include "sqlite/connection.h"
+#include "messagedispatcher.h"
 #include "statistics.h"
-#include "eventhandlers.h"
-#include <thorq_message.h>
 
 #define PARSE_PORT false
 #define SERVER_MAX_CONNECTIONS 1024
@@ -50,7 +49,7 @@ void exit_handler(int s)
     strerror_r(s, buf, sizeof(buf));
 #endif
 
-    printf("Caught signal %s\n", buf);
+    fmt::print("Caught signal {}\n", buf);
 
     runServer.store(false);
 }
@@ -64,9 +63,9 @@ void exitCleanup()
 
 int main(int argc, char** argv)
 {
-    printf("ThorQ Server %s\n", THORQ_VERSION_SERVER.toString().c_str());
-    printf("Using link %s\n", THORQ_VERSION_LINK.toString().c_str());
-    printf("Expecting client %s\n", THORQ_VERSION_CLIENT.toString().c_str());
+    fmt::print("ThorQ Server {}\n", THORQ_VERSION_SERVER.toString().c_str());
+    fmt::print("Using link {}\n", THORQ_VERSION_LINK.toString().c_str());
+    fmt::print("Expecting client {}\n", THORQ_VERSION_CLIENT.toString().c_str());
 
     cxxopts::Options options(THORQ_APPLICATION_NAME, "Server for ThorQ - A application for long range collar control");
     options.add_options()
@@ -92,7 +91,7 @@ int main(int argc, char** argv)
 
     if (!ThorQ::Server::Initialize())
     {
-            printf("Failed to initialize Server!\n");
+            fmt::print("Failed to initialize Server!\n");
             return EXIT_FAILURE;
     }
 
@@ -100,7 +99,7 @@ int main(int argc, char** argv)
 
     if (!g_server->ready())
     {
-            printf("Failed to start Server!\n");
+            fmt::print("Failed to start Server!\n");
             return EXIT_FAILURE;
     }
 

@@ -1,5 +1,6 @@
 #include "messagehandlers.h"
 
+#include <fmt/core.h>
 #include <utils.h>
 #include <enums.h>
 #include <crypto.h>
@@ -66,18 +67,18 @@ void handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint
 		currentVersion = THORQ_VERSION_LINK;
 		break;
 	default:
-        printf("Client expects invalid version %i[%s]\n", app, version.toString().c_str());
+        fmt::print("Client expects invalid version %i[%s]\n", app, version.toString());
 		return;
 	}
 
-    printf("Client expects %s[%s], current is %s[%s]\n", name, version.toString().c_str(), name, currentVersion.toString().c_str());
+    fmt::print("Client expects %s[%s], current is %s[%s]\n", name, version.toString(), name, currentVersion.toString());
 
     instance->disconnectPeer(THORQ_DISCONNECT_REASON_VERSION_INCOMPATIBLE);
 }
 
 void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
-    printf("[MSG] Crypto!");
+    fmt::print("[MSG] Crypto!");
     std::vector<std::uint8_t> response;
 
     THORQ_PAYLOAD_CRYPTO cmd;
@@ -86,45 +87,45 @@ void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8
     switch (cmd) {
     case THORQ_PAYLOAD_CRYPTO_REQUEST:
 	{
-        printf("[MSG] Crypto request!");
+        fmt::print("[MSG] Crypto request!");
 		instance->cryptoInit();
         break;
     }
     case THORQ_PAYLOAD_CRYPTO_ESTABLISH:
 	{
-        printf("[MSG] Crypto establish!");
+        fmt::print("[MSG] Crypto establish!");
         std::vector<std::uint8_t> data;
         thorq_payload_crypto_establish_unpack(message, data);
 
 		if (!instance->cryptoEstablish(data))
         {
-            fprintf(stderr, "Failed to create shared secret with %s\n", enet_peer_address_str(instance->peer()).c_str());
+            fmt::print(stderr, "Failed to create shared secret with %s\n", enet_peer_address_str(instance->peer()));
             instance->disconnectPeer(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
         }
         break;
     }
     case THORQ_PAYLOAD_CRYPTO_VERIFY:
 	{
-        printf("[MSG] Crypto verify!");
+        fmt::print("[MSG] Crypto verify!");
         std::vector<std::uint8_t> data;
         thorq_payload_crypto_verify_unpack(message, data);
 
         if (instance->cryptoVerify(data))
 		{
-            printf("[MSG] Crypto verified!");
+            fmt::print("[MSG] Crypto verified!");
             thorq_payload_systemid_cmd_pack(response, THORQ_PAYLOAD_SYSTEMID_REQUEST);
             instance->sendPayload(response, THORQ_CHANNEL_MAIN, true, true);
             instance->setAuthState(THORQ_STATE_HWID_REQUESTING);
         }
         else
         {
-            fprintf(stderr, "Failed to verify with %s\n", enet_peer_address_str(instance->peer()).c_str());
+            fmt::print(stderr, "Failed to verify with %s\n", enet_peer_address_str(instance->peer()));
             instance->disconnectPeer(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
         }
         break;
     }
 	default:
-        printf("[MSG] Crypto \?\?\?!");
+        fmt::print("[MSG] Crypto \?\?\?!");
 		return;
     }
 }
@@ -156,7 +157,7 @@ void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uin
 
     std::string systemID = ThorQ::SystemID::systemid_to_string(data);
 
-    printf("SystemID: %s\n", systemID.c_str());
+    fmt::print("SystemID: %s\n", systemID);
 
     ThorQ::SQLite::Connection connection("database.db", ThorQ::SQLite::Connection::READWRITE);
 
@@ -169,7 +170,7 @@ void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uin
 
     ThorQ::SQLite::Query query = connection.query("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?1);"
                                                   "SELECT banned_at FROM system_ids WHERE system_id = ?1;");
-    query.bind(1, systemID.c_str());
+    query.bind(1, systemID);
 
     if (!query.step() || query.columnCount() == 0)
     {
@@ -452,5 +453,5 @@ void handleMessageAck(ThorQ::Instance* instance, const std::vector<std::uint8_t>
 {
     (void)instance;
     (void)message;
-    printf("Unexpected ack message...\n");
+    fmt::print("Unexpected ack message...\n");
 }
