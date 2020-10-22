@@ -1,8 +1,10 @@
 #ifndef SESSION_H
 #define SESSION_H
 
+#include <atomic>
 #include <cstdint>
 #include <unordered_set>
+#include <tbb/concurrent_unordered_map.h>
 
 #include "typedefs_server.h"
 
@@ -20,10 +22,10 @@ public:
 private:
     struct Participant
     {
-        Account* account = nullptr;
-        std::uint8_t permissions = 0;
+        std::shared_ptr<ThorQ::Account> account = nullptr;
+        std::atomic_uint8_t permissions = 0;
     };
-    std::unordered_set<Participant> m_participants;
+    tbb::concurrent_unordered_map<std::string, Participant> m_participants;
 };
 }
 

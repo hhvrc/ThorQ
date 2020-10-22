@@ -13,7 +13,6 @@
 #include <thorq_payload_session.h>
 
 #include "memorymanager.h"
-#include "singletons.h"
 #include "utils.h"
 #include "account.h"
 

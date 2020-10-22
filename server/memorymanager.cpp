@@ -1,3 +1,5 @@
+#include <jemalloc/jemalloc.h>
+
 #include "memorymanager.h"
 
 #include <array>

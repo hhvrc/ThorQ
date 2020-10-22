@@ -1,11 +1,14 @@
 #include "account.h"
 
 #include <set>
+#include <memory>
+#include <atomic>
 #include <thread>
 #include <future>
-#include <fmt/core.h>
+#include <tbb/concurrent_unordered_map.h>
 
 #include <hashing.h>
+#include <fmt/core.h>
 #include <thorq_payload_ack.h>
 #include <thorq_payload_session.h>
 #include <thorq_payload_relationship.h>
@@ -18,24 +21,20 @@
 #include "utils.h"
 #include "instance.h"
 
-std::shared_mutex g_accounts_lock;
-std::set<ThorQ::Account*> g_accounts;
+tbb::concurrent_unordered_map<std::string, std::shared_ptr<ThorQ::Account>> g_accounts;
 
 ThorQ::Account::Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const std::string& username, const std::string& passwordHash)
     : m_dbId(dbId)
     , m_username(username)
     , m_passwordHash(passwordHash)
     , m_authority(authority)
-    , l_sessions()
     , m_sessions()
-    , l_instances()
     , m_instances()
-    , l_relationships()
     , m_relationships()
 {
 }
 
-ThorQ::Account* ThorQ::Account::GetAccount(const std::string& username)
+std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& username)
 {
     {
         std::shared_lock l(g_accounts_lock);
@@ -329,7 +328,7 @@ std::unordered_set<ThorQ::Relationship*> ThorQ::Account::relationships() const
     return m_relationships;
 }
 
-void ThorQ::Account::requestSession(ThorQ::Instance* source, ThorQ::Account* target)
+void ThorQ::Account::requestSession(std::shared_ptr<ThorQ::Instance> source, std::shared_ptr<ThorQ::Account> target)
 {
     /*
     std::vector<std::uint8_t> response;

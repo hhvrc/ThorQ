@@ -5,6 +5,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <unordered_set>
+#include <tbb/concurrent_unordered_set.h>
 
 #include <enums.h>
 #include "typedefs_server.h"
@@ -15,8 +16,8 @@ class Account
     friend Instance;
     Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const std::string& username, const std::string& passwordHash);
 public:
-    static Account* GetAccount(const std::string& username);
-    static Account* NewAccount(const std::string& username, const std::string& passwordHash);
+    static std::shared_ptr<ThorQ::Account> GetAccount(const std::string& username);
+    static std::shared_ptr<ThorQ::Account> NewAccount(const std::string& username, const std::string& passwordHash);
 public:
     std::int64_t databaseId() const;
 
@@ -29,11 +30,7 @@ public:
     Account* master() const;
     bool isExclusive() const;
 
-    std::unordered_set<Session*> sessions() const;
-    std::unordered_set<Instance*> instances() const;
-    std::unordered_set<Relationship*> relationships() const;
-
-    static void requestSession(Instance* source, Account* target);
+    static void requestSession(std::shared_ptr<ThorQ::Instance>> source, std::shared_ptr<ThorQ::Account>> target);
     bool requestAcceptFrom(Account* sender);
     bool requestDenyFrom(Account* sender);
 
@@ -53,7 +50,7 @@ public:
     void sendMessage(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
     void sendMessageToFriends(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
 private:
-    std::int64_t m_dbId;
+    const std::int64_t m_dbId;
 
     std::shared_mutex l_basics;
     std::string m_username;
@@ -63,22 +60,15 @@ private:
 
     THORQ_ACCOUNT_AUTHORITY m_authority;
 
-    std::shared_mutex l_master;
-    Account* m_master;    // This persons master
-    std::atomic<bool> m_exclusive; // This person is exclusive to their master
+    std::shared_ptr<ThorQ::Account>> m_master; // This persons master
+    std::atomic_bool m_exclusive;                          // This person is exclusive to their master
 
-    std::shared_mutex l_requests;
-    std::unordered_set<Instance*> m_requests_incoming;
-    std::unordered_set<Instance*> m_requests_outgoing;
+    tbb::concurrent_unordered_set<std::shared_ptr<ThorQ::Instance>> m_requests_incoming;
+    tbb::concurrent_unordered_set<std::shared_ptr<ThorQ::Instance>> m_requests_outgoing;
 
-    std::shared_mutex l_sessions;
-    std::unordered_set<Session*> m_sessions;
-
-    std::shared_mutex l_instances;
-    std::unordered_set<Instance*> m_instances;
-
-    std::shared_mutex l_relationships;
-    std::unordered_set<Relationship*> m_relationships;
+    tbb::concurrent_unordered_set<std::shared_ptr<ThorQ::Session>> m_sessions;
+    tbb::concurrent_unordered_set<std::shared_ptr<ThorQ::Instance>> m_instances;
+    tbb::concurrent_unordered_set<std::shared_ptr<ThorQ::Relationship>> m_relationships;
 };
 }
 

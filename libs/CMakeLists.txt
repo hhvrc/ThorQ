@@ -35,9 +35,9 @@ set(PYTHON_ARGS
     "--enable-modules=auto_rng,bcrypt"
     "--without-documentation"
 )
-message("Executing: ${PYTHON_ARGS}")
+message("Executing: python3 ${PYTHON_ARGS}")
 execute_process(
-    COMMAND "python" ${PYTHON_ARGS}
+    COMMAND "python3" ${PYTHON_ARGS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     RESULT_VARIABLE py_result
     OUTPUT_VARIABLE py_output
@@ -94,9 +94,14 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_ack.h
 )
 
+link_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/fbe/bin/${BUILD_OS}
+)
+
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/fbe/include
 )
 
 add_library(${project} STATIC
@@ -107,12 +112,15 @@ add_library(${project} STATIC
 # Link libraries
 target_link_libraries(${project}
     ${${project}_LIBS}
+    jemalloc
+    proto
     fmt
 )
 
 set(GLOB_INCLUDE_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/fbe/include
     ${CMAKE_CURRENT_SOURCE_DIR}/fmt/include
     ${CMAKE_CURRENT_SOURCE_DIR}/enet/include
     ${CMAKE_CURRENT_SOURCE_DIR}/stduuid/include

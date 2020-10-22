@@ -6,7 +6,7 @@
 
 #include "account.h"
 
-ThorQ::Relationship* ThorQ::Relationship::NewRelationship(ThorQ::Account* account1, ThorQ::Account* account2)
+ThorQ::Relationship* ThorQ::Relationship::NewRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target)
 {
     ThorQ::SQLite::Connection connection("database.db", ThorQ::SQLite::Connection::READWRITE);
 
@@ -46,7 +46,7 @@ ThorQ::Relationship *ThorQ::Relationship::GetRelationship(uuids::uuid publicId)
 {
 
 }
-ThorQ::Relationship* ThorQ::Relationship::GetRelationship(ThorQ::Account *account1, ThorQ::Account *account2)
+ThorQ::Relationship* ThorQ::Relationship::GetRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target)
 {
     auto optional = ThorQ::SQLite::Connection::Open("database.db", ThorQ::SQLite::Connection::READONLY);
 
@@ -58,7 +58,7 @@ ThorQ::Relationship* ThorQ::Relationship::GetRelationship(ThorQ::Account *accoun
     con.execute("INSERT OR IGNORE INTO relationships() VALUES (?1, ?2);");
 }
 
-ThorQ::Relationship::Relationship(std::uint64_t privateId, uuids::uuid publicId, ThorQ::Account* source, ThorQ::Account* target, THORQ_RELATIONSHIP_STATUS status, THORQ_RELATIONSHIP_AUTHORITY authority)
+ThorQ::Relationship::Relationship(std::uint64_t privateId, uuids::uuid publicId, std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target, THORQ_RELATIONSHIP_STATUS status, THORQ_RELATIONSHIP_AUTHORITY authority)
     : m_privId(privateId)
     , m_publicId(publicId)
     , m_source(source)
@@ -82,17 +82,17 @@ uuids::uuid ThorQ::Relationship::publicId() const
     return m_publicId;
 }
 
-ThorQ::Account *ThorQ::Relationship::source() const
+std::shared_ptr<ThorQ::Account> ThorQ::Relationship::source() const
 {
     return m_source;
 }
 
-ThorQ::Account *ThorQ::Relationship::target() const
+std::shared_ptr<ThorQ::Account> ThorQ::Relationship::target() const
 {
     return m_target;
 }
 
-void ThorQ::Relationship::setMirror(ThorQ::Relationship* mirror)
+void ThorQ::Relationship::setMirror(std::shared_ptr<ThorQ::Relationship> mirror)
 {
     m_mirror = mirror;
     if (m_mirror != nullptr)
@@ -101,7 +101,7 @@ void ThorQ::Relationship::setMirror(ThorQ::Relationship* mirror)
     }
 }
 
-ThorQ::Relationship *ThorQ::Relationship::mirror() const
+std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::mirror() const
 {
     return m_mirror;
 }
@@ -120,7 +120,7 @@ void ThorQ::Relationship::setStatus(THORQ_RELATIONSHIP_STATUS status)
 {
     if (m_status.exchange(status) != status)
     {
-        emit statusChanged(status);
+        //emit statusChanged(status);
     }
 }
 
@@ -128,7 +128,7 @@ void ThorQ::Relationship::setAuthority(THORQ_RELATIONSHIP_AUTHORITY authority)
 {
     if (m_authority.exchange(authority) != authority)
     {
-        emit authorityChanged(authority);
+        //emit authorityChanged(authority);
     }
 }
 

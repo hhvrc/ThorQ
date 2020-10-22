@@ -2,7 +2,7 @@
 #define MESSAGEDISPATCHER_H
 
 #include <thread>
-#include <array>
+#include <vector>
 
 #include "constants.h"
 #include "typedefs_global.h"
@@ -18,7 +18,7 @@ public:
 private:
     Server* m_server;
     std::thread* m_thread;
-    std::array<std::uint8_t, THORQ_PAYLOAD_LEN_MAX> m_buffer;
+    std::vector<std::uint8_t> m_buffer;
 };
 }
 

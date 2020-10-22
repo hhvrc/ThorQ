@@ -1,6 +1,7 @@
 #include "messagedispatcher.h"
 
 #include <enet.h>
+#include <fmt/core.h>
 
 #include <thorq_message.h>
 #include <thorq_payload_heartbeat.h>
@@ -22,8 +23,8 @@
 #include "messagehandlers.h"
 
 ThorQ::MessageDispatcher::MessageDispatcher(ThorQ::Server *serverInstance)
+    : m_buffer(THORQ_PAYLOAD_LEN_MAX)
 {
-
 }
 
 void ThorQ::MessageDispatcher::DispatchEvent(const ENetEvent& event)
@@ -99,7 +100,7 @@ void ThorQ::MessageDispatcher::DispatchEvent(const ENetEvent& event)
         break;
     case THORQ_PAYLOAD_ID_ANNOUNCEMENT:
     case THORQ_PAYLOAD_ID_ACK:
-        qDebug() << "Waitttttt... im not supposed to get these?" << (int)message[0];
+        fmt::print("Unexpected messageID from client: {}\n", (int)payload[0]);
         fflush(stdout);
         break;
     default:
