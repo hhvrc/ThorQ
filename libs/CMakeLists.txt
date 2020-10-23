@@ -37,7 +37,7 @@ set(PYTHON_ARGS
 )
 message("Executing: python3 ${PYTHON_ARGS}")
 execute_process(
-    COMMAND "python3" ${PYTHON_ARGS}
+    COMMAND "python" ${PYTHON_ARGS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     RESULT_VARIABLE py_result
     OUTPUT_VARIABLE py_output
