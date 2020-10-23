@@ -20,7 +20,7 @@ private:
 
 	bool m_accepted = false;
 
-	Account* m_friend;
+    std::shared_ptr<ThorQ::Account> m_friend;
 	THORQ_SESSION_AUTHORITY m_sessionAuthority = THORQ_SESSION_AUTHORITY_PROMPT; ///< How
 };
 }

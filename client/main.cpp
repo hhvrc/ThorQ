@@ -102,7 +102,6 @@ int main(int argc, char** argv)
 	QObject::connect(cli, &Client::Warning, &warningBox, &QMessageBox::setText);
 	QObject::connect(cli, &Client::Warning, &warningBox, &QWidget::show);
 
-    QObject::connect(&loginWidget, &LoginWidget::regkeyEntered, cli, &Client::submitRegistrationKey);
 	QObject::connect(&loginWidget, &LoginWidget::usernameEntered, cli, &Client::Login);
 
     QObject::connect(cli, &Client::userUpdate, &mainWidget, &MainWidget::updateUser);

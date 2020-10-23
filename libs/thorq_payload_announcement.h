@@ -26,7 +26,7 @@ enum THORQ_PAYLOAD_ANNOUNCEMENT : std::uint8_t
  */
 inline bool thorq_payload_announcement_is_valid(const std::vector<std::uint8_t>& payload)
 {
-    return thorq_payload_serialization_is_valid(payload)
+    return payload.size() >= 2
         && payload[0] == THORQ_PAYLOAD_ID_ANNOUNCEMENT
         && payload[1] <= THORQ_PAYLOAD_ANNOUNCEMENT_SERVER_MAINTANENCE; // Max enum value
 }
@@ -39,7 +39,7 @@ inline bool thorq_payload_announcement_is_valid(const std::vector<std::uint8_t>&
  */
 inline void thorq_payload_announcement_pack(std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ANNOUNCEMENT type, const std::string& message)
 {
-    thorq_payload_serialization_pack_1string(payload, THORQ_PAYLOAD_ID_ANNOUNCEMENT, type, message);
+    thorq_payload_serialization_pack_string(payload, THORQ_PAYLOAD_ID_ANNOUNCEMENT, type, message);
 }
 
 /**
@@ -51,7 +51,7 @@ inline void thorq_payload_announcement_pack(std::vector<std::uint8_t>& payload, 
 inline void thorq_payload_announcement_unpack(const std::vector<std::uint8_t>& payload, THORQ_PAYLOAD_ANNOUNCEMENT& type, std::string& message)
 {
     type = static_cast<THORQ_PAYLOAD_ANNOUNCEMENT>(thorq_payload_serialization_get_cmd(payload));
-    thorq_payload_serialization_unpack_1string(payload, message);
+    thorq_payload_serialization_unpack_string(payload, message);
 }
 
 #endif // THORQ_PAYLOAD_ANNOUNCEMENT_H

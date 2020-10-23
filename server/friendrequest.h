@@ -10,8 +10,8 @@ struct FriendRequest
 {
 	int dbId;
 	QUuid uuid;
-	Account* sender;
-	Account* receiver;
+    std::shared_ptr<ThorQ::Account> sender;
+    std::shared_ptr<ThorQ::Account> receiver;
 };
 }
 

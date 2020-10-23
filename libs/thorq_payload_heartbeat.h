@@ -25,8 +25,8 @@ inline void thorq_payload_heartbeat_pack(std::vector<std::uint8_t>& payload, std
 {
     payload.resize(3);
     payload[0] = THORQ_PAYLOAD_ID_HEARTBEAT;
-    payload[1] = interval_ms >> 8;
-    payload[2] = interval_ms >> 0;
+    payload[1] = std::uint8_t(interval_ms >> 8);
+    payload[2] = std::uint8_t(interval_ms >> 0);
 }
 
 /**

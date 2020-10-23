@@ -35,12 +35,12 @@ ThorQ::Instance::~Instance()
 	delete m_crypto;
 }
 
-ThorQ::Account* ThorQ::Instance::account() const
+std::shared_ptr<ThorQ::Account> ThorQ::Instance::account() const
 {
 	return m_account;
 }
 
-void ThorQ::Instance::setAccount(Account* account)
+void ThorQ::Instance::setAccount(std::shared_ptr<ThorQ::Account> account)
 {
 	if (m_account != account)
 	{
@@ -86,7 +86,7 @@ void ThorQ::Instance::setAccount(Account* account)
     }
 }
 
-void ThorQ::Instance::setHwid(const QByteArray& hwid)
+void ThorQ::Instance::setHwid(const std::vector<std::uint8_t>& hwid)
 {
     if (m_systemID != hwid)
 	{
@@ -95,7 +95,7 @@ void ThorQ::Instance::setHwid(const QByteArray& hwid)
 	}
 }
 
-const QByteArray& ThorQ::Instance::hwid() const
+std::vector<std::uint8_t> ThorQ::Instance::hwid() const
 {
     return m_systemID;
 }

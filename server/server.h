@@ -84,7 +84,7 @@ private:
     moodycamel::ConcurrentQueue<QueuedMessage> m_rxQueue;
     moodycamel::ConsumerToken m_rxToken;
 
-    moodycamel::ConcurrentQueue<QueuedMessage> m_broadcastQueue;
+    moodycamel::ConcurrentQueue<ENetPacket*> m_broadcastQueue;
     moodycamel::ConsumerToken m_broadcastToken;
 };
 }

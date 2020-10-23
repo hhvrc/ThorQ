@@ -6,7 +6,7 @@
 
 #include "account.h"
 
-ThorQ::Relationship* ThorQ::Relationship::NewRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target)
+std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::NewRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target)
 {
     ThorQ::SQLite::Connection connection("database.db", ThorQ::SQLite::Connection::READWRITE);
 
@@ -38,24 +38,24 @@ ThorQ::Relationship* ThorQ::Relationship::NewRelationship(std::shared_ptr<ThorQ:
     ThorQ::Relationship
 }
 
-ThorQ::Relationship *ThorQ::Relationship::GetRelationship(int64_t dbId)
+std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(int64_t dbId)
 {
 
 }
-ThorQ::Relationship *ThorQ::Relationship::GetRelationship(uuids::uuid publicId)
+std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(uuids::uuid publicId)
 {
 
 }
-ThorQ::Relationship* ThorQ::Relationship::GetRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target)
+std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target)
 {
-    auto optional = ThorQ::SQLite::Connection::Open("database.db", ThorQ::SQLite::Connection::READONLY);
+    ThorQ::SQLite::Connection connection("database.db", ThorQ::SQLite::Connection::READONLY);
 
-    if (!optional.has_value())
+    if (!connection.isOpen())
     {
         return nullptr;
     }
 
-    con.execute("INSERT OR IGNORE INTO relationships() VALUES (?1, ?2);");
+    connection.execute("INSERT OR IGNORE INTO relationships() VALUES (?1, ?2);");
 }
 
 ThorQ::Relationship::Relationship(std::uint64_t privateId, uuids::uuid publicId, std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target, THORQ_RELATIONSHIP_STATUS status, THORQ_RELATIONSHIP_AUTHORITY authority)
@@ -97,7 +97,7 @@ void ThorQ::Relationship::setMirror(std::shared_ptr<ThorQ::Relationship> mirror)
     m_mirror = mirror;
     if (m_mirror != nullptr)
     {
-        m_mirror->m_mirror = this;
+        m_mirror->m_mirror = std::make_shared<ThorQ::Relationship>(this);
     }
 }
 

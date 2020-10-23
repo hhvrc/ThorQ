@@ -10,6 +10,7 @@
 #include "enums.h"
 #include "constants.h"
 #include "serialization.h"
+#include "thorq_message.h"
 
 /// @enum THORQ_PAYLOAD_ACCOUNT_CMD
 enum THORQ_PAYLOAD_ACCOUNT : std::uint8_t
@@ -36,39 +37,38 @@ enum THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS : std::uint8_t
 
 inline bool thorq_payload_account_is_valid(const std::vector<std::uint8_t>& payload)
 {
-    if (thorq_payload_serialization_get_id(payload) != THORQ_PAYLOAD_ID_ACCOUNT) return false;
-
-    if (thorq_payload_serialization_is_valid(payload))
+    if (payload.size() >= 2 &&
+        thorq_payload_serialization_get_id(payload) == THORQ_PAYLOAD_ID_ACCOUNT)
     {
         switch (thorq_payload_serialization_get_cmd(payload)) {
         case THORQ_PAYLOAD_ACCOUNT_REGISTER:
-			return payload.size() > 5
-					&& payload[2] >= THORQ_USERNAME_LEN_MIN
-					&& payload[2] <= THORQ_USERNAME_LEN_MAX
-					&& payload[3] >= THORQ_PASSWORD_LEN_MIN
-					&& payload[3] <= THORQ_PASSWORD_LEN_MAX
-					&& payload[4] >= THORQ_DISCORDID_LEN_MIN
-					&& payload[4] <= THORQ_DISCORDID_LEN_MAX
-					&& payload.size() == 5 + payload[2] + payload[3] + payload[4];
-		case THORQ_PAYLOAD_ACCOUNT_DELETE:
-			return payload.size() > 3
-					&& payload[1] >= THORQ_PASSWORD_LEN_MIN
-					&& payload[1] <= THORQ_PASSWORD_LEN_MAX
-					&& payload.size() == 3 + payload[2];
-		case THORQ_PAYLOAD_ACCOUNT_LOGIN:
-			return payload.size() > 4
-					&& payload[2] >= THORQ_USERNAME_LEN_MIN
-					&& payload[2] <= THORQ_USERNAME_LEN_MAX
-					&& payload[3] >= THORQ_PASSWORD_LEN_MIN
-					&& payload[3] <= THORQ_PASSWORD_LEN_MAX
-					&& payload.size() == 4 + payload[2] + payload[3];
-		case THORQ_PAYLOAD_ACCOUNT_LOGIN_AUTHTOKEN:
-			return payload.size() == THORQ_AUTHTOKEN_LEN + 2;
-		case THORQ_PAYLOAD_ACCOUNT_LOGOUT:
-			return payload.size() == 3 && payload[2] <= THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_ALL;
-		default:
-			return false;
-		}
+            return payload.size() > 5
+                    && payload[2] >= THORQ_USERNAME_LEN_MIN
+                    && payload[2] <= THORQ_USERNAME_LEN_MAX
+                    && payload[3] >= THORQ_PASSWORD_LEN_MIN
+                    && payload[3] <= THORQ_PASSWORD_LEN_MAX
+                    && payload[4] >= THORQ_DISCORDID_LEN_MIN
+                    && payload[4] <= THORQ_DISCORDID_LEN_MAX
+                    && payload.size() == 5 + payload[2] + payload[3] + payload[4];
+        case THORQ_PAYLOAD_ACCOUNT_DELETE:
+            return payload.size() > 3
+                    && payload[1] >= THORQ_PASSWORD_LEN_MIN
+                    && payload[1] <= THORQ_PASSWORD_LEN_MAX
+                    && payload.size() == 3 + payload[2];
+        case THORQ_PAYLOAD_ACCOUNT_LOGIN:
+            return payload.size() > 4
+                    && payload[2] >= THORQ_USERNAME_LEN_MIN
+                    && payload[2] <= THORQ_USERNAME_LEN_MAX
+                    && payload[3] >= THORQ_PASSWORD_LEN_MIN
+                    && payload[3] <= THORQ_PASSWORD_LEN_MAX
+                    && payload.size() == 4 + payload[2] + payload[3];
+        case THORQ_PAYLOAD_ACCOUNT_LOGIN_AUTHTOKEN:
+            return payload.size() == THORQ_AUTHTOKEN_LEN + 2;
+        case THORQ_PAYLOAD_ACCOUNT_LOGOUT:
+            return payload.size() == 3 && payload[2] <= THORQ_PAYLOAD_ACCOUNT_LOGOUT_OPTIONS_ALL;
+        default:
+            return false;
+        }
     }
 
     return false;

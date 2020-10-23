@@ -13,7 +13,7 @@
 namespace ThorQ {
 class Account
 {
-    friend Instance;
+    friend ThorQ::Instance;
     Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const std::string& username, const std::string& passwordHash);
 public:
     static std::shared_ptr<ThorQ::Account> GetAccount(const std::string& username);
@@ -27,12 +27,12 @@ public:
     std::string passwordHash() const;
     bool setPasswordHash(const std::string& passwordHash);
 
-    Account* master() const;
+    std::shared_ptr<ThorQ::Account> master() const;
     bool isExclusive() const;
 
-    static void requestSession(std::shared_ptr<ThorQ::Instance>> source, std::shared_ptr<ThorQ::Account>> target);
-    bool requestAcceptFrom(Account* sender);
-    bool requestDenyFrom(Account* sender);
+    static void requestSession(std::shared_ptr<ThorQ::Instance> source, std::shared_ptr<ThorQ::Account> target);
+    bool requestAcceptFrom(std::shared_ptr<ThorQ::Account> sender);
+    bool requestDenyFrom(std::shared_ptr<ThorQ::Account> sender);
 
     void setIsInSteamVR(bool hasCollar);
     void setHasCollar(bool hasCollar);
@@ -47,8 +47,8 @@ public:
     void ban();
     void fuckYou();
     void disconnectAllInstances();
-    void sendMessage(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
-    void sendMessageToFriends(const std::vector<std::uint8_t>& message, bool encrypt = true, bool reliable = true);
+    void sendPayload(const std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
+    void sendPayloadToFriends(const std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
 private:
     const std::int64_t m_dbId;
 
@@ -60,7 +60,8 @@ private:
 
     THORQ_ACCOUNT_AUTHORITY m_authority;
 
-    std::shared_ptr<ThorQ::Account>> m_master; // This persons master
+    std::shared_mutex l_master;
+    std::shared_ptr<ThorQ::Account> m_master; // This persons master
     std::atomic_bool m_exclusive;                          // This person is exclusive to their master
 
     tbb::concurrent_unordered_set<std::shared_ptr<ThorQ::Instance>> m_requests_incoming;

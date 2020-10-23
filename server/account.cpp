@@ -20,8 +20,10 @@
 
 #include "utils.h"
 #include "instance.h"
+#include "relationship.h"
 
-tbb::concurrent_unordered_map<std::string, std::shared_ptr<ThorQ::Account>> g_accounts;
+std::shared_mutex g_accounts_lock;
+std::unordered_map<std::string, std::shared_ptr<ThorQ::Account>> g_accounts;
 
 ThorQ::Account::Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const std::string& username, const std::string& passwordHash)
     : m_dbId(dbId)
@@ -38,11 +40,11 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& us
 {
     {
         std::shared_lock l(g_accounts_lock);
-        auto it = std::find_if(g_accounts.begin(), g_accounts.end(), [username](const Account* account) -> bool { return account->username() == username; });
+        auto it = g_accounts.find(username);
 
         if (it != g_accounts.end())
         {
-            return *it;
+            return it->second;
         }
     }
 
@@ -90,28 +92,27 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& us
         return nullptr;
     }
 
-    return new Account(query.column(0).getInt64(), (THORQ_ACCOUNT_AUTHORITY)authority, username, query.column(1).getText());
+    return std::make_shared<ThorQ::Account>(query.column(0).getInt64(), (THORQ_ACCOUNT_AUTHORITY)authority, username, query.column(1).getText());
 }
 
-ThorQ::Account* ThorQ::Account::NewAccount(const std::string& username, const std::string& passwordHash)
+std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& username, const std::string& passwordHash)
 {
     {
         std::shared_lock l(g_accounts_lock);
-        auto it = std::find_if(g_accounts.begin(), g_accounts.end(), [username](const Account* account) -> bool { return account->username() == username; });
+        auto it = g_accounts.find(username);
 
         if (it != g_accounts.end())
         {
-            return *it;
+            fmt::print("Account already exists: {}\n", username);
+            return nullptr;
         }
     }
-
-    Account* account = nullptr;
 
     SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
 
     if (!connection.isOpen())
     {
-        return account;
+        return nullptr;
     }
 
     SQLite::Transaction transaction = connection.transaction();
@@ -160,7 +161,8 @@ ThorQ::Account* ThorQ::Account::NewAccount(const std::string& username, const st
 		return nullptr;
 	}
 
-    return account;
+    e // <-- yes, this is intentional to draw attention to: vvvvvvvvvvv FIX ME vvvvvvvvvvvvvv
+    return std::make_shared<ThorQ::Account>(0, THORQ_ACCOUNT_AUTHORITY_NONE, username, passwordHash);
 }
 
 int64_t ThorQ::Account::databaseId() const
@@ -301,7 +303,7 @@ bool ThorQ::Account::setPasswordHash(const std::string& passwordHash)
     return true;
 }
 
-ThorQ::Account *ThorQ::Account::master() const
+std::shared_ptr<ThorQ::Account> ThorQ::Account::master() const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(l_master));
     return m_master;
@@ -310,22 +312,6 @@ ThorQ::Account *ThorQ::Account::master() const
 bool ThorQ::Account::isExclusive() const
 {
     return m_exclusive;
-}
-
-std::unordered_set<ThorQ::Session*> ThorQ::Account::sessions() const
-{
-    std::shared_lock l(const_cast<std::shared_mutex&>(l_sessions));
-    return m_sessions;
-}
-std::unordered_set<ThorQ::Instance*> ThorQ::Account::instances() const
-{
-    std::shared_lock l(const_cast<std::shared_mutex&>(l_instances));
-    return m_instances;
-}
-std::unordered_set<ThorQ::Relationship*> ThorQ::Account::relationships() const
-{
-    std::shared_lock l(const_cast<std::shared_mutex&>(l_relationships));
-    return m_relationships;
 }
 
 void ThorQ::Account::requestSession(std::shared_ptr<ThorQ::Instance> source, std::shared_ptr<ThorQ::Account> target)
@@ -417,7 +403,7 @@ bool ThorQ::Account::requestAcceptFrom(ThorQ::Account* sender)
     return true;
     */
 }
-bool ThorQ::Account::requestDenyFrom(ThorQ::Account *sender)
+bool ThorQ::Account::requestDenyFrom(std::shared_ptr<ThorQ::Account> sender)
 {
     /*
     std::vector<std::uint8_t> response;
@@ -471,6 +457,7 @@ void ThorQ::Account::setHasCollar(bool value)
             m_activityState &= ~THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT;
 
         std::vector<std::uint8_t> message;
+        thorq_payload_relationship_status_unpack()
         thorq_payload_notification_pack(message, THORQ_NOTIFICATION_USER_ACTIVITY, account()->username(), m_activityState);
         broadcastNotification(message, true);
     }
@@ -496,22 +483,18 @@ void ThorQ::Account::setStatus(std::uint16_t flags)
 
 }
 
-void ThorQ::Account::sendMessage(const std::vector<std::uint8_t>& message, bool encrypt, bool reliable)
+void ThorQ::Account::sendPayload(const std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
 {
-    auto recepients = instances();
-
-    for (Instance* instance : recepients)
+    for (std::shared_ptr<ThorQ::Instance> instance : m_instances)
     {
-        instance->sendPayload(message, encrypt, reliable);
+        instance->sendPayload(payload, ch, encrypt, reliable);
     }
 }
 
-void ThorQ::Account::sendMessageToFriends(const std::vector<uint8_t> &message, bool encrypt, bool reliable)
+void ThorQ::Account::sendPayloadToFriends(const std::vector<uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
 {
-    auto recepients = relationships();
-
-    for (Relationship* relationship : recepients)
+    for (std::shared_ptr<ThorQ::Relationship> relationship : m_relationships)
     {
-        relationship;
+        relationship->target()->sendPayload(payload, ch, encrypt, reliable);
     }
 }

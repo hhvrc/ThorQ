@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 
+#include <memory>
 #include <enums.h>
 #include <constants.h>
 #include <typedefs_global.h>
@@ -20,11 +21,11 @@ public:
     Instance(ENetPeer* peer, const std::string& name);
     ~Instance();
 
-	void setAccount(Account* account);
-	Account* account() const;
+    void setAccount(std::shared_ptr<ThorQ::Account> account);
+    std::shared_ptr<ThorQ::Account> account() const;
 
     void setHwid(const std::vector<std::uint8_t>& hwid);
-    const std::vector<std::uint8_t>& hwid() const;
+    std::vector<std::uint8_t> hwid() const;
 
 	void setPeer(ENetPeer* peer);
     ENetPeer* peer() const;
@@ -47,7 +48,7 @@ public:
     void disconnectPeerForcibly(std::uint32_t reason);
 private:
     ENetPeer* m_peer;
-    ThorQ::Account* m_account;
+    std::shared_ptr<ThorQ::Account> m_account;
 
     ThorQ::Crypto* m_crypto;
     std::uint8_t*  m_verificationData;

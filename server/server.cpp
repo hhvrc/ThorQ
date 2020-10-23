@@ -199,7 +199,7 @@ void ThorQ::Server::broadcastAnnouncement(const std::vector<std::uint8_t>& paylo
     if (packet != nullptr)
     {
         ThorQ::packetEncode(packet, payload);
-        m_broadcastQueue.enqueue(QueuedMessage{ nullptr, packet, THORQ_CHANNEL_AUTHORITY });
+        m_broadcastQueue.enqueue(packet);
     }
 }
 

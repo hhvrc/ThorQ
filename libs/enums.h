@@ -29,7 +29,7 @@ enum THORQ_PAYLOAD_ID : std::uint8_t
     THORQ_PAYLOAD_ID_CRYPTO,       ///< Cryptographic handshake messages
     THORQ_PAYLOAD_ID_SYSTEMID,     ///< SystemID messages
     THORQ_PAYLOAD_ID_ACCOUNT,      ///< Create/Delete/Recover/Login/Logout
-    THORQ_PAYLOAD_ID_RELATION,     ///< Friend/Block/AcceptFriend/DenyFriend/UnFriend/GetRelations
+    THORQ_PAYLOAD_ID_RELATIONSHIP, ///< Friend/Block/AcceptFriend/DenyFriend/UnFriend/GetRelations
     THORQ_PAYLOAD_ID_SESSION,      ///< Sessions with other people
     THORQ_PAYLOAD_ID_ACK,          ///< Acknowledge
 

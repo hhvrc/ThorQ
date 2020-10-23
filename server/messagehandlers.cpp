@@ -217,7 +217,7 @@ void handleMessageAccount(ThorQ::Instance* instance, const std::vector<std::uint
 
     if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDOUT)
     {
-        auto it = std::find_if(g_accounts.begin(), g_accounts.end(), [&](const ThorQ::Account* account) -> bool
+        auto it = std::find_if(g_accounts.begin(), g_accounts.end(), [&](const std::shared_ptr<ThorQ::Account> account) -> bool
         {
             return account->username() == username;
         });
@@ -293,7 +293,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
             std::string username;
             thorq_payload_command_get_data(message, username);
 
-            auto it = std::find_if(g_accounts.begin(), g_accounts.end(), [&](const ThorQ::Account* account) -> bool
+            auto it = std::find_if(g_accounts.begin(), g_accounts.end(), [&](const std::shared_ptr<ThorQ::Account> account) -> bool
             {
                 return account->username() == username;
             });
@@ -357,7 +357,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
             thorq_payload_
             thorq_payload_command_get_data(message, name);
 
-            auto sit = std::find_if(g_accounts.begin(), g_accounts.end(), [name](const ThorQ::Account* a) -> bool
+            auto sit = std::find_if(g_accounts.begin(), g_accounts.end(), [name](const std::shared_ptr<ThorQ::Account> a) -> bool
             {
                 if (a == nullptr) return false;
 
