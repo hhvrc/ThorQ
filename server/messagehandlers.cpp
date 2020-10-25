@@ -22,7 +22,6 @@
 #include "utils.h"
 #include "config.h"
 #include "session.h"
-#include "singletons.h"
 #include "sqlite/connection.h"
 #include "sqlite/column.h"
 #include "sqlite/query.h"

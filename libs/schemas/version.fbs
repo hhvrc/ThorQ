@@ -1,0 +1,16 @@
+namespace ThorQ;
+
+attribute "priority";
+
+enum Component : ubyte {
+  Link,
+  Client,
+  Server
+}
+
+table Version {
+	component:Compoent;
+	major:ubyte;
+	minor:ubyte;
+	patch:ubyte;
+}

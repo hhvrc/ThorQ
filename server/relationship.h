@@ -41,7 +41,7 @@ private:
     const uuids::uuid  m_publicId;
     const std::shared_ptr<ThorQ::Account> m_source;
     const std::shared_ptr<ThorQ::Account> m_target;
-    std::shared_ptr<ThorQ::Relationship> m_mirror;
+    std::shared_ptr<ThorQ::Relationship>  m_mirror;
     std::atomic<THORQ_RELATIONSHIP_STATUS>     m_status;
     std::atomic<THORQ_RELATIONSHIP_AUTHORITY>  m_authority;
 };

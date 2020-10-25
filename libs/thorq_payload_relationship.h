@@ -36,8 +36,6 @@ inline bool thorq_payload_relationship_is_valid(const std::vector<std::uint8_t>&
                 && payload[2] <= THORQ_USERNAME_LEN_MAX
                 && payload[3] >= THORQ_PASSWORD_LEN_MIN
                 && payload[3] <= THORQ_PASSWORD_LEN_MAX
-                && payload[4] >= THORQ_DISCORDID_LEN_MIN
-                && payload[4] <= THORQ_DISCORDID_LEN_MAX
                 && payload.size() == 5 + payload[2] + payload[3] + payload[4];
     case THORQ_PAYLOAD_ACCOUNT_DELETE:
         return payload.size() > 3

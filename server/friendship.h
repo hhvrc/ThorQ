@@ -1,22 +1,20 @@
 #ifndef FRIENDSHIP_H
 #define FRIENDSHIP_H
 
-#include <QObject>
-#include <QUuid>
+#include <stduuid/include/uuid.h>
 
 #include <enums.h>
 
 #include "account.h"
 
 namespace ThorQ {
-class FriendShip : public QObject
+class FriendShip
 {
-	Q_OBJECT
 	// Stored as: db_id, uuid, source, target, allow_control_without_requests
 public:
 private:
 	int m_dbId;
-	QUuid m_uuid;
+    uuids::uuid m_uuid;
 
 	bool m_accepted = false;
 

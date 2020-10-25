@@ -1,0 +1,8 @@
+namespace ThorQ;
+
+attribute "priority";
+
+table Image {
+  uuid:Uuid;
+  data:[ubyte:16384]; /// 64*64*4 (64*64 SRGB bitmap)
+}

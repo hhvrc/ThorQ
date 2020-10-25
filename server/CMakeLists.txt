@@ -11,6 +11,15 @@ message("Configuring ${project}...")
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cxxopts)
 
+if (WIN32)
+    include_directories(
+	"C:\\Program Files (x86)\\TBB\\include"
+    )
+    link_directories(
+	"C:\\Program Files (x86)\\TBB\\lib"
+    )
+endif()
+
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.cpp
@@ -80,4 +89,5 @@ add_executable(${project}
 target_link_libraries(${project}
     ThorQLib
     cxxopts
+    tbb
 )

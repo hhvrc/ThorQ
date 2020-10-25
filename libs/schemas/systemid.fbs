@@ -1,0 +1,8 @@
+namespace ThorQ;
+
+attribute "priority";
+
+table SystemId {
+	binid:[ubyte:10];
+	cname:[byte];
+}

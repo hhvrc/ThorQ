@@ -1,0 +1,34 @@
+namespace ThorQ;
+namespace Relationship;
+
+attribute "priority";
+
+enum Status : ubyte
+{
+	Blocked,
+	None,
+	Pending,
+	Friend
+}
+
+enum Authority : ubyte
+{
+	Silent,
+	Notify,
+	Accept,
+	Exclusive
+}
+
+table Relationship {
+  uuid:[ubyte:16];     /// public id of the relationship
+  status:Status;       /// Relationship status
+  authority:Authority; /// Actions to be taken on session requested
+  username:string;     /// Name of user these apply to
+}
+
+table Session {
+  uuid:Uuid;
+  icon:Uuid;
+  name:string;
+  members:[Uuid];
+}

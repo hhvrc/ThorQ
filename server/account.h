@@ -62,7 +62,7 @@ private:
 
     std::shared_mutex l_master;
     std::shared_ptr<ThorQ::Account> m_master; // This persons master
-    std::atomic_bool m_exclusive;                          // This person is exclusive to their master
+    std::atomic_bool m_exclusive;             // This person is exclusive to their master
 
     tbb::concurrent_unordered_set<std::shared_ptr<ThorQ::Instance>> m_requests_incoming;
     tbb::concurrent_unordered_set<std::shared_ptr<ThorQ::Instance>> m_requests_outgoing;

@@ -1,5 +1,3 @@
-#include <jemalloc/jemalloc.h>
-
 #include "memorymanager.h"
 
 #include <array>
@@ -46,6 +44,11 @@ ENetCallbacks ThorQ::Memory::Initialize()
     callbacks.packet_destroy = ThorQ::Memory::packetFree;
 
     return callbacks;
+}
+
+void ThorQ::Memory::DeInitialize()
+{
+
 }
 
 ENetPacket* ThorQ::Memory::packetGet(std::size_t size, std::uint32_t flags)

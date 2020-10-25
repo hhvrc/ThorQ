@@ -86,9 +86,9 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
     }
 
-    ThorQ::Server server(port, 1024, THORQ_CHANNEL_COUNT, true);
+    ThorQ::Server server;
 
-    if (!server.start())
+    if (!server.start(port, 1024, THORQ_CHANNEL_COUNT, true))
     {
             fmt::print("Failed to start Server!\n");
             return EXIT_FAILURE;

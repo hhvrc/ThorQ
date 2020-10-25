@@ -56,6 +56,14 @@ if(WIN32)
 endif()
 # -------------------------
 
+# ------ flatbuffers ------
+set(FLATBUFFERS_INSTALL OFF)
+set(FLATBUFFERS_BUILD_TESTS OFF)
+set(FLATBUFFERS_STATIC_FLATC ON)
+add_subdirectory(flatbuffers)
+message("${FLATBUFFERS_FLATC_EXECUTABLE}")
+# -------------------------
+
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/hashing.cpp
@@ -94,14 +102,19 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_ack.h
 )
 
-link_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/fbe/bin/${BUILD_OS}
+set(GLOB_INCLUDE_DIRS
+    ${CMAKE_CURRENT_BINARY_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/fmt/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/enet/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/stduuid/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/flatbuffers/include
+
+    CACHE PATH "List of library directories for header includes"
 )
 
 include_directories(
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/fbe/include
+    ${GLOB_INCLUDE_DIRS}
 )
 
 add_library(${project} STATIC
@@ -112,18 +125,6 @@ add_library(${project} STATIC
 # Link libraries
 target_link_libraries(${project}
     ${${project}_LIBS}
-    jemalloc
-    proto
+    flatbuffers
     fmt
-)
-
-set(GLOB_INCLUDE_DIRS
-    ${CMAKE_CURRENT_BINARY_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/fbe/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/fmt/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/enet/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/stduuid/include
-
-    CACHE PATH "List of library directories for header includes"
 )
