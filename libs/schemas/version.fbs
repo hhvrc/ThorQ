@@ -1,15 +1,13 @@
-namespace ThorQ;
+namespace ThorQ.Serialization;
 
-attribute "priority";
-
-enum Component : ubyte {
+enum App : ubyte {
   Link,
   Client,
   Server
 }
 
 table Version {
-	component:Compoent;
+	app:App;
 	major:ubyte;
 	minor:ubyte;
 	patch:ubyte;

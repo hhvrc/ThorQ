@@ -1,0 +1,13 @@
+namespace ThorQ.Serialization.Crypto;
+
+enum Type : ubyte {
+  Request,
+  Establish,
+  Verify,
+  Ok
+}
+
+table Command {
+  type:Type;
+  data:[ubyte];
+}

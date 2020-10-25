@@ -30,12 +30,17 @@ ThorQ::Crypto::Crypto()
 
 ThorQ::Crypto::~Crypto()
 {
+    reset();
+
+    EVP_CIPHER_CTX_free(m_ctx);
+}
+
+void ThorQ::Crypto::reset()
+{
     if (m_keyPair != nullptr)
     {
         EC_KEY_free(m_keyPair);
     }
-
-    EVP_CIPHER_CTX_free(m_ctx);
 }
 
 bool ThorQ::Crypto::ready() const
@@ -45,6 +50,8 @@ bool ThorQ::Crypto::ready() const
 
 bool ThorQ::Crypto::generateKeyPair()
 {
+    reset();
+
     //Generate keypair
     m_keyPair = EC_KEY_new_by_curve_name(CRYPTO_CURVE_NID);
 

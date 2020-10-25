@@ -1,8 +1,11 @@
-namespace ThorQ;
+namespace ThorQ.Serialization.SystemId;
 
-attribute "priority";
+enum Command : ubyte {
+  Request,
+  Submit
+}
 
 table SystemId {
-	binid:[ubyte:10];
-	cname:[byte];
+  cmd:Command;
+  data:[byte];
 }

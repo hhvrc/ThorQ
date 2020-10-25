@@ -1,0 +1,10 @@
+namespace ThorQ.Serialization.Moderation;
+
+enum Type : ubyte {
+  Ban
+}
+
+table Command {
+  type:Type;
+  reason:string;
+}

@@ -8,6 +8,7 @@
 #include <enums.h>
 #include <constants.h>
 #include <typedefs_global.h>
+#include <flatbuffers/flatbuffers.h>
 
 #include "typedefs_server.h"
 
@@ -36,13 +37,12 @@ public:
     void setAuthState(THORQ_STATE_AUTH state);
 
 	void cryptoInit();
-	bool cryptoEstablish(const std::vector<std::uint8_t>& data);
-	bool cryptoVerify(const std::vector<std::uint8_t>& data);
+    bool cryptoEstablish(const flatbuffers::Vector<std::uint8_t>& data);
+    bool cryptoVerify(const flatbuffers::Vector<std::uint8_t>& data);
 
 	Crypto* getCrypto();
 
-    void sendPayload(const std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
-    void sendRaw(const std::vector<std::uint8_t>& raw, THORQ_CHANNEL ch, bool reliable = true);
+    void sendPayload(const flatbuffers::DetachedBuffer& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
 
     void disconnectPeer(std::uint32_t reason);
     void disconnectPeerForcibly(std::uint32_t reason);

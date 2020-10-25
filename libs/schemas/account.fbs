@@ -1,0 +1,36 @@
+include  "uuid.fbs";
+
+namespace ThorQ.Serialization.Account;
+
+enum CommandCode : ubyte {
+  Register,
+  Delete,
+  LoginCookie,
+  LoginPassword,
+  Logout,
+  LogoutAll,
+  Recover
+}
+
+table Command {
+  cmd:CommandCode;
+  username:string;
+  password:string;
+  session_cookie:[ubyte];
+  discord_id:string;
+  remember_me:bool;
+}
+
+enum ResponseCode : ubyte {
+  Ok,
+  Denied,
+  Created,
+  Removed,
+  Error
+}
+
+table Response {
+  response:ResponseCode;
+  explenation:string;
+  session_cookie:[ubyte];
+}

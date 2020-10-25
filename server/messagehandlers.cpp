@@ -9,15 +9,16 @@
 #include <systemid.h>
 #include <instance.h>
 #include <thorq_message.h>
-#include <thorq_payload_ack.h>
-#include <thorq_payload_version.h>
-#include <thorq_payload_heartbeat.h>
-#include <thorq_payload_crypto.h>
-#include <thorq_payload_systemid.h>
-#include <thorq_payload_account.h>
-#include <thorq_payload_announcement.h>
-#include <thorq_payload_session.h>
-#include <thorq_payload_collar.h>
+#include <flatbuffers/flatbuffers.h>
+#include <flatbuffers/flexbuffers.h>
+#include <schemas/out/version_generated.h>
+#include <schemas/out/heartbeat_generated.h>
+#include <schemas/out/crypto_generated.h>
+#include <schemas/out/systemid_generated.h>
+#include <schemas/out/account_generated.h>
+#include <schemas/out/announcement_generated.h>
+#include <schemas/out/session_generated.h>
+#include <schemas/out/collar_generated.h>
 
 #include "utils.h"
 #include "config.h"
@@ -27,46 +28,55 @@
 #include "sqlite/query.h"
 
 
-void handleMessageHeartbeat(ThorQ::Instance *instance, const std::vector<std::uint8_t> &message)
+void handleMessageHeartbeat(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
-    std::uint16_t interval;
-    thorq_payload_heartbeat_unpack(message, interval);
+    fmt::print("[MSG] Heartbeat!");
 
-    std::uint32_t setPoint = g_heartbeatSetPoint.load();
+    flatbuffers::Verifier verifier(message.data(), message.size());
 
-    if (interval != setPoint)
+    const ThorQ::Serialization::Heartbeat* heartbeat = flatbuffers::GetRoot<ThorQ::Serialization::Heartbeat>(message.data());
+
+    if (heartbeat->interval() !=  g_heartbeatSetPoint)
     {
-        std::vector<std::uint8_t> response;
-        thorq_payload_heartbeat_pack(response, setPoint);
-        instance->sendPayload(response, THORQ_CHANNEL_MAIN, false, true);
+        flatbuffers::FlatBufferBuilder builder;
+
+        auto heartbeatBuilder = ThorQ::Serialization::CreateHeartbeat(builder, g_heartbeatSetPoint);
+
+        builder.Finish(heartbeatBuilder);
+
+        instance->sendPayload(builder.Release(), THORQ_CHANNEL_MAIN, false, true);
     }
 }
 
 void handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
-    THORQ_APP app;
-    ThorQ::Version version;
-    thorq_payload_version_unpack(message, app, version);
+    fmt::print("[MSG] Version!");
+
+    flatbuffers::Verifier verifier(message.data(), message.size());
+
+    const ThorQ::Serialization::Version* version = flatbuffers::GetRoot<ThorQ::Serialization::Version>(message.data());
+
+    version->Verify(verifier);
 
     ThorQ::Version currentVersion;
 
 	const char* name;
 
-	switch (app) {
-	case THORQ_APP_SERVER:
+    switch (version->app()) {
+    case ThorQ::Serialization::App_Server:
 		name = "server";
 		currentVersion = THORQ_VERSION_SERVER;
 		break;
-	case THORQ_APP_CLIENT:
+    case ThorQ::Serialization::App_Client:
 		name = "client";
 		currentVersion = THORQ_VERSION_CLIENT;
 		break;
-	case THORQ_APP_LINK:
+    case ThorQ::Serialization::App_Link:
 		name = "link";
 		currentVersion = THORQ_VERSION_LINK;
 		break;
 	default:
-        fmt::print("Client expects invalid version %i[%s]\n", app, version.toString());
+        fmt::print("Client expects invalid version %i[%s]\n", version->app(), version.toString());
 		return;
 	}
 
@@ -78,32 +88,33 @@ void handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint
 void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
     fmt::print("[MSG] Crypto!");
-    std::vector<std::uint8_t> response;
 
-    THORQ_PAYLOAD_CRYPTO cmd;
-    thorq_payload_crypto_get_cmd(message, cmd);
+    flatbuffers::Verifier verifier(message.data(), message.size());
 
-    switch (cmd) {
-    case THORQ_PAYLOAD_CRYPTO_REQUEST:
+    const ThorQ::Serialization::Crypto::Command* crypto = flatbuffers::GetRoot<ThorQ::Serialization::Crypto::Command>(message.data());
+
+    crypto->Verify(verifier);
+
+    switch (crypto->type()) {
+    case ThorQ::Serialization::Crypto::Type_Request:
 	{
         fmt::print("[MSG] Crypto request!");
 		instance->cryptoInit();
         break;
     }
-    case THORQ_PAYLOAD_CRYPTO_ESTABLISH:
+    case ThorQ::Serialization::Crypto::Type_Establish:
 	{
         fmt::print("[MSG] Crypto establish!");
         std::vector<std::uint8_t> data;
-        thorq_payload_crypto_establish_unpack(message, data);
 
-		if (!instance->cryptoEstablish(data))
+        if (!instance->cryptoEstablish(crypto->data()))
         {
             fmt::print(stderr, "Failed to create shared secret with %s\n", enet_peer_address_str(instance->peer()));
             instance->disconnectPeer(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
         }
         break;
     }
-    case THORQ_PAYLOAD_CRYPTO_VERIFY:
+    case ThorQ::Serialization::Crypto::Type_Verify:
 	{
         fmt::print("[MSG] Crypto verify!");
         std::vector<std::uint8_t> data;

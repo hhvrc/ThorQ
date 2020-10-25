@@ -1,0 +1,5 @@
+namespace ThorQ.Serialization;
+
+table Heartbeat {
+  interval:uint;
+}

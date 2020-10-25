@@ -38,7 +38,7 @@ enum PREENCRYPTION_FLAG : std::uint8_t
     PREENCRYPTION_FLAG_RESERVED_8 = 1 << 7,
 };
 
-bool ThorQ::packetEncode(ENetPacket* packet, const std::vector<std::uint8_t>& payload)
+bool ThorQ::packetEncode(ENetPacket* packet, const flatbuffers::DetachedBuffer& payload)
 {
     if (payload.size() > THORQ_PAYLOAD_LEN_MAX || payload.size() < THORQ_PAYLOAD_LEN_MIN)
     {
@@ -57,7 +57,7 @@ bool ThorQ::packetEncode(ENetPacket* packet, const std::vector<std::uint8_t>& pa
     return true;
 }
 
-bool ThorQ::packetEncode(ENetPacket* packet, const std::vector<std::uint8_t>& payload, ThorQ::Crypto* crypto)
+bool ThorQ::packetEncode(ENetPacket* packet, const flatbuffers::DetachedBuffer& payload, ThorQ::Crypto* crypto)
 {
     if (payload.size() > THORQ_PAYLOAD_LEN_MAX || payload.size() < THORQ_PAYLOAD_LEN_MIN)
     {

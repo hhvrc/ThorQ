@@ -9,7 +9,7 @@
 #include <constants.h>
 #include <thorq_message.h>
 #include <thorq_payload_ack.h>
-#include <thorq_payload_crypto.h>
+#include <schemas/out/crypto_generated.h>
 #include <thorq_payload_session.h>
 
 #include "memorymanager.h"
@@ -132,20 +132,25 @@ THORQ_STATE_AUTH ThorQ::Instance::authState() const
 
 void ThorQ::Instance::cryptoInit()
 {
-    getCrypto()->reset();
+    getCrypto()->generateKeyPair();
 
     setCryptoState(THORQ_STATE_CRYPTO_ESTABLISHING);
 
+    flatbuffers::FlatBufferBuilder builder;
+
+    auto cmd = ThorQ::Serialization::Crypto::CreateCommandDirect(builder, ThorQ::Serialization::Crypto::Type_Establish, getCrypto().getPublicKey());
+    cmd.F
+
     std::vector<std::uint8_t> message;
-    thorq_payload_crypto_establish_pack(message, getCrypto()->publicKey());
+    thorq_payload_crypto_establish_pack(message, getCrypto()->getPublicKey());
     sendPayload(message, THORQ_CHANNEL_MAIN, true, true);
 }
 
-bool ThorQ::Instance::cryptoEstablish(const std::vector<std::uint8_t>& data)
+bool ThorQ::Instance::cryptoEstablish(const flatbuffers::Vector<std::uint8_t>& data)
 {
-    if (cryptoState() == THORQ_STATE_CRYPTO_ESTABLISHING && !data.empty())
+    if (cryptoState() == THORQ_STATE_CRYPTO_ESTABLISHING && data.size() != 0)
 	{
-        if (getCrypto()->agree(data))
+        if (getCrypto()->agree(data.data(), data.size()))
         {
             m_verificationData = new std::uint8_t[THORQ_CRYPTO_VERIFICATION_DATA_LENGTH];
 			Crypto::RandomizeBytes(m_verificationData, THORQ_CRYPTO_VERIFICATION_DATA_LENGTH);
@@ -167,11 +172,11 @@ bool ThorQ::Instance::cryptoEstablish(const std::vector<std::uint8_t>& data)
 }
 
 
-bool ThorQ::Instance::cryptoVerify(const std::vector<std::uint8_t>& data)
+bool ThorQ::Instance::cryptoVerify(const flatbuffers::Vector<std::uint8_t>& data)
 {
     if (cryptoState() == THORQ_STATE_CRYPTO_VERIFYING && data.size() == THORQ_CRYPTO_VERIFICATION_DATA_LENGTH)
 	{
-		if (memcmp(&m_verificationData[0], &data[0], THORQ_CRYPTO_VERIFICATION_DATA_LENGTH) == 0)
+        if (memcmp(m_verificationData, data.data(), data.size()) == 0)
 		{
             std::vector<std::uint8_t> message;
             thorq_payload_crypto_pack(message, THORQ_PAYLOAD_CRYPTO_OK);
@@ -195,7 +200,7 @@ ThorQ::Crypto* ThorQ::Instance::getCrypto()
 	return m_crypto;
 }
 
-void ThorQ::Instance::sendPayload(const std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
+void ThorQ::Instance::sendPayload(const flatbuffers::DetachedBuffer& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
 {
     ENetPacket* packet = ThorQ::Memory::packetGet(payload.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED);
 
@@ -218,21 +223,6 @@ void ThorQ::Instance::sendPayload(const std::vector<std::uint8_t>& payload, THOR
             }
         }
 
-        enet_peer_send(m_peer, ch, packet);
-    }
-    else
-    {
-        fmt::print(stderr, "Failed to allocate packet!");
-    }
-}
-
-void ThorQ::Instance::sendRaw(const std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool reliable)
-{
-    ENetPacket* packet = ThorQ::Memory::packetGet(payload.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED);
-
-    if (packet != nullptr)
-    {
-        memcpy(packet->data, payload.data(), payload.size());
         enet_peer_send(m_peer, ch, packet);
     }
     else

@@ -29,6 +29,8 @@ public:
     Crypto();
     ~Crypto();
 
+    void reset();
+
     bool ready() const;
 
     /**

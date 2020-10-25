@@ -1,7 +1,6 @@
-namespace ThorQ;
-namespace Relationship;
+include  "uuid.fbs";
 
-attribute "priority";
+namespace ThorQ.Serialization.Relationship;
 
 enum Status : ubyte
 {
@@ -20,10 +19,17 @@ enum Authority : ubyte
 }
 
 table Relationship {
-  uuid:[ubyte:16];     /// public id of the relationship
-  status:Status;       /// Relationship status
-  authority:Authority; /// Actions to be taken on session requested
-  username:string;     /// Name of user these apply to
+  /// public id of the relationship
+  uuid:Uuid;
+  
+  /// Relationship status
+  status:Status;
+  
+  /// Actions to be taken on session requested
+  authority:Authority;
+  
+  /// Name of user these apply to
+  username:string;
 }
 
 table Session {
