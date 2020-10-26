@@ -57,11 +57,45 @@ endif()
 # -------------------------
 
 # ------ flatbuffers ------
+
+# Save flags
+set(PREV_FLAGS ${CMAKE_CXX_FLAGS})
+
+# Remove warning flags
+string(REGEX REPLACE " ?-W.[a-zA-Z0-9=-]+| ?-pedantic" "" CMAKE_CXX_FLAGS ${PREV_FLAGS})
+
 set(FLATBUFFERS_INSTALL OFF)
 set(FLATBUFFERS_BUILD_TESTS OFF)
+set(FLATBUFFERS_BUILD_FLATC OFF)
 set(FLATBUFFERS_STATIC_FLATC ON)
 add_subdirectory(flatbuffers)
-message("${FLATBUFFERS_FLATC_EXECUTABLE}")
+
+# Restore flags
+set(CMAKE_CXX_FLAGS ${PREV_FLAGS})
+
+find_program (FLATBUFFERS_COMPILER flatc)
+file(GLOB ${project}_SCHEMAS "${CMAKE_CURRENT_SOURCE_DIR}/schemas/*.fbs")
+set(FLATC_OUTPUT_DIR  "${CMAKE_CURRENT_BINARY_DIR}/schemas")
+foreach(SCHEMA ${${project}_SCHEMAS})
+    get_filename_component(SCHEMA_FILE ${SCHEMA} NAME)
+    get_filename_component(SCHEMA_NAME ${SCHEMA} NAME_WE)
+    set(FLATC_OUTPUT_FILE "${FLATC_OUTPUT_DIR}/${SCHEMA_NAME}_generated.h")
+    add_custom_command(
+        OUTPUT ${FLATC_OUTPUT_FILE}
+        COMMAND ${FLATBUFFERS_COMPILER}
+        ARGS --cpp
+        ARGS --force-empty
+        ARGS --gen-mutable
+        ARGS --cpp-str-type "std::string"
+        ARGS -o ${FLATC_OUTPUT_DIR}
+        ARGS -b ${SCHEMA_FILE}
+        COMMENT "Building C++ header for ${SCHEMA_FILE}"
+        DEPENDS ${SCHEMA}
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/schemas"
+    )
+    set_property(SOURCE ${FLATC_OUTPUT_FILE} APPEND PROPERTY OBJECT_DEPENDS ${SCHEMA})
+    list(APPEND ${project}_SCHEMAS ${FLATC_OUTPUT_FILE})
+endforeach()
 # -------------------------
 
 set(${project}_SOURCES
@@ -71,7 +105,6 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid_${BUILD_OSL}.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/serialization.cpp
-
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.cpp
 )
 set(${project}_HEADERS
@@ -89,17 +122,7 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_global.h
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.h
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_heartbeat.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_version.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_crypto.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_systemid.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_account.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_relationship.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_session.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_moderation.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_announcement.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_collar.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_payload_ack.h
+    ${${project}_SCHEMAS}
 )
 
 set(GLOB_INCLUDE_DIRS

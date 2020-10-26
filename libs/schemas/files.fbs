@@ -1,8 +1,6 @@
-namespace ThorQ.Serialization.Files;
+include  "uuid.fbs";
 
-struct Uuid {
-  data:[ubyte:16];
-}
+namespace ThorQ.Serialization.Files;
 
 struct Image {
   uuid:Uuid;
