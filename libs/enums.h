@@ -66,7 +66,7 @@ enum THORQ_USER_ACTIVITY_FLAG : std::uint8_t
 {
     THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT = 1 << 0, ///< User currently has a collar connected to their pc, this will show up as a [🗲] icon next to their name
     THORQ_USER_ACTIVITY_FLAG_OPENVR_RUNNING = 1 << 1, ///< User is currently in Virtual Reality, this will show up as a [VR] icon next to their name
-    THORQ_USER_ACTIVITY_FLAG_IN_SESSION     = 1 << 2, ///< User is currently in a session
+    THORQ_USER_ACTIVITY_FLAG_RESERVED_3     = 1 << 2,
     THORQ_USER_ACTIVITY_FLAG_RESERVED_4     = 1 << 3,
     THORQ_USER_ACTIVITY_FLAG_RESERVED_5     = 1 << 4,
     THORQ_USER_ACTIVITY_FLAG_RESERVED_6     = 1 << 5,

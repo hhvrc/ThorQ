@@ -38,7 +38,7 @@ public:
     bool execute(const char* statement);
     bool tableExists(const char* apTableName);
 
-    std::uint64_t lastInsertedRowId() const;
+    std::int64_t lastInsertedRowId() const;
 
     const char* lastError() const;
 private:

@@ -10,10 +10,10 @@ typedef struct evp_cipher_st EVP_CIPHER;
 typedef struct ec_key_st EC_KEY;
 
 #define CRYPTO_CURVE_NID NID_secp256k1
-#define CRYPTO_AES_IV_LEN 12
-#define CRYPTO_ECDH_SHARED_KEY_LEN 32
-#define CRYPTO_ECDH_PUBLIC_KEY_LEN 65
-#define CRYPTO_ECDH_PRIVATE_KEY_LEN 32
+constexpr std::size_t CRYPTO_AES_IV_LEN = 12;
+constexpr std::size_t CRYPTO_ECDH_SHARED_KEY_LEN  = 32;
+constexpr std::size_t CRYPTO_ECDH_PUBLIC_KEY_LEN  = 65;
+constexpr std::size_t CRYPTO_ECDH_PRIVATE_KEY_LEN = 32;
 
 namespace ThorQ {
 /// Class to make cryptography extremely easy to deal with

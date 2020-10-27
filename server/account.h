@@ -5,7 +5,7 @@
 #include <memory>
 #include <shared_mutex>
 #include <unordered_set>
-#include <tbb/concurrent_unordered_set.h>
+#include <set>
 
 #include <enums.h>
 #include "typedefs_server.h"
@@ -30,9 +30,17 @@ public:
     std::shared_ptr<ThorQ::Account> master() const;
     bool isExclusive() const;
 
+    bool addRequestOutgoing(std::shared_ptr<ThorQ::Account> target);
+    bool removeRequestOutgoing(std::shared_ptr<ThorQ::Account> target);
+    bool containsRequestOutgoing(std::shared_ptr<ThorQ::Account> target) const;
+
+    bool addRequestIncoming(std::shared_ptr<ThorQ::Account> source);
+    bool removeRequestIncoming(std::shared_ptr<ThorQ::Account> source);
+    bool containsRequestIncoming(std::shared_ptr<ThorQ::Account> source) const;
+
     static void requestSession(std::shared_ptr<ThorQ::Instance> source, std::shared_ptr<ThorQ::Account> target);
-    bool requestAcceptFrom(std::shared_ptr<ThorQ::Account> sender);
-    bool requestDenyFrom(std::shared_ptr<ThorQ::Account> sender);
+    static bool requestAccept(std::shared_ptr<ThorQ::Account> sender, std::shared_ptr<ThorQ::Account> target);
+    static bool requestDeny(std::shared_ptr<ThorQ::Account> sender, std::shared_ptr<ThorQ::Account> target);
 
     void setIsInSteamVR(bool hasCollar);
     void setHasCollar(bool hasCollar);
@@ -40,7 +48,6 @@ public:
     void setStatus(std::uint16_t flags);
     std::uint16_t status();
 
-    bool isInSession() const;
     bool isInSteamVR() const;
     bool hasCollar() const;
 
@@ -64,12 +71,18 @@ private:
     std::shared_ptr<ThorQ::Account> m_master; // This persons master
     std::atomic_bool m_exclusive;             // This person is exclusive to their master
 
-    tbb::concurrent_unordered_set<std::shared_ptr<ThorQ::Instance>> m_requests_incoming;
-    tbb::concurrent_unordered_set<std::shared_ptr<ThorQ::Instance>> m_requests_outgoing;
+    std::shared_mutex l_requests;
+    std::set<std::shared_ptr<ThorQ::Account>> m_requests_incoming;
+    std::set<std::shared_ptr<ThorQ::Account>> m_requests_outgoing;
 
-    tbb::concurrent_unordered_set<std::shared_ptr<ThorQ::Session>> m_sessions;
-    tbb::concurrent_unordered_set<std::shared_ptr<ThorQ::Instance>> m_instances;
-    tbb::concurrent_unordered_set<std::shared_ptr<ThorQ::Relationship>> m_relationships;
+    std::shared_mutex l_sessions;
+    std::set<std::shared_ptr<ThorQ::Session>> m_sessions;
+
+    std::shared_mutex l_instances;
+    std::set<std::shared_ptr<ThorQ::Instance>> m_instances;
+
+    std::shared_mutex l_relationships;
+    std::set<std::shared_ptr<ThorQ::Relationship>> m_relationships;
 };
 }
 

@@ -9,9 +9,8 @@
 
 #include <hashing.h>
 #include <fmt/core.h>
-#include <thorq_payload_ack.h>
-#include <thorq_payload_session.h>
-#include <thorq_payload_relationship.h>
+#include <schemas/session_generated.h>
+#include <schemas/relationship_generated.h>
 
 #include "sqlite/connection.h"
 #include "sqlite/transaction.h"
@@ -123,7 +122,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 		return nullptr;
     }
 
-    SQLite::Query query = connection.query("INSERT OR IGNORE INTO accounts(username, password_hash) VALUES (?, ?);SELECT changes();");
+    SQLite::Query query = connection.query("INSERT OR IGNORE INTO accounts(username, password_hash) VALUES (?, ?);");
 
     if (!query.bind(1, username))
     {
@@ -143,15 +142,11 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
         return nullptr;
     }
 
-    if (query.columnCount() != 1)
-    {
-        fmt::print(stderr, "SQL Query didnt return any values\?\?\?\? lastError: {}\n", connection.lastError());
-        return nullptr;
-    }
+    std::int64_t i = connection.lastInsertedRowId();
 
-    if (query.column(1).getInt() == 0)
+    if (i == 0)
     {
-        fmt::print(stderr, "account [{}] invalid/already used\n", username, connection.lastError());
+        fmt::print(stderr, "account [{}] invalid/already used\n", connection.lastError());
         return nullptr;
     }
 
@@ -161,8 +156,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 		return nullptr;
 	}
 
-    e // <-- yes, this is intentional to draw attention to: vvvvvvvvvvv FIX ME vvvvvvvvvvvvvv
-    return std::make_shared<ThorQ::Account>(0, THORQ_ACCOUNT_AUTHORITY_NONE, username, passwordHash);
+    return std::make_shared<ThorQ::Account>(i, THORQ_ACCOUNT_AUTHORITY_NONE, username, passwordHash);
 }
 
 int64_t ThorQ::Account::databaseId() const
@@ -314,122 +308,121 @@ bool ThorQ::Account::isExclusive() const
     return m_exclusive;
 }
 
-void ThorQ::Account::requestSession(std::shared_ptr<ThorQ::Instance> source, std::shared_ptr<ThorQ::Account> target)
+bool ThorQ::Account::addRequestOutgoing(std::shared_ptr<ThorQ::Account> target)
 {
-    /*
-    std::vector<std::uint8_t> response;
+    std::unique_lock l(l_requests);
 
-    // If account already has a partner or target account is self
-    if (source->account() == target)
-    {
-        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SESSION, THORQ_PAYLOAD_SESSION_REQUEST, THORQ_PAYLOAD_ACK_DENIED);
-        source->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
-        return;
-    }
+    std::size_t sizeBefore = m_requests_outgoing.size();
 
-    if ()
-    {
-        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SESSION, THORQ_PAYLOAD_SESSION_REQUEST, THORQ_COMMAND_ACK_DENIED);
-        source->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
-        return;
-    }
+    m_requests_outgoing.insert(target);
 
-    if (target->isInSession())
-    {
-        thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, target->account()->username() + " is already in another session");
-        source->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
-        return;
-    }
-
-    // Spam prevention
-    if (m_outgoing_requests.contains(target))
-    {
-        thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_NO_CHANGE);
-        source->sendMessage(response, THORQ_CHANNEL_MAIN, true, true);
-        return;
-    }
-    m_outgoing_requests.insert(target);
-
-    target->m_incoming_requests.insert(this);
-
-    thorq_payload_event_pack(response, THORQ_EVENT_SESSION_REQUESTED, account()->username());
-    target->sendMessage(response, true, true);
-
-    thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_IN_PROGRESS, "Request sent");
-    this->sendMessage(response, true, true);
+    return m_requests_outgoing.size() > sizeBefore;
 }
-bool ThorQ::Account::requestAcceptFrom(ThorQ::Account* sender)
+bool ThorQ::Account::removeRequestOutgoing(std::shared_ptr<ThorQ::Account> target)
+{
+    std::unique_lock l(l_requests);
+    return m_requests_outgoing.erase(target) == 0;
+}
+bool ThorQ::Account::containsRequestOutgoing(std::shared_ptr<ThorQ::Account> target) const
+{
+    std::shared_lock l(l_requests);
+    return m_requests_outgoing.contains(target);
+}
+
+bool ThorQ::Account::addRequestIncoming(std::shared_ptr<ThorQ::Account> source)
+{
+    std::unique_lock l(l_requests);
+
+    std::size_t sizeBefore = m_requests_incoming.size();
+
+    m_requests_incoming.insert(source);
+
+    return m_requests_incoming.size() > sizeBefore;
+}
+bool ThorQ::Account::removeRequestIncoming(std::shared_ptr<ThorQ::Account> source)
+{
+    std::unique_lock l(l_requests);
+    return m_requests_incoming.erase(source) == 0;
+}
+bool ThorQ::Account::containsRequestIncoming(std::shared_ptr<ThorQ::Account> source) const
+{
+    std::shared_lock l(l_requests);
+    return m_requests_incoming.contains(source);
+}
+
+void ThorQ::Account::requestSession(std::shared_ptr<ThorQ::Instance> source, std::shared_ptr<ThorQ::Account> targetAccount)
 {
     std::vector<std::uint8_t> response;
 
-    if (sender == this)
+    std::shared_ptr<ThorQ::Account> sourceAccount = source->account();
+
+    // If account is logged out
+    if (sourceAccount == nullptr)
     {
-        thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_DENIED, "Cannot start session with self");
-        sendMessage(response, true, true);
+        // TODO: Protobuf response: [DENIED] Please log in
+        return;
+    }
+
+    // If target account is self
+    if (sourceAccount == targetAccount)
+    {
+        // TODO: Protobuf response: [DENIED] Cannot request on self
+        return;
+    }
+
+    if (!sourceAccount->addRequestOutgoing(targetAccount))
+    {
+        // TODO: Protobuf response: [DENIED] Request already sent
+        return;
+    }
+
+    // Ensure a record exists in receiver
+    targetAccount->addRequestIncoming(sourceAccount);
+
+    // TODO: Protobuf to {target} [Session][Event] Got request from {sourceAccount}
+
+    // TODO: Protobuf response: [OK] Request sent
+}
+
+bool ThorQ::Account::requestAccept(std::shared_ptr<ThorQ::Account> sourceAccount, std::shared_ptr<ThorQ::Account> targetAccount)
+{
+    if (sourceAccount == targetAccount)
+    {
+        // TODO: Protobuf response: [DENIED] Cannot start session with self
         return false;
     }
 
-    if (!m_incoming_requests.remove(sender))
+    if (!sourceAccount->removeRequestOutgoing(targetAccount))
     {
-        thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_DENIED, " Request from " + sender->account()->username() + " is invalid / never got sent");
-        sendMessage(response, true, true);
-        return false;
-    }
-    sender->m_outgoing_requests.remove(this);
-
-    if (m_partner != nullptr)
-    {
-        thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_DENIED, "You are already in another session");
-        sendMessage(response, true, true);
+        // Protobuf response: [DENIED] Request from {sourceAccount} is invalid / never got sent
         return false;
     }
 
-    if (!sender->isInSession())
-    {
-        thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_DENIED, sender->account()->username() + " is already in another session");
-        sendMessage(response, true, true);
-        return false;
-    }
+    targetAccount->removeRequestIncoming(sourceAccount);
 
-    m_partner = sender;
+    // TODO: Insert a session containing the two
 
-    setSessionState(THORQ_STATE_SESSION_ACTIVE);
+    // TODO: Protobuf to {source} [Session][Event] Session started {session}
+    // TODO: Protobuf to {target} [Session][Event] Session started {session}
 
-    thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_OK, "Request accepted");
-    m_partner->sendMessage(response, true, true);
-    thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_ACCEPT, THORQ_COMMAND_ACK_RESULT_OK, "Session started");
-    this->sendMessage(response, true, true);
+    // TODO: Protobuf response: [OK]
 
     return true;
-    */
 }
-bool ThorQ::Account::requestDenyFrom(std::shared_ptr<ThorQ::Account> sender)
+bool ThorQ::Account::requestDeny(std::shared_ptr<ThorQ::Account> sourceAccount, std::shared_ptr<ThorQ::Account> targetAccount)
 {
-    /*
-    std::vector<std::uint8_t> response;
-
-    if (sender == this)
+    if (sourceAccount == targetAccount)
     {
-        thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_DENY, THORQ_COMMAND_ACK_RESULT_DENIED, "Cannot deny session with self");
-        sendMessage(response, true, true);
+        // TODO: Protobuf response: [DENIED] Cannot deny session from self
         return false;
     }
 
-    if (!m_incoming_requests.remove(sender))
-    {
-        thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_DENY, THORQ_COMMAND_ACK_RESULT_DENIED, " Request from " + sender->account()->username() + " is invalid / never got sent");
-        sendMessage(response, true, true);
-        return false;
-    }
-    sender->m_outgoing_requests.remove(this);
+    sourceAccount->removeRequestOutgoing(targetAccount);
+    targetAccount->removeRequestIncoming(sourceAccount);
 
-    thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_COMMAND_ACK_RESULT_DENIED, "Request denied");
-    sender->sendMessage(response, true, true);
-    thorq_payload_ack_pack(response, THORQ_COMMAND_ID_SESSION_DENY, THORQ_COMMAND_ACK_RESULT_OK);
-    this->sendMessage(response, true, true);
+    // TODO: Protobuf response: [OK]
 
     return true;
-    */
 }
 
 void ThorQ::Account::setIsInSteamVR(bool value)
@@ -463,10 +456,6 @@ void ThorQ::Account::setHasCollar(bool value)
     }
 }
 
-bool ThorQ::Account::isInSession() const
-{
-    return (m_activityState & THORQ_USER_ACTIVITY_FLAG_IN_SESSION) != 0;
-}
 
 bool ThorQ::Account::isInSteamVR() const
 {

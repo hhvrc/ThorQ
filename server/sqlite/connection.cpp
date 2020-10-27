@@ -80,7 +80,7 @@ bool ThorQ::SQLite::Connection::tableExists(const char* apTableName)
     return (1 == query.column(0).getInt());
 }
 
-uint64_t ThorQ::SQLite::Connection::lastInsertedRowId() const
+int64_t ThorQ::SQLite::Connection::lastInsertedRowId() const
 {
     if (m_db != nullptr)
     {

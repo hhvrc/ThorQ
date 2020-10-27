@@ -76,7 +76,7 @@ bool ThorQ::Crypto::getPublicKey(std::uint8_t *publicKeyOut, std::size_t outLen)
     const EC_POINT* publicKey = EC_KEY_get0_public_key(m_keyPair);
 
     // Encode public key
-    int len = EC_POINT_point2oct(m_group,
+    std::size_t len = EC_POINT_point2oct(m_group,
                              publicKey,
                              POINT_CONVERSION_UNCOMPRESSED,
                              publicKeyOut,
@@ -123,7 +123,7 @@ bool ThorQ::Crypto::encrypt(std::uint8_t* outputData, const std::uint8_t* inputD
             while (totalWrittenBytes != dataLen)
             {
                 // Prevent integer overflow
-                int bytesToWrite = std::min(dataLen - totalWrittenBytes, (std::size_t)std::numeric_limits<int>::max());
+                int bytesToWrite = std::min((int)(dataLen - totalWrittenBytes), std::numeric_limits<int>::max());
 
                 if (EVP_EncryptUpdate(m_ctx, outputData + totalWrittenBytes, &iterWrittenBytes, inputData + totalWrittenBytes, bytesToWrite) == 1)
                 {
@@ -163,7 +163,7 @@ bool ThorQ::Crypto::decrypt(std::uint8_t* outputData, const std::uint8_t* inputD
         while (totalWrittenBytes != dataLen)
         {
             // Prevent integer overflow
-            int bytesToWrite = std::min(dataLen - totalWrittenBytes, (std::size_t)std::numeric_limits<int>::max());
+            int bytesToWrite = std::min((int)(dataLen - totalWrittenBytes), std::numeric_limits<int>::max());
 
             if (EVP_DecryptUpdate(m_ctx, outputData + totalWrittenBytes, &iterWrittenBytes, inputData + totalWrittenBytes, bytesToWrite) == 1)
             {
