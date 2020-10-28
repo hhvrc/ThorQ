@@ -177,6 +177,7 @@ bool OpenVROverlayController::init()
         // Set priority
 		vr::VRActionSetHandle_t actionSetHandle;
         inputError = m_vrInput->GetActionSetHandle("ui", &actionSetHandle);
+        inputError = m_vrInput->GetActionSetHandle("/actions/ui", &actionSetHandle);
         if (inputError != vr::VRInputError_None)
         {
             qWarning() << tr("Failed to get actionSetHandle:") << inputError;
