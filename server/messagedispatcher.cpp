@@ -4,17 +4,17 @@
 #include <fmt/core.h>
 
 #include <thorq_message.h>
-#include <thorq_payload_heartbeat.h>
-#include <thorq_payload_version.h>
-#include <thorq_payload_crypto.h>
-#include <thorq_payload_systemid.h>
-#include <thorq_payload_account.h>
-#include <thorq_payload_session.h>
-#include <thorq_payload_relationship.h>
-#include <thorq_payload_moderation.h>
-#include <thorq_payload_announcement.h>
-#include <thorq_payload_collar.h>
-#include <thorq_payload_ack.h>
+#include <flatbuffers/flatbuffers.h>
+#include <schemas/heartbeat_generated.h>
+#include <schemas/version_generated.h>
+#include <schemas/crypto_generated.h>
+#include <schemas/systemid_generated.h>
+#include <schemas/account_generated.h>
+#include <schemas/session_generated.h>
+#include <schemas/relationship_generated.h>
+#include <schemas/moderation_generated.h>
+#include <schemas/announcement_generated.h>
+#include <schemas/collar_generated.h>
 
 #include "utils.h"
 #include "account.h"

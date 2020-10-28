@@ -321,7 +321,7 @@ bool ThorQ::Account::addRequestOutgoing(std::shared_ptr<ThorQ::Account> target)
 bool ThorQ::Account::removeRequestOutgoing(std::shared_ptr<ThorQ::Account> target)
 {
     std::unique_lock l(l_requests);
-    return m_requests_outgoing.erase(target) == 0;
+    return m_requests_outgoing.erase(target) > 0;
 }
 bool ThorQ::Account::containsRequestOutgoing(std::shared_ptr<ThorQ::Account> target) const
 {
@@ -342,7 +342,7 @@ bool ThorQ::Account::addRequestIncoming(std::shared_ptr<ThorQ::Account> source)
 bool ThorQ::Account::removeRequestIncoming(std::shared_ptr<ThorQ::Account> source)
 {
     std::unique_lock l(l_requests);
-    return m_requests_incoming.erase(source) == 0;
+    return m_requests_incoming.erase(source) > 0;
 }
 bool ThorQ::Account::containsRequestIncoming(std::shared_ptr<ThorQ::Account> source) const
 {
@@ -425,18 +425,46 @@ bool ThorQ::Account::requestDeny(std::shared_ptr<ThorQ::Account> sourceAccount, 
     return true;
 }
 
+bool ThorQ::Account::isOnline() const
+{
+    std::shared_lock l(l_instances);
+    return m_instances.size() > 0;
+}
+
+bool ThorQ::Account::addInstance(ThorQ::Instance* instance)
+{
+    std::unique_lock l(l_instances);
+    return m_instances.erase(instance);
+}
+
+bool ThorQ::Account::removeInstance(ThorQ::Instance* instance)
+{
+    std::unique_lock l(l_instances);
+    return m_instances.erase(instance) > 0;
+}
+
+bool ThorQ::Account::containsInstance(ThorQ::Instance* instance) const
+{
+    std::shared_lock l(l_instances);
+    return m_instances.contains(instance);
+}
+
+void ThorQ::Account::removeAllInstances()
+{
+    std::unique_lock l(l_instances);
+    m_instances.clear();
+}
+
 void ThorQ::Account::setIsInSteamVR(bool value)
 {
     if (isInSteamVR() != value)
     {
         if (value)
-            m_activityState |= THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT;
+            m_activityState |= THORQ_USER_ACTIVITY_FLAG_OPENVR_RUNNING;
         else
-            m_activityState &= ~THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT;
+            m_activityState &= ~THORQ_USER_ACTIVITY_FLAG_OPENVR_RUNNING;
 
-        std::vector<std::uint8_t> message;
-        thorq_payload_ _pack(message, THORQ_PAYLOAD_FRIEND_EVENT_STATUS, username(), m_activityState);
-        broadcastNotification(message, true);
+        // TODO: Protobuf to friends: [Relationship][AccountState] activityState
     }
 }
 
@@ -449,10 +477,7 @@ void ThorQ::Account::setHasCollar(bool value)
         else
             m_activityState &= ~THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT;
 
-        std::vector<std::uint8_t> message;
-        thorq_payload_relationship_status_unpack()
-        thorq_payload_notification_pack(message, THORQ_NOTIFICATION_USER_ACTIVITY, account()->username(), m_activityState);
-        broadcastNotification(message, true);
+        // TODO: Protobuf to friends: [Relationship][AccountState] activityState
     }
 }
 
@@ -467,20 +492,20 @@ bool ThorQ::Account::hasCollar() const
     return (m_activityState & THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT) != 0;
 }
 
-void ThorQ::Account::setStatus(std::uint16_t flags)
+void ThorQ::Account::disconnectAllInstances()
 {
 
 }
 
-void ThorQ::Account::sendPayload(const std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
+void ThorQ::Account::sendPayload(const flatbuffers::DetachedBuffer& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
 {
     for (std::shared_ptr<ThorQ::Instance> instance : m_instances)
     {
-        instance->sendPayload(payload, ch, encrypt, reliable);
+        instance->packetSend(payload, ch, encrypt, reliable);
     }
 }
 
-void ThorQ::Account::sendPayloadToFriends(const std::vector<uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
+void ThorQ::Account::sendPayloadToFriends(const flatbuffers::DetachedBuffer& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
 {
     for (std::shared_ptr<ThorQ::Relationship> relationship : m_relationships)
     {

@@ -37,10 +37,13 @@ ThorQ::Crypto::~Crypto()
 
 void ThorQ::Crypto::reset()
 {
+    memset(m_sharedKey, 0, CRYPTO_ECDH_SHARED_KEY_LEN);
     if (m_keyPair != nullptr)
     {
         EC_KEY_free(m_keyPair);
     }
+    m_keyPair = nullptr;
+    m_group = nullptr;
 }
 
 bool ThorQ::Crypto::ready() const
@@ -61,55 +64,63 @@ bool ThorQ::Crypto::generateKeyPair()
     // Generate keys
     if (!EC_KEY_generate_key(m_keyPair))
     {
-        EC_KEY_free(m_keyPair);
-        m_keyPair = nullptr;
-        m_group = nullptr;
+        reset();
         return false;
     }
 
     return true;
 }
 
-bool ThorQ::Crypto::getPublicKey(std::uint8_t *publicKeyOut, std::size_t outLen) const
+bool ThorQ::Crypto::getPublicKey(std::uint8_t* publicKeyOut, std::size_t outLen) const
 {
-    // Get public key
-    const EC_POINT* publicKey = EC_KEY_get0_public_key(m_keyPair);
+    if (ready())
+    {
+        // Get public key
+        const EC_POINT* publicKey = EC_KEY_get0_public_key(m_keyPair);
 
-    // Encode public key
-    std::size_t len = EC_POINT_point2oct(m_group,
-                             publicKey,
-                             POINT_CONVERSION_UNCOMPRESSED,
-                             publicKeyOut,
-                             outLen,
-                             nullptr);
+        // Encode public key
+        std::size_t len = EC_POINT_point2oct(m_group,
+                                 publicKey,
+                                 POINT_CONVERSION_UNCOMPRESSED,
+                                 publicKeyOut,
+                                 outLen,
+                                 nullptr);
 
-    return len == CRYPTO_ECDH_PUBLIC_KEY_LEN;
+        return len == CRYPTO_ECDH_PUBLIC_KEY_LEN;
+    }
+
+    return false;
 }
 
 bool ThorQ::Crypto::agree(const std::uint8_t* keyData, std::size_t keySize)
 {
-    bool ret = false;
+    bool success = false;
 
-    // Create key
-    EC_POINT* foreignKeyPoint = EC_POINT_new(m_group);
-    if (foreignKeyPoint)
+    if (ready())
     {
-        // Decode foreign key
-        if (EC_POINT_oct2point(m_group, foreignKeyPoint, keyData, keySize, nullptr) == 1)
-        {
-            // Calculate shared secret
-            int len = ECDH_compute_key(m_sharedKey, CRYPTO_ECDH_SHARED_KEY_LEN, foreignKeyPoint, m_keyPair, nullptr);
-            ret = (len == CRYPTO_ECDH_SHARED_KEY_LEN);
-        }
+        // Create key
+        EC_POINT* foreignKeyPoint = EC_POINT_new(m_group);
 
-        EC_POINT_free(foreignKeyPoint);
+        if (foreignKeyPoint != nullptr)
+        {
+            // Decode foreign key
+            if (EC_POINT_oct2point(m_group, foreignKeyPoint, keyData, keySize, nullptr) == 1)
+            {
+                // Calculate shared secret
+                success = (ECDH_compute_key(m_sharedKey, CRYPTO_ECDH_SHARED_KEY_LEN, foreignKeyPoint, m_keyPair, nullptr) == CRYPTO_ECDH_SHARED_KEY_LEN);
+            }
+
+            EC_POINT_free(foreignKeyPoint);
+        }
     }
 
-    return ret;
+    return success;
 }
 
 bool ThorQ::Crypto::encrypt(std::uint8_t* outputData, const std::uint8_t* inputData, std::size_t dataLen, std::uint8_t* iv)
 {
+    if (!ready()) return false;
+
     bool ret = false;
     int iterWrittenBytes = 0;
     std::size_t totalWrittenBytes = 0;
@@ -152,6 +163,8 @@ err:
 
 bool ThorQ::Crypto::decrypt(std::uint8_t* outputData, const std::uint8_t* inputData, std::size_t dataLen, const std::uint8_t *iv)
 {
+    if (!ready()) return false;
+
     bool ret = false;
     int iterWrittenBytes = 0;
     std::size_t totalWrittenBytes = 0;

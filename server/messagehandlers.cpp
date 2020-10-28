@@ -10,15 +10,16 @@
 #include <instance.h>
 #include <thorq_message.h>
 #include <flatbuffers/flatbuffers.h>
-#include <flatbuffers/flexbuffers.h>
-#include <schemas/out/version_generated.h>
-#include <schemas/out/heartbeat_generated.h>
-#include <schemas/out/crypto_generated.h>
-#include <schemas/out/systemid_generated.h>
-#include <schemas/out/account_generated.h>
-#include <schemas/out/announcement_generated.h>
-#include <schemas/out/session_generated.h>
-#include <schemas/out/collar_generated.h>
+#include <schemas/heartbeat_generated.h>
+#include <schemas/version_generated.h>
+#include <schemas/crypto_generated.h>
+#include <schemas/systemid_generated.h>
+#include <schemas/account_generated.h>
+#include <schemas/session_generated.h>
+#include <schemas/relationship_generated.h>
+#include <schemas/moderation_generated.h>
+#include <schemas/announcement_generated.h>
+#include <schemas/collar_generated.h>
 
 #include "utils.h"
 #include "config.h"
@@ -44,7 +45,7 @@ void handleMessageHeartbeat(ThorQ::Instance* instance, const std::vector<std::ui
 
         builder.Finish(heartbeatBuilder);
 
-        instance->sendPayload(builder.Release(), THORQ_CHANNEL_MAIN, false, true);
+        instance->packetSend(builder.Release(), THORQ_CHANNEL_MAIN, false, true);
     }
 }
 
@@ -124,7 +125,7 @@ void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8
 		{
             fmt::print("[MSG] Crypto verified!");
             thorq_payload_systemid_cmd_pack(response, THORQ_PAYLOAD_SYSTEMID_REQUEST);
-            instance->sendPayload(response, THORQ_CHANNEL_MAIN, true, true);
+            instance->packetSend(response, THORQ_CHANNEL_MAIN, true, true);
             instance->setAuthState(THORQ_STATE_HWID_REQUESTING);
         }
         else
@@ -150,7 +151,7 @@ void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uin
     if (cmd != THORQ_PAYLOAD_SYSTEMID_SUBMIT)
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SYSTEMID, static_cast<std::uint8_t>(cmd), THORQ_PAYLOAD_ACK_INVALID);
-        instance->sendPayload(response, THORQ_CHANNEL_MAIN, true, true);
+        instance->packetSend(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
 
@@ -161,7 +162,7 @@ void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uin
     if (!ThorQ::SystemID::systemid_validate(data))
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SYSTEMID, THORQ_PAYLOAD_SYSTEMID_SUBMIT, THORQ_PAYLOAD_ACK_DENIED);
-        instance->sendPayload(response, THORQ_CHANNEL_MAIN, true, true);
+        instance->packetSend(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
 
@@ -174,7 +175,7 @@ void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uin
     if (!connection.isOpen())
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SYSTEMID, THORQ_PAYLOAD_SYSTEMID_SUBMIT, THORQ_PAYLOAD_ACK_ERROR);
-        instance->sendPayload(response, THORQ_CHANNEL_MAIN, true, true);
+        instance->packetSend(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
 
@@ -185,7 +186,7 @@ void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uin
     if (!query.step() || query.columnCount() == 0)
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SYSTEMID, THORQ_PAYLOAD_SYSTEMID_SUBMIT, THORQ_PAYLOAD_ACK_ERROR);
-        instance->sendPayload(response, THORQ_CHANNEL_MAIN, true, true);
+        instance->packetSend(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
 
@@ -240,19 +241,19 @@ void handleMessageAccount(ThorQ::Instance* instance, const std::vector<std::uint
             instance->setLoginState(THORQ_STATE_LOGIN_LOGGEDIN);
 
             thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN, THORQ_PAYLOAD_ACK_OK);
-            instance->sendPayload(response, true, true);
+            instance->packetSend(response, true, true);
         }
         else
         {
             thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN, THORQ_PAYLOAD_ACK_DENIED);
 
-            instance->sendPayload(response, true, true);
+            instance->packetSend(response, true, true);
         }
     }
     else
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN, THORQ_PAYLOAD_ACK_NO_CHANGE);
-        instance->sendPayload(response, true, true);
+        instance->packetSend(response, true, true);
     }
 }
 
@@ -266,7 +267,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
     if (instance->authState() != THORQ_STATE_AUTH_OK)
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_COMMAND, cmd, THORQ_PAYLOAD_ACK_UNAUTHORIZED);
-        instance->sendPayload(response, false, true);
+        instance->packetSend(response, false, true);
         return;
     }
 
@@ -276,7 +277,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
         if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
         {
             thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_COMMAND, cmd, THORQ_PAYLOAD_ACK_OK);
-            instance->sendPayload(response, true, true);
+            instance->packetSend(response, true, true);
 
             std::vector<ThorQ::Instance*> instances = g_sessions.toList();
 
@@ -285,14 +286,14 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
                 if (i->account() != nullptr)
                 {
                     thorq_payload_notification_pack(response, THORQ_NOTIFICATION_USER_ACTIVITY, i->account()->username(), i->activityState());
-                    instance->sendPayload(response, true, true);
+                    instance->packetSend(response, true, true);
                 }
             }
         }
         else
         {
             thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_COMMAND, cmd, THORQ_PAYLOAD_ACK_LOGIN_NEEDED);
-            instance->sendPayload(response, true, true);
+            instance->packetSend(response, true, true);
         }
         break;
     }
@@ -311,7 +312,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
             if (*it == nullptr)
             {
                 thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SESSION, THORQ_COMMAND_ID_SESSION_REQUEST, THORQ_PAYLOAD_ACK_DENIED, username + "is not an account");
-                instance->sendPayload(response, true);
+                instance->packetSend(response, true);
                 return;
             }
 
@@ -320,7 +321,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
             if (targetInstances.isEmpty())
             {
                 thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SESSION, THORQ_PAYLOAD_ACK_DENIED, username + "is not online");
-                instance->sendPayload(response, true);
+                instance->packetSend(response, true);
                 return;
             }
 
@@ -330,7 +331,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
         else
         {
             thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_COMMAND, cmd, THORQ_PAYLOAD_ACK_LOGIN_NEEDED);
-            instance->sendPayload(response, true, true);
+            instance->packetSend(response, true, true);
         }
         break;
     }
@@ -346,7 +347,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
             if (otherInstance == nullptr)
             {
                 thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_COMMAND, cmd, THORQ_PAYLOAD_ACK_DENIED, name + "is not online");
-                instance->sendPayload(response, true);
+                instance->packetSend(response, true);
                 return;
             }
 
@@ -355,7 +356,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
         else
         {
             thorq_payload_ack_pack(response, cmd, THORQ_PAYLOAD_ACK_LOGIN_NEEDED);
-            instance->sendPayload(response, true, true);
+            instance->packetSend(response, true, true);
         }
         break;
     }
@@ -378,7 +379,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
             if (otherInstance == nullptr)
             {
                 thorq_payload_ack_pack(response, cmd, THORQ_PAYLOAD_ACK_DENIED, name + "is not online");
-                instance->sendPayload(response, true);
+                instance->packetSend(response, true);
                 return;
             }
 
@@ -387,7 +388,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
         else
         {
             thorq_payload_ack_pack(response, cmd, THORQ_PAYLOAD_ACK_LOGIN_NEEDED);
-            instance->sendPayload(response, true, true);
+            instance->packetSend(response, true, true);
         }
         break;
     }
@@ -398,12 +399,12 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
             instance->setSessionState(THORQ_STATE_SESSION_NONE);
 
             thorq_payload_ack_pack(response, cmd, THORQ_PAYLOAD_ACK_OK);
-            instance->sendPayload(response, true, true);
+            instance->packetSend(response, true, true);
         }
         else
         {
             thorq_payload_ack_pack(response, cmd, THORQ_PAYLOAD_ACK_LOGIN_NEEDED);
-            instance->sendPayload(response, true, true);
+            instance->packetSend(response, true, true);
         }
         break;
     }
@@ -418,7 +419,7 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
         else
         {
             thorq_payload_ack_pack(response, cmd, THORQ_PAYLOAD_ACK_LOGIN_NEEDED);
-            instance->sendPayload(response, true, true);
+            instance->packetSend(response, true, true);
         }
         break;
     }
@@ -435,12 +436,12 @@ void handleMessageSession(ThorQ::Instance *instance)
         instance->setLoginState(THORQ_STATE_LOGIN_LOGGEDOUT);
 
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGOUT, THORQ_PAYLOAD_ACK_OK);
-        instance->sendPayload(response, true, true);
+        instance->packetSend(response, true, true);
     }
     else
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGOUT, THORQ_PAYLOAD_ACK_NO_CHANGE);
-        instance->sendPayload(response, true, true);
+        instance->packetSend(response, true, true);
     }
 }
 

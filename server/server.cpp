@@ -19,8 +19,8 @@
 
 #include <fmt/core.h>
 #include <thorq_message.h>
-#include <thorq_payload_version.h>
-#include <thorq_payload_heartbeat.h>
+#include <schemas/version_generated.h>
+#include <schemas/heartbeat_generated.h>
 
 #include "utils.h"
 #include "account.h"
@@ -82,7 +82,7 @@ ThorQ::Server::~Server()
 
         for (ENetPeer* peer = firstPeer; peer != lastPeer; peer++)
         {
-            enet_peer_disconnect_now(peer, THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED);
+            enet_peer_disconnect_now(peer, (std::uint32_t)THORQ_DISCONNECT_REASON::SHUTDOWN_CLOSED);
         }
 
         enet_host_flush(m_host);
@@ -192,7 +192,7 @@ std::uint64_t ThorQ::Server::totalPacketsReceived() const
     return m_totalReceivedPackets;
 }
 
-void ThorQ::Server::broadcastAnnouncement(const std::vector<std::uint8_t>& payload, bool reliable, bool unsequenced)
+void ThorQ::Server::broadcastAnnouncement(const flatbuffers::DetachedBuffer& payload, bool reliable, bool unsequenced)
 {
     ENetPacket* packet = ThorQ::Memory::packetGet(payload.size(), (ENET_PACKET_FLAG_RELIABLE * reliable) | (ENET_PACKET_FLAG_UNSEQUENCED * unsequenced));
 
@@ -281,16 +281,16 @@ void ThorQ::Server::handleEventConnection(const ENetEvent& event)
     std::vector<std::uint8_t> message;
 
     thorq_payload_version_pack(message, THORQ_APP_LINK, THORQ_VERSION_LINK);
-    instance->sendPayload(message, THORQ_CHANNEL_MAIN, false, true);
+    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
 
     thorq_payload_version_pack(message, THORQ_APP_CLIENT, THORQ_VERSION_CLIENT);
-    instance->sendPayload(message, THORQ_CHANNEL_MAIN, false, true);
+    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
 
     thorq_payload_version_pack(message, THORQ_APP_SERVER, THORQ_VERSION_SERVER);
-    instance->sendPayload(message, THORQ_CHANNEL_MAIN, false, true);
+    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
 
     thorq_payload_heartbeat_pack(message, 500); // TODO: get from config
-    instance->sendPayload(message, THORQ_CHANNEL_MAIN, false, true);
+    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
 
     fmt::print("[{}] Connected", enet_peer_address_str(event.peer));
 }
@@ -300,17 +300,16 @@ void ThorQ::Server::handleEventMessage(const ENetEvent &event)
 }
 void ThorQ::Server::handleEventDisconnect(const ENetEvent& event)
 {
-    if (event.peer->data == nullptr)
-        return;
+    // Get instance
+    ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
 
-    auto instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
-
-    fmt::print("[{}] disconnected\n", enet_peer_address_str(event.peer));
-
+    // Remove pointer
     event.peer->data = nullptr;
 
-    // Automatically notifies others
-    instance->deleteLater();
+    // Yeet
+    delete instance;
+
+    fmt::print("[{}] disconnected\n", enet_peer_address_str(event.peer));
 }
 void ThorQ::Server::handleEventTimeout(const ENetEvent& event)
 {

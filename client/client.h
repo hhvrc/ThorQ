@@ -11,7 +11,7 @@
 
 #include <enums.h>
 #include <typedefs_global.h>
-#include <thorq_payload_version.h>
+#include <schemas/version_generated.h>
 
 #include "user.h"
 

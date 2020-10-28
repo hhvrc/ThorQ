@@ -18,8 +18,8 @@ std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::NewRelationship(std::s
     SQLite::Query ensure = connection.query("INSERT OR IGNORE INTO relationships(uuid, source, target) VALUES (?1, ?3, ?4),(?2, ?4, ?3);");
     ensure.bind(1, "please generate some text");
     ensure.bind(2, "and some more generated text");
-    ensure.bind(3, account1->databaseId());
-    ensure.bind(4, account2->databaseId());
+    ensure.bind(3, source->databaseId());
+    ensure.bind(4, target->databaseId());
     ensure.step();
     ensure.finalize();
 
@@ -35,16 +35,18 @@ std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::NewRelationship(std::s
     SQLite::Column statusCol = fetch.column(4);
     SQLite::Column authorityCol = fetch.column(5);
 
-    ThorQ::Relationship
+    // TODO
+
+    //ThorQ::Relationship
 }
 
 std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(int64_t dbId)
 {
-
+    // TODO
 }
 std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(uuids::uuid publicId)
 {
-
+    // TODO
 }
 std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target)
 {
@@ -56,9 +58,11 @@ std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(std::s
     }
 
     connection.execute("INSERT OR IGNORE INTO relationships() VALUES (?1, ?2);");
+
+    // TODO
 }
 
-ThorQ::Relationship::Relationship(std::uint64_t privateId, uuids::uuid publicId, std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target, THORQ_RELATIONSHIP_STATUS status, THORQ_RELATIONSHIP_AUTHORITY authority)
+ThorQ::Relationship::Relationship(std::int64_t privateId, uuids::uuid publicId, std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target, THORQ_RELATIONSHIP_STATUS status, THORQ_RELATIONSHIP_AUTHORITY authority)
     : m_privId(privateId)
     , m_publicId(publicId)
     , m_source(source)
@@ -130,9 +134,4 @@ void ThorQ::Relationship::setAuthority(THORQ_RELATIONSHIP_AUTHORITY authority)
     {
         //emit authorityChanged(authority);
     }
-}
-
-void ThorQ::Relationship::UpdateDatabase()
-{
-
 }

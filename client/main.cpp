@@ -18,14 +18,14 @@
 
 Q_DECLARE_METATYPE(THORQ_STATE_CONNECTION)
 Q_DECLARE_METATYPE(THORQ_STATE_CRYPTO)
-Q_DECLARE_METATYPE(THORQ_STATE_AUTH)
+Q_DECLARE_METATYPE(THORQ_STATE_HWID)
 Q_DECLARE_METATYPE(THORQ_STATE_LOGIN)
 
 #define COMTEST 1
 
+#include <constants.h>
 #include <crypto.h>
 #include <thorq_message.h>
-#include <thorq_payload_crypto.h>
 
 #include <QVBoxLayout>
 
@@ -35,7 +35,7 @@ int main(int argc, char** argv)
 {
 	qRegisterMetaType<THORQ_STATE_CONNECTION>("ThorqConnectionState");
     qRegisterMetaType<THORQ_STATE_CRYPTO>("ThorqCryptoState");
-    qRegisterMetaType<THORQ_STATE_AUTH>("ThorqAuthState");
+    qRegisterMetaType<THORQ_STATE_HWID>("ThorqAuthState");
 	qRegisterMetaType<THORQ_STATE_LOGIN>("ThorqLoginState");
 
 	// TODO: customize GUI
@@ -62,7 +62,7 @@ int main(int argc, char** argv)
 	app.setStyleSheet(stylesheet);
 	app.setApplicationName(THORQ_APPLICATION_NAME);
 	app.setDesktopFileName(THORQ_APPLICATION_NAME);
-    app.setApplicationVersion(THORQ_VERSION_CLIENT.toString());
+    app.setApplicationVersion(THORQ_VERSION_CLIENT.toString().c_str());
 	app.setWindowIcon(QIcon(":/shockGrey.ico"));
     //app.setQuitOnLastWindowClosed(false);
 

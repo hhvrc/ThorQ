@@ -7,6 +7,7 @@
 
 #include <cstdint>
 #include <vector>
+#include <memory>
 
 #include <flatbuffers/flatbuffers.h>
 
@@ -14,8 +15,8 @@
 
 namespace ThorQ {
 bool packetEncode(ENetPacket* pakcet, const flatbuffers::DetachedBuffer& payload);
-bool packetEncode(ENetPacket* pakcet, const flatbuffers::DetachedBuffer& payload, ThorQ::Crypto* crypto);
-bool packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>&   payload, ThorQ::Crypto* crypto);
+bool packetEncode(ENetPacket* pakcet, const flatbuffers::DetachedBuffer& payload, std::shared_ptr<ThorQ::Crypto> crypto);
+bool packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>&   payload, std::shared_ptr<ThorQ::Crypto> crypto);
 }
 
 #endif // THORQ_MESSAGE_H

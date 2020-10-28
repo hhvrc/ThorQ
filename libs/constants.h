@@ -66,5 +66,6 @@ constexpr int THORQ_DISCORDID_LEN_MAX = 36; ///< Maximum id length (32 chars + "
 constexpr const char*   THORQ_APPLICATION_NAME = "ThorQ";
 constexpr const char*   THORQ_APPLICATION_DESCRIPTION = "Software to control 3rd party collars across the internet";
 constexpr const char*   THORQ_SERVER_HOSTNAME = "www.dededededede.de";
+constexpr std::uint16_t THORQ_SERVER_PORT = 12345;
 
 #endif // CONSTANTS_H

@@ -6,6 +6,9 @@
 #include <shared_mutex>
 #include <unordered_set>
 #include <set>
+#include <vector>
+
+#include <flatbuffers/flatbuffers.h>
 
 #include <enums.h>
 #include "typedefs_server.h"
@@ -42,20 +45,22 @@ public:
     static bool requestAccept(std::shared_ptr<ThorQ::Account> sender, std::shared_ptr<ThorQ::Account> target);
     static bool requestDeny(std::shared_ptr<ThorQ::Account> sender, std::shared_ptr<ThorQ::Account> target);
 
+    bool isOnline() const;
+    bool addInstance(ThorQ::Instance* instance);
+    bool removeInstance(ThorQ::Instance* instance);
+    bool containsInstance(ThorQ::Instance* instance) const;
+    void removeAllInstances();
+
     void setIsInSteamVR(bool hasCollar);
     void setHasCollar(bool hasCollar);
-
-    void setStatus(std::uint16_t flags);
-    std::uint16_t status();
 
     bool isInSteamVR() const;
     bool hasCollar() const;
 
     void ban();
-    void fuckYou();
     void disconnectAllInstances();
-    void sendPayload(const std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
-    void sendPayloadToFriends(const std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
+    void sendPayload(const flatbuffers::DetachedBuffer& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
+    void sendPayloadToFriends(const flatbuffers::DetachedBuffer& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
 private:
     const std::int64_t m_dbId;
 
@@ -79,7 +84,7 @@ private:
     std::set<std::shared_ptr<ThorQ::Session>> m_sessions;
 
     std::shared_mutex l_instances;
-    std::set<std::shared_ptr<ThorQ::Instance>> m_instances;
+    std::set<ThorQ::Instance*> m_instances;
 
     std::shared_mutex l_relationships;
     std::set<std::shared_ptr<ThorQ::Relationship>> m_relationships;

@@ -57,7 +57,7 @@ bool ThorQ::packetEncode(ENetPacket* packet, const flatbuffers::DetachedBuffer& 
     return true;
 }
 
-bool ThorQ::packetEncode(ENetPacket* packet, const flatbuffers::DetachedBuffer& payload, ThorQ::Crypto* crypto)
+bool ThorQ::packetEncode(ENetPacket* packet, const flatbuffers::DetachedBuffer& payload, std::shared_ptr<ThorQ::Crypto> crypto)
 {
     if (payload.size() > THORQ_PAYLOAD_LEN_MAX || payload.size() < THORQ_PAYLOAD_LEN_MIN)
     {
@@ -76,7 +76,7 @@ bool ThorQ::packetEncode(ENetPacket* packet, const flatbuffers::DetachedBuffer& 
     return true;
 }
 
-bool ThorQ::packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& payload, ThorQ::Crypto *crypto)
+bool ThorQ::packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& payload, std::shared_ptr<ThorQ::Crypto> crypto)
 {
     if (packet->dataLength > THORQ_PAYLOAD_LEN_MAX || packet->dataLength < THORQ_PAYLOAD_LEN_MIN)
     {

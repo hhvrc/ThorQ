@@ -4,6 +4,8 @@
 #include <queue>
 #include <unordered_set>
 
+#include <flatbuffers/flatbuffers.h>
+
 #include "enums.h"
 #include "typedefs_global.h"
 #include "typedefs_server.h"
@@ -43,7 +45,7 @@ public:
     std::uint64_t totalDataReceived() const;
     std::uint64_t totalPacketsReceived() const;
 
-    void broadcastAnnouncement(const std::vector<std::uint8_t>& packet, bool reliable, bool unsequenced);
+    void broadcastAnnouncement(const flatbuffers::DetachedBuffer& packet, bool reliable, bool unsequenced);
 protected:
     friend Instance;
     friend MessageDispatcher;
