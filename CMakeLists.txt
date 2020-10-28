@@ -85,7 +85,7 @@ endif()
 
 add_subdirectory(libs)
 include_directories(${GLOB_INCLUDE_DIRS})
-#add_subdirectory(client)
+add_subdirectory(client)
 add_subdirectory(server)
 add_subdirectory(keygen)
 

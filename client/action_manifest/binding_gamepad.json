@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "logitech_stylus",
+  "controller_type": "gamepad",
   "description": "",
-  "name": "logitech_stylus"
+  "name": "gamepad defaults"
 }

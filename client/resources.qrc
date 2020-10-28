@@ -17,5 +17,8 @@
         <file>action_manifest/bindings_vive_controller.json</file>
         <file>action_manifest/bindings_vive_cosmos_controller.json</file>
         <file>action_manifest/manifest.json</file>
+        <file>action_manifest/binding_gamepad.json</file>
+        <file>action_manifest/binding_hpmotioncontroller.json</file>
+        <file>action_manifest/bindings_knuckles_ev1.json</file>
     </qresource>
 </RCC>

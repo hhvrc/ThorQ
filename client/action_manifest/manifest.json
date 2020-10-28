@@ -10,50 +10,34 @@
   "action_sets": [
     {
       "name": "/actions/ui",
-      "usage": "single"
+      "usage": "leftright"
     }
   ],
   "actions": [
     {
-      "name": "/actions/ui/in/LeftClick",
-      "type": "boolean",
-      "requirement": "mandatory"
+      "name" : "/actions/ui/out/haptics_left",
+      "requirement": "optional",
+      "type" : "vibration"
     },
     {
-      "name": "/actions/ui/in/RightClick",
-      "type": "boolean",
-      "requirement": "optional"
+      "name" : "/actions/ui/out/haptics_right",
+      "requirement": "optional",
+      "type" : "vibration"
     },
     {
-      "name": "/actions/ui/in/TouchpadPosition",
-      "type": "vector2",
-      "requirement": "optional"
-    },
-    {
-      "name": "/actions/ui/in/EditMode",
+      "name": "/actions/ui/in/interact",
+      "requirement": "mandatory",
       "type": "boolean"
     },
     {
-      "name": "/actions/ui/in/MoveWindow",
+      "name": "/actions/ui/in/show_overlay",
+      "requirement": "mandatory",
       "type": "boolean"
     },
     {
-      "name": "/actions/ui/in/LeftSkeleton",
-      "type": "skeleton",
-      "skeleton": "/skeleton/hand/left"
-    },
-    {
-      "name": "/actions/ui/in/RightSkeleton",
-      "type": "skeleton",
-      "skeleton": "/skeleton/hand/right"
-    },
-    {
-      "name": "/actions/ui/in/MiddleClick",
-      "type": "boolean"
-    },
-    {
-      "name": "/actions/ui/in/Screenshot",
-      "type": "boolean"
+        "name": "/actions/ui/in/prox_sensor",
+        "requirement": "suggested",
+        "type": "boolean"
     }
   ],
   "default_bindings": [
@@ -68,6 +52,14 @@
     {
       "controller_type": "knuckles",
       "binding_url": "bindings_knuckles.json"
+    },
+    {
+      "controller_type": "knuckles_ev1",
+      "binding_url": "bindings_knuckles_ev1.json"
+    },
+    {
+      "controller_type": "hpmotioncontroller",
+      "binding_url": "bindings_hpmotioncontroller.json"
     },
     {
       "controller_type": "holographic_controller",
@@ -108,6 +100,10 @@
     {
       "controller_type": "vive_tracker_camera",
       "binding_url": "binding_vive_tracker_camera.json"
+    },
+    {
+      "controller_type": "gamepad",
+      "binding_url": "binding_gamepad.json"
     }
   ],
   "localization": [

@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "logitech_stylus",
+  "controller_type": "knuckles_ev1",
   "description": "",
-  "name": "logitech_stylus"
+  "name": "knuckles_ev1 default"
 }

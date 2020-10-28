@@ -72,19 +72,7 @@ public:
 	 * @brief tint
 	 * @return
 	 */
-	QColor tint() const;
-
-	/**
-	 * @brief visibilityTimeout
-	 * @return
-	 */
-	int visibilityTimeout() const;
-
-	/**
-	 * @brief visibilityTimeoutEnabled
-	 * @return
-	 */
-	bool visibilityTimeoutEnabled() const;
+    QColor tint() const;
 signals:
     /**
 	 * @brief vrQuit
@@ -101,19 +89,7 @@ signals:
 	 * @brief isVisibleChanged
 	 * @param visible
 	 */
-	void isVisibleChanged(bool visible);
-
-	/**
-	 * @brief visibilityTimeoutChanged
-	 * @param timeout
-	 */
-	void visibilityTimeoutChanged(int timeout);
-
-	/**
-	 * @brief visibilityTimeoutEnabledChanged
-	 * @param enabled
-	 */
-	void visibilityTimeoutEnabledChanged(bool enabled);
+    void isVisibleChanged(bool visible);
 
 	/**
 	 * @brief widthChanged
@@ -154,19 +130,7 @@ public slots:
 	 * @brief setIsVisible
 	 * @param isVisible
 	 */
-	void setIsVisible(bool isVisible);
-
-	/**
-	 * @brief setVisibilityTimeout
-	 * @param timeout
-	 */
-	void setVisibilityTimeout(int timeout);
-
-	/**
-	 * @brief setVisibilityTimeoutEnabled
-	 * @param isEnabled
-	 */
-	void setVisibilityTimeoutEnabled(bool isEnabled);
+    void setIsVisible(bool isVisible);
 
     /**
 	 * @brief setWidth
@@ -185,47 +149,78 @@ public slots:
      * @param color
      */
 	void setTint(const QColor& color);
-protected:
-	void visibilityTimeoutExpired();
 
+    enum class EHand : std::int8_t
+    {
+        Invalid = -1,
+        Left,
+        Right,
+        Center
+    };
+
+    bool triggerHapticFeedback(EHand hand, float secondsFromNow, float amplitude, float frequency, float duration );
+
+    bool openBindingUI();
+protected:
 	void update();
+
+    bool pullEvents();
 
 	bool createOverlay();
 	void onSceneChanged();
-    void overlayTransform();
+    bool overlayTransform();
 
-    void setPriController(vr::TrackedDeviceIndex_t index);
-	bool isOculus(vr::TrackedDeviceIndex_t index) const;
+    void setOverlayDevice(vr::TrackedDeviceIndex_t deviceIndex);
+    void setOverlayOffset(const QMatrix4x4& offset);
+
+
+
+    EHand getHandForSource(vr::VRInputValueHandle_t source);
+    const QMatrix4x4& getOffsetForHand(EHand hand);
+    const QMatrix4x4& getOffsetForSource(vr::VRInputValueHandle_t source);
+    vr::VRInputValueHandle_t getOriginForHand(EHand hand);
+    vr::TrackedDeviceIndex_t getDeviceForSource(vr::VRInputValueHandle_t source);
 private:
 	bool m_isVisible;
 	float m_alpha;
 	float m_width;
-	QColor m_tint;
-
-	bool m_timeoutEnabled;
+    QColor m_tint;
 
 	// Widget
 	QGraphicsProxyWidget* m_proxyWidget;
-	QTimer* m_updateLogicTimer;
-	QTimer* m_visibilityTimer;
+    QTimer* m_updateLogicTimer;
 
-	// Overlay stuff
-	vr::IVRSystem* m_vrSystem;
-	vr::IVRInput* m_vrInput;
-	vr::IVROverlay* m_vrOverlay;
-	vr::IVRSettings* m_vrSettings;
-	vr::VROverlayHandle_t m_overlay;
-    vr::HmdVector2_t m_windowSize;
+    // OpenVR stuff
+    vr::IVRSystem*   m_apiSystem;
+    vr::IVRInput*    m_apiInput;
+    vr::IVROverlay*  m_apiOverlay;
+    vr::IVRSettings* m_apiSettings;
+
+    // Overlay stuff
+    vr::VROverlayHandle_t    m_overlayHandle;
+    vr::HmdMatrix34_t        m_overlayOffset;
+    vr::TrackedDeviceIndex_t m_overlayDevice;
+    QMatrix4x4 m_overlayDeviceOffsetL;
+    QMatrix4x4 m_overlayDeviceOffsetR;
+    QMatrix4x4 m_overlayDeviceOffsetC;
 
     // Controller stuff
-    vr::TrackedDeviceIndex_t m_controller_pri;
-    vr::TrackedDeviceIndex_t m_controller_sec;
+    EHand m_mouseHand;
+    EHand m_overlayHand;
+    vr::TrackedDeviceIndex_t m_mouseDeviceIndex;
 
-	// Overlay offset
-    QMatrix4x4* m_overlay_offset;
-	QMatrix4x4  m_overlay_offset_L;
-	QMatrix4x4  m_overlay_offset_R;
-	QMatrix4x4  m_overlay_offset_U;
+    // Action set stuff
+    vr::VRActiveActionSet_t  m_activeActionSet;
+    vr::VRActionSetHandle_t  m_handleActionSet;
+    vr::VRActionHandle_t     m_handleActionHapticsLeft;
+    vr::VRActionHandle_t     m_handleActionHapticsRight;
+    vr::VRActionHandle_t     m_handleActionInteract;
+    vr::VRActionHandle_t     m_handleActionShowOverlay;
+    vr::VRActionHandle_t     m_handleActionProxSensor;
+
+    vr::VRInputValueHandle_t m_sourceHMD;
+    vr::VRInputValueHandle_t m_sourceControllerLeft;
+    vr::VRInputValueHandle_t m_sourceControllerRight;
 
 	// Graphics
 	QGraphicsScene *m_scene;

@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "logitech_stylus",
+  "controller_type": "hpmotioncontroller",
   "description": "",
-  "name": "logitech_stylus"
+  "name": "hpmotioncontroller defaults"
 }
