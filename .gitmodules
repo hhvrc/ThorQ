@@ -1,15 +1,15 @@
 [submodule "libs/enet"]
 	path = libs/enet
 	url = https://github.com/zpl-c/enet.git
-[submodule "Client/openvr"]
+[submodule "client/openvr"]
 	path = client/openvr
 	url = https://github.com/ValveSoftware/openvr.git
 [submodule "libs/botan"]
 	path = libs/botan
 	url = https://github.com/randombit/botan.git
-[submodule "Server/concurrentqueue"]
+[submodule "server/concurrentqueue"]
 	path = server/concurrentqueue
-	url = https://github.com/cameron314/concurrentqueue
+	url = https://github.com/cameron314/concurrentqueue.git
 [submodule "server/cxxopts"]
 	path = server/cxxopts
 	url = https://github.com/jarro2783/cxxopts.git
