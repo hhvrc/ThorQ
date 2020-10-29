@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <numeric>
+#include <concepts>
 
 #include "enums.h"
 
