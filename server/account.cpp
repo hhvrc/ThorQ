@@ -146,7 +146,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 
     if (i == 0)
     {
-        fmt::print(stderr, "account [{}] invalid/already used\n", connection.lastError());
+        fmt::print(stderr, "username [{}] not available\n", username);
         return nullptr;
     }
 

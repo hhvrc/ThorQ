@@ -153,7 +153,7 @@ bool ThorQ::Server::start(std::uint16_t port, std::size_t maxPeers, std::uint8_t
             m_host = nullptr;
         }
 
-        m_host = enet_host_create(&address, maxPeers, channelCount, 0, 0); // two channels: communication(tcp), and commands(udp)
+        m_host = enet_host_create(&address, maxPeers, channelCount, 0, 0);
 
         if (m_host != nullptr)
         {
