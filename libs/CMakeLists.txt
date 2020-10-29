@@ -64,10 +64,10 @@ set(PREV_FLAGS ${CMAKE_CXX_FLAGS})
 # Remove warning flags
 string(REGEX REPLACE " ?-W.[a-zA-Z0-9=-]+| ?-pedantic" "" CMAKE_CXX_FLAGS ${PREV_FLAGS})
 
-set(FLATBUFFERS_INSTALL OFF)
-set(FLATBUFFERS_BUILD_TESTS OFF)
-set(FLATBUFFERS_BUILD_FLATC OFF)
-set(FLATBUFFERS_STATIC_FLATC ON)
+set(FLATBUFFERS_INSTALL      OFF CACHE BOOL "Enable the installation of targets."          FORCE)
+set(FLATBUFFERS_BUILD_FLATC  OFF CACHE BOOL "Enable the build of the flatbuffers compiler" FORCE)
+set(FLATBUFFERS_STATIC_FLATC ON  CACHE BOOL "Build flatbuffers compiler with -static flag" FORCE)
+set(FLATBUFFERS_BUILD_TESTS  OFF CACHE BOOL "Enable the build of tests and samples."       FORCE)
 add_subdirectory(flatbuffers)
 
 # Restore flags
