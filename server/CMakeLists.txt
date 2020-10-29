@@ -88,4 +88,5 @@ target_link_libraries(${project}
     ThorQLib
     cxxopts
     tbb
+    ${CMAKE_DL_LIBS}
 )
