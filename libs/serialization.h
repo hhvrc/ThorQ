@@ -4,7 +4,6 @@
 #include <vector>
 #include <cstdint>
 #include <string>
-#include <ranges>
 #include <numeric>
 
 #include "enums.h"
@@ -12,6 +11,7 @@
 void thorq_payload_serialization_prealloc(std::vector<std::uint8_t>& payload);
 
 #ifdef _MSC_VER // /std:c++latest /O2
+#include <ranges>
 #include <type_traits>
 template <typename T>
 constexpr std::size_t get_size_needed_for_type(const T& value)
