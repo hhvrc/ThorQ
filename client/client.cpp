@@ -50,7 +50,7 @@
  */
 enum THORQ_CLIENT_ACTION
 {
-    ACTION_Connected      = 1 << 0,  ///< [Toggle] Try to connect, and stay connected
+    ACTION_Connect        = 1 << 0,  ///< [Toggle] Try to connect, and stay connected
     ACTION_ReConnect      = 1 << 1,  ///< [Signal] Try to reconnect, set this if hostname/port is changed
     ACTION_Login          = 1 << 2,  ///< [Signal] Request server to log in with a given username
     ACTION_Logout         = 1 << 3,  ///< [Signal] Request server to log out
@@ -66,7 +66,7 @@ enum THORQ_CLIENT_ACTION
     ACTION_RESERVED_14    = 1 << 13,
     ACTION_RESERVED_15    = 1 << 14,
     ACTION_RESERVED_16    = 1 << 15,
-    ACTION_TOGGLEACTIONS  = ACTION_Connected ///< All action flags that are meant to be toggled, and not used as signals, these flags will not be cleared after they are read
+    ACTION_TOGGLEACTIONS  = ACTION_Connect ///< All action flags that are meant to be toggled, and not used as signals, these flags will not be cleared after they are read
 };
 
 /**
@@ -138,7 +138,7 @@ Client::Client(ENetHost* host)
 
 	connect(m_serviceTimer, &QTimer::timeout, this, &Client::Service);
 	m_serviceTimer->setSingleShot(false);
-    m_serviceTimer->setInterval(5);
+    m_serviceTimer->setInterval(10);
 	m_serviceTimer->start();
 
 	m_thread->start();
@@ -146,7 +146,7 @@ Client::Client(ENetHost* host)
 
 Client* Client::NewClient()
 {
-	ENetHost* host = enet_host_create(nullptr, 1, 2, 0, 0);
+    ENetHost* host = enet_host_create(nullptr, 1, THORQ_CHANNEL_COUNT, 0, 0);
 
 	if (host == nullptr)
 		return nullptr;
@@ -218,7 +218,7 @@ void Client::Connect(const char* address, quint16 port)
     m_requestedHostName = address;
     m_requestedHostPort = port;
 
-	m_actionFlags.fetch_or(ACTION_Connected);
+    m_actionFlags.fetch_or(ACTION_Connect);
 }
 
 void Client::Reconnect()
@@ -228,7 +228,7 @@ void Client::Reconnect()
 
 void Client::Disconnect()
 {
-	m_actionFlags.fetch_and(~ACTION_Connected);
+    m_actionFlags.fetch_and(~ACTION_Connect);
 }
 
 void Client::Login(const QString &username)
@@ -417,7 +417,7 @@ void Client::Service()
          * If [STATE] ACTION_Connected is not set, then the clients should not be connected
          * If [FLAG]  ACTION_ReConnect is set, then the client should disconnect, and will naturally reconnect again (i love state machines)
          */
-		if ((actions & ACTION_ReConnect) != 0 || (actions & ACTION_Connected) == 0)
+        if ((actions & ACTION_ReConnect) != 0 || (actions & ACTION_Connect) == 0)
         {
 			SetConnectionState(THORQ_STATE_CONNECTION_DISCONNECTING);
 			enet_peer_disconnect(m_peer, 0);

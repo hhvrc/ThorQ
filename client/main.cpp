@@ -35,7 +35,7 @@ int main(int argc, char** argv)
 {
 	qRegisterMetaType<THORQ_STATE_CONNECTION>("ThorqConnectionState");
     qRegisterMetaType<THORQ_STATE_CRYPTO>("ThorqCryptoState");
-    qRegisterMetaType<THORQ_STATE_HWID>("ThorqAuthState");
+    qRegisterMetaType<THORQ_STATE_HWID>("ThorqHwidState");
 	qRegisterMetaType<THORQ_STATE_LOGIN>("ThorqLoginState");
 
 	// TODO: customize GUI
@@ -110,7 +110,7 @@ int main(int argc, char** argv)
 
     loginWidget.show();
 
-	cli->Connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT);
+    cli->Connect("localhost"/*THORQ_SERVER_HOSTNAME*/, THORQ_SERVER_PORT);
 
 #else
     QPixmap pix(":/uwu.png");

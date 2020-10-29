@@ -54,20 +54,36 @@ void exit_handler(int s)
 
 int main(int argc, char** argv)
 {
-    fmt::print("ThorQ Server {}\n", THORQ_VERSION_SERVER.toString());
-    fmt::print("Using link {}\n", THORQ_VERSION_LINK.toString());
-    fmt::print("Expecting client {}\n", THORQ_VERSION_CLIENT.toString());
-
     cxxopts::Options options(THORQ_APPLICATION_NAME, "Server for ThorQ - A application for long range collar control");
     options.add_options()
+            ( "h,help", "Show this menu" )
             ( "p,port", "Port for the server to run at", cxxopts::value<std::uint16_t>())
             ( "c,conf", "Configuration file for the server", cxxopts::value<std::string>())
             ;
     cxxopts::ParseResult result = options.parse(argc, argv);
+
+    if (result["help"].count() != 0)
+    {
+        fmt::print(options.help());
+        return EXIT_SUCCESS;
+    }
+
+    fmt::print("ThorQ Server {}\n", THORQ_VERSION_SERVER.toString());
+    fmt::print("Using link {}\n", THORQ_VERSION_LINK.toString());
+    fmt::print("Expecting client {}\n", THORQ_VERSION_CLIENT.toString());
+
 #if PARSE_PORT
-    std::uint16_t port = result["port"].as<std::uint16_t>();
+    cxxopts::OptionValue portValue = result["port"];
+
+    if (portValue.count() == 0)
+    {
+        fmt::print("Please provide a port for the server to run at, or a config file to read this from\n");
+        return EXIT_SUCCESS;
+    }
+
+    std::uint16_t port = portValue.as<std::uint16_t>();
 #else
-    std::uint16_t port = 12345;
+    std::uint16_t port = THORQ_SERVER_PORT;
 #endif
 
     if (!InitializeDB("database.db"))
