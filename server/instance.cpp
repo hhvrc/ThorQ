@@ -48,7 +48,7 @@ ThorQ::Instance::~Instance()
 
 std::shared_ptr<ThorQ::Account> ThorQ::Instance::account() const
 {
-    std::shared_lock l(l_account);
+    std::shared_lock l(const_cast<std::shared_mutex&>(l_account));
 	return m_account;
 }
 
@@ -59,7 +59,7 @@ void ThorQ::Instance::accountSwap(std::shared_ptr<ThorQ::Account>& account)
 	{
         std::swap(m_account, account);
 	}
-
+/*
     if (state != m_loginState)
     {
         m_loginState = state;
@@ -91,7 +91,7 @@ void ThorQ::Instance::accountSwap(std::shared_ptr<ThorQ::Account>& account)
 
             setAccount(nullptr);
         }
-    }
+    }*/
 }
 
 void ThorQ::Instance::setHwid(const std::vector<std::uint8_t>& hwid)
@@ -137,6 +137,11 @@ THORQ_STATE_HWID ThorQ::Instance::hwidState() const
     return m_hwidState;
 }
 
+void ThorQ::Instance::setHwidState(THORQ_STATE_HWID state)
+{
+
+}
+
 bool ThorQ::Instance::cryptoInit()
 {
     if (m_crypto->generateKeyPair())
@@ -150,7 +155,7 @@ bool ThorQ::Instance::cryptoInit()
 
     m_crypto->reset();
     setCryptoState(THORQ_STATE_CRYPTO_NONE);
-    disconnectPeer(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
+    disconnectPeer(THORQ_DISCONNECT_REASON::CRYPTO_FAILED);
 
     return false;
 }
@@ -174,7 +179,7 @@ bool ThorQ::Instance::cryptoEstablish(const flatbuffers::Vector<std::uint8_t>& d
 
     m_crypto->reset();
     setCryptoState(THORQ_STATE_CRYPTO_NONE);
-    disconnectPeer(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
+    disconnectPeer(THORQ_DISCONNECT_REASON::CRYPTO_FAILED);
 
 	return false;
 }
@@ -196,51 +201,57 @@ bool ThorQ::Instance::cryptoVerify(const flatbuffers::Vector<std::uint8_t>& data
 
     m_crypto->reset();
     setCryptoState(THORQ_STATE_CRYPTO_NONE);
-    disconnectPeer(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
+    disconnectPeer(THORQ_DISCONNECT_REASON::CRYPTO_FAILED);
 
-	return false;
+    return false;
 }
 
-
-std::shared_ptr<ThorQ::Crypto> ThorQ::Instance::getCrypto()
+ENetPacket* ThorQ::Instance::packetEncode(const uint8_t *data, std::size_t dataSize, bool encrypt, bool reliable)
 {
-    return m_crypto;
-}
-
-void ThorQ::Instance::packetSend(const flatbuffers::DetachedBuffer& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
-{
-    ENetPacket* packet = ThorQ::Memory::packetGet(payload.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED);
+    ENetPacket* packet = ThorQ::Memory::packetGet(dataSize, reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED);
 
     if (packet != nullptr)
     {
         if (encrypt)
         {
-            if (!ThorQ::packetEncode(packet, payload, m_crypto))
+            if (!ThorQ::packetEncode(packet, data, dataSize, m_crypto))
             {
                 fmt::print(stderr, "Failed to encode packet!");
-                return;
+                ThorQ::Memory::packetFree(packet);
+                packet = nullptr;
             }
         }
         else
         {
-            if (!ThorQ::packetEncode(packet, payload))
+            if (!ThorQ::packetEncode(packet, data, dataSize))
             {
                 fmt::print(stderr, "Failed to encode packet!");
-                return;
+                ThorQ::Memory::packetFree(packet);
+                packet = nullptr;
             }
         }
-
-        enet_peer_send(m_peer, ch, packet);
     }
     else
     {
         fmt::print(stderr, "Failed to allocate packet!");
     }
+
+    return packet;
 }
 
-bool ThorQ::packetDecode()
+bool ThorQ::Instance::packetDecode(const ENetPacket *packet, std::vector<std::uint8_t>& payload)
 {
+    return ThorQ::packetDecode(packet, payload, m_crypto);
+}
 
+bool ThorQ::Instance::packetSend(ENetPacket *packet, THORQ_CHANNEL ch)
+{
+    if (packet != nullptr)
+    {
+        return enet_peer_send(m_peer, ch, packet) == 0;
+    }
+
+    return false;
 }
 
 void ThorQ::Instance::disconnectPeer(THORQ_DISCONNECT_REASON reason, bool force)

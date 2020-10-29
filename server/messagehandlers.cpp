@@ -40,19 +40,17 @@ void handleMessageHeartbeat(ThorQ::Instance* instance, const std::vector<std::ui
     if (heartbeat->interval() !=  g_heartbeatSetPoint)
     {
         flatbuffers::FlatBufferBuilder builder;
+        auto offset = ThorQ::Serialization::CreateHeartbeat(builder, g_heartbeatSetPoint);
+        builder.Finish(offset);
 
-        auto heartbeatBuilder = ThorQ::Serialization::CreateHeartbeat(builder, g_heartbeatSetPoint);
-
-        builder.Finish(heartbeatBuilder);
-
-        instance->packetSend(builder.Release(), THORQ_CHANNEL_MAIN, false, true);
+        instance->packetSend(instance->packetEncode(builder.GetBufferPointer(), builder.GetSize(), false, false), THORQ_CHANNEL_MAIN);
     }
 }
 
 void handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
     fmt::print("[MSG] Version!");
-
+/*
     flatbuffers::Verifier verifier(message.data(), message.size());
 
     const ThorQ::Serialization::Version* version = flatbuffers::GetRoot<ThorQ::Serialization::Version>(message.data());
@@ -83,13 +81,13 @@ void handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint
 
     fmt::print("Client expects %s[%s], current is %s[%s]\n", name, version.toString(), name, currentVersion.toString());
 
-    instance->disconnectPeer(THORQ_DISCONNECT_REASON_VERSION_INCOMPATIBLE);
+    instance->disconnectPeer(THORQ_DISCONNECT_REASON_VERSION_INCOMPATIBLE);*/
 }
 
 void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
     fmt::print("[MSG] Crypto!");
-
+/*
     flatbuffers::Verifier verifier(message.data(), message.size());
 
     const ThorQ::Serialization::Crypto::Command* crypto = flatbuffers::GetRoot<ThorQ::Serialization::Crypto::Command>(message.data());
@@ -138,13 +136,13 @@ void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8
 	default:
         fmt::print("[MSG] Crypto \?\?\?!");
 		return;
-    }
+    }*/
 }
 
 void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
     std::vector<std::uint8_t> response;
-
+/*
     THORQ_PAYLOAD_SYSTEMID cmd;
     thorq_payload_systemid_get_cmd(message, cmd);
 
@@ -196,13 +194,13 @@ void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uin
     {
         instance->disconnectPeer(THORQ_DISCONNECT_REASON_AUTH_SYSTEMID_BANNED);
         return;
-    }
+    }*/
 }
 
 void handleMessageAccount(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {
     std::vector<std::uint8_t> response;
-
+/*
     switch (thorq_payload_account_get_cmd(message)) {
     case THORQ_PAYLOAD_ACCOUNT_REGISTER:
         std::string username, password;
@@ -424,11 +422,11 @@ void handleMessageFriend(ThorQ::Instance* instance, const std::vector<std::uint8
         break;
     }
     }
-
+*/
 }
 
 void handleMessageSession(ThorQ::Instance *instance)
-{
+{/*
     std::vector<std::uint8_t> response;
 
     if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
@@ -442,7 +440,7 @@ void handleMessageSession(ThorQ::Instance *instance)
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGOUT, THORQ_PAYLOAD_ACK_NO_CHANGE);
         instance->packetSend(response, true, true);
-    }
+    }*/
 }
 
 void handleMessageModeration(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
@@ -454,10 +452,10 @@ void handleMessageAnnouncement(ThorQ::Instance* instance, const std::vector<std:
 }
 
 void handleMessageCollar(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
-{
+{/*
     if (instance->sessionState() == THORQ_STATE_SESSION_ACTIVE)
         if (instance->partner() != nullptr)
-            instance->partner()->sendMessage(message, true, false);
+            instance->partner()->sendMessage(message, true, false);*/
 }
 
 void handleMessageAck(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)

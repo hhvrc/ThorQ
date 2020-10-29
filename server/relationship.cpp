@@ -96,12 +96,12 @@ std::shared_ptr<ThorQ::Account> ThorQ::Relationship::target() const
     return m_target;
 }
 
-void ThorQ::Relationship::setMirror(std::shared_ptr<ThorQ::Relationship> mirror)
+void ThorQ::Relationship::setMirrors(std::shared_ptr<ThorQ::Relationship> relationship1, std::shared_ptr<ThorQ::Relationship> relationship2)
 {
-    m_mirror = mirror;
-    if (m_mirror != nullptr)
+    if (relationship1 != nullptr && relationship2 != nullptr)
     {
-        m_mirror->m_mirror = std::make_shared<ThorQ::Relationship>(this);
+        relationship1->m_mirror = relationship2;
+        relationship2->m_mirror = relationship1;
     }
 }
 

@@ -26,7 +26,7 @@ signals:
 public slots:
     void setConnectionState(THORQ_STATE_CONNECTION state);
     void setCryptoState(THORQ_STATE_CRYPTO state);
-    void setAuthState(THORQ_STATE_AUTH state);
+    void setHwidState(THORQ_STATE_HWID state);
 
     void setLoginState(THORQ_STATE_LOGIN state);
 	void setConnectionPing(uint ping);

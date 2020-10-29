@@ -87,7 +87,7 @@ enum class THORQ_DISCONNECT_REASON : std::uint32_t
 
     KICKED,
     BANNED,
-    TIMEDOUT,
+    TIMED_OUT,
 
     FUCK_YOU
 };

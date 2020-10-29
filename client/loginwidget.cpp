@@ -91,7 +91,7 @@ void LoginWidget::setCryptoState(THORQ_STATE_CRYPTO state)
     }
 }
 
-void LoginWidget::setAuthState(THORQ_STATE_AUTH state)
+void LoginWidget::setHwidState(THORQ_STATE_HWID state)
 {
     if (m_state != state)
     {

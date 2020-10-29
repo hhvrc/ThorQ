@@ -14,9 +14,9 @@
 #include "typedefs_global.h"
 
 namespace ThorQ {
-bool packetEncode(ENetPacket* pakcet, const flatbuffers::DetachedBuffer& payload);
-bool packetEncode(ENetPacket* pakcet, const flatbuffers::DetachedBuffer& payload, std::shared_ptr<ThorQ::Crypto> crypto);
-bool packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>&   payload, std::shared_ptr<ThorQ::Crypto> crypto);
+bool packetEncode(ENetPacket* pakcet, const std::uint8_t* data, std::size_t dataSize);
+bool packetEncode(ENetPacket* pakcet, const std::uint8_t* data, std::size_t dataSize, std::shared_ptr<ThorQ::Crypto> crypto);
+bool packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& payload, std::shared_ptr<ThorQ::Crypto> crypto);
 }
 
 #endif // THORQ_MESSAGE_H

@@ -60,7 +60,7 @@ public:
     /**
      * @return
      */
-	THORQ_STATE_AUTH AuthState() const;
+    THORQ_STATE_HWID AuthState() const;
 
     /**
      * @return
@@ -179,7 +179,7 @@ signals:
     /**
      * @param state
      */
-	void AuthStateChanged(THORQ_STATE_AUTH state);
+    void AuthStateChanged(THORQ_STATE_HWID state);
 
     /**
      * @param state
@@ -288,7 +288,7 @@ private slots:
      *
      * @param state State to set
 	 */
-	void SetAuthState(THORQ_STATE_AUTH state);
+    void SetAuthState(THORQ_STATE_HWID state);
 
     /**
      * @brief [Thread-Safe] Sets the state of the login
@@ -318,19 +318,17 @@ private slots:
 	void SetPartner(const QString& username);
 
     /// These should be self-explanatory
-    void HandleMessage(ENetPacket* packet);
+    void handleMessage(ENetPacket* packet);
 	void handlePayloadHeartbeat(std::vector<std::uint8_t>& payload);
 	void handlePayloadVersion(std::vector<std::uint8_t>& payload);
 	void handlePayloadCrypto(std::vector<std::uint8_t>& payload);
     void handlePayloadSystemID(std::vector<std::uint8_t>& payload);
 	void handlePayloadAccount(std::vector<std::uint8_t>& payload);
 	void handlePayloadRelation(std::vector<std::uint8_t>& payload);
-	void handlePayloadSession(std::vector<std::uint8_t>& payload);
-	void handlePayloadRoom(std::vector<std::uint8_t>& payload);
+    void handlePayloadSession(std::vector<std::uint8_t>& payload);
 	void handlePayloadModeration(std::vector<std::uint8_t>& payload);
 	void handlePayloadAnnouncement(std::vector<std::uint8_t>& payload);
-	void handlePayloadCollar(std::vector<std::uint8_t>& payload);
-	void handlePayloadAck(std::vector<std::uint8_t>& payload);
+    void handlePayloadCollar(std::vector<std::uint8_t>& payload);
 
     /**
      * @brief SendPayload
@@ -345,13 +343,13 @@ private slots:
      */
 	void requestEncryptionHandshake();
 
-    void handleDisconnect(quint32 reason);
+    void handleDisconnect(THORQ_DISCONNECT_REASON reason);
 private:
-	ThorQ::Crypto* m_crypto;
+    std::shared_ptr<ThorQ::Crypto> m_crypto;
 
 	std::atomic<THORQ_STATE_CONNECTION> m_connectionState;
 	std::atomic<THORQ_STATE_CRYPTO> m_cryptoState;
-	std::atomic<THORQ_STATE_AUTH> m_authState;
+    std::atomic<THORQ_STATE_HWID> m_authState;
 	std::atomic<THORQ_STATE_LOGIN> m_loginState;
 	std::atomic<THORQ_STATE_SESSION> m_sessionState;
     std::atomic<quint16> m_rtt;
@@ -360,20 +358,20 @@ private:
 	QString m_username;
 	QString m_password;
 
-	std::mutex l_partnerName;
+    std::mutex l_partnerName;
 	QString m_partnerName;
 
-	std::mutex l_requestedPartner;
+    std::mutex l_requestedPartner;
 	QString m_requestedPartner;
 
-	std::mutex l_requestingPartner;
+    std::mutex l_requestingPartner;
 	QString m_requestingPartner;
 
-	std::mutex l_registrationKey;
+    std::mutex l_registrationKey;
 	QString m_registrationKey;
 
-	std::atomic<quint16> m_actionFlags;
-	std::atomic<quint64> m_collarState;
+    std::atomic_uint16_t m_actionFlags;
+    std::atomic_uint64_t m_collarState;
 
 	QThread* m_thread;
 	QTimer* m_serviceTimer;
@@ -386,7 +384,7 @@ private:
 	ENetHost* m_host;
 	ENetPeer* m_peer;
 
-	std::mutex    l_requestedHost;
+    std::mutex l_requestedHost;
 	QString m_requestedHostName;
 	quint16 m_requestedHostPort;
 

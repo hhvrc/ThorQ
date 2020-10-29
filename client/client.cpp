@@ -30,16 +30,17 @@
 #include <crypto.h>
 #include <systemid.h>
 #include <thorq_message.h>
-#include <thorq_payload_crypto.h>
-#include <thorq_payload_account.h>
-#include <thorq_payload_collar.h>
-#include <thorq_payload_version.h>
-#include <thorq_payload_account.h>
-#include <thorq_payload_systemid.h>
-#include <thorq_payload_session.h>
-#include <thorq_payload_heartbeat.h>
-#include <thorq_payload_announcement.h>
-#include <thorq_payload_systemid.h>
+#include <flatbuffers/flatbuffers.h>
+#include <schemas/crypto_generated.h>
+#include <schemas/account_generated.h>
+#include <schemas/collar_generated.h>
+#include <schemas/version_generated.h>
+#include <schemas/account_generated.h>
+#include <schemas/systemid_generated.h>
+#include <schemas/session_generated.h>
+#include <schemas/heartbeat_generated.h>
+#include <schemas/announcement_generated.h>
+#include <schemas/systemid_generated.h>
 
 #define SCOPELOCK(l) std::scoped_lock lock(const_cast<std::mutex&>(l))
 
@@ -99,10 +100,10 @@ std::string ExtractString(const std::uint8_t* data, std::size_t dataSize, std::s
 
 Client::Client(ENetHost* host)
 	: QObject()
-	, m_crypto(new ThorQ::Crypto())
+    , m_crypto(std::make_shared<ThorQ::Crypto>())
 	, m_connectionState(THORQ_STATE_CONNECTION_DISCONNECTED)
 	, m_cryptoState(THORQ_STATE_CRYPTO_NONE)
-	, m_authState(THORQ_STATE_AUTH_NONE)
+    , m_authState(THORQ_STATE_HWID_NONE)
 	, m_loginState(THORQ_STATE_LOGIN_LOGGEDOUT)
 	, m_sessionState(THORQ_STATE_SESSION_NONE)
     , m_rtt(0)
@@ -173,7 +174,6 @@ Client::~Client()
 
 	delete m_address;
     delete m_heartbeatTimer;
-	delete m_crypto;
 	delete m_thread;
 }
 
@@ -197,7 +197,7 @@ THORQ_STATE_CRYPTO Client::CryptoState() const
 	return m_cryptoState.load();
 }
 
-THORQ_STATE_AUTH Client::AuthState() const
+THORQ_STATE_HWID Client::AuthState() const
 {
 	return m_authState.load();
 }
@@ -253,7 +253,7 @@ void Client::Logout()
 
 void Client::RequestSession(const QString &username)
 {
-	SCOPELOCK(l_requestedPartner);
+    SCOPELOCK(l_requestedPartner);
 	m_requestedPartner = username;
 	m_actionFlags.fetch_or(ACTION_SessionRequest);
 }
@@ -328,14 +328,14 @@ void Client::Service()
 			requestEncryptionHandshake();
 			break;
 		case ENET_EVENT_TYPE_RECEIVE:
-			HandleMessage(event.packet);
+            handleMessage(event.packet);
 			enet_packet_destroy(event.packet);
 			break;
 		case ENET_EVENT_TYPE_DISCONNECT:
-			handleDisconnect(event.data);
+            handleDisconnect((THORQ_DISCONNECT_REASON)event.data);
 			break;
 		case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-			handleDisconnect(THORQ_DISCONNECT_REASON_TIMEDOUT);
+            handleDisconnect(THORQ_DISCONNECT_REASON::TIMED_OUT);
 			break;
 		case ENET_EVENT_TYPE_NONE:
 			break;
@@ -344,7 +344,7 @@ void Client::Service()
 
 	// Gets the actions, and clears the actions that arent toggleables
 	uint actions = m_actionFlags.fetch_and(ACTION_TOGGLEACTIONS);
-
+/*
 	// Send stuff
 	if (ConnectionState() == THORQ_STATE_CONNECTION_CONNECTED)
     {
@@ -354,7 +354,6 @@ void Client::Service()
             {
                 std::vector<std::uint8_t> payload;
 
-                SCOPELOCK(l_loginInfo);
 				thorq_payload_account_logout_pack(payload);
                 SendPayload(payload, THORQ_CHANNEL_MAIN, true, true);
 
@@ -412,7 +411,7 @@ void Client::Service()
 
         }
 
-
+*/
         /**
          * Disconnects client gracefully
          * If [STATE] ACTION_Connected is not set, then the clients should not be connected
@@ -444,15 +443,15 @@ void Client::Service()
                     m_heartbeatTimer->start();
                     m_lastCheck = 0;
 				}
-
+/*
                 // Send a heartbeat, and set awaiting to true
                 std::vector<std::uint8_t> payload;
                 thorq_payload_heartbeat_pack(payload, m_heartbeatInterval);
                 SendPayload(payload, false, false);
-                m_awaitingHeartbeat = true;
+                m_awaitingHeartbeat = true;*/
 			}
 		}
-	}
+    /*}
 	else if (ConnectionState() == THORQ_STATE_CONNECTION_DISCONNECTED)
 	{
 		if ((actions & ACTION_Connected) != 0)
@@ -478,7 +477,7 @@ void Client::Service()
 				// TODO: something
 			}
 		}
-	}
+    }*/
 }
 
 void Client::SetRtt(std::uint16_t rtt)
@@ -510,7 +509,7 @@ void Client::SetCryptoState(THORQ_STATE_CRYPTO newState)
 	if (newState != oldState)
 	{
 		if (newState < oldState)
-			SetAuthState(THORQ_STATE_AUTH_NONE);
+            SetAuthState(THORQ_STATE_HWID_NONE);
 		else
 			SetConnectionState(THORQ_STATE_CONNECTION_CONNECTED);
 
@@ -518,7 +517,7 @@ void Client::SetCryptoState(THORQ_STATE_CRYPTO newState)
 	}
 }
 
-void Client::SetAuthState(THORQ_STATE_AUTH newState)
+void Client::SetAuthState(THORQ_STATE_HWID newState)
 {
 	int oldState = m_authState.exchange(newState);
 
@@ -541,7 +540,7 @@ void Client::SetLoginState(THORQ_STATE_LOGIN newState)
 		if (newState < oldState)
 			SetSessionState(THORQ_STATE_SESSION_NONE);
 		else
-			SetAuthState(THORQ_STATE_AUTH_OK);
+            SetAuthState(THORQ_STATE_HWID_OK);
 
 		emit LoginStateChanged(newState);
 	}
@@ -571,13 +570,13 @@ void Client::SetPartner(const QString &username)
 	m_partnerName = username;
 }
 
-void Client::HandleMessage(ENetPacket* packet)
+void Client::handleMessage(ENetPacket* packet)
 {
 	if (ConnectionState() != THORQ_STATE_CONNECTION_CONNECTED)
 		return;
 
 	std::vector<std::uint8_t> message(packet->data, packet->data + packet->dataLength);
-
+/*
     if (!thorqPacketDecode(message, m_crypto))
 	{
         return;
@@ -663,11 +662,11 @@ void Client::HandleMessage(ENetPacket* packet)
 		}
 
 		break;
-	}
+    }*/
 }
 
 void Client::handlePayloadHeartbeat(std::vector<std::uint8_t>& payload)
-{
+{/*
 	// Set interval from server
 	thorq_payload_heartbeat_unpack(payload, m_heartbeatInterval);
 
@@ -675,10 +674,10 @@ void Client::handlePayloadHeartbeat(std::vector<std::uint8_t>& payload)
 	{
 		m_awaitingHeartbeat = false;
 		SetRtt(m_heartbeatTimer->elapsed());
-	}
+    }*/
 }
 void Client::handlePayloadVersion(std::vector<std::uint8_t>& payload)
-{
+{/*
     THORQ_APP app;
     ThorQ::Version version;
     thorq_payload_version_unpack(payload, app, version);
@@ -711,10 +710,10 @@ void Client::handlePayloadVersion(std::vector<std::uint8_t>& payload)
 	default:
         qDebug() << tr("Got ivalid version %1[%2]").arg(app).arg(version.toString().c_str());
 		return;
-	}
+    }*/
 }
 void Client::handlePayloadCrypto(std::vector<std::uint8_t>& payload)
-{
+{/*
     std::vector<std::uint8_t> response;
 
     THORQ_PAYLOAD_CRYPTO cmd;
@@ -752,10 +751,10 @@ void Client::handlePayloadCrypto(std::vector<std::uint8_t>& payload)
 	default:
         qDebug() << "CRYPT: Unexpected message:" << cmd;
 		return;
-	}
+    }*/
 }
 void Client::handlePayloadSystemID(std::vector<std::uint8_t>& payload)
-{
+{/*
     std::vector<std::uint8_t> response;
 
 	THORQ_PAYLOAD_SYSTEMID cmd;
@@ -773,10 +772,10 @@ void Client::handlePayloadSystemID(std::vector<std::uint8_t>& payload)
 	default:
         qDebug() << "AUTH: Unexpected message:" << cmd;
 		break;
-    }
+    }*/
 }
 void Client::handlePayloadAccount(std::vector<std::uint8_t>& payload)
-{
+{/*
 	THORQ_PAYLOAD_ACCOUNT cmd;
 	thorq_payload_account_get_cmd(payload, cmd);
 
@@ -789,10 +788,25 @@ void Client::handlePayloadAccount(std::vector<std::uint8_t>& payload)
 		break;
 	}
 
-	emit Announcement("Announcement!");
+    emit Announcement("Announcement!");*/
+}
+
+void Client::handlePayloadRelation(std::vector<uint8_t> &payload)
+{
+
+}
+
+void Client::handlePayloadSession(std::vector<uint8_t> &payload)
+{
+
+}
+
+void Client::handlePayloadModeration(std::vector<uint8_t> &payload)
+{
+
 }
 void Client::handlePayloadAnnouncement(std::vector<std::uint8_t>& payload)
-{
+{/*
 	QString message;
     THORQ_PAYLOAD_ANNOUNCEMENT_TYPE type;
     THORQ_PAYLOAD_ANNOUNCEMENT_REASON reason;
@@ -825,172 +839,10 @@ void Client::handlePayloadAnnouncement(std::vector<std::uint8_t>& payload)
         break;
     }
 
-    emit Announcement(QString("[%1] %2 announcement:\n%3").arg(type_str).arg(reason_str).arg(message));
+    emit Announcement(QString("[%1] %2 announcement:\n%3").arg(type_str).arg(reason_str).arg(message));*/
 }
-void Client::handleMessageEvent(std::vector<std::uint8_t> &payload)
-{
-	QString message;
-    thorq_event_type_t type;
-
-    thorq_payload_event_get_type(payload, type);
-    thorq_payload_event_get_message(payload, message);
-
-    switch (type) {
-    case THORQ_EVENT_SESSION_REQUESTED:
-		emit SessionRequested(message);
-        break;
-    case THORQ_EVENT_SESSION_STARTED:
-        SetSessionState(THORQ_STATE_SESSION_ACTIVE);
-        break;
-    case THORQ_EVENT_SESSION_STOPPED:
-        SetSessionState(THORQ_STATE_SESSION_NONE);
-        break;
-    }
-}
-void Client::handleMessageCommand(std::vector<std::uint8_t> &payload)
-{
-
-}
-void Client::handleMessageCommandAck(std::vector<std::uint8_t> &payload)
-{
-	QString message;
-    THORQ_PAYLOAD_ID cmd;
-    THORQ_PAYLOAD_ACK result;
-
-    thorq_payload_ack_get_id(payload, cmd);
-    thorq_payload_ack_get_result(payload, result);
-    thorq_payload_ack_get_message(payload, message);
-
-    switch (result) {
-    case THORQ_PAYLOAD_ACK_INVALID:
-        // TODO: HMMMMMMM
-        return;
-    case THORQ_PAYLOAD_ACK_LOGIN_NEEDED:
-        SetLoginState(THORQ_STATE_LOGIN_LOGGEDOUT);
-        return;
-    case THORQ_PAYLOAD_ACK_UNAUTHORIZED:
-        SetAuthState(THORQ_STATE_AUTH_NONE);
-        return;
-    default:
-        break;
-    }
-
-    switch (cmd) {
-	/*
-    case THORQ_COMMAND_ID_LOGIN:
-    {
-        switch (result) {
-        case THORQ_COMMAND_ACK_RESULT_OK:
-        case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
-        {
-			SetUsername(message);
-            SetLoginState(THORQ_STATE_LOGIN_LOGGEDIN);
-
-            std::vector<std::uint8_t> payload;
-            thorq_payload_command_pack(payload, THORQ_COMMAND_ID_GET_USER_LIST);
-            SendPayload(payload, true, true);
-            return;
-        }
-        case THORQ_COMMAND_ACK_RESULT_DENIED:
-            SetUsername("");
-            SetLoginState(THORQ_STATE_LOGIN_LOGGEDOUT);
-			emit Error(message);
-            return;
-        default:
-            return;
-        }
-    }
-    case THORQ_COMMAND_ID_LOGOUT:
-    {
-        switch (result) {
-        case THORQ_COMMAND_ACK_RESULT_OK:
-        case THORQ_COMMAND_ACK_RESULT_NO_CHANGE:
-            SetUsername("");
-            SetLoginState(THORQ_STATE_LOGIN_LOGGEDOUT);
-            break;
-        default:
-            return;
-        }
-	}
-	*/
-    case THORQ_COMMAND_ID_SESSION_REQUEST:
-    {
-        switch (result) {
-        case THORQ_PAYLOAD_ACK_IN_PROGRESS:
-            return;
-        case THORQ_PAYLOAD_ACK_NO_CHANGE:
-            return;
-        case THORQ_PAYLOAD_ACK_DENIED:
-			emit Error(message);
-            return;
-        default:
-            return;
-        }
-    }
-    case THORQ_COMMAND_ID_SESSION_ACCEPT:
-    {
-        switch (result) {
-        case THORQ_PAYLOAD_ACK_OK:
-            return;
-        case THORQ_PAYLOAD_ACK_DENIED:
-            return;
-        default:
-            return;
-        }
-    }
-    case THORQ_COMMAND_ID_SESSION_DENY:
-    {
-        switch (result) {
-        case THORQ_PAYLOAD_ACK_OK:
-            return;
-        case THORQ_PAYLOAD_ACK_DENIED:
-			emit Error(message);
-            return;
-        default:
-            return;
-        }
-    }
-    case THORQ_COMMAND_ID_SESSION_LEAVE:
-    {
-        switch (result) {
-        case THORQ_PAYLOAD_ACK_OK:
-            return;
-        default:
-            return;
-        }
-    }
-    default:
-        return;
-    }
-}
-void Client::handleMessageNotification(std::vector<std::uint8_t> &payload)
-{
-	THORQ_NOTIFICATION_TYPE type;
-
-    thorq_payload_notification_get_type(payload, type);
-
-	switch (type) {
-	case THORQ_NOTIFICATION_USER_ACTIVITY:
-	{
-		QString name;
-		quint8 state = 0;
-        thorq_payload_notification_get_message_and_data(payload, name, state);
-		emit userUpdate(name, state);
-		break;
-	}
-	case THORQ_NOTIFICATION_USER_OFFLINE:
-	case THORQ_NOTIFICATION_USER_OFFLINE_LOS:
-	case THORQ_NOTIFICATION_USER_OFFLINE_TIMEOUT:
-	{
-		QString name;
-        thorq_payload_notification_get_message(payload, name);
-		emit UserOffline(name);
-		break;
-	}
-	}
-}
-void Client::handleMessageCollar(std::vector<std::uint8_t> &payload)
-{
+void Client::handlePayloadCollar(std::vector<std::uint8_t> &payload)
+{/*
 	quint8 flags, shockVal, vibrateVal, beepVal, autoVal;
     thorq_payload_collar_unpack(payload, flags, shockVal, vibrateVal, beepVal, autoVal);
 
@@ -1009,23 +861,25 @@ void Client::handleMessageCollar(std::vector<std::uint8_t> &payload)
 	else if ((flags & THORQ_COLLAR_FLAG_AUTO) != 0)
 	{
 		emit ReceivedAuto(autoVal, shockVal, vibrateVal, beepVal);
-	}
+    }*/
 }
 
 void Client::SendPayload(std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
 {
+    ENetPacket* packet = enet_packet_create(payload.data(), payload.size(), ENET_PACKET_FLAG_RELIABLE * reliable | ENET_PACKET_FLAG_UNSEQUENCED * !reliable);
+
     if (encrypt)
 	{
-        if (!thorqPacketDecode(payload, m_crypto))
+        if (!ThorQ::packetEncode(packet, payload.data(), payload.size(), m_crypto))
 			return;
 	}
     else
 	{
-        if (!thorqPacketDecode(payload))
+        if (!ThorQ::packetEncode(packet, payload.data(), payload.size()))
 			return;
 	}
 
-    enet_peer_send(m_peer, ch, enet_packet_create(payload.data(), payload.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED));
+    enet_peer_send(m_peer, ch, packet);
 }
 
 void Client::requestEncryptionHandshake()
@@ -1036,53 +890,48 @@ void Client::requestEncryptionHandshake()
     m_crypto->reset();
     SetCryptoState(THORQ_STATE_CRYPTO_REQUESTED);
 
+    flatbuffers::FlatBufferBuilder builder;
+    auto offset = ThorQ::Serialization::Crypto::CreateCommandDirect(builder, ThorQ::Serialization::Crypto::Type_Request);
+    builder.Finish(offset);
+/*
     std::vector<std::uint8_t> payload;
     thorq_payload_crypto_request_pack(payload);
-    SendPayload(payload, THORQ_CHANNEL_MAIN, false, true);
+    SendPayload(payload, THORQ_CHANNEL_MAIN, false, true);*/
 }
 
-void Client::handleDisconnect(quint32 reason)
+void Client::handleDisconnect(THORQ_DISCONNECT_REASON reason)
 {
 	m_peer = nullptr;
 	SetConnectionState(THORQ_STATE_CONNECTION_DISCONNECTED);
 
-	if (reason != 0)
-	{
-		switch (reason)
-		{
-		case THORQ_DISCONNECT_REASON_TIMEDOUT:
-			emit Warning(tr("Connection timed out"));
-			return;
-		case THORQ_DISCONNECT_REASON_VERSION_INCOMPATIBLE:
-			emit Error(tr("Please update you application\nContact the Dev:\nYameroDev#9058"));
-			break;
-		case THORQ_DISCONNECT_REASON_CRYPT_FAILED:
-			emit Error(tr("Encryption failed"));
-			break;
-        case THORQ_DISCONNECT_REASON_AUTH_TIMEOUT:
-			emit Error(tr("Authentication failed\nYou changed your registrationkey between pc's too quickly!\nWait a week and try again"));
-            break;
-        case THORQ_DISCONNECT_REASON_AUTH_REGKEY_INVALID:
-			emit Error(tr("Authentication failed\nInvalid registration key!"));
-			break;
-        case THORQ_DISCONNECT_REASON_AUTH_SYSTEMID_BANNED:
-            emit Error(tr("Authentication failed\nYou have been banned!"));
-            break;
-		case THORQ_DISCONNECT_REASON_SHUTDOWN_CLOSED:
-			emit Warning(tr("Server shut down"));
-			break;
-		case THORQ_DISCONNECT_REASON_SHUTDOWN_MAINTANENCE:
-			emit Warning(tr("Server is undergoing maintenance"));
-			break;
-		case THORQ_DISCONNECT_REASON_KICKED:
-			emit Error(tr("You have been kicked"));
-			break;
-        case THORQ_DISCONNECT_REASON_FUCK_YOU:
-            emit Error(tr("Fuck you"));
-            break;
-		default:
-			emit Warning(tr("Disconnected for unknown reason"));
-			break;
-		}
-	}
+    switch (reason)
+    {
+    case THORQ_DISCONNECT_REASON::TIMED_OUT:
+        emit Warning(tr("Connection timed out"));
+        return;
+    case THORQ_DISCONNECT_REASON::VERSION_INCOMPATIBLE:
+        emit Error(tr("Please update you application\nContact the Dev:\nYameroDev#9058"));
+        break;
+    case THORQ_DISCONNECT_REASON::CRYPTO_FAILED:
+        emit Error(tr("Encryption failed"));
+        break;
+    case THORQ_DISCONNECT_REASON::SHUTDOWN_CLOSED:
+        emit Warning(tr("Server shut down"));
+        break;
+    case THORQ_DISCONNECT_REASON::SHUTDOWN_MAINTANENCE:
+        emit Warning(tr("Server is undergoing maintenance"));
+        break;
+    case THORQ_DISCONNECT_REASON::KICKED:
+        emit Error(tr("You have been kicked"));
+        break;
+    case THORQ_DISCONNECT_REASON::BANNED:
+        emit Error(tr("You have been banned"));
+        break;
+    case THORQ_DISCONNECT_REASON::FUCK_YOU:
+        emit Error(tr("Fuck you"));
+        break;
+    default:
+        emit Warning(tr("Disconnected for unknown reason"));
+        break;
+    }
 }

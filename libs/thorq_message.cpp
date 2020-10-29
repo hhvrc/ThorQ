@@ -38,9 +38,9 @@ enum PREENCRYPTION_FLAG : std::uint8_t
     PREENCRYPTION_FLAG_RESERVED_8 = 1 << 7,
 };
 
-bool ThorQ::packetEncode(ENetPacket* packet, const flatbuffers::DetachedBuffer& payload)
+bool ThorQ::packetEncode(ENetPacket* packet, const std::uint8_t* data, std::size_t dataSize)
 {
-    if (payload.size() > THORQ_PAYLOAD_LEN_MAX || payload.size() < THORQ_PAYLOAD_LEN_MIN)
+    if (data == nullptr || dataSize > THORQ_PAYLOAD_LEN_MAX || dataSize < THORQ_PAYLOAD_LEN_MIN)
     {
         return false;
     }
@@ -49,17 +49,17 @@ bool ThorQ::packetEncode(ENetPacket* packet, const flatbuffers::DetachedBuffer& 
     packet->data[0] = 0;
 
     // Copy data
-    memcpy(packet->data + 1, payload.data(), payload.size());
+    memcpy(packet->data + 1, data, dataSize);
 
     // Set size
-    packet->dataLength = payload.size();
+    packet->dataLength = dataSize;
 
     return true;
 }
 
-bool ThorQ::packetEncode(ENetPacket* packet, const flatbuffers::DetachedBuffer& payload, std::shared_ptr<ThorQ::Crypto> crypto)
+bool ThorQ::packetEncode(ENetPacket* packet, const std::uint8_t* data, std::size_t dataSize, std::shared_ptr<ThorQ::Crypto> crypto)
 {
-    if (payload.size() > THORQ_PAYLOAD_LEN_MAX || payload.size() < THORQ_PAYLOAD_LEN_MIN)
+    if (dataSize > THORQ_PAYLOAD_LEN_MAX || dataSize < THORQ_PAYLOAD_LEN_MIN)
     {
         return false;
     }
@@ -68,7 +68,7 @@ bool ThorQ::packetEncode(ENetPacket* packet, const flatbuffers::DetachedBuffer& 
     packet->data[0] = PREENCRYPTION_FLAG_ENCRYPTED;
 
     // Encrpyt the data, this will copy it and the generated IV into messageOut
-    if (crypto->encrypt(packet->data + 1, payload.data(), payload.size(), packet->data + 1 + payload.size()))
+    if (crypto->encrypt(packet->data + 1, data, dataSize, packet->data + 1 + dataSize))
     {
         return packet;
     }

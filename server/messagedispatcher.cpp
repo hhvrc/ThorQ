@@ -30,9 +30,9 @@ void ThorQ::MessageDispatcher::DispatchEvent(const ENetEvent& event)
 {
     ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
 
-    if (!ThorQ::packetDecode(event.packet, m_buffer, instance->getCrypto()))
+    if (!instance->packetDecode(event.packet, m_buffer))
         return;
-
+/*
     switch (event.channelID) {
     case THORQ_CHANNEL_MAIN:
     case THORQ_CHANNEL_IMPULSE:
@@ -115,4 +115,5 @@ void ThorQ::MessageDispatcher::DispatchEvent(const ENetEvent& event)
 
         break;
     }
+    */
 }

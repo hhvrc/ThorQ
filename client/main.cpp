@@ -92,7 +92,7 @@ int main(int argc, char** argv)
     QObject::connect(cli, &Client::RttChanged, &loginWidget, &LoginWidget::setConnectionPing);
     QObject::connect(cli, &Client::ConnectionStateChanged, &loginWidget, &LoginWidget::setConnectionState);
     QObject::connect(cli, &Client::CryptoStateChanged, &loginWidget, &LoginWidget::setCryptoState);
-    QObject::connect(cli, &Client::AuthStateChanged, &loginWidget, &LoginWidget::setAuthState);
+    QObject::connect(cli, &Client::AuthStateChanged, &loginWidget, &LoginWidget::setHwidState);
 	QObject::connect(cli, &Client::LoginStateChanged, &loginWidget, &LoginWidget::setLoginState);
 
     QObject::connect(cli, &Client::Error, &errorBox, &QMessageBox::setText);

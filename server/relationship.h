@@ -28,7 +28,7 @@ public:
     std::shared_ptr<ThorQ::Account> source() const;
     std::shared_ptr<ThorQ::Account> target() const;
 
-    void setMirror(std::shared_ptr<ThorQ::Relationship> mirror);
+    static void setMirrors(std::shared_ptr<ThorQ::Relationship> relationship1, std::shared_ptr<ThorQ::Relationship> relationship2);
     std::shared_ptr<ThorQ::Relationship> mirror() const; // Mirror of this
 
     THORQ_RELATIONSHIP_STATUS status() const;

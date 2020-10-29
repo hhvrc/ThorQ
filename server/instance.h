@@ -41,8 +41,10 @@ public:
     bool cryptoEstablish(const flatbuffers::Vector<std::uint8_t>& data);
     bool cryptoVerify(const flatbuffers::Vector<std::uint8_t>& data);
 
-    void packetSend(const flatbuffers::DetachedBuffer& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
-    bool packetDecode();
+    ENetPacket* packetEncode(const std::uint8_t* data, std::size_t dataSize, bool encrypt = true, bool reliable = true);
+    bool packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& payload);
+
+    bool packetSend(ENetPacket* packet, THORQ_CHANNEL ch);
 
     void disconnectPeer(THORQ_DISCONNECT_REASON reason, bool force = false);
 private:

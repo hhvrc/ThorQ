@@ -44,6 +44,14 @@ public:
 	OpenVROverlayController(QObject* parent = nullptr);
 	~OpenVROverlayController() override;
 
+    enum class EHand : std::int8_t
+    {
+        Invalid = -1,
+        Left,
+        Right,
+        Center
+    };
+
 	/**
 	 * @brief widget
 	 * @return
@@ -148,15 +156,7 @@ public slots:
 	 * @brief setTint
      * @param color
      */
-	void setTint(const QColor& color);
-
-    enum class EHand : std::int8_t
-    {
-        Invalid = -1,
-        Left,
-        Right,
-        Center
-    };
+    void setTint(const QColor& color);
 
     bool triggerHapticFeedback(EHand hand, float secondsFromNow, float amplitude, float frequency, float duration );
 

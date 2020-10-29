@@ -91,7 +91,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& us
         return nullptr;
     }
 
-    return std::make_shared<ThorQ::Account>(query.column(0).getInt64(), (THORQ_ACCOUNT_AUTHORITY)authority, username, query.column(1).getText());
+    return std::shared_ptr<ThorQ::Account>(new ThorQ::Account(query.column(0).getInt64(), (THORQ_ACCOUNT_AUTHORITY)authority, username, query.column(1).getText()));
 }
 
 std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& username, const std::string& passwordHash)
@@ -156,7 +156,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 		return nullptr;
 	}
 
-    return std::make_shared<ThorQ::Account>(i, THORQ_ACCOUNT_AUTHORITY_NONE, username, passwordHash);
+    return std::shared_ptr<ThorQ::Account>(new ThorQ::Account(i, THORQ_ACCOUNT_AUTHORITY_NONE, username, passwordHash));
 }
 
 int64_t ThorQ::Account::databaseId() const
@@ -325,7 +325,7 @@ bool ThorQ::Account::removeRequestOutgoing(std::shared_ptr<ThorQ::Account> targe
 }
 bool ThorQ::Account::containsRequestOutgoing(std::shared_ptr<ThorQ::Account> target) const
 {
-    std::shared_lock l(l_requests);
+    std::shared_lock l(const_cast<std::shared_mutex&>(l_requests));
     return m_requests_outgoing.contains(target);
 }
 
@@ -346,7 +346,7 @@ bool ThorQ::Account::removeRequestIncoming(std::shared_ptr<ThorQ::Account> sourc
 }
 bool ThorQ::Account::containsRequestIncoming(std::shared_ptr<ThorQ::Account> source) const
 {
-    std::shared_lock l(l_requests);
+    std::shared_lock l(const_cast<std::shared_mutex&>(l_requests));
     return m_requests_incoming.contains(source);
 }
 
@@ -427,7 +427,7 @@ bool ThorQ::Account::requestDeny(std::shared_ptr<ThorQ::Account> sourceAccount, 
 
 bool ThorQ::Account::isOnline() const
 {
-    std::shared_lock l(l_instances);
+    std::shared_lock l(const_cast<std::shared_mutex&>(l_instances));
     return m_instances.size() > 0;
 }
 
@@ -445,7 +445,7 @@ bool ThorQ::Account::removeInstance(ThorQ::Instance* instance)
 
 bool ThorQ::Account::containsInstance(ThorQ::Instance* instance) const
 {
-    std::shared_lock l(l_instances);
+    std::shared_lock l(const_cast<std::shared_mutex&>(l_instances));
     return m_instances.contains(instance);
 }
 
@@ -499,9 +499,9 @@ void ThorQ::Account::disconnectAllInstances()
 
 void ThorQ::Account::sendPayload(const flatbuffers::DetachedBuffer& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
 {
-    for (std::shared_ptr<ThorQ::Instance> instance : m_instances)
+    for (ThorQ::Instance* instance : m_instances)
     {
-        instance->packetSend(payload, ch, encrypt, reliable);
+        instance->packetSend(instance->packetEncode(payload.data(), payload.size(), encrypt, reliable), ch);
     }
 }
 

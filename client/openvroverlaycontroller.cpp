@@ -503,6 +503,10 @@ bool OpenVROverlayController::triggerHapticFeedback(OpenVROverlayController::EHa
         action = m_handleActionHapticsRight;
         origin = m_sourceControllerRight;
     }
+    else
+    {
+        return false;
+    }
 
     vr::EVRInputError err = vr::VRInput()->TriggerHapticVibrationAction(action, secondsFromNow, duration, frequency, amplitude, origin);
 

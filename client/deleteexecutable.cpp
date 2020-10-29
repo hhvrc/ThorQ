@@ -1,6 +1,6 @@
 #include "deleteexecutable.h"
 
-#include <QDebug>
+#include <fmt/core.h>
 
 #if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
 #include <WinSock2.h>
@@ -22,10 +22,13 @@ void DelMe()
 
 	if (readlink("/proc/self/exe", &cmd[3], MAXPATHLEN) == -1)
 	{
-        qWarning() << "Error getting path to self:" << strerror(errno);
+        char arr[256]{0};
+        strerror_r(errno, arr, 256);
+
+        fmt::print(stderr, "Error getting path to self: {}\n", arr);
 	}
 
-    qDebug() << "System call success:" << (system(cmd) == EXIT_SUCCESS);
+    fmt::print("System call success: {}\n", system(cmd) == EXIT_SUCCESS);
 #elif _WIN32
     TCHAR szModuleName[MAX_PATH];
     GetModuleFileName(NULL, szModuleName, MAX_PATH);
