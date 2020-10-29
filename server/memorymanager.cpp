@@ -40,6 +40,7 @@ ENetCallbacks ThorQ::Memory::Initialize()
 
     callbacks.free = free;
     callbacks.malloc = malloc;
+    callbacks.no_memory = nullptr;
     callbacks.packet_create = packetGetEnet;
     callbacks.packet_destroy = ThorQ::Memory::packetFree;
 
