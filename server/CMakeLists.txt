@@ -40,7 +40,6 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/column.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/transaction.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/connection.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/internal/shell.c
     ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/internal/sqlite3.c
 )
 set(${project}_HEADERS
@@ -70,7 +69,6 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/transaction.h
     ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/connection.h
     ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/internal/sqlite3.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/internal/sqlite3ext.h
 )
 
 include_directories(

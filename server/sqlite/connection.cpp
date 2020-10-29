@@ -7,16 +7,15 @@
 #include "query.h"
 #include "value.h"
 
-ThorQ::SQLite::Connection::Connection(const char* apFilename,
-                                      int aFlags,             /* = OpenMode::READONLY */
-                                      int aBusyTimeoutMs,     /* = 0                  */
-                                      const char* apVfs       /* = nullptr            */)
+ThorQ::SQLite::Connection::Connection(const char* apFilename, /* ex: "file:database.db */
+                                      int aFlags,             /* = OpenMode::READONLY  */
+                                      int aBusyTimeoutMs      /* = 0                   */)
     : m_db(nullptr)
     , m_transaction(nullptr)
 {
     if (apFilename != nullptr)
     {
-        if (sqlite3_open_v2(apFilename, &m_db, aFlags | SQLITE_OPEN_NOMUTEX, apVfs) != SQLITE_OK)
+        if (sqlite3_open_v2(apFilename, &m_db, aFlags, NULL) != SQLITE_OK)
         {
             sqlite3_close_v2(m_db);
             m_db = nullptr;

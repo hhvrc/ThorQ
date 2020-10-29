@@ -20,12 +20,12 @@ class Connection
 public:
     enum OpenMode : int
     {
-        READONLY,
-        READWRITE,
-        CREATE,
+        READONLY  = 1,
+        READWRITE = 2,
+        CREATE    = 4,
     };
 
-    Connection(const char* apFilename, const int aFlags = OpenMode::READONLY, const int aBusyTimeoutMs = 0, const char* apVfs = nullptr);
+    Connection(const char* apFilename, int aFlags = OpenMode::READONLY, int aBusyTimeoutMs = 0);
     ~Connection();
 
     bool isOpen() const;
