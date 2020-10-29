@@ -15,7 +15,7 @@
 #include <thorq_message.h>
 
 #include "cxxopts.hpp"
-#include "sqlite/connection.h"
+#include "lsql/connection.h"
 #include "server.h"
 #include "account.h"
 #include "instance.h"
@@ -29,7 +29,7 @@ std::atomic_bool runServer = true;
 
 bool InitializeDB(const char* path) noexcept
 {
-    ThorQ::SQLite::Connection con(path, ThorQ::SQLite::Connection::CREATE | ThorQ::SQLite::Connection::READWRITE);
+    LSql::Connection con(path, LSql::Connection::CREATE | LSql::Connection::READWRITE);
 
     return con.execute("CREATE TABLE IF NOT EXISTS system_ids(db_id INTEGER PRIMARY KEY AUTOINCREMENT, system_id TEXT NOT NULL UNIQUE, banned_at DATETIME, registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)") // Unique SystemID of a cmoputer
         && con.execute("CREATE TABLE IF NOT EXISTS auth_tokens(db_id INTEGER PRIMARY KEY AUTOINCREMENT, auth_token TEXT NOT NULL UNIQUE, system_id INTEGER NOT NULL, account_id INTEGER NOT NULL, created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP)") // Authentication Token generated at login

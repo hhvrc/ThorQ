@@ -24,9 +24,9 @@
 #include "utils.h"
 #include "config.h"
 #include "session.h"
-#include "sqlite/connection.h"
-#include "sqlite/column.h"
-#include "sqlite/query.h"
+#include "lsql/connection.h"
+#include "lsql/column.h"
+#include "lsql/query.h"
 
 
 void handleMessageHeartbeat(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
@@ -168,7 +168,7 @@ void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uin
 
     fmt::print("SystemID: %s\n", systemID);
 
-    ThorQ::SQLite::Connection connection("database.db", ThorQ::SQLite::Connection::READWRITE);
+    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
 
     if (!connection.isOpen())
     {
@@ -177,7 +177,7 @@ void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uin
         return;
     }
 
-    ThorQ::SQLite::Query query = connection.query("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?1);"
+    LSql::Query query = connection.query("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?1);"
                                                   "SELECT banned_at FROM system_ids WHERE system_id = ?1;");
     query.bind(1, systemID);
 
@@ -188,7 +188,7 @@ void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uin
         return;
     }
 
-    bool isBanned = (query.column(0).type() == ThorQ::SQLite::Type::Null);
+    bool isBanned = (query.column(0).type() == LSql::Type::Null);
 
     if (isBanned)
     {

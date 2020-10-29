@@ -12,10 +12,10 @@
 #include <schemas/session_generated.h>
 #include <schemas/relationship_generated.h>
 
-#include "sqlite/connection.h"
-#include "sqlite/transaction.h"
-#include "sqlite/column.h"
-#include "sqlite/query.h"
+#include "lsql/connection.h"
+#include "lsql/transaction.h"
+#include "lsql/column.h"
+#include "lsql/query.h"
 
 #include "utils.h"
 #include "instance.h"
@@ -47,7 +47,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& us
         }
     }
 
-    SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
+    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
 
     if (!connection.isOpen())
     {
@@ -55,7 +55,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& us
         return nullptr;
     }
 
-    SQLite::Query query = connection.query("SELECT db_id, password_hash, authority FROM accounts WHERE username = ?");
+    LSql::Query query = connection.query("SELECT db_id, password_hash, authority FROM accounts WHERE username = ?");
 
     if (!query.bind(1, username))
     {
@@ -76,10 +76,10 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& us
     }
 
     // Get database ID
-    SQLite::Column col = query.column(0);
-    if (query.getType(0) != SQLite::Type::Integer ||
-        query.getType(1) != SQLite::Type::Text    ||
-        query.getType(2) != SQLite::Type::Integer)
+    LSql::Column col = query.column(0);
+    if (query.getType(0) != LSql::Type::Integer ||
+        query.getType(1) != LSql::Type::Text    ||
+        query.getType(2) != LSql::Type::Integer)
     {
         return nullptr;
     }
@@ -107,14 +107,14 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
         }
     }
 
-    SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
+    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
 
     if (!connection.isOpen())
     {
         return nullptr;
     }
 
-    SQLite::Transaction transaction = connection.transaction();
+    LSql::Transaction transaction = connection.transaction();
 
     if (!transaction.isOpen())
 	{
@@ -122,7 +122,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 		return nullptr;
     }
 
-    SQLite::Query query = connection.query("INSERT OR IGNORE INTO accounts(username, password_hash) VALUES (?, ?);");
+    LSql::Query query = connection.query("INSERT OR IGNORE INTO accounts(username, password_hash) VALUES (?, ?);");
 
     if (!query.bind(1, username))
     {
@@ -181,14 +181,14 @@ bool ThorQ::Account::setUsername(const std::string& username)
         return false;
     }
 
-    SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
+    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
 
     if (!connection.isOpen())
     {
         return false;
     }
 
-    SQLite::Query query = connection.query("UPDATE OR IGNORE accounts SET username = ? WHERE db_id = ? LIMIT 1;SELECT changes();");
+    LSql::Query query = connection.query("UPDATE OR IGNORE accounts SET username = ? WHERE db_id = ? LIMIT 1;SELECT changes();");
 
     if (!query.isValid())
     {
@@ -247,14 +247,14 @@ bool ThorQ::Account::setPasswordHash(const std::string& passwordHash)
         return false;
     }
 
-    SQLite::Connection connection("database.db", SQLite::Connection::READWRITE);
+    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
 
     if (!connection.isOpen())
     {
         return false;
     }
 
-    SQLite::Query query = connection.query("UPDATE OR IGNORE accounts SET password_hash = ? WHERE db_id = ? LIMIT 1;SELECT changes();");
+    LSql::Query query = connection.query("UPDATE OR IGNORE accounts SET password_hash = ? WHERE db_id = ? LIMIT 1;SELECT changes();");
 
     if (!query.isValid())
     {

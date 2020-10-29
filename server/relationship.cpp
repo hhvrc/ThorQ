@@ -1,21 +1,21 @@
 #include "relationship.h"
 
-#include "sqlite/connection.h"
-#include "sqlite/column.h"
-#include "sqlite/query.h"
+#include "lsql/connection.h"
+#include "lsql/column.h"
+#include "lsql/query.h"
 
 #include "account.h"
 
 std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::NewRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target)
 {
-    ThorQ::SQLite::Connection connection("database.db", ThorQ::SQLite::Connection::READWRITE);
+    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
 
     if (!connection.isOpen())
     {
         return nullptr;
     }
 
-    SQLite::Query ensure = connection.query("INSERT OR IGNORE INTO relationships(uuid, source, target) VALUES (?1, ?3, ?4),(?2, ?4, ?3);");
+    LSql::Query ensure = connection.query("INSERT OR IGNORE INTO relationships(uuid, source, target) VALUES (?1, ?3, ?4),(?2, ?4, ?3);");
     ensure.bind(1, "please generate some text");
     ensure.bind(2, "and some more generated text");
     ensure.bind(3, source->databaseId());
@@ -23,17 +23,17 @@ std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::NewRelationship(std::s
     ensure.step();
     ensure.finalize();
 
-    SQLite::Query fetch = connection.query("SELECT db_id, uuid, source, target, status, authority FROM relationships WHERE uuid LIKE ?1 OR ?2;");
+    LSql::Query fetch = connection.query("SELECT db_id, uuid, source, target, status, authority FROM relationships WHERE uuid LIKE ?1 OR ?2;");
     fetch.bind(1, "please generate some text");
     fetch.bind(2, "and some more generated text");
     fetch.step();
 
-    SQLite::Column dbIdCol = fetch.column(0);
-    SQLite::Column uuidCol = fetch.column(1);
-    SQLite::Column sourceCol = fetch.column(2);
-    SQLite::Column targetCol = fetch.column(3);
-    SQLite::Column statusCol = fetch.column(4);
-    SQLite::Column authorityCol = fetch.column(5);
+    LSql::Column dbIdCol = fetch.column(0);
+    LSql::Column uuidCol = fetch.column(1);
+    LSql::Column sourceCol = fetch.column(2);
+    LSql::Column targetCol = fetch.column(3);
+    LSql::Column statusCol = fetch.column(4);
+    LSql::Column authorityCol = fetch.column(5);
 
     // TODO
 
@@ -50,7 +50,7 @@ std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(uuids:
 }
 std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target)
 {
-    ThorQ::SQLite::Connection connection("database.db", ThorQ::SQLite::Connection::READONLY);
+    LSql::Connection connection("database.db", LSql::Connection::READONLY);
 
     if (!connection.isOpen())
     {

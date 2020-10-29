@@ -9,6 +9,8 @@ project(
 
 message("Configuring ${project}...")
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lsql)
+
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cxxopts)
 
 if (WIN32)
@@ -34,13 +36,6 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/relationship.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/messagehandlers.cpp
-
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/value.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/query.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/column.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/transaction.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/connection.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/internal/sqlite3.c
 )
 set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/server.h
@@ -61,20 +56,13 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/relationship.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_server.h
-
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/type.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/value.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/query.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/column.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/transaction.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/connection.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/sqlite/internal/sqlite3.h
 )
 
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/concurrentqueue
+    ${CMAKE_CURRENT_SOURCE_DIR}/lsql/include
     ${CMAKE_CURRENT_SOURCE_DIR}/cxxopts/include
 )
 
@@ -87,6 +75,7 @@ add_executable(${project}
 target_link_libraries(${project}
     ThorQLib
     cxxopts
+    lsql
     tbb
     ${CMAKE_DL_LIBS}
 )
