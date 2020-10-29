@@ -75,11 +75,6 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    ThorQ::Account::NewAccount("yeet", "yeet");
-    ThorQ::Account::NewAccount("yeet1", "yeet1");
-    ThorQ::Account::NewAccount("yeet2", "yeet2");
-    return EXIT_SUCCESS;
-
     if (!ThorQ::Server::Initialize())
     {
             fmt::print("Failed to initialize Server!\n");

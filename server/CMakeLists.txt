@@ -11,6 +11,9 @@ message("Configuring ${project}...")
 
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lsql)
 
+set(CXXOPTS_BUILD_EXAMPLES OFF)
+set(CXXOPTS_BUILD_TESTS    OFF)
+set(CXXOPTS_ENABLE_INSTALL OFF)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cxxopts)
 
 if (WIN32)
