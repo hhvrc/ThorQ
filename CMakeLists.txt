@@ -63,8 +63,8 @@ if(MSVC)
     string(REGEX REPLACE "[/-]O[12bdgistxy] ?" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
     string(REGEX REPLACE "[/-]DEBUG:[a-zA-Z]+ ?" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
-    # Enable max warnings
-    string(APPEND CMAKE_CXX_FLAGS " -W4 -DNOMINMAX")
+    # Enable max warnings (But dont spam the console)
+    string(APPEND CMAKE_CXX_FLAGS " -Wall -DNOMINMAX -wo9025 -wo5054")
 
     if(${CMAKE_BUILD_TYPE} MATCHES "Release")
 	string(APPEND CMAKE_CXX_FLAGS " -MT -DEBUG:NONE -O2")
