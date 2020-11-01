@@ -1,12 +1,22 @@
 #include "relationship.h"
 
+#include "lsql/transaction.h"
 #include "lsql/connection.h"
 #include "lsql/column.h"
 #include "lsql/query.h"
 
+#include "uuid.h"
 #include "account.h"
 
-std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::NewRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target)
+std::shared_mutex g_relationships_lock;
+std::unordered_map<ThorQ::Uuid, std::shared_ptr<ThorQ::Relationship>> g_relationships;
+
+std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(ThorQ::Uuid publicId)
+{
+    // TODO
+    return nullptr;
+}
+std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target)
 {
     LSql::Connection connection("database.db", LSql::Connection::READWRITE);
 
@@ -15,56 +25,66 @@ std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::NewRelationship(std::s
         return nullptr;
     }
 
-    LSql::Query ensure = connection.query("INSERT OR IGNORE INTO relationships(uuid, source, target) VALUES (?1, ?3, ?4),(?2, ?4, ?3);");
-    ensure.bind(1, "please generate some text");
-    ensure.bind(2, "and some more generated text");
-    ensure.bind(3, source->databaseId());
-    ensure.bind(4, target->databaseId());
-    ensure.step();
-    ensure.finalize();
+    LSql::Transaction transaction = connection.transaction();
 
-    LSql::Query fetch = connection.query("SELECT db_id, uuid, source, target, status, authority FROM relationships WHERE uuid LIKE ?1 OR ?2;");
-    fetch.bind(1, "please generate some text");
-    fetch.bind(2, "and some more generated text");
-    fetch.step();
+    LSql::Query query = connection.query(
+                "INSERT OR IGNORE INTO relationships(source, target, uuid, status, authority) VALUES (:1, :2, :3, :5, :6),(:2, :1, :4, :5, :6);"
+                "SELECT source, uuid, status, authority FROM relationships WHERE source LIKE :1 OR :2 AND target LIKE :1 OR :2 LIMIT 2;"
+                );
+    query.bind(1, source->databaseId());
+    query.bind(2, target->databaseId());
+    query.bind(3, ThorQ::Uuid::NewUuid().toString());
+    query.bind(4, ThorQ::Uuid::NewUuid().toString());
+    query.bind(5, (int32_t)THORQ_RELATIONSHIP_STATUS::NONE);
+    query.bind(6, (int32_t)THORQ_RELATIONSHIP_AUTHORITY::SILENT);
+    query.step();
 
-    LSql::Column dbIdCol = fetch.column(0);
-    LSql::Column uuidCol = fetch.column(1);
-    LSql::Column sourceCol = fetch.column(2);
-    LSql::Column targetCol = fetch.column(3);
-    LSql::Column statusCol = fetch.column(4);
-    LSql::Column authorityCol = fetch.column(5);
+    std::shared_ptr<ThorQ::Relationship> sourceRelationship;
+    std::shared_ptr<ThorQ::Relationship> targetRelationship;
 
+    for (int i = 0; i < 2; i++)
+    {
+        if (!query.step() && query.columnCount() != 4)
+        {
+            return nullptr;
+        }
+
+        std::int64_t sourceId = query.column(0).getInt64();
+
+        ThorQ::Uuid uuid;
+        if (!ThorQ::Uuid::TryParse(query.column(1).getText(), uuid))
+        {
+            return nullptr;
+        }
+
+        std::int32_t status    = query.column(2).getInt();
+        std::int32_t authority = query.column(3).getInt();
+
+        if (sourceId == source->databaseId())
+        {
+            sourceRelationship = std::shared_ptr<ThorQ::Relationship>(new Relationship(uuid, source, target, (THORQ_RELATIONSHIP_STATUS)status, (THORQ_RELATIONSHIP_AUTHORITY)authority));
+            //sourceRelationship = std::shared_ptr<ThorQ::Relationship>(new Relationship(accountId, uuid.value(), source, target, (THORQ_RELATIONSHIP_STATUS)status, (THORQ_RELATIONSHIP_AUTHORITY)authority));
+        }
+        else if (sourceId == target->databaseId())
+        {
+            targetRelationship = std::shared_ptr<ThorQ::Relationship>(new Relationship(uuid, target, source, (THORQ_RELATIONSHIP_STATUS)status, (THORQ_RELATIONSHIP_AUTHORITY)authority));
+            //targetRelationship = std::shared_ptr<ThorQ::Relationship>(new Relationship(accountId, uuid.value(), target, source, (THORQ_RELATIONSHIP_STATUS)status, (THORQ_RELATIONSHIP_AUTHORITY)authority));
+        }
+        else
+        {
+            return nullptr;
+        }
+    }
+
+    std::unique_lock l(g_relationships_lock);
+    g_relationships.insert(std::pair<ThorQ::Uuid, std::shared_ptr<ThorQ::Relationship>>(sourceRelationship->publicId(), sourceRelationship));
     // TODO
 
     //ThorQ::Relationship
 }
 
-std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(int64_t dbId)
-{
-    // TODO
-}
-std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(uuids::uuid publicId)
-{
-    // TODO
-}
-std::shared_ptr<ThorQ::Relationship> ThorQ::Relationship::GetRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target)
-{
-    LSql::Connection connection("database.db", LSql::Connection::READONLY);
-
-    if (!connection.isOpen())
-    {
-        return nullptr;
-    }
-
-    connection.execute("INSERT OR IGNORE INTO relationships() VALUES (?1, ?2);");
-
-    // TODO
-}
-
-ThorQ::Relationship::Relationship(std::int64_t privateId, uuids::uuid publicId, std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target, THORQ_RELATIONSHIP_STATUS status, THORQ_RELATIONSHIP_AUTHORITY authority)
-    : m_privId(privateId)
-    , m_publicId(publicId)
+ThorQ::Relationship::Relationship(ThorQ::Uuid publicId, std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target, THORQ_RELATIONSHIP_STATUS status, THORQ_RELATIONSHIP_AUTHORITY authority)
+    : m_publicId(publicId)
     , m_source(source)
     , m_target(target)
     , m_mirror(nullptr)
@@ -81,7 +101,7 @@ ThorQ::Relationship::~Relationship()
     }
 }
 
-uuids::uuid ThorQ::Relationship::publicId() const
+ThorQ::Uuid ThorQ::Relationship::publicId() const
 {
     return m_publicId;
 }

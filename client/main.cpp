@@ -110,7 +110,7 @@ int main(int argc, char** argv)
 
     loginWidget.show();
 
-    cli->Connect("localhost"/*THORQ_SERVER_HOSTNAME*/, THORQ_SERVER_PORT);
+    cli->Connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT);
 
 #else
     QPixmap pix(":/uwu.png");

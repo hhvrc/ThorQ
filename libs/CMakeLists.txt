@@ -110,7 +110,6 @@ set(${project}_SOURCES
 set(${project}_HEADERS
     ${CMAKE_CURRENT_BINARY_DIR}/botan_all.h
     ${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/stduuid/include/uuid.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
     ${CMAKE_CURRENT_SOURCE_DIR}/hashing.h
@@ -130,7 +129,6 @@ set(GLOB_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/fmt/include
     ${CMAKE_CURRENT_SOURCE_DIR}/enet/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/stduuid/include
     ${CMAKE_CURRENT_SOURCE_DIR}/flatbuffers/include
 
     CACHE PATH "List of library directories for header includes"

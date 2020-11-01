@@ -6,8 +6,7 @@
 #include <unordered_set>
 #include <tbb/concurrent_unordered_map.h>
 
-#include <stduuid/include/uuid.h>
-
+#include "uuid.h"
 #include "typedefs_server.h"
 
 namespace ThorQ {
@@ -22,10 +21,10 @@ public:
 
     Session();
 private:
-    uuids::uuid m_id;
+    ThorQ::Uuid m_id;
     struct Participant
     {
-        uuids::uuid m_id;
+        ThorQ::Uuid m_id;
         std::shared_ptr<ThorQ::Account> account = nullptr;
         std::atomic_uint8_t permissions = 0;
     };

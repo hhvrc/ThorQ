@@ -3,27 +3,22 @@
 
 #include <atomic>
 #include <memory>
-#include <uuid.h>
 
 #include <enums.h>
-#include <stduuid/include/uuid.h>
 
+#include "uuid.h"
 #include "typedefs_server.h"
 
 namespace ThorQ {
 class Relationship // An attributed "edge" in a labeled graph
 {
-    Relationship(const Relationship&) = delete;
-    Relationship& operator=(const Relationship&) = delete;
-    Relationship(std::int64_t privateId, uuids::uuid publicId, std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target, THORQ_RELATIONSHIP_STATUS status, THORQ_RELATIONSHIP_AUTHORITY authority);
+    Relationship(ThorQ::Uuid publicId, std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target, THORQ_RELATIONSHIP_STATUS status, THORQ_RELATIONSHIP_AUTHORITY authority);
 public:
-    static std::shared_ptr<ThorQ::Relationship> NewRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target);
-    static std::shared_ptr<ThorQ::Relationship> GetRelationship(std::int64_t dbId);
-    static std::shared_ptr<ThorQ::Relationship> GetRelationship(uuids::uuid publicId);
+    static std::shared_ptr<ThorQ::Relationship> GetRelationship(ThorQ::Uuid publicId);
     static std::shared_ptr<ThorQ::Relationship> GetRelationship(std::shared_ptr<ThorQ::Account> source, std::shared_ptr<ThorQ::Account> target);
     ~Relationship();
 
-    uuids::uuid publicId() const;
+    ThorQ::Uuid publicId() const;
 
     std::shared_ptr<ThorQ::Account> source() const;
     std::shared_ptr<ThorQ::Account> target() const;
@@ -37,8 +32,7 @@ public:
     THORQ_RELATIONSHIP_AUTHORITY authority() const;
     void setAuthority(THORQ_RELATIONSHIP_AUTHORITY authority);
 private:
-    const std::int64_t m_privId;
-    const uuids::uuid  m_publicId;
+    const ThorQ::Uuid  m_publicId;
     const std::shared_ptr<ThorQ::Account> m_source;
     const std::shared_ptr<ThorQ::Account> m_target;
     std::shared_ptr<ThorQ::Relationship>  m_mirror;

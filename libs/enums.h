@@ -97,22 +97,22 @@ enum class THORQ_DISCONNECT_REASON : std::uint32_t
 ////////////////////////////////////////////////////
 
 /// Friend relationship status
-enum THORQ_RELATIONSHIP_STATUS : std::uint8_t
+enum class THORQ_RELATIONSHIP_STATUS : std::uint8_t
 {
-    THORQ_RELATIONSHIP_STATUS_BLOCKED, ///< Target is blocked
-    THORQ_RELATIONSHIP_STATUS_NONE,    ///< No relationship status
-    THORQ_RELATIONSHIP_STATUS_PENDING, ///< Outgoing friend-request
-    THORQ_RELATIONSHIP_STATUS_FRIENDS, ///< Account is friended
+    BLOCKED, ///< Target is blocked
+    NONE,    ///< No relationship status
+    PENDING, ///< Outgoing friend-request
+    FRIENDS, ///< Account is friended
 };
 
 /// Actions to be taken on session requested
-enum THORQ_RELATIONSHIP_AUTHORITY : std::uint8_t
+enum class THORQ_RELATIONSHIP_AUTHORITY : std::uint8_t
 {
-    THORQ_RELATIONSHIP_AUTHORITY_REJECT,    ///< Always reject this persons requests
-    THORQ_RELATIONSHIP_AUTHORITY_SILENT,    ///< Persons requests will not prompt me
-    THORQ_RELATIONSHIP_AUTHORITY_NOTIFY,    ///< Prompt me if this person requests control
-    THORQ_RELATIONSHIP_AUTHORITY_ACCEPT,    ///< Accept if this person requests
-    THORQ_RELATIONSHIP_AUTHORITY_EXCLUSIVE  ///< This person can invoke exclusive access to me (will kick everyone else out)
+    REJECT,   ///< Always reject this persons requests
+    SILENT,   ///< Persons requests will not prompt me
+    NOTIFY,   ///< Prompt me if this person requests control
+    ACCEPT,   ///< Accept if this person requests
+    EXCLUSIVE ///< This person can invoke exclusive access to me (will kick everyone else out)
 };
 
 enum THORQ_ACCOUNT_AUTHORITY : std::uint8_t
