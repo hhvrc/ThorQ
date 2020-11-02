@@ -575,8 +575,8 @@ void OpenVROverlayController::update()
     // Links to check out:
     //
     // https://github.com/ValveSoftware/openvr/wiki/IVROverlay::HandleControllerOverlayInteractionAsMouse
-    // https://github.com/aardvarkxr/aardvark/blob/57ab9a76a186ea8150f02393f1c210bfcb5ff931/data/aardvark.vrmanifest
-
+    // https://github.com/aardvarkxr/aardvark/blob/master/src/avrenderer/vrmanager.cpp
+    // https://github.com/aardvarkxr/aardvark/blob/master/data/aardvark.vrmanifest
 
 
     vr::VREvent_t event{};
@@ -747,11 +747,6 @@ bool OpenVROverlayController::createOverlay()
     // Set input method to simulate a mouse
     err = m_apiOverlay->SetOverlayInputMethod(m_overlayHandle, vr::VROverlayInputMethod_Mouse);
 	if (err != vr::VROverlayError_None)
-        qWarning() << tr("Error setting overlay input method:") << m_apiOverlay->GetOverlayErrorNameFromEnum(err);
-
-    // Enable Interaction
-    err = m_apiOverlay->SetOverlayFlag(m_overlayHandle, vr::VROverlayFlags_MakeOverlaysInteractiveIfVisible, true);
-    if (err != vr::VROverlayError_None)
         qWarning() << tr("Error setting overlay input method:") << m_apiOverlay->GetOverlayErrorNameFromEnum(err);
 
 	return true;
