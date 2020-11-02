@@ -17,12 +17,18 @@
 #include <schemas/collar_generated.h>
 
 #include "utils.h"
+#include "server.h"
 #include "account.h"
 #include "instance.h"
 #include "messagehandlers.h"
 
-ThorQ::MessageDispatcher::MessageDispatcher(ThorQ::Server *serverInstance)
-    : m_buffer(THORQ_PAYLOAD_LEN_MAX)
+ThorQ::MessageDispatcher::MessageDispatcher(ThorQ::Server* server)
+    : m_server(server)
+    , m_buffer(THORQ_PAYLOAD_LEN_MAX)
+    , m_tokenGet(server->m_rxQueue)
+    , m_tokenQueue(server->m_txQueue)
+    , m_tokenBroadcast(server->m_broadcastQueue)
+    , m_tokenDisconnect(server->m_disconnectQueue)
 {
 }
 

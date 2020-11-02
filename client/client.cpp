@@ -344,10 +344,10 @@ void Client::Service()
 
 	// Gets the actions, and clears the actions that arent toggleables
 	uint actions = m_actionFlags.fetch_and(ACTION_TOGGLEACTIONS);
-/*
+
 	// Send stuff
 	if (ConnectionState() == THORQ_STATE_CONNECTION_CONNECTED)
-    {
+    {/*
         if (LoginState() == THORQ_STATE_LOGIN_LOGGEDIN)
         {
             if ((actions & ACTION_Logout) != 0)
@@ -451,10 +451,10 @@ void Client::Service()
                 m_awaitingHeartbeat = true;*/
 			}
 		}
-    /*}
+    }
 	else if (ConnectionState() == THORQ_STATE_CONNECTION_DISCONNECTED)
 	{
-		if ((actions & ACTION_Connected) != 0)
+        if ((actions & ACTION_Connect) != 0)
         {
             bool addressFound = false;
 
@@ -477,7 +477,7 @@ void Client::Service()
 				// TODO: something
 			}
 		}
-    }*/
+    }
 }
 
 void Client::SetRtt(std::uint16_t rtt)
@@ -864,6 +864,54 @@ void Client::handlePayloadCollar(std::vector<std::uint8_t> &payload)
     }*/
 }
 
+ENetPacket* Client::packetEncode(const uint8_t* data, size_t dataSize, bool encrypt, bool reliable)
+{
+    ENetPacket* packet = enet_packet_create(nullptr, dataSize, reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED);
+
+    if (packet != nullptr)
+    {
+        if (encrypt)
+        {
+            if (!ThorQ::packetEncode(packet, data, dataSize, m_crypto))
+            {
+                qWarning() << "Failed to encode packet!";
+                enet_packet_destroy(packet);
+                packet = nullptr;
+            }
+        }
+        else
+        {
+            if (!ThorQ::packetEncode(packet, data, dataSize))
+            {
+                qWarning() << "Failed to encode packet!";
+                enet_packet_destroy(packet);
+                packet = nullptr;
+            }
+        }
+    }
+    else
+    {
+        qWarning() << "Failed to allocate packet!";
+    }
+
+    return packet;
+}
+
+bool Client::packetDecode(const ENetPacket* packet, std::vector<uint8_t>& payload)
+{
+    return ThorQ::packetDecode(packet, payload, m_crypto);
+}
+
+bool Client::packetSend(ENetPacket* packet, THORQ_CHANNEL ch)
+{
+    if (packet != nullptr)
+    {
+        return enet_peer_send(m_peer, ch, packet) == 0;
+    }
+
+    return false;
+}
+
 void Client::SendPayload(std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
 {
     ENetPacket* packet = enet_packet_create(payload.data(), payload.size(), ENET_PACKET_FLAG_RELIABLE * reliable | ENET_PACKET_FLAG_UNSEQUENCED * !reliable);
@@ -893,10 +941,8 @@ void Client::requestEncryptionHandshake()
     flatbuffers::FlatBufferBuilder builder;
     auto offset = ThorQ::Serialization::Crypto::CreateCommandDirect(builder, ThorQ::Serialization::Crypto::Type_Request);
     builder.Finish(offset);
-/*
-    std::vector<std::uint8_t> payload;
-    thorq_payload_crypto_request_pack(payload);
-    SendPayload(payload, THORQ_CHANNEL_MAIN, false, true);*/
+
+    SendPayload(payload, THORQ_CHANNEL_MAIN, false, true);
 }
 
 void Client::handleDisconnect(THORQ_DISCONNECT_REASON reason)

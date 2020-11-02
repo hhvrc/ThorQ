@@ -26,6 +26,7 @@
 #include "account.h"
 #include "instance.h"
 #include "memorymanager.h"
+#include "messagedispatcher.h"
 
 #define VER_STRING(MAJOR, MINOR, PATCH) #MAJOR "." #MINOR "." #PATCH
 const char* ThorQ::Server::Version()
@@ -62,12 +63,14 @@ ThorQ::Server::Server()
     , m_totalSentPackets(0)
     , m_totalReceivedData(0)
     , m_totalReceivedPackets(0)
-    , m_txQueue()
-    , m_txToken(m_txQueue)
-    , m_rxQueue()
     , m_rxToken(m_rxQueue)
-    , m_broadcastQueue()
+    , m_rxQueue()
+    , m_txToken(m_txQueue)
+    , m_txQueue()
     , m_broadcastToken(m_broadcastQueue)
+    , m_broadcastQueue()
+    , m_disconnectToken(m_disconnectQueue)
+    , m_disconnectQueue()
 {
 }
 ThorQ::Server::~Server()
@@ -165,6 +168,12 @@ bool ThorQ::Server::start(std::uint16_t port, std::size_t maxPeers, std::uint8_t
 
             m_thread = new std::thread(&ThorQ::Server::run, this);
 
+            unsigned int nProc = std::thread::hardware_concurrency();
+            for (unsigned int i = 0; i < nProc; i++)
+            {
+                m_dispatchers.push_back(new ThorQ::MessageDispatcher(this));
+            }
+
             return true;
         }
     }
@@ -187,6 +196,12 @@ bool ThorQ::Server::start(std::uint16_t port, std::size_t maxPeers, std::uint8_t
 
 void ThorQ::Server::stop()
 {
+    for (std::size_t i = 0; i < m_dispatchers.size(); i++)
+    {
+        delete m_dispatchers[i];
+    }
+    m_dispatchers.clear();
+
     if (m_thread != nullptr)
     {
         m_run = false;
@@ -236,13 +251,18 @@ void ThorQ::Server::broadcastAnnouncement(const flatbuffers::DetachedBuffer& pay
     }
 }
 
-bool ThorQ::Server::tryGetMessage(ThorQ::Server::QueuedMessage &message)
+bool ThorQ::Server::tryGetMessage(moodycamel::ConsumerToken token, ThorQ::Server::QueuedMessage &message)
 {
-    return m_rxQueue.try_dequeue(m_rxToken, message);
+    return m_rxQueue.try_dequeue(token, message);
 }
-bool ThorQ::Server::tryQueueMessage(const QueuedMessage& message)
+bool ThorQ::Server::tryQueueMessage(moodycamel::ProducerToken token, const QueuedMessage& message)
 {
-    return m_txQueue.enqueue(m_txToken, message);
+    return m_txQueue.enqueue(token, message);
+}
+
+bool ThorQ::Server::disconnectPeer(moodycamel::ProducerToken token, QueuedDisconnect &disconnect)
+{
+    return m_disconnectQueue.enqueue(token, disconnect);
 }
 
 void ThorQ::Server::run()
@@ -331,7 +351,7 @@ void ThorQ::Server::handleEventConnection(const ENetEvent& event)
     thorq_payload_heartbeat_pack(message, 500); // TODO: get from config
     instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
 */
-    fmt::print("[{}] Connected", enet_peer_address_str(event.peer));
+    fmt::print("[{}] Connected\n", enet_peer_address_str(event.peer));
 }
 void ThorQ::Server::handleEventMessage(const ENetEvent &event)
 {

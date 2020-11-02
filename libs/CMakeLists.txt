@@ -35,7 +35,7 @@ set(PYTHON_ARGS
     "--enable-modules=auto_rng,bcrypt"
     "--without-documentation"
 )
-message("Executing: python3 ${PYTHON_ARGS}")
+message("Executing: python ${PYTHON_ARGS}")
 execute_process(
     COMMAND "python" ${PYTHON_ARGS}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
@@ -104,7 +104,6 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/version.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid_${BUILD_OSL}.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/serialization.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.cpp
 )
 set(${project}_HEADERS
@@ -115,7 +114,6 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/hashing.h
     ${CMAKE_CURRENT_SOURCE_DIR}/version.h
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/serialization.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/enums.h
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_global.h

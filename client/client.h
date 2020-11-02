@@ -330,13 +330,10 @@ private slots:
 	void handlePayloadAnnouncement(std::vector<std::uint8_t>& payload);
     void handlePayloadCollar(std::vector<std::uint8_t>& payload);
 
-    /**
-     * @brief SendPayload
-     * @param payload
-     * @param encrypt
-     * @param reliable
-     */
-    void SendPayload(std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
+    ENetPacket* packetEncode(const std::uint8_t* data, std::size_t dataSize, bool encrypt = true, bool reliable = true);
+    bool packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& payload);
+
+    bool packetSend(ENetPacket* packet, THORQ_CHANNEL ch);
 
     /**
      * @brief requestEncryptionHandshake

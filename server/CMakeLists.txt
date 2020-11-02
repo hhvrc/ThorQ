@@ -60,6 +60,7 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/authtoken.h
     ${CMAKE_CURRENT_SOURCE_DIR}/relationship.h
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/singletons.h
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_server.h
 )
 

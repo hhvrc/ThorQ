@@ -54,11 +54,18 @@ protected:
     {
         ENetPeer* peer;
         ENetPacket* packet;
-        std::uint8_t channel; /// THORQ_CHANNEL
+        std::uint8_t channel;
+    };
+    struct QueuedDisconnect
+    {
+        ENetPeer* peer;
+        THORQ_DISCONNECT_REASON reason;
+        bool force;
     };
 
-    bool tryGetMessage(QueuedMessage& message);
-    bool tryQueueMessage(const QueuedMessage& message);
+    bool tryGetMessage(moodycamel::ConsumerToken token, QueuedMessage& message);
+    bool tryQueueMessage(moodycamel::ProducerToken token, const QueuedMessage& message);
+    bool disconnectPeer(moodycamel::ProducerToken token, QueuedDisconnect& disconnect);
 private:
     void run();
 
@@ -72,6 +79,8 @@ private:
     std::thread* m_thread;
     std::atomic_bool m_run;
 
+    std::vector<ThorQ::MessageDispatcher*> m_dispatchers;
+
     std::atomic<ServerStatus> m_status;
 
     std::atomic_uint32_t m_heartbeatInterval;
@@ -81,14 +90,17 @@ private:
     std::atomic_uint64_t m_totalReceivedData;
     std::atomic_uint64_t m_totalReceivedPackets;
 
-    moodycamel::ConcurrentQueue<QueuedMessage> m_txQueue;
-    moodycamel::ProducerToken m_txToken;
-
-    moodycamel::ConcurrentQueue<QueuedMessage> m_rxQueue;
     moodycamel::ConsumerToken m_rxToken;
+    moodycamel::ConcurrentQueue<QueuedMessage> m_rxQueue;
 
-    moodycamel::ConcurrentQueue<ENetPacket*> m_broadcastQueue;
+    moodycamel::ProducerToken m_txToken;
+    moodycamel::ConcurrentQueue<QueuedMessage> m_txQueue;
+
     moodycamel::ConsumerToken m_broadcastToken;
+    moodycamel::ConcurrentQueue<ENetPacket*> m_broadcastQueue;
+
+    moodycamel::ConsumerToken m_disconnectToken;
+    moodycamel::ConcurrentQueue<QueuedDisconnect> m_disconnectQueue;
 };
 }
 

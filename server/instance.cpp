@@ -4,6 +4,7 @@
 
 #include <enet.h>
 #include <fmt/core.h>
+
 #include <enums.h>
 #include <crypto.h>
 #include <constants.h>
@@ -11,6 +12,7 @@
 #include <schemas/crypto_generated.h>
 #include <schemas/session_generated.h>
 
+#include "server.h"
 #include "memorymanager.h"
 #include "utils.h"
 #include "account.h"
@@ -248,7 +250,7 @@ bool ThorQ::Instance::packetSend(ENetPacket *packet, THORQ_CHANNEL ch)
 {
     if (packet != nullptr)
     {
-        return enet_peer_send(m_peer, ch, packet) == 0;
+        return g_server->tryQueueMessage(ThorQ::Server::QueuedMessage{m_peer, packet, ch});
     }
 
     return false;
