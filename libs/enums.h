@@ -58,16 +58,16 @@ enum class THORQ_PAYLOAD_ACK : std::uint8_t
 {
     _INVALID,
 
-    OK,           ///< Command succeeded
-    IN_PROGRESS,  ///< Command accepted, and is in progress
-    NO_CHANGE,    ///< Command was ignored, because it didnt change anything
+    OK,            ///< Command succeeded
+    IN_PROGRESS,   ///< Command accepted, and is in progress
+    NO_CHANGE,     ///< Command was ignored, because it didnt change anything
 
-    DENIED,       ///< Command was denied
-    INVALID,      ///< Command itself or its format is invalid
-    LOGIN_NEEDED, ///< Client has not logged in
-    UNAUTHORIZED, ///< Client has not authenticated (Crypto + Auth)
+    DENIED,        ///< Command was denied
+    INVALID,       ///< Command itself or its format is invalid
+    LOGIN_NEEDED,  ///< Client has not logged in
+    UNAUTHORIZED,  ///< Client has not authenticated (Crypto + Auth)
 
-    ERROR,        ///< Server experienced an error executing command
+    ERROR_OCCURED, ///< Server experienced an error executing command
 
     _MAX
 };
