@@ -141,8 +141,14 @@ add_library(${project} STATIC
     ${${project}_HEADERS}
 )
 
+# Get pthreads
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 # Link libraries
 target_link_libraries(${project}
+    Threads::Threads
+    ${CMAKE_DL_LIBS}
     ${${project}_LIBS}
     flatbuffers
     fmt

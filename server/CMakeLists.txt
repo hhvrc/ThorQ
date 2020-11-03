@@ -72,16 +72,16 @@ add_executable(${project}
 	${${project}_HEADERS}
 )
 
+if(WIN32)
+    set(EXTRA_LIBS Rpcrt4)
+else()
+    set(EXTRA_LIBS uuid)
+endif()
+
 target_link_libraries(${project}
+    ${EXTRA_LIBS}
     ThorQLib
     cxxopts
     lsql
     tbb
-    ${CMAKE_DL_LIBS}
 )
-
-if (WIN32)
-    target_link_libraries(${project}
-	Rpcrt4
-    )
-endif()
