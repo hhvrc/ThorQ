@@ -73,16 +73,16 @@ enum THORQ_CLIENT_ACTION
  * @enum THORQ_COLLAR_FLAG
  * @brief Flags to describe current user input
  */
-enum THORQ_COLLAR_FLAG
+enum class THORQ_COLLAR_FLAG : std::uint16_t
 {
-    THORQ_COLLAR_FLAG_SHOCK      = 1 << 0, ///< Activate collar shock
-    THORQ_COLLAR_FLAG_VIBRATE    = 1 << 1, ///< Activate collar vibration
-    THORQ_COLLAR_FLAG_BEEP       = 1 << 2, ///< Activate collar speaker
-    THORQ_COLLAR_FLAG_AUTO       = 1 << 3, ///< Auto mode
-    THORQ_COLLAR_FLAG_RESERVED_5 = 1 << 4,
-    THORQ_COLLAR_FLAG_RESERVED_6 = 1 << 5,
-    THORQ_COLLAR_FLAG_RESERVED_7 = 1 << 6,
-    THORQ_COLLAR_FLAG_IMPULSE    = 1 << 7,
+    SHOCK      = 1 << 0, ///< Activate collar shock
+    VIBRATE    = 1 << 1, ///< Activate collar vibration
+    BEEP       = 1 << 2, ///< Activate collar speaker
+    AUTO       = 1 << 3, ///< Auto mode
+    RESERVED_5 = 1 << 4,
+    RESERVED_6 = 1 << 5,
+    RESERVED_7 = 1 << 6,
+    IMPULSE    = 1 << 7,
 };
 
 std::string enetaddr_to_str(const ENetAddress* addr)
@@ -146,7 +146,7 @@ Client::Client(ENetHost* host)
 
 Client* Client::NewClient()
 {
-    ENetHost* host = enet_host_create(nullptr, 1, THORQ_CHANNEL_COUNT, 0, 0);
+    ENetHost* host = enet_host_create(nullptr, 1, (std::uint8_t)THORQ_CHANNEL::_MAX, 0, 0);
 
 	if (host == nullptr)
 		return nullptr;
@@ -282,30 +282,30 @@ void Client::LeaveSession()
 void Client::SetShock(std::uint8_t value)
 {
     m_collarState.fetch_and(~((0xFFull << 56) | 0xFFull));
-    m_collarState.fetch_or(((std::uint64_t)value << 56) | THORQ_COLLAR_FLAG_SHOCK);
+    m_collarState.fetch_or(((std::uint64_t)value << 56) | (std::uint16_t)THORQ_COLLAR_FLAG::SHOCK);
 }
 void Client::SetVibrate(std::uint8_t value)
 {
     m_collarState.fetch_and(~((0xFFull << 48) | 0xFFull));
-    m_collarState.fetch_or((std::uint64_t(value) << 48) | THORQ_COLLAR_FLAG_VIBRATE);
+    m_collarState.fetch_or((std::uint64_t(value) << 48) | (std::uint16_t)THORQ_COLLAR_FLAG::VIBRATE);
 }
 void Client::SetBeep(std::uint8_t value)
 {
     m_collarState.fetch_and(~((0xFFull << 40) | 0xFFull));
-    m_collarState.fetch_or((std::uint64_t(value) << 40) | THORQ_COLLAR_FLAG_BEEP);
+    m_collarState.fetch_or((std::uint64_t(value) << 40) | (std::uint16_t)THORQ_COLLAR_FLAG::BEEP);
 }
 void Client::EnableAuto(std::uint8_t value)
 {
     m_collarState.fetch_and(~((0xFFull << 32) | 0xFFull));
-    m_collarState.fetch_or((std::uint64_t(value) << 32) | THORQ_COLLAR_FLAG_AUTO);
+    m_collarState.fetch_or((std::uint64_t(value) << 32) | (std::uint16_t)THORQ_COLLAR_FLAG::AUTO);
 }
 void Client::DisableAuto()
 {
-	m_collarState.fetch_and(~THORQ_COLLAR_FLAG_AUTO);
+    m_collarState.fetch_and(~(std::uint16_t)THORQ_COLLAR_FLAG::AUTO);
 }
 void Client::SendImpulse()
 {
-	m_collarState.fetch_or(THORQ_COLLAR_FLAG_IMPULSE);
+    m_collarState.fetch_or((std::uint16_t)THORQ_COLLAR_FLAG::IMPULSE);
 }
 
 void Client::submitRegistrationKey(const QString& regKey)
@@ -906,28 +906,10 @@ bool Client::packetSend(ENetPacket* packet, THORQ_CHANNEL ch)
 {
     if (packet != nullptr)
     {
-        return enet_peer_send(m_peer, ch, packet) == 0;
+        return enet_peer_send(m_peer, (std::uint8_t)ch, packet) == 0;
     }
 
     return false;
-}
-
-void Client::SendPayload(std::vector<std::uint8_t>& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
-{
-    ENetPacket* packet = enet_packet_create(payload.data(), payload.size(), ENET_PACKET_FLAG_RELIABLE * reliable | ENET_PACKET_FLAG_UNSEQUENCED * !reliable);
-
-    if (encrypt)
-	{
-        if (!ThorQ::packetEncode(packet, payload.data(), payload.size(), m_crypto))
-			return;
-	}
-    else
-	{
-        if (!ThorQ::packetEncode(packet, payload.data(), payload.size()))
-			return;
-	}
-
-    enet_peer_send(m_peer, ch, packet);
 }
 
 void Client::requestEncryptionHandshake()
@@ -942,7 +924,7 @@ void Client::requestEncryptionHandshake()
     auto offset = ThorQ::Serialization::Crypto::CreateCommandDirect(builder, ThorQ::Serialization::Crypto::Type_Request);
     builder.Finish(offset);
 
-    SendPayload(payload, THORQ_CHANNEL_MAIN, false, true);
+    packetSend(packetEncode(builder.GetBufferPointer(), builder.GetSize(), false, true), THORQ_CHANNEL::MAIN);
 }
 
 void Client::handleDisconnect(THORQ_DISCONNECT_REASON reason)

@@ -354,7 +354,11 @@ void ThorQ::Account::requestSession(std::shared_ptr<ThorQ::Instance> source, std
 {
     std::vector<std::uint8_t> response;
 
-    std::shared_ptr<ThorQ::Account> sourceAccount = source->account();
+    std::shared_ptr<ThorQ::Account> sourceAccount;
+    {
+        std::shared_lock l(source->l_account);
+        sourceAccount = source->m_account;
+    }
 
     // If account is logged out
     if (sourceAccount == nullptr)
@@ -434,7 +438,7 @@ bool ThorQ::Account::isOnline() const
 bool ThorQ::Account::addInstance(ThorQ::Instance* instance)
 {
     std::unique_lock l(l_instances);
-    return m_instances.erase(instance);
+    return m_instances.insert(instance).second;
 }
 
 bool ThorQ::Account::removeInstance(ThorQ::Instance* instance)
@@ -490,25 +494,4 @@ bool ThorQ::Account::isInSteamVR() const
 bool ThorQ::Account::hasCollar() const
 {
     return (m_activityState & THORQ_USER_ACTIVITY_FLAG_COLLAR_PRESENT) != 0;
-}
-
-void ThorQ::Account::disconnectAllInstances()
-{
-
-}
-
-void ThorQ::Account::sendPayload(const flatbuffers::DetachedBuffer& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
-{
-    for (ThorQ::Instance* instance : m_instances)
-    {
-        instance->packetSend(instance->packetEncode(payload.data(), payload.size(), encrypt, reliable), ch);
-    }
-}
-
-void ThorQ::Account::sendPayloadToFriends(const flatbuffers::DetachedBuffer& payload, THORQ_CHANNEL ch, bool encrypt, bool reliable)
-{
-    for (std::shared_ptr<ThorQ::Relationship> relationship : m_relationships)
-    {
-        relationship->target()->sendPayload(payload, ch, encrypt, reliable);
-    }
 }

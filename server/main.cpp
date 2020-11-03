@@ -22,9 +22,6 @@
 #include "messagedispatcher.h"
 #include "statistics.h"
 
-#define SINGLETON_BASE
-#include "singletons.h"
-
 #define PARSE_PORT false
 #define SERVER_MAX_CONNECTIONS 1024
 
@@ -100,9 +97,9 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
     }
 
-    g_server = new ThorQ::Server();
+    ThorQ::Server server;
 
-    if (!g_server->start(port, 1024, THORQ_CHANNEL_COUNT, true))
+    if (!server.start(port, 1024, (std::uint8_t)THORQ_CHANNEL::_MAX, true))
     {
             fmt::print("Failed to start Server!\n");
             return EXIT_FAILURE;
@@ -110,7 +107,5 @@ int main(int argc, char** argv)
 
     while (runServer) { std::this_thread::sleep_for(std::chrono::milliseconds(500)); }
 
-    g_server->stop();
-
-    delete g_server;
+    server.stop();
 }

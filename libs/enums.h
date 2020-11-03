@@ -3,62 +3,73 @@
 
 #include <cstdint>
 
-enum THORQ_APP : std::uint8_t
+enum class THORQ_APP : std::uint8_t
 {
+    _INVALID,
+
 	THORQ_APP_SERVER,
 	THORQ_APP_CLIENT,
 	THORQ_APP_LINK,
+
+    _MAX
 };
 
-enum THORQ_CHANNEL : std::uint8_t
+enum class THORQ_CHANNEL : std::uint8_t
 {
-    THORQ_CHANNEL_MAIN,      ///< Main channel (login/logout/friend/request)
-    THORQ_CHANNEL_EVENTS,    ///< Events (status/relation)
-    THORQ_CHANNEL_IMPULSE,   ///< Impulse data (collar/toys)
-    THORQ_CHANNEL_AUTHORITY, ///< Moderations/Announcements/Admin
-    THORQ_CHANNEL_COUNT
+    _INVALID,
+
+    MAIN,      ///< Main channel (login/logout/friend/request)
+    EVENTS,    ///< Events (status/relation)
+    IMPULSE,   ///< Impulse data (collar/toys)
+    AUTHORITY, ///< Moderations/Announcements/Admin
+
+    _MAX
 };
 
 /// Flags to describe the payload of a message
-enum THORQ_PAYLOAD_ID : std::uint8_t
+enum class THORQ_PAYLOAD_ID : std::uint8_t
 {
+    _INVALID,
 
     // Main & Event channel
-    THORQ_PAYLOAD_ID_HEARTBEAT,    ///< Heartbeat to keep connection alive and determine RTT
-    THORQ_PAYLOAD_ID_VERSION,      ///< Request updated version info
-    THORQ_PAYLOAD_ID_CRYPTO,       ///< Cryptographic handshake messages
-    THORQ_PAYLOAD_ID_SYSTEMID,     ///< SystemID messages
-    THORQ_PAYLOAD_ID_ACCOUNT,      ///< Create/Delete/Recover/Login/Logout
-    THORQ_PAYLOAD_ID_RELATIONSHIP, ///< Friend/Block/AcceptFriend/DenyFriend/UnFriend/GetRelations
-    THORQ_PAYLOAD_ID_SESSION,      ///< Sessions with other people
-    THORQ_PAYLOAD_ID_ACK,          ///< Acknowledge
+    HEARTBEAT,    ///< Heartbeat to keep connection alive and determine RTT
+    VERSION,      ///< Request updated version info
+    CRYPTO,       ///< Cryptographic handshake messages
+    SYSTEMID,     ///< SystemID messages
+    ACCOUNT,      ///< Create/Delete/Recover/Login/Logout
+    RELATIONSHIP, ///< Friend/Block/AcceptFriend/DenyFriend/UnFriend/GetRelations
+    SESSION,      ///< Sessions with other people
+    ACK,          ///< Acknowledge
 
     // Impulse channel
-    THORQ_PAYLOAD_ID_TOY = 0, ///< Toys
-    THORQ_PAYLOAD_ID_COLLAR,  ///< Collars
+    TOY,          ///< Toys
+    COLLAR,       ///< Collars
 
     // Authority channel
-    THORQ_PAYLOAD_ID_MODERATION = 0, ///< Bans/Reporting
-    THORQ_PAYLOAD_ID_ANNOUNCEMENT,   ///< Server notifications/Admin notifications
+    MODERATION,   ///< Bans/Reporting
+    ANNOUNCEMENT, ///< Server notifications/Admin notifications
 
-    THORQ_PAYLOAD_ID__MAX = THORQ_PAYLOAD_ID_ACK,
-    THORQ_PAYLOAD_ID__INVALID,
+    _MAX
 };
 
 
 /// Acknowledgement of message sent from remote host
-enum THORQ_PAYLOAD_ACK : std::uint8_t
+enum class THORQ_PAYLOAD_ACK : std::uint8_t
 {
-	THORQ_PAYLOAD_ACK_OK,           ///< Command succeeded
-	THORQ_PAYLOAD_ACK_IN_PROGRESS,  ///< Command accepted, and is in progress
-	THORQ_PAYLOAD_ACK_NO_CHANGE,    ///< Command was ignored, because it didnt change anything
+    _INVALID,
 
-	THORQ_PAYLOAD_ACK_DENIED,       ///< Command was denied
-    THORQ_PAYLOAD_ACK_INVALID,      ///< Command itself or its format is invalid
-	THORQ_PAYLOAD_ACK_LOGIN_NEEDED, ///< Client has not logged in
-	THORQ_PAYLOAD_ACK_UNAUTHORIZED, ///< Client has not authenticated (Crypto + Auth)
+    OK,           ///< Command succeeded
+    IN_PROGRESS,  ///< Command accepted, and is in progress
+    NO_CHANGE,    ///< Command was ignored, because it didnt change anything
 
-    THORQ_PAYLOAD_ACK_ERROR         ///< Server experienced an error executing command
+    DENIED,       ///< Command was denied
+    INVALID,      ///< Command itself or its format is invalid
+    LOGIN_NEEDED, ///< Client has not logged in
+    UNAUTHORIZED, ///< Client has not authenticated (Crypto + Auth)
+
+    ERROR,        ///< Server experienced an error executing command
+
+    _MAX
 };
 
 /// Id of a device or service that client has

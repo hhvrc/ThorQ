@@ -58,9 +58,6 @@ public:
     bool hasCollar() const;
 
     void ban();
-    void disconnectAllInstances();
-    void sendPayload(const flatbuffers::DetachedBuffer& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
-    void sendPayloadToFriends(const flatbuffers::DetachedBuffer& payload, THORQ_CHANNEL ch, bool encrypt = true, bool reliable = true);
 private:
     const std::int64_t m_dbId;
 

@@ -314,7 +314,7 @@ void ThorQ::Server::run()
         ENetPacket* queuedBroadcast;
         while (m_broadcastQueue.try_dequeue(queuedBroadcast))
         {
-            enet_host_broadcast(m_host, THORQ_CHANNEL_AUTHORITY, queuedBroadcast);
+            enet_host_broadcast(m_host, (std::uint8_t)THORQ_CHANNEL::AUTHORITY, queuedBroadcast);
         }
 
         QueuedMessage queuedMessage;

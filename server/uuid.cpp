@@ -13,7 +13,7 @@ ThorQ::Uuid ThorQ::Uuid::NewUuid()
 #if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
     CoCreateGuid(reinterpret_cast<GUID*>(id.m_data));
 #elif __linux__
-    uuid_generate_random(id.m_data);
+    uuid_generate_random((uuid_t&)id.m_data);
 #endif
     return id;
 }
@@ -23,7 +23,7 @@ bool ThorQ::Uuid::TryParse(const std::string& str, ThorQ::Uuid& guidOut)
 #if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
     return UuidFromStringA((std::uint8_t*)str.data(), (GUID*)guidOut.m_data) == RPC_S_OK;
 #elif __linux__
-    return uuid_parse(str.data(), guidOut.m_data) == 0;
+    return uuid_parse(str.data(), (uuid_t&)guidOut.m_data) == 0;
 #endif
 }
 

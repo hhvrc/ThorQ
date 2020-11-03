@@ -4,64 +4,52 @@
 #include <cstdint>
 #include <vector>
 #include <memory>
+#include <atomic>
 #include <shared_mutex>
+
+#include <enet.h>
+#include <flatbuffers/flatbuffers.h>
 
 #include <enums.h>
 #include <constants.h>
 #include <typedefs_global.h>
-#include <flatbuffers/flatbuffers.h>
 
 #include "typedefs_server.h"
 
 namespace ThorQ {
-class Instance
+struct Instance
 {
-    friend ThorQ::Server;
-    Instance(const Instance&) = delete;
-    Instance& operator=(const Instance&) = delete;
-public:
-    Instance(ENetPeer* peer);
-    ~Instance();
+    Instance() = delete;
+    Instance(ENetPeer* peer)
+        : m_peer(peer)
+        , l_crypto()
+        , m_crypto()
+        , l_account()
+        , m_account()
+        , l_systemID()
+        , m_systemID()
+        , m_verificationData()
+        , m_cryptoState(THORQ_STATE_CRYPTO::THORQ_STATE_CRYPTO_NONE)
+        , m_hwidState(THORQ_STATE_HWID::THORQ_STATE_HWID_NONE)
+    {
+        peer->data = this;
+    }
 
-    std::shared_ptr<ThorQ::Account> account() const;
-    void accountSwap(std::shared_ptr<ThorQ::Account>& account);
-
-    void setHwid(const std::vector<std::uint8_t>& hwid);
-    std::vector<std::uint8_t> hwid() const;
-
-    void setPeer(ENetPeer* peer);
-    ENetPeer* peer() const;
-
-	THORQ_STATE_CRYPTO cryptoState() const;
-	void setCryptoState(THORQ_STATE_CRYPTO state);
-    THORQ_STATE_HWID hwidState() const;
-    void setHwidState(THORQ_STATE_HWID state);
-
-    bool cryptoInit();
-    bool cryptoEstablish(const flatbuffers::Vector<std::uint8_t>& data);
-    bool cryptoVerify(const flatbuffers::Vector<std::uint8_t>& data);
-
-    ENetPacket* packetEncode(const std::uint8_t* data, std::size_t dataSize, bool encrypt = true, bool reliable = true);
-    bool packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& payload);
-
-    bool packetSend(ENetPacket* packet, THORQ_CHANNEL ch);
-
-    void disconnectPeer(THORQ_DISCONNECT_REASON reason, bool force = false);
-private:
     ENetPeer* m_peer;
+
+    std::mutex l_crypto;
+    std::shared_ptr<ThorQ::Crypto> m_crypto;
 
     std::shared_mutex l_account;
     std::shared_ptr<ThorQ::Account> m_account;
 
-    std::shared_mutex l_crypto;
-    std::shared_ptr<ThorQ::Crypto> m_crypto;
+    std::shared_mutex l_systemID;
+    std::vector<std::uint8_t> m_systemID;
 
     std::vector<std::uint8_t> m_verificationData;
 
-    std::vector<std::uint8_t> m_systemID;
-
-    THORQ_STATE_CRYPTO m_cryptoState;
-    THORQ_STATE_HWID   m_hwidState;
+    std::atomic<THORQ_STATE_CRYPTO> m_cryptoState;
+    std::atomic<THORQ_STATE_HWID>   m_hwidState;
 };
 }
 
