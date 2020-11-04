@@ -73,7 +73,7 @@ if(MSVC)
     endif()
 else()
     # 64-bit, threading, and verbose
-    string(APPEND CMAKE_CXX_FLAGS " -m64 -pthread -Wall -Wextra -pedantic -Wconversion -Wsign-conversion")
+    string(APPEND CMAKE_CXX_FLAGS " -m64 -pthread -Wall -Wextra -pedantic -Wformat=2 -Wsign-conversion -Wundef -Wredundant-decls -Wwrite-strings -Wpointer-arith -Wcast-qual -Wmissing-include-dirs -Wcast-align -Wctor-dtor-privacy -Wdisabled-optimization -Winvalid-pch -Woverloaded-virtual -Wconversion -Wswitch-enum -Wno-ctor-dtor-privacy -Wno-format-nonliteral -Wnoexcept -Wno-dangling-else -Wno-unused-local-typedefs -Wdouble-promotion -Wtrampolines -Wzero-as-null-pointer-constant -Wuseless-cast -Wvector-operation-performance -Wsized-deallocation -Wshadow -Wshift-overflow=2 -Wnull-dereference -Wduplicated-cond")
 
     if(${CMAKE_BUILD_TYPE} MATCHES "Release")
 	string(APPEND CMAKE_CXX_FLAGS " -fstack-protector -O3 -g0 -s")
