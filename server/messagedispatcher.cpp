@@ -58,7 +58,7 @@ void ThorQ::MessageDispatcher::DispatchEvent(const ENetEvent& event)
         break;
     case THORQ_CHANNEL::EVENTS:
         break;
-    case THORQ_CHANNEL::IMPULSE:
+    case THORQ_CHANNEL::STREAM:
         break;
     case THORQ_CHANNEL::AUTHORITY:
         break;

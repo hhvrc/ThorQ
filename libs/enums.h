@@ -20,7 +20,7 @@ enum class THORQ_CHANNEL : std::uint8_t
 
     MAIN,      ///< Main channel (login/logout/friend/request)
     EVENTS,    ///< Events (status/relation)
-    IMPULSE,   ///< Impulse data (collar/toys)
+    STREAM,    ///< For data streams
     AUTHORITY, ///< Moderations/Announcements/Admin
 
     _MAX

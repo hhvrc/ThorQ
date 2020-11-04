@@ -466,7 +466,7 @@ void OpenVROverlayController::setTint(const QColor& tint)
 	{
 		m_tint = tint;
 
-        vr::EVROverlayError err = m_apiOverlay->SetOverlayColor(m_overlayHandle, m_tint.redF(), m_tint.greenF(), m_tint.blueF());
+        vr::EVROverlayError err = m_apiOverlay->SetOverlayColor(m_overlayHandle, (float)m_tint.redF(), (float)m_tint.greenF(), (float)m_tint.blueF());
 
 		if (err != vr::VROverlayError_None)
 		{

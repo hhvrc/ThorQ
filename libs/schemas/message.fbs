@@ -1,0 +1,22 @@
+include "account.fbs";
+include "announcement.fbs";
+include "collar.fbs";
+include "crypto.fbs";
+include "files.fbs";
+include "heartbeat.fbs";
+include "moderation.fbs";
+include "relationship.fbs";
+include "session.fbs";
+include "systemid.fbs";
+include "uuid.fbs";
+include "version.fbs";
+
+namespace ThorQ.Serialization;
+
+union Message {
+
+}
+
+table MessageBuffer {
+  message_array : [Message];
+}

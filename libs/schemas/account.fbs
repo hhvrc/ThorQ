@@ -2,7 +2,11 @@ include  "uuid.fbs";
 
 namespace ThorQ.Serialization.Account;
 
-enum CommandCode : ubyte {
+struct AuthToken {
+  token:[ubyte:64];
+}
+
+enum AccountCommandCode : ubyte {
   Register,
   Delete,
   LoginCookie,
@@ -12,16 +16,16 @@ enum CommandCode : ubyte {
   Recover
 }
 
-table Command {
-  cmd:CommandCode;
+table AccountCommand {
+  cmd:AccountCommandCode;
   username:string;
   password:string;
-  session_cookie:[ubyte];
+  auth_token:AuthToken;
   discord_id:string;
   remember_me:bool;
 }
 
-enum ResponseCode : ubyte {
+enum AccountResponseCode : ubyte {
   Ok,
   Denied,
   Created,
@@ -29,8 +33,8 @@ enum ResponseCode : ubyte {
   Error
 }
 
-table Response {
-  response:ResponseCode;
+table AccountResponse {
+  response:AccountResponseCode;
   explenation:string;
   session_cookie:[ubyte];
 }

@@ -4,18 +4,18 @@ namespace ThorQ.Serialization.Relationship;
 
 enum Status : ubyte
 {
-	Blocked,
-	None,
-	Pending,
-	Friend
+  Blocked,
+  None,
+  Pending,
+  Friend
 }
 
 enum Authority : ubyte
 {
-	Silent,
-	Notify,
-	Accept,
-	Exclusive
+  Silent,
+  Notify,
+  Accept,
+  Exclusive
 }
 
 table Relationship {
