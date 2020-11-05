@@ -83,5 +83,4 @@ target_link_libraries(${project}
     ThorQLib
     cxxopts
     lsql
-    tbb
 )

@@ -1,30 +1,30 @@
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
+#include <span>
+#include <atomic>
 #include <cstdint>
 #include <cstdlib>
+#include <shared_mutex>
 
-typedef struct evp_cipher_ctx_st EVP_CIPHER_CTX;
-typedef struct ec_group_st EC_GROUP;
-typedef struct evp_cipher_st EVP_CIPHER;
-typedef struct ec_key_st EC_KEY;
-
-#define CRYPTO_CURVE_NID NID_secp256k1
-constexpr std::size_t CRYPTO_AES_IV_LEN = 12;
-constexpr std::size_t CRYPTO_ECDH_SHARED_KEY_LEN  = 32;
-constexpr std::size_t CRYPTO_ECDH_PUBLIC_KEY_LEN  = 65;
-constexpr std::size_t CRYPTO_ECDH_PRIVATE_KEY_LEN = 32;
+#include <sodium.h>
 
 namespace ThorQ {
 /// Class to make cryptography extremely easy to deal with
 class Crypto
 {
 public:
+    static constexpr std::size_t MacLen = crypto_secretbox_MACBYTES;
+    static constexpr std::size_t NonceLen = crypto_secretbox_NONCEBYTES;
+    static constexpr std::size_t PublicKeyLen = crypto_kx_PUBLICKEYBYTES;
+    static constexpr std::size_t SecretKeyLen = crypto_kx_SECRETKEYBYTES;
+    static constexpr std::size_t SessionKeyLen = crypto_kx_SESSIONKEYBYTES;
+
     /** Randomizes data using cryptographic functions
      * @param data Pointer to data to randomize
      * @param len Length of data to randomize
      */
-    static bool RandomizeBytes(std::uint8_t* data, std::size_t len);
+    static void RandomizeBytes(std::uint8_t* data, std::size_t len);
 
     Crypto();
     ~Crypto();
@@ -44,14 +44,14 @@ public:
      * @param outLen
      * @retval Returns if public key was successfully retrieved
      */
-    bool getPublicKey(std::uint8_t* publicKeyOut, std::size_t outLen) const;
+    bool getPublicKey(std::span<std::uint8_t> publicKeyOut) const;
 
     /** Establish secret key with foreign host
      * @param foreignKey
      * @param keySize
      * @return
      */
-    bool agree(const std::uint8_t* foreignKey, std::size_t keySize);
+    bool agree(const std::span<std::uint8_t> foreignKey);
 
     /** Attempts to encrypt the data
      * @param inputData
@@ -60,7 +60,7 @@ public:
      * @param iv
      * @return
      */
-    bool encrypt(std::uint8_t* outputData, const std::uint8_t* inputData, std::size_t dataLen, std::uint8_t* iv);
+    bool encrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t> mac, std::span<std::uint8_t> nonce) const;
 
     /** Attempts to decrypt the data
      * @param inputData
@@ -69,14 +69,21 @@ public:
      * @param iv
      * @return
      */
-    bool decrypt(std::uint8_t* outputData, const std::uint8_t *inputData, std::size_t dataLen, const std::uint8_t *iv);
+    bool decrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t> mac, std::span<std::uint8_t> nonce) const;
 private:
-    EVP_CIPHER_CTX* m_ctx;
-    const EC_GROUP* m_group;
-    const EVP_CIPHER* m_cipher;
+    void reset_nolock();
 
-    EC_KEY* m_keyPair;
-    std::uint8_t m_sharedKey[CRYPTO_ECDH_SHARED_KEY_LEN];
+    enum class State : std::uint8_t
+    {
+        Uninitialized,
+    };
+
+    std::atomic<State> m_state;
+    std::shared_mutex  m_modlock;
+    std::array<std::uint8_t, Crypto::PublicKeyLen>  m_pk;
+    std::array<std::uint8_t, Crypto::SecretKeyLen>  m_sk;
+    std::array<std::uint8_t, Crypto::SessionKeyLen> m_rx;
+    std::array<std::uint8_t, Crypto::SessionKeyLen> m_tx;
 };
 }
 

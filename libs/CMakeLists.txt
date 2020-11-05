@@ -11,52 +11,9 @@ message("Configuring ${project}...")
 
 add_subdirectory(fmt)
 
-# ------ Get OpenSSL ------
-find_package(OpenSSL REQUIRED)
-set(${project}_LIBS
-    OpenSSL::Crypto
-    OpenSSL::SSL
-)
-if(WIN32)
-    list(APPEND ${project}_LIBS Crypt32 winmm ws2_32 Iphlpapi)
-endif()
-# -------------------------
-
-# ------- Get Botan -------
-set(PYTHON_ARGS
-    "${CMAKE_CURRENT_SOURCE_DIR}/botan/configure.py"
-    "--os=${BUILD_OSL}"
-    "--cc=${BUILD_COMPILER}"
-    "--cpu=x86_${VPTR_BITS}"
-    "--amalgamation"
-    "--disable-shared"
-    "--link-method=copy"
-    "--minimized-build"
-    "--enable-modules=auto_rng,bcrypt"
-    "--without-documentation"
-)
-message("Executing: python ${PYTHON_ARGS}")
-execute_process(
-    COMMAND "python" ${PYTHON_ARGS}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    RESULT_VARIABLE py_result
-    OUTPUT_VARIABLE py_output
-)
-if (NOT ${py_result} EQUAL 0)
-    message("BUILD OUTPUT:\n${py_output}")
-    message(FATAL_ERROR "Failed to build Botan")
-endif()
-
-# Stop botan from fucking up
-string(APPEND CMAKE_CXX_FLAGS " -DBOTAN_IS_BEING_BUILT -DBOTAN_NO_DEPRECATED_WARNINGS")
-
-# Stop botan from fucking up (on windows)
-if(WIN32)
-    string(APPEND CMAKE_CXX_FLAGS " -bigobj")
-endif()
-# -------------------------
-
 # ------ flatbuffers ------
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFLATBUFFERS_USE_STD_SPAN") # C++20 :D
 
 # Save flags
 set(PREV_FLAGS ${CMAKE_CXX_FLAGS})
@@ -107,7 +64,6 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.cpp
 )
 set(${project}_HEADERS
-    ${CMAKE_CURRENT_BINARY_DIR}/botan_all.h
     ${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
@@ -149,7 +105,8 @@ find_package(Threads REQUIRED)
 target_link_libraries(${project}
     Threads::Threads
     ${CMAKE_DL_LIBS}
-    ${${project}_LIBS}
     flatbuffers
+    sodium
     fmt
+    tbb
 )

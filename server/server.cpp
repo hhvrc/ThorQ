@@ -240,13 +240,13 @@ std::uint64_t ThorQ::Server::totalPacketsReceived() const
     return m_totalReceivedPackets;
 }
 
-void ThorQ::Server::broadcastAnnouncement(const flatbuffers::DetachedBuffer& payload, bool reliable, bool unsequenced)
+void ThorQ::Server::broadcastAnnouncement(const std::span<std::uint8_t> payload, bool reliable, bool unsequenced)
 {
-    ENetPacket* packet = ThorQ::Memory::packetGet(payload.size(), (ENET_PACKET_FLAG_RELIABLE * reliable) | (ENET_PACKET_FLAG_UNSEQUENCED * unsequenced));
+    ENetPacket* packet = ThorQ::Memory::packetGet(ThorQ::calculatePacketSize(payload.size(), false), (ENET_PACKET_FLAG_RELIABLE * reliable) | (ENET_PACKET_FLAG_UNSEQUENCED * unsequenced));
 
     if (packet != nullptr)
     {
-        ThorQ::packetEncode(packet, payload.data(), payload.size());
+        ThorQ::packetEncode(packet, payload);
         m_broadcastQueue.enqueue(packet);
     }
 }

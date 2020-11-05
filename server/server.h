@@ -1,6 +1,7 @@
 #ifndef SERVER_H
 #define SERVER_H
 
+#include <span>
 #include <queue>
 #include <unordered_set>
 
@@ -45,7 +46,7 @@ public:
     std::uint64_t totalDataReceived() const;
     std::uint64_t totalPacketsReceived() const;
 
-    void broadcastAnnouncement(const flatbuffers::DetachedBuffer& packet, bool reliable, bool unsequenced);
+    void broadcastAnnouncement(const std::span<std::uint8_t> payload, bool reliable, bool unsequenced);
 protected:
     friend Instance;
     friend MessageDispatcher;

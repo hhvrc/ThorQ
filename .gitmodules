@@ -4,9 +4,6 @@
 [submodule "client/openvr"]
 	path = client/openvr
 	url = https://github.com/ValveSoftware/openvr.git
-[submodule "libs/botan"]
-	path = libs/botan
-	url = https://github.com/randombit/botan.git
 [submodule "server/concurrentqueue"]
 	path = server/concurrentqueue
 	url = https://github.com/cameron314/concurrentqueue.git

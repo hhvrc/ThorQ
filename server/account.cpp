@@ -7,7 +7,6 @@
 #include <future>
 #include <tbb/concurrent_unordered_map.h>
 
-#include <hashing.h>
 #include <fmt/core.h>
 #include <schemas/session_generated.h>
 #include <schemas/relationship_generated.h>

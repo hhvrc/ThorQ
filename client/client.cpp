@@ -864,15 +864,15 @@ void Client::handlePayloadCollar(std::vector<std::uint8_t> &payload)
     }*/
 }
 
-ENetPacket* Client::packetEncode(const uint8_t* data, size_t dataSize, bool encrypt, bool reliable)
+ENetPacket* Client::packetEncode(const std::span<std::uint8_t> data, bool encrypt, bool reliable)
 {
-    ENetPacket* packet = enet_packet_create(nullptr, dataSize, reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED);
+    ENetPacket* packet = enet_packet_create(nullptr, data.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED);
 
     if (packet != nullptr)
     {
         if (encrypt)
         {
-            if (!ThorQ::packetEncode(packet, data, dataSize, m_crypto))
+            if (!ThorQ::packetEncode(packet, data, m_crypto))
             {
                 qWarning() << "Failed to encode packet!";
                 enet_packet_destroy(packet);
@@ -881,7 +881,7 @@ ENetPacket* Client::packetEncode(const uint8_t* data, size_t dataSize, bool encr
         }
         else
         {
-            if (!ThorQ::packetEncode(packet, data, dataSize))
+            if (!ThorQ::packetEncode(packet, data))
             {
                 qWarning() << "Failed to encode packet!";
                 enet_packet_destroy(packet);
@@ -924,7 +924,7 @@ void Client::requestEncryptionHandshake()
     auto offset = ThorQ::Serialization::Crypto::CreateCommandDirect(builder, ThorQ::Serialization::Crypto::Type_Request);
     builder.Finish(offset);
 
-    packetSend(packetEncode(builder.GetBufferPointer(), builder.GetSize(), false, true), THORQ_CHANNEL::MAIN);
+    packetSend(packetEncode(std::span<std::uint8_t>(builder.GetBufferPointer(), builder.GetSize()), false, true), THORQ_CHANNEL::MAIN);
 }
 
 void Client::handleDisconnect(THORQ_DISCONNECT_REASON reason)

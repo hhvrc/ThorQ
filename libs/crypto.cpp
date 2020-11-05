@@ -3,201 +3,108 @@
 #include <limits>
 #include <cstring>
 #include <cstdint>
+#include <cassert>
 #include <algorithm>
+#include <execution>
 
-#include <openssl/ec.h>
-#include <openssl/evp.h>
-#include <openssl/ssl.h>
-#include <openssl/rand.h>
-
-// EC_ID:         NID_secp256k1
-// CIPHER_ID:     ChaCha20
-// KEY_DER_FN_ID: KDF2(SHA-256)
-
-bool ThorQ::Crypto::RandomizeBytes(uint8_t *data, std::size_t len)
+void ThorQ::Crypto::RandomizeBytes(std::uint8_t* data, std::size_t len)
 {
-    return RAND_bytes(data, len) == 1;
+    randombytes_buf(data, len);
 }
 
 ThorQ::Crypto::Crypto()
-    : m_ctx(EVP_CIPHER_CTX_new())
-    , m_group(nullptr)
-    , m_cipher(EVP_chacha20())
-    , m_keyPair(nullptr)
+    : m_state(State::Uninitialized)
+    , m_modlock()
+    , m_pk{0}
+    , m_sk{0}
+    , m_rx{0}
+    , m_tx{0}
 {
-    memset(m_sharedKey, 0, CRYPTO_ECDH_SHARED_KEY_LEN);
+    assert(sodium_init() >= 0);
 }
 
 ThorQ::Crypto::~Crypto()
 {
     reset();
-
-    EVP_CIPHER_CTX_free(m_ctx);
 }
 
 void ThorQ::Crypto::reset()
 {
-    memset(m_sharedKey, 0, CRYPTO_ECDH_SHARED_KEY_LEN);
-    if (m_keyPair != nullptr)
-    {
-        EC_KEY_free(m_keyPair);
-    }
-    m_keyPair = nullptr;
-    m_group = nullptr;
+    std::unique_lock l(m_modlock);
+    reset_nolock();
 }
 
 bool ThorQ::Crypto::ready() const
 {
-    return m_keyPair != nullptr && m_group != nullptr;
+    return m_state != State::Uninitialized;
 }
 
 bool ThorQ::Crypto::generateKeyPair()
 {
-    reset();
-
-    //Generate keypair
-    m_keyPair = EC_KEY_new_by_curve_name(CRYPTO_CURVE_NID);
-
-    // Get group
-    m_group = EC_KEY_get0_group(m_keyPair);
-
-    // Generate keys
-    if (!EC_KEY_generate_key(m_keyPair))
-    {
-        reset();
-        return false;
-    }
-
-    return true;
+    std::unique_lock l(m_modlock);
+    return crypto_kx_keypair(m_pk.data(), m_sk.data()) == 0;
 }
 
-bool ThorQ::Crypto::getPublicKey(std::uint8_t* publicKeyOut, std::size_t outLen) const
+bool ThorQ::Crypto::getPublicKey(std::span<std::uint8_t> publicKeyOut) const
 {
-    if (ready())
+    std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
+    if (ready() && publicKeyOut.size() == Crypto::PublicKeyLen)
     {
-        // Get public key
-        const EC_POINT* publicKey = EC_KEY_get0_public_key(m_keyPair);
-
-        // Encode public key
-        std::size_t len = EC_POINT_point2oct(m_group,
-                                 publicKey,
-                                 POINT_CONVERSION_UNCOMPRESSED,
-                                 publicKeyOut,
-                                 outLen,
-                                 nullptr);
-
-        return len == CRYPTO_ECDH_PUBLIC_KEY_LEN;
+        std::copy(std::execution::unseq, m_pk.begin(), m_pk.end(), publicKeyOut.begin());
+        return true;
     }
 
     return false;
 }
 
-bool ThorQ::Crypto::agree(const std::uint8_t* keyData, std::size_t keySize)
+bool ThorQ::Crypto::agree(const std::span<std::uint8_t> foreignKey)
 {
-    bool success = false;
-
-    if (ready())
+    std::unique_lock l(m_modlock);
+    if (ready() &&
+        foreignKey.size() == Crypto::PublicKeyLen)
     {
-        // Create key
-        EC_POINT* foreignKeyPoint = EC_POINT_new(m_group);
-
-        if (foreignKeyPoint != nullptr)
-        {
-            // Decode foreign key
-            if (EC_POINT_oct2point(m_group, foreignKeyPoint, keyData, keySize, nullptr) == 1)
-            {
-                // Calculate shared secret
-                success = (ECDH_compute_key(m_sharedKey, CRYPTO_ECDH_SHARED_KEY_LEN, foreignKeyPoint, m_keyPair, nullptr) == CRYPTO_ECDH_SHARED_KEY_LEN);
-            }
-
-            EC_POINT_free(foreignKeyPoint);
-        }
+        return crypto_kx_server_session_keys(m_rx.data(), m_tx.data(), m_pk.data(), m_sk.data(), foreignKey.data()) == 0;
     }
 
-    return success;
+    return false;
 }
 
-bool ThorQ::Crypto::encrypt(std::uint8_t* outputData, const std::uint8_t* inputData, std::size_t dataLen, std::uint8_t* iv)
+bool ThorQ::Crypto::encrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t> mac, std::span<std::uint8_t> nonce) const
 {
-    if (!ready()) return false;
-
-    bool ret = false;
-    int iterWrittenBytes = 0;
-    std::size_t totalWrittenBytes = 0;
-
-    if (RandomizeBytes(iv, CRYPTO_AES_IV_LEN))
+    std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
+    if (ready() &&
+        !dataIn.empty() &&
+        dataIn.size() == dataOut.size() &&
+        mac.size() == Crypto::MacLen &&
+        nonce.size() == Crypto::NonceLen)
     {
-        // Initialize the cipher
-        if (EVP_EncryptInit_ex(m_ctx, m_cipher, nullptr, m_sharedKey, iv) == 1)
-        {
-            // Iterate for every 2.27 ish GB (INT_MAX)
-            while (totalWrittenBytes != dataLen)
-            {
-                // Prevent integer overflow
-                int bytesToWrite = std::min((int)(dataLen - totalWrittenBytes), std::numeric_limits<int>::max());
-
-                if (EVP_EncryptUpdate(m_ctx, outputData + totalWrittenBytes, &iterWrittenBytes, inputData + totalWrittenBytes, bytesToWrite) == 1)
-                {
-                    totalWrittenBytes += iterWrittenBytes;
-                }
-                else
-                {
-                    goto err;
-                }
-            }
-
-            // Fianlize the encryption
-            if (EVP_EncryptFinal_ex(m_ctx, outputData + totalWrittenBytes, &iterWrittenBytes) == 1)
-            {
-                totalWrittenBytes += iterWrittenBytes;
-
-                // Check if everything got written
-                ret = (totalWrittenBytes == dataLen);
-            }
-        }
+        randombytes_buf(nonce.data(), nonce.size());
+        return crypto_secretbox_detached(dataOut.data(), mac.data(), dataIn.data(), dataIn.size(), nonce.data(), m_tx.data()) == 0;
     }
-err:
-    EVP_CIPHER_CTX_reset(m_ctx);
-    return ret;
+
+    return false;
 }
 
-bool ThorQ::Crypto::decrypt(std::uint8_t* outputData, const std::uint8_t* inputData, std::size_t dataLen, const std::uint8_t *iv)
+bool ThorQ::Crypto::decrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t> mac, std::span<std::uint8_t> nonce) const
 {
-    if (!ready()) return false;
-
-    bool ret = false;
-    int iterWrittenBytes = 0;
-    std::size_t totalWrittenBytes = 0;
-
-    // Initialize the cipher
-    if (EVP_DecryptInit_ex(m_ctx, m_cipher, nullptr, m_sharedKey, iv) == 1)
+    std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
+    if (ready() &&
+        !dataIn.empty() &&
+        dataIn.size() == dataOut.size() &&
+        mac.size() == Crypto::MacLen &&
+        nonce.size() == Crypto::NonceLen)
     {
-        // Iterate for every 2.27 ish GB (INT_MAX)
-        while (totalWrittenBytes != dataLen)
-        {
-            // Prevent integer overflow
-            int bytesToWrite = std::min((int)(dataLen - totalWrittenBytes), std::numeric_limits<int>::max());
-
-            if (EVP_DecryptUpdate(m_ctx, outputData + totalWrittenBytes, &iterWrittenBytes, inputData + totalWrittenBytes, bytesToWrite) == 1)
-            {
-                totalWrittenBytes += iterWrittenBytes;
-            }
-            else
-            {
-                goto err;
-            }
-        }
-
-        // Fianlize the encryption
-        if (EVP_DecryptFinal_ex(m_ctx, outputData + totalWrittenBytes, &iterWrittenBytes) == 1)
-        {
-            totalWrittenBytes += iterWrittenBytes;
-
-            // Check if everything got written
-            ret = (totalWrittenBytes == dataLen);
-        }
+        return crypto_secretbox_open_detached(dataOut.data(), mac.data(), dataIn.data(), dataIn.size(), nonce.data(), m_rx.data()) == 0;
     }
-err:
-    EVP_CIPHER_CTX_reset(m_ctx);
-    return ret;
+
+    return false;
+}
+
+void ThorQ::Crypto::reset_nolock()
+{
+    m_state = State::Uninitialized;
+    std::memset(m_pk.data(), 0, m_pk.size());
+    std::memset(m_sk.data(), 0, m_sk.size());
+    std::memset(m_rx.data(), 0, m_rx.size());
+    std::memset(m_tx.data(), 0, m_tx.size());
 }
