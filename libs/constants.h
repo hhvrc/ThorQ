@@ -53,8 +53,8 @@ constexpr int THORQ_AUTHTOKEN_LEN = 256;
  * The hashing algorithm used effectively truncates the password at 72 characters, so set the limit there
  * see: https://botan.randombit.net/handbook/api_ref/passhash.html
  */
-constexpr int THORQ_PASSWORD_LEN_MIN = 6; ///< Minimum Password length
-constexpr int THORQ_PASSWORD_LEN_MAX = 72; ///< Maximum Password length
+constexpr int THORQ_PASSWORD_LEN_MIN = 6; ///< Minimum Password length  // TODO: Update values
+constexpr int THORQ_PASSWORD_LEN_MAX = 72; ///< Maximum Password length // TODO: Update values
 
 /* Discord id limits
  */
