@@ -20,7 +20,6 @@
 #include "account.h"
 #include "instance.h"
 #include "messagedispatcher.h"
-#include "statistics.h"
 
 #define PARSE_PORT false
 #define SERVER_MAX_CONNECTIONS 1024
