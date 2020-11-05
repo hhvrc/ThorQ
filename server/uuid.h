@@ -42,9 +42,8 @@ namespace std {
   {
     std::size_t operator()(const ThorQ::Uuid& k) const
     {
-        uint64_t i1 = *reinterpret_cast<const std::uint64_t*>(k.m_data + 0);
-        uint64_t i2 = *reinterpret_cast<const std::uint64_t*>(k.m_data + 8);
-        return i1 ^ i2;
+        return (std::hash<std::uint64_t>()(*reinterpret_cast<const std::uint64_t*>(k.m_data + 0)) ^
+               (std::hash<std::uint64_t>()(*reinterpret_cast<const std::uint64_t*>(k.m_data + 8)) << 1)) >> 1;
     }
   };
 }
