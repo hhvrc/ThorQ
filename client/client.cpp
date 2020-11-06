@@ -924,7 +924,7 @@ void Client::requestEncryptionHandshake()
     auto offset = ThorQ::Serialization::Crypto::CreateCommandDirect(builder, ThorQ::Serialization::Crypto::Type_Request);
     builder.Finish(offset);
 
-    packetSend(packetEncode(std::span<std::uint8_t>(builder.GetBufferPointer(), builder.GetSize()), false, true), THORQ_CHANNEL::MAIN);
+    packetSend(packetEncode(builder.GetBufferSpan(), false, true), THORQ_CHANNEL::MAIN);
 }
 
 void Client::handleDisconnect(THORQ_DISCONNECT_REASON reason)
