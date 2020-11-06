@@ -22,7 +22,6 @@
 #include <schemas/version_generated.h>
 #include <schemas/heartbeat_generated.h>
 
-#include "utils.h"
 #include "account.h"
 #include "instance.h"
 #include "memorymanager.h"
@@ -351,7 +350,11 @@ void ThorQ::Server::handleEventConnection(const ENetEvent& event)
     thorq_payload_heartbeat_pack(message, 500); // TODO: get from config
     instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
 */
-    fmt::print("[{}] Connected\n", enet_peer_address_str(event.peer));
+    char addr[40];
+    if (enet_peer_get_ip(event.peer, addr, 40) == 0)
+    {
+        fmt::print("[{}] Connected\n", addr);
+    }
 }
 void ThorQ::Server::handleEventMessage(const ENetEvent &event)
 {
@@ -368,12 +371,20 @@ void ThorQ::Server::handleEventDisconnect(const ENetEvent& event)
     // Yeet
     delete instance;
 
-    fmt::print("[{}] disconnected\n", enet_peer_address_str(event.peer));
+    char addr[40];
+    if (enet_peer_get_ip(event.peer, addr, 40) == 0)
+    {
+        fmt::print("[{}] disconnected\n", addr);
+    }
 }
 void ThorQ::Server::handleEventTimeout(const ENetEvent& event)
 {
     if (event.peer->data == nullptr)
         return;
 
-    fmt::print("[{}] timed out\n", enet_peer_address_str(event.peer));
+    char addr[40];
+    if (enet_peer_get_ip(event.peer, addr, 40) == 0)
+    {
+        fmt::print("[{}] timed out\n", addr);
+    }
 }

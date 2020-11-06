@@ -31,7 +31,6 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/memorymanager.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/uuid.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/account.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/session.cpp
@@ -44,7 +43,6 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/memorymanager.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/uuid.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
     ${CMAKE_CURRENT_SOURCE_DIR}/config.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/account.h

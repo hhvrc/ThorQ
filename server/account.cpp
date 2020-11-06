@@ -16,7 +16,6 @@
 #include "lsql/column.h"
 #include "lsql/query.h"
 
-#include "utils.h"
 #include "instance.h"
 #include "relationship.h"
 

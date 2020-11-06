@@ -16,7 +16,6 @@
 #include <schemas/announcement_generated.h>
 #include <schemas/collar_generated.h>
 
-#include "utils.h"
 #include "server.h"
 #include "account.h"
 #include "instance.h"
