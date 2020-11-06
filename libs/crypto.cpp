@@ -50,7 +50,7 @@ bool ThorQ::Crypto::getPublicKey(std::span<std::uint8_t> publicKeyOut) const
     std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
     if (ready() && publicKeyOut.size() == Crypto::PublicKeyLen)
     {
-        std::copy(std::execution::unseq, m_pk.begin(), m_pk.end(), publicKeyOut.begin());
+        std::copy(m_pk.begin(), m_pk.end(), publicKeyOut.begin());
         return true;
     }
 

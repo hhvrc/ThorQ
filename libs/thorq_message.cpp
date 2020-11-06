@@ -80,7 +80,7 @@ bool ThorQ::packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data)
     packetData[0] = (std::uint8_t)PREENCRYPTION_FLAG::NONE;
 
     // Copy data
-    std::copy(std::execution::unseq, packetPayload.begin(), packetPayload.end(), data.begin());
+    std::copy(packetPayload.begin(), packetPayload.end(), data.begin());
 
     return true;
 }
@@ -141,7 +141,7 @@ bool ThorQ::packetDecode(const ENetPacket* packet, std::span<std::uint8_t> data,
         // Get data sections
         std::span<std::uint8_t> packetPayload = packetData.subspan(PacketRawPayloadOffset, data.size());
 
-        std::copy(std::execution::unseq, data.begin(), data.end(), packetPayload.begin());
+        std::copy(data.begin(), data.end(), packetPayload.begin());
     }
 
     return true;
