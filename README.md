@@ -37,8 +37,7 @@ Then do Ctrl+Shift+B, or click "Build all" to build
 | Use Case         | Name            | Home Link                                     | Download Windows                                | Apt                 |
 | ---------------- | --------------- | --------------------------------------------- | ----------------------------------------------- | ------------------- |
 | Networking       | ENet            | http://enet.bespin.org/                       | https://github.com/zpl-c/enet                   |                     |
-| Encryption       | OpenSSL         | https://www.openssl.org/                      | https://slproweb.com/products/Win32OpenSSL.html | libssl-dev          |
-| Password Hashing | Botan           | https://botan.randombit.net/                  | https://github.com/randombit/botan              | botan               |
+| Cryptography     | LibSodium       | https://libsodium.gitbook.io/doc/             | https://github.com/jedisct1/libsodium           | libsodium-dev       |
 | GUI              | Qt              | https://www.qt.io/                            | https://www.qt.io/download-qt-installer         | qt5-default         |
 | VR UI            | OpenVR          | https://www.steamvr.com/en/                   | https://github.com/ValveSoftware/openvr         | libopenvr-dev       |
 | Message queueing | ConcurrentQueue | https://github.com/cameron314/concurrentqueue | https://github.com/cameron314/concurrentqueue   |                     |
