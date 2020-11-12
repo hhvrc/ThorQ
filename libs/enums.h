@@ -88,7 +88,7 @@ enum THORQ_USER_ACTIVITY_FLAG : std::uint8_t
 ///
 enum class THORQ_DISCONNECT_REASON : std::uint32_t
 {
-    UNKNOWN = 0,
+    UNKNOWN,
     VERSION_INCOMPATIBLE,
 
     CRYPTO_FAILED,
@@ -100,7 +100,7 @@ enum class THORQ_DISCONNECT_REASON : std::uint32_t
     BANNED,
     TIMED_OUT,
 
-    FUCK_YOU
+    _MAX
 };
 
 ////////////////////////////////////////////////////

@@ -66,10 +66,6 @@ ThorQ::Server::Server()
     , m_rxQueue()
     , m_txToken(m_txQueue)
     , m_txQueue()
-    , m_broadcastToken(m_broadcastQueue)
-    , m_broadcastQueue()
-    , m_disconnectToken(m_disconnectQueue)
-    , m_disconnectQueue()
 {
 }
 ThorQ::Server::~Server()
@@ -239,29 +235,46 @@ std::uint64_t ThorQ::Server::totalPacketsReceived() const
     return m_totalReceivedPackets;
 }
 
-void ThorQ::Server::broadcastAnnouncement(const std::span<std::uint8_t> payload, bool reliable, bool unsequenced)
+bool ThorQ::Server::tryBroadcastAnnouncement(const std::span<std::uint8_t> payload, bool reliable, bool unsequenced)
 {
     ENetPacket* packet = ThorQ::Memory::packetGet(ThorQ::calculatePacketSize(payload.size(), false), (ENET_PACKET_FLAG_RELIABLE * reliable) | (ENET_PACKET_FLAG_UNSEQUENCED * unsequenced));
 
     if (packet != nullptr)
     {
         ThorQ::packetEncode(packet, payload);
-        m_broadcastQueue.enqueue(packet);
+        m_txQueue.enqueue(Server::QueuedEvent{ nullptr,
+                                               packet,
+                                               channel,
+                                               DisconnectType::None,
+                                               THORQ_DISCONNECT_REASON::UNKNOWN
+                                             });
     }
+
+    return false;
 }
 
-bool ThorQ::Server::tryGetMessage(moodycamel::ConsumerToken token, ThorQ::Server::QueuedMessage &message)
+bool ThorQ::Server::tryGetEvent(ENetEvent& event, moodycamel::ConsumerToken token)
 {
-    return m_rxQueue.try_dequeue(token, message);
+    return m_rxQueue.try_dequeue(token, event);
 }
-bool ThorQ::Server::tryQueueMessage(moodycamel::ProducerToken token, const QueuedMessage& message)
+bool ThorQ::Server::tryQueueMessage(ENetPeer* peer, ENetPacket* packet, THORQ_CHANNEL channel, moodycamel::ProducerToken token)
 {
-    return m_txQueue.enqueue(token, message);
+    return m_txQueue.enqueue(token, Server::QueuedEvent{ peer,
+                                                         packet,
+                                                         channel,
+                                                         DisconnectType::None,
+                                                         THORQ_DISCONNECT_REASON::UNKNOWN
+                                                        });
 }
 
-bool ThorQ::Server::disconnectPeer(moodycamel::ProducerToken token, QueuedDisconnect &disconnect)
+bool ThorQ::Server::tryQueueDisconnect(ENetPeer* peer, bool force, THORQ_DISCONNECT_REASON reason, moodycamel::ProducerToken token)
 {
-    return m_disconnectQueue.enqueue(token, disconnect);
+    return m_txQueue.enqueue(token, Server::QueuedEvent{ peer,
+                                                         nullptr,
+                                                         THORQ_CHANNEL::_INVALID,
+                                                         force ? DisconnectType::Force : DisconnectType::Later,
+                                                         reason
+                                                        });
 }
 
 void ThorQ::Server::run()
@@ -275,51 +288,35 @@ void ThorQ::Server::run()
     {
         while (enet_host_service(m_host, &event, 0) > 0)
         {
-            switch (event.type)
-            {
-            case ENET_EVENT_TYPE_CONNECT:
-                handleEventConnection(event);
-                break;
-            case ENET_EVENT_TYPE_RECEIVE:
-                handleEventMessage(event);
-                break;
-            case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-                handleEventTimeout(event);
-                goto disconnect; // To avoid [-Wimplicit-fallthrough]
-            case ENET_EVENT_TYPE_DISCONNECT:
-            disconnect:
-                handleEventDisconnect(event);
-                break;
-            case ENET_EVENT_TYPE_NONE:
-                break;
-            }
-
-            if (++iterations > 100)
-            {
-                m_totalSentData += m_host->totalSentData;
-                m_host->totalSentData = 0;
-
-                m_totalSentPackets += m_host->totalSentPackets;
-                m_host->totalSentPackets = 0;
-
-                m_totalReceivedData += m_host->totalReceivedData;
-                m_host->totalReceivedData = 0;
-
-                m_totalReceivedPackets += m_host->totalReceivedPackets;
-                m_host->totalReceivedPackets = 0;
-            }
+            m_rxQueue.enqueue(event);
         }
 
-        ENetPacket* queuedBroadcast;
-        while (m_broadcastQueue.try_dequeue(queuedBroadcast))
-        {
-            enet_host_broadcast(m_host, (std::uint8_t)THORQ_CHANNEL::AUTHORITY, queuedBroadcast);
-        }
-
-        QueuedMessage queuedMessage;
+        QueuedEvent queuedMessage;
         while (m_txQueue.try_dequeue(queuedMessage))
         {
-            enet_peer_send(queuedMessage.peer, queuedMessage.channel, queuedMessage.packet);
+            if (queuedMessage.peer != nullptr)
+            {
+                enet_peer_send(queuedMessage.peer, queuedMessage.channel, queuedMessage.packet);
+            }
+            else
+            {
+                enet_host_broadcast(m_host, queuedMessage.channel, queuedMessage.packet);
+            }
+        }
+
+        if (++iterations > 100)
+        {
+            m_totalSentData += m_host->totalSentData;
+            m_host->totalSentData = 0;
+
+            m_totalSentPackets += m_host->totalSentPackets;
+            m_host->totalSentPackets = 0;
+
+            m_totalReceivedData += m_host->totalReceivedData;
+            m_host->totalReceivedData = 0;
+
+            m_totalReceivedPackets += m_host->totalReceivedPackets;
+            m_host->totalReceivedPackets = 0;
         }
     }
 
@@ -358,7 +355,6 @@ void ThorQ::Server::handleEventConnection(const ENetEvent& event)
 }
 void ThorQ::Server::handleEventMessage(const ENetEvent &event)
 {
-    m_rxQueue.enqueue(QueuedMessage{ event.peer, event.packet, event.channelID });
 }
 void ThorQ::Server::handleEventDisconnect(const ENetEvent& event)
 {

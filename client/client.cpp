@@ -955,9 +955,6 @@ void Client::handleDisconnect(THORQ_DISCONNECT_REASON reason)
     case THORQ_DISCONNECT_REASON::BANNED:
         emit Error(tr("You have been banned"));
         break;
-    case THORQ_DISCONNECT_REASON::FUCK_YOU:
-        emit Error(tr("Fuck you"));
-        break;
     default:
         emit Warning(tr("Disconnected for unknown reason"));
         break;

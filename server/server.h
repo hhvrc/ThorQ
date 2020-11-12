@@ -46,27 +46,37 @@ public:
     std::uint64_t totalDataReceived() const;
     std::uint64_t totalPacketsReceived() const;
 
-    void broadcastAnnouncement(const std::span<std::uint8_t> payload, bool reliable, bool unsequenced);
+    bool tryBroadcastAnnouncement(const std::span<std::uint8_t> payload, bool reliable, bool unsequenced);
 protected:
     friend Instance;
     friend MessageDispatcher;
 
-    struct QueuedMessage
+    enum class DisconnectType : std::uint8_t
     {
-        ENetPeer* peer;
-        ENetPacket* packet;
-        std::uint8_t channel;
-    };
-    struct QueuedDisconnect
-    {
-        ENetPeer* peer;
-        THORQ_DISCONNECT_REASON reason;
-        bool force;
+        None,
+        Later,
+        Force
     };
 
-    bool tryGetMessage(moodycamel::ConsumerToken token, QueuedMessage& message);
-    bool tryQueueMessage(moodycamel::ProducerToken token, const QueuedMessage& message);
-    bool disconnectPeer(moodycamel::ProducerToken token, QueuedDisconnect& disconnect);
+    struct QueuedEvent
+    {
+        // Target peer, nullptr for everyone
+        ENetPeer* peer;
+
+        // Packet for peer, nullptr on message will discard the event
+        ENetPacket* packet;
+
+        // Channel to send packet on
+        THORQ_CHANNEL channel;
+
+        // For disconnects
+        DisconnectType disconnect;
+        THORQ_DISCONNECT_REASON reason;
+    };
+
+    bool tryGetEvent(ENetEvent& event, moodycamel::ConsumerToken token);
+    bool tryQueueMessage(ENetPeer* peer, ENetPacket* packet, THORQ_CHANNEL channel, moodycamel::ProducerToken token);
+    bool tryQueueDisconnect(ENetPeer* peer, bool force, THORQ_DISCONNECT_REASON reason, moodycamel::ProducerToken token);
 private:
     void run();
 
@@ -92,16 +102,10 @@ private:
     std::atomic_uint64_t m_totalReceivedPackets;
 
     moodycamel::ConsumerToken m_rxToken;
-    moodycamel::ConcurrentQueue<QueuedMessage> m_rxQueue;
+    moodycamel::ConcurrentQueue<ENetEvent> m_rxQueue;
 
     moodycamel::ProducerToken m_txToken;
-    moodycamel::ConcurrentQueue<QueuedMessage> m_txQueue;
-
-    moodycamel::ConsumerToken m_broadcastToken;
-    moodycamel::ConcurrentQueue<ENetPacket*> m_broadcastQueue;
-
-    moodycamel::ConsumerToken m_disconnectToken;
-    moodycamel::ConcurrentQueue<QueuedDisconnect> m_disconnectQueue;
+    moodycamel::ConcurrentQueue<QueuedEvent> m_txQueue;
 };
 }
 

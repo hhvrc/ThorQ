@@ -37,8 +37,6 @@ private:
     std::vector<std::uint8_t> m_buffer;
     moodycamel::ConsumerToken m_tokenGet;
     moodycamel::ProducerToken m_tokenQueue;
-    moodycamel::ProducerToken m_tokenBroadcast;
-    moodycamel::ProducerToken m_tokenDisconnect;
 };
 }
 
