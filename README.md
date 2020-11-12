@@ -11,17 +11,17 @@ Server and Client to control a shock-collar remotely from anywhere in the world.
 ```console
 $ git clone https://github.com/hhvrc/CollarControl.git
 $ cd CollarControl
-$ git submodule update --init
+$ git submodule update --init --recursive
 $ mkdir build
 $ cd build
 $ cmake ..
-$ make -4
+$ make -j$((`nproc`+1))
 ```
 ### Windows
 ```powershell
 > git clone https://github.com/hhvrc/CollarControl.git
 > cd CollarControl
-> git submodule update --init
+> git submodule update --init --recursive
 ```
 Open Visual Studio 2019
 
@@ -34,10 +34,14 @@ CMake will now configure the project
 Then do Ctrl+Shift+B, or click "Build all" to build
 
 ## Libraries used
-| Use Case         | Name            | Home Link                                     | Download Windows                                | Apt                 |
-| ---------------- | --------------- | --------------------------------------------- | ----------------------------------------------- | ------------------- |
-| Networking       | ENet            | http://enet.bespin.org/                       | https://github.com/zpl-c/enet                   |                     |
-| Cryptography     | LibSodium       | https://libsodium.gitbook.io/doc/             | https://github.com/jedisct1/libsodium           | libsodium-dev       |
-| GUI              | Qt              | https://www.qt.io/                            | https://www.qt.io/download-qt-installer         | qt5-default         |
-| VR UI            | OpenVR          | https://www.steamvr.com/en/                   | https://github.com/ValveSoftware/openvr         | libopenvr-dev       |
-| Message queueing | ConcurrentQueue | https://github.com/cameron314/concurrentqueue | https://github.com/cameron314/concurrentqueue   |                     |
+| Use Case          | Name            | Home Link                                     | Download Windows                                | Apt                 |
+| ----------------- | --------------- | --------------------------------------------- | ----------------------------------------------- | ------------------- |
+| Networking        | ENet            | http://enet.bespin.org/                       | https://github.com/zpl-c/enet                   |                     |
+| Serialization     | FlatBuffers     | https://google.github.io/flatbuffers/         | https://github.com/google/flatbuffers           |                     |
+| String formatting | {fmt}           | https://fmt.dev/latest/index.html             | https://github.com/fmtlib/fmt                   | libfmt-dev          |
+| Cryptography      | LibSodium       | https://libsodium.gitbook.io/doc/             | https://github.com/jedisct1/libsodium           | libsodium-dev       |
+| GUI               | Qt              | https://www.qt.io/                            | https://www.qt.io/download-qt-installer         | qt5-default         |
+| VR UI             | OpenVR          | https://www.steamvr.com/en/                   | https://github.com/ValveSoftware/openvr         | libopenvr-dev       |
+| Argument parsing  | cxxopts         | https://github.com/jarro2783/cxxopts          | https://github.com/jarro2783/cxxopts            |                     |
+| Message queueing  | ConcurrentQueue | https://github.com/cameron314/concurrentqueue | https://github.com/cameron314/concurrentqueue   |                     |
+| SQLite wrapper    | LSql            | https://github.com/hhvrc/LSql             | https://github.com/hhvrc/LSql               |                     |
