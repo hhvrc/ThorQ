@@ -83,7 +83,14 @@ else()
 endif()
 # --------------------------
 
+# -- Set global libraries --
+if(WIN32)
+    link_libraries(ws2_32 winmm Rpcrt4)
+endif()
+# --------------------------
+
 add_subdirectory(libs)
+link_directories(${GLOB_LINK_DIRS})
 include_directories(${GLOB_INCLUDE_DIRS})
 add_subdirectory(client)
 add_subdirectory(server)

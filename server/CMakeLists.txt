@@ -69,9 +69,7 @@ add_executable(${project}
 	${${project}_HEADERS}
 )
 
-if(WIN32)
-    set(EXTRA_LIBS Rpcrt4)
-else()
+if(UNIX)
     set(EXTRA_LIBS uuid)
 endif()
 

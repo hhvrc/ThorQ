@@ -2,6 +2,7 @@
 #define CRYPTO_H
 
 #include <span>
+#include <array>
 #include <atomic>
 #include <cstdint>
 #include <cstdlib>

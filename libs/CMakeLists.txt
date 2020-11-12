@@ -30,7 +30,7 @@ add_subdirectory(flatbuffers)
 # Restore flags
 set(CMAKE_CXX_FLAGS ${PREV_FLAGS})
 
-find_program (FLATBUFFERS_COMPILER flatc)
+find_program (FLATC_EXEC flatc)
 file(GLOB ${project}_SCHEMAS "${CMAKE_CURRENT_SOURCE_DIR}/schemas/*.fbs")
 set(FLATC_OUTPUT_DIR  "${CMAKE_CURRENT_BINARY_DIR}/schemas")
 foreach(SCHEMA ${${project}_SCHEMAS})
@@ -39,7 +39,7 @@ foreach(SCHEMA ${${project}_SCHEMAS})
     set(FLATC_OUTPUT_FILE "${FLATC_OUTPUT_DIR}/${SCHEMA_NAME}_generated.h")
     add_custom_command(
         OUTPUT ${FLATC_OUTPUT_FILE}
-        COMMAND ${FLATBUFFERS_COMPILER}
+	COMMAND ${FLATC_EXEC}
         ARGS --cpp
         ARGS --force-empty
         ARGS --gen-mutable
@@ -78,16 +78,37 @@ set(${project}_HEADERS
     ${${project}_SCHEMAS}
 )
 
+if (WIN32)
+    set(GLOB_LINK_DIRS
+	${CMAKE_CURRENT_SOURCE_DIR}/tbb/lib/windows
+	${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/windows
+
+	CACHE PATH "List of library directories that contains binaries to link agaisnt"
+    )
+else()
+    set(GLOB_LINK_DIRS
+	${CMAKE_CURRENT_SOURCE_DIR}/tbb/lib/linux
+	${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/linux
+
+	CACHE PATH "List of library directories that contains binaries to link agaisnt"
+    )
+endif()
+
+link_directories(
+    ${GLOB_LINK_DIRS}
+)
+
 set(GLOB_INCLUDE_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/tbb/include
     ${CMAKE_CURRENT_SOURCE_DIR}/fmt/include
     ${CMAKE_CURRENT_SOURCE_DIR}/enet/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/sodium/include
     ${CMAKE_CURRENT_SOURCE_DIR}/flatbuffers/include
 
     CACHE PATH "List of library directories for header includes"
 )
-
 include_directories(
     ${GLOB_INCLUDE_DIRS}
 )

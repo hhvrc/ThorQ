@@ -62,7 +62,7 @@ std::string ThorQ::Uuid::toString() const
     std::string str;
 #if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
     std::uint8_t* ptr;
-    if (UuidToStringA((const GUID*)m_data, &ptr) != RPC_S_OK)
+    if (UuidToStringA((UUID*)m_data, &ptr) != RPC_S_OK)
     {
         return str;
     }
