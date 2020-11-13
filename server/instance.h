@@ -11,6 +11,7 @@
 #include <flatbuffers/flatbuffers.h>
 
 #include <enums.h>
+#include <crypto.h>
 #include <constants.h>
 #include <typedefs_global.h>
 
@@ -21,9 +22,8 @@ struct Instance
 {
     Instance() = delete;
     Instance(ENetPeer* peer)
-        : m_peer(peer)
-        , l_crypto()
-        , m_crypto()
+        : peer(peer)
+        , crypto(new ThorQ::Crypto())
         , l_account()
         , m_account()
         , l_systemID()
@@ -35,10 +35,8 @@ struct Instance
         peer->data = this;
     }
 
-    ENetPeer* m_peer;
-
-    std::mutex l_crypto;
-    std::shared_ptr<ThorQ::Crypto> m_crypto;
+    ENetPeer* peer;
+     std::shared_ptr<ThorQ::Crypto> crypto;
 
     std::shared_mutex l_account;
     std::shared_ptr<ThorQ::Account> m_account;

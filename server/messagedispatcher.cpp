@@ -19,6 +19,7 @@
 #include "server.h"
 #include "account.h"
 #include "instance.h"
+#include "memorymanager.h"
 
 ThorQ::MessageDispatcher::MessageDispatcher(ThorQ::Server* server)
     : m_server(server)
@@ -38,8 +39,7 @@ void ThorQ::MessageDispatcher::DispatchEvent(const ENetEvent& event)
     ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
 
     {
-        std::unique_lock l(instance->l_crypto);
-        if (!ThorQ::packetDecode(event.packet, m_buffer, instance->m_crypto))
+        if (!ThorQ::packetDecode(event.packet, m_buffer, instance->crypto))
         {
             return;
         }
@@ -106,59 +106,77 @@ void ThorQ::MessageDispatcher::DispatchEvent(const ENetEvent& event)
 }
 
 void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
-{/*
+{
     fmt::print("[MSG] Heartbeat!");
 
     flatbuffers::Verifier verifier(message.data(), message.size());
 
     const ThorQ::Serialization::Heartbeat* heartbeat = flatbuffers::GetRoot<ThorQ::Serialization::Heartbeat>(message.data());
 
-    if (heartbeat->interval() !=  g_heartbeatSetPoint)
+    if (heartbeat->Verify(verifier))
     {
-        flatbuffers::FlatBufferBuilder builder;
-        auto offset = ThorQ::Serialization::CreateHeartbeat(builder, g_heartbeatSetPoint);
-        builder.Finish(offset);
+        std::uint32_t interval = m_server->heartbeatInterval();
 
-        instance->packetSend(instance->packetEncode(builder.GetBufferPointer(), builder.GetSize(), false, false), THORQ_CHANNEL_MAIN);
+        if (heartbeat->interval() != interval)
+        {
+            // Build flatbuffer
+            flatbuffers::FlatBufferBuilder builder;
+            auto offset = ThorQ::Serialization::CreateHeartbeat(builder, interval);
+            builder.Finish(offset);
+
+            // Calculate packet size
+            std::size_t size = ThorQ::calculatePacketSize(builder.GetSize(), false);
+
+            //
+            ENetPacket* packet = ThorQ::Memory::packetGet(size, ENET_PACKET_FLAG_RELIABLE);
+            ThorQ::packetEncode(packet, builder.GetBufferSpan());
+            m_server->tryQueueMessage(instance->peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
+        }
     }
-*/}
+}
 
 void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
-{/*
+{
     fmt::print("[MSG] Version!");
 
     flatbuffers::Verifier verifier(message.data(), message.size());
 
-    const ThorQ::Serialization::Version* version = flatbuffers::GetRoot<ThorQ::Serialization::Version>(message.data());
+    const ThorQ::Serialization::Version* protoVersion = flatbuffers::GetRoot<ThorQ::Serialization::Version>(message.data());
 
-    version->Verify(verifier);
+    if (protoVersion->Verify(verifier))
+    {
+        std::uint8_t app = protoVersion->app();
+        ThorQ::Version version = *protoVersion;
+        ThorQ::Version currentVersion;
 
-    ThorQ::Version currentVersion;
+        const char* name = ThorQ::Serialization::EnumNameApp(protoVersion->app());
 
-    const char* name;
+        switch (app) {
+        case ThorQ::Serialization::App_Server:
+            currentVersion = THORQ_VERSION_SERVER;
+            break;
+        case ThorQ::Serialization::App_Client:
+            currentVersion = THORQ_VERSION_CLIENT;
+            break;
+        case ThorQ::Serialization::App_Link:
+            currentVersion = THORQ_VERSION_LINK;
+            break;
+        default:
+            fmt::print("Client expects invalid version {}[{}]\n", app, version.toString());
+            return;
+        }
 
-    switch (version->app()) {
-    case ThorQ::Serialization::App_Server:
-        name = "server";
-        currentVersion = THORQ_VERSION_SERVER;
-        break;
-    case ThorQ::Serialization::App_Client:
-        name = "client";
-        currentVersion = THORQ_VERSION_CLIENT;
-        break;
-    case ThorQ::Serialization::App_Link:
-        name = "link";
-        currentVersion = THORQ_VERSION_LINK;
-        break;
-    default:
-        fmt::print("Client expects invalid version %i[%s]\n", version->app(), version.toString());
-        return;
+        if (version == currentVersion)
+        {
+            fmt::print("Client {}[{}] version matched!", name, version.toString());
+        }
+        else
+        {
+            fmt::print("Client expects {0}[{1}], current is {0}[{2}]\nDisconnecting peer...", name, version.toString(), currentVersion.toString());
+            m_server->tryQueueDisconnect(instance->peer, false, THORQ_DISCONNECT_REASON::VERSION_INCOMPATIBLE, m_tokenQueue);
+        }
     }
-
-    fmt::print("Client expects %s[%s], current is %s[%s]\n", name, version.toString(), name, currentVersion.toString());
-
-    instance->disconnectPeer(THORQ_DISCONNECT_REASON_VERSION_INCOMPATIBLE);
-*/}
+}
 
 void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {/*
@@ -174,7 +192,22 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
     case ThorQ::Serialization::Crypto::Type_Request:
     {
         fmt::print("[MSG] Crypto request!");
-        instance->cryptoInit();
+        instance->crypto->generateKeyPair();
+
+        // Build flatbuffer
+        flatbuffers::FlatBufferBuilder builder;
+        auto offset = ThorQ::Serialization::Crypto::CreateCommand(builder, ThorQ::Serialization::Crypto::Type_Establish);
+        builder.Finish(offset);
+
+        // Calculate packet size
+        std::size_t size = ThorQ::calculatePacketSize(builder.GetSize(), false);
+
+        //
+        ENetPacket* packet = ThorQ::Memory::packetGet(size, ENET_PACKET_FLAG_RELIABLE);
+        ThorQ::packetEncode(packet, builder.GetBufferSpan());
+        m_server->tryQueueMessage(instance->peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
+
+        instance->crypto->getPublicKey();
         break;
     }
     case ThorQ::Serialization::Crypto::Type_Establish:
@@ -212,8 +245,8 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
     default:
         fmt::print("[MSG] Crypto \?\?\?!");
         return;
-    }
-*/}
+    }*/
+}
 
 void ThorQ::MessageDispatcher::handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
 {/*

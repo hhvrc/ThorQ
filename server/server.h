@@ -5,6 +5,7 @@
 #include <queue>
 #include <unordered_set>
 
+#include <enet.h>
 #include <flatbuffers/flatbuffers.h>
 
 #include "enums.h"
@@ -38,8 +39,8 @@ public:
     bool start(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount, bool noDelay);
     void stop();
 
-    std::uint32_t HeartbeatInterval() const;
-    void SetHeartbeatInterval(std::uint32_t msInterval);
+    std::uint32_t heartbeatInterval() const;
+    void setHeartbeatInterval(std::uint32_t msInterval);
 
     std::uint64_t totalDataSent() const;
     std::uint64_t totalPacketsSent() const;
@@ -75,8 +76,8 @@ protected:
     };
 
     bool tryGetEvent(ENetEvent& event, moodycamel::ConsumerToken token);
-    bool tryQueueMessage(ENetPeer* peer, ENetPacket* packet, THORQ_CHANNEL channel, moodycamel::ProducerToken token);
-    bool tryQueueDisconnect(ENetPeer* peer, bool force, THORQ_DISCONNECT_REASON reason, moodycamel::ProducerToken token);
+    bool tryQueueMessage(ENetPeer* peer, ENetPacket* packet, THORQ_CHANNEL channel, const moodycamel::ProducerToken& token);
+    bool tryQueueDisconnect(ENetPeer* peer, bool force, THORQ_DISCONNECT_REASON reason, const moodycamel::ProducerToken& token);
 private:
     void run();
 

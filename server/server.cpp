@@ -1,5 +1,3 @@
-#include "server.h"
-
 #if defined(__GCC__) || defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wextra"
@@ -16,6 +14,8 @@
 #if defined(__GCC__) || defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
+
+#include "server.h"
 
 #include <fmt/core.h>
 #include <thorq_message.h>
@@ -206,11 +206,11 @@ void ThorQ::Server::stop()
     }
 }
 
-uint32_t ThorQ::Server::HeartbeatInterval() const
+uint32_t ThorQ::Server::heartbeatInterval() const
 {
     return m_heartbeatInterval;
 }
-void ThorQ::Server::SetHeartbeatInterval(std::uint32_t msInterval)
+void ThorQ::Server::setHeartbeatInterval(std::uint32_t msInterval)
 {
     if (msInterval != m_heartbeatInterval)
     {
@@ -244,7 +244,7 @@ bool ThorQ::Server::tryBroadcastAnnouncement(const std::span<std::uint8_t> paylo
         ThorQ::packetEncode(packet, payload);
         m_txQueue.enqueue(Server::QueuedEvent{ nullptr,
                                                packet,
-                                               channel,
+                                               THORQ_CHANNEL::AUTHORITY,
                                                DisconnectType::None,
                                                THORQ_DISCONNECT_REASON::UNKNOWN
                                              });
@@ -257,7 +257,7 @@ bool ThorQ::Server::tryGetEvent(ENetEvent& event, moodycamel::ConsumerToken toke
 {
     return m_rxQueue.try_dequeue(token, event);
 }
-bool ThorQ::Server::tryQueueMessage(ENetPeer* peer, ENetPacket* packet, THORQ_CHANNEL channel, moodycamel::ProducerToken token)
+bool ThorQ::Server::tryQueueMessage(ENetPeer* peer, ENetPacket* packet, THORQ_CHANNEL channel, const moodycamel::ProducerToken& token)
 {
     return m_txQueue.enqueue(token, Server::QueuedEvent{ peer,
                                                          packet,
@@ -267,7 +267,7 @@ bool ThorQ::Server::tryQueueMessage(ENetPeer* peer, ENetPacket* packet, THORQ_CH
                                                         });
 }
 
-bool ThorQ::Server::tryQueueDisconnect(ENetPeer* peer, bool force, THORQ_DISCONNECT_REASON reason, moodycamel::ProducerToken token)
+bool ThorQ::Server::tryQueueDisconnect(ENetPeer* peer, bool force, THORQ_DISCONNECT_REASON reason, const moodycamel::ProducerToken& token)
 {
     return m_txQueue.enqueue(token, Server::QueuedEvent{ peer,
                                                          nullptr,
@@ -296,11 +296,11 @@ void ThorQ::Server::run()
         {
             if (queuedMessage.peer != nullptr)
             {
-                enet_peer_send(queuedMessage.peer, queuedMessage.channel, queuedMessage.packet);
+                enet_peer_send(queuedMessage.peer, (std::uint8_t)queuedMessage.channel, queuedMessage.packet);
             }
             else
             {
-                enet_host_broadcast(m_host, queuedMessage.channel, queuedMessage.packet);
+                enet_host_broadcast(m_host, (std::uint8_t)queuedMessage.channel, queuedMessage.packet);
             }
         }
 
