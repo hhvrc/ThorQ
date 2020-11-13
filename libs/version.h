@@ -4,38 +4,53 @@
 #include <cstdint>
 #include <string>
 
+#include "schemas/version_generated.h"
+
 namespace ThorQ {
 /// Version type
-struct Version
+class Version
 {
-    std::uint8_t major;
-    std::uint8_t minor;
-    std::uint8_t patch;
+public:
+    Version();
+    Version(std::uint8_t major, std::uint8_t minor, std::uint8_t patch);
+    Version(const ThorQ::Version& version);
+    Version(const ThorQ::Serialization::Version& version);
+
+    std::uint8_t major() const;
+    std::uint8_t minor() const;
+    std::uint8_t patch() const;
+
+    void setMajor(std::uint8_t major);
+    void setMinor(std::uint8_t minor);
+    void setPatch(std::uint8_t patch);
 
     std::string toString() const;
-
-    inline Version operator- (const Version& other)
-    {
-        Version diff;
-        diff.major = major - other.major;
-        diff.minor = minor - other.minor;
-        diff.patch = patch - other.patch;
-        return diff;
-    }
-
-    inline Version &operator-=(const Version& other)
-    {
-        *this = *this - other;
-        return *this;
-    }
-
-    inline bool operator==(const Version& other) const { return this->major == other.major && this->minor == other.minor && this->patch == other.patch; }
-    inline bool operator!=(const Version& other) const { return !(*this == other); }
-    inline bool operator< (const Version& other) const { return this->major <  other.major || this->minor <  other.minor || this->patch <  other.patch; }
-    inline bool operator<=(const Version& other) const { return !(other < *this); }
-    inline bool operator> (const Version& other) const { return other < *this; }
-    inline bool operator>=(const Version& other) const { return !(*this < other); }
+private:
+    std::uint8_t m_major;
+    std::uint8_t m_minor;
+    std::uint8_t m_patch;
 };
+
+inline bool operator == (const ThorQ::Version& lhs, const ThorQ::Version& rhs) { return lhs.major() == rhs.major() && lhs.minor() == rhs.minor() && lhs.patch() == rhs.patch(); }
+inline bool operator <  (const ThorQ::Version& lhs, const ThorQ::Version& rhs) { return lhs.major() <  rhs.major() || lhs.minor() <  rhs.minor() || lhs.patch() <  rhs.patch(); }
+inline bool operator >  (const ThorQ::Version& lhs, const ThorQ::Version& rhs) { return lhs.major() >  rhs.major() || lhs.minor() >  rhs.minor() || lhs.patch() >  rhs.patch(); }
+inline bool operator != (const ThorQ::Version& lhs, const ThorQ::Version& rhs) { return !(lhs == rhs); }
+inline bool operator <= (const ThorQ::Version& lhs, const ThorQ::Version& rhs) { return !(lhs >  rhs); }
+inline bool operator >= (const ThorQ::Version& lhs, const ThorQ::Version& rhs) { return !(lhs <  rhs); }
+
+inline bool operator == (const ThorQ::Version& lhs, const ThorQ::Serialization::Version& rhs) { return lhs.major() == rhs.major() && lhs.minor() == rhs.minor() && lhs.patch() == rhs.patch(); }
+inline bool operator <  (const ThorQ::Version& lhs, const ThorQ::Serialization::Version& rhs) { return lhs.major() <  rhs.major() || lhs.minor() <  rhs.minor() || lhs.patch() <  rhs.patch(); }
+inline bool operator >  (const ThorQ::Version& lhs, const ThorQ::Serialization::Version& rhs) { return lhs.major() >  rhs.major() || lhs.minor() >  rhs.minor() || lhs.patch() >  rhs.patch(); }
+inline bool operator != (const ThorQ::Version& lhs, const ThorQ::Serialization::Version& rhs) { return !(lhs == rhs); }
+inline bool operator <= (const ThorQ::Version& lhs, const ThorQ::Serialization::Version& rhs) { return !(lhs >  rhs); }
+inline bool operator >= (const ThorQ::Version& lhs, const ThorQ::Serialization::Version& rhs) { return !(lhs <  rhs); }
+
+inline bool operator == (const ThorQ::Serialization::Version& lhs, const ThorQ::Version& rhs) { return lhs.major() == rhs.major() && lhs.minor() == rhs.minor() && lhs.patch() == rhs.patch(); }
+inline bool operator <  (const ThorQ::Serialization::Version& lhs, const ThorQ::Version& rhs) { return lhs.major() <  rhs.major() || lhs.minor() <  rhs.minor() || lhs.patch() <  rhs.patch(); }
+inline bool operator >  (const ThorQ::Serialization::Version& lhs, const ThorQ::Version& rhs) { return lhs.major() >  rhs.major() || lhs.minor() >  rhs.minor() || lhs.patch() >  rhs.patch(); }
+inline bool operator != (const ThorQ::Serialization::Version& lhs, const ThorQ::Version& rhs) { return !(lhs == rhs); }
+inline bool operator <= (const ThorQ::Serialization::Version& lhs, const ThorQ::Version& rhs) { return !(lhs >  rhs); }
+inline bool operator >= (const ThorQ::Serialization::Version& lhs, const ThorQ::Version& rhs) { return !(lhs <  rhs); }
 }
 
 #endif // VERSION_H
