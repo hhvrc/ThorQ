@@ -74,13 +74,13 @@ bool ThorQ::packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data)
 
     // Get data sections
     std::span<std::uint8_t> packetData(packet->data, packet->dataLength);
-    std::span<std::uint8_t> packetPayload = packetData.subspan(PacketRawPayloadOffset, data.size());
+    std::span<std::uint8_t> packetPayload = packetData.subspan(PacketRawPayloadOffset);
 
     // Set header
     packetData[0] = (std::uint8_t)PREENCRYPTION_FLAG::NONE;
 
     // Copy data
-    std::copy(packetPayload.begin(), packetPayload.end(), data.begin());
+    std::copy(data.begin(), data.end(), packetPayload.begin());
 
     return true;
 }
@@ -98,7 +98,7 @@ bool ThorQ::packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data,
     std::span<std::uint8_t> packetData(packet->data, packet->dataLength);
     std::span<std::uint8_t> packetMAC     = packetData.subspan(PacketEncMacOffset,     Crypto::MacLen);
     std::span<std::uint8_t> packetNonce   = packetData.subspan(PacketEncNonceOffset,   Crypto::NonceLen);
-    std::span<std::uint8_t> packetPayload = packetData.subspan(PacketEncPayloadOffset, data.size());
+    std::span<std::uint8_t> packetPayload = packetData.subspan(PacketEncPayloadOffset);
 
     // Set header
     packetData[0] = (std::uint8_t)PREENCRYPTION_FLAG::ENCRYPTED;
@@ -133,7 +133,7 @@ bool ThorQ::packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& da
         // Get data sections
         std::span<std::uint8_t> packetMAC     = packetData.subspan(PacketEncMacOffset,     Crypto::MacLen);
         std::span<std::uint8_t> packetNonce   = packetData.subspan(PacketEncNonceOffset,   Crypto::NonceLen);
-        std::span<std::uint8_t> packetPayload = packetData.subspan(PacketEncPayloadOffset, data.size());
+        std::span<std::uint8_t> packetPayload = packetData.subspan(PacketEncPayloadOffset);
 
         if (!crypto->decrypt(data, packetPayload, packetMAC, packetNonce))
         {
@@ -143,9 +143,9 @@ bool ThorQ::packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& da
     else
     {
         // Get data sections
-        std::span<std::uint8_t> packetPayload = packetData.subspan(PacketRawPayloadOffset, data.size());
+        std::span<std::uint8_t> packetPayload = packetData.subspan(PacketEncPayloadOffset);
 
-        std::copy(data.begin(), data.end(), packetPayload.begin());
+        std::copy(packetPayload.begin(), packetPayload.end(), data.begin());
     }
 
     return true;
