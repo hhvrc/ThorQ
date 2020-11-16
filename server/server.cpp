@@ -326,65 +326,9 @@ void ThorQ::Server::run()
 
     m_status = ServerStatus::Stopped;
 }
-
-void ThorQ::Server::handleEventConnection(const ENetEvent& event)
-{
-    // Dont worry, its ok to have a seemingly dangling pointer here (ENet keeps track of the pointer)
-
-    ThorQ::Instance* instance = new ThorQ::Instance(event.peer);
-
-    std::vector<std::uint8_t> message;
-/*
-    flatbuffers::FlatBufferBuilder builder;
-    ThorQ::Serialization::VersionBuilder versionBuilder(builder);
-    versionBuilder.
-
-    thorq_payload_version_pack(message, THORQ_APP_LINK, THORQ_VERSION_LINK);
-    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
-
-    thorq_payload_version_pack(message, THORQ_APP_CLIENT, THORQ_VERSION_CLIENT);
-    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
-
-    thorq_payload_version_pack(message, THORQ_APP_SERVER, THORQ_VERSION_SERVER);
-    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
-
-    thorq_payload_heartbeat_pack(message, 500); // TODO: get from config
-    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
-*/
-    char addr[40];
-    if (enet_peer_get_ip(event.peer, addr, 40) == 0)
-    {
-        fmt::print("[{}] Connected\n", addr);
-    }
-}
-void ThorQ::Server::handleEventMessage(const ENetEvent &event)
-{
-}
 void ThorQ::Server::handleEventDisconnect(const ENetEvent& event)
 {
-    // Get instance
-    ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
-
-    // Remove pointer
-    event.peer->data = nullptr;
-
-    // Yeet
-    delete instance;
-
-    char addr[40];
-    if (enet_peer_get_ip(event.peer, addr, 40) == 0)
-    {
-        fmt::print("[{}] disconnected\n", addr);
-    }
 }
 void ThorQ::Server::handleEventTimeout(const ENetEvent& event)
 {
-    if (event.peer->data == nullptr)
-        return;
-
-    char addr[40];
-    if (enet_peer_get_ip(event.peer, addr, 40) == 0)
-    {
-        fmt::print("[{}] timed out\n", addr);
-    }
 }

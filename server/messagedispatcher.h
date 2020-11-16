@@ -20,7 +20,12 @@ public:
 
 private:
     void run();
-    void DispatchEvent(const ENetEvent& event);
+
+    void handleEventConnection(const ENetEvent& event);
+    void handleEventMessage(const ENetEvent &event);
+    void handleEventDisconnect(const ENetEvent& event);
+    void handleEventTimeout(const ENetEvent& event);
+
     void handleMessageHeartbeat(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
     void handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
     void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);

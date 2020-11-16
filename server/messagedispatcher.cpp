@@ -45,14 +45,61 @@ void ThorQ::MessageDispatcher::run()
     while (!m_closing)
     {
         ENetEvent event;
-        if (m_server->tryGetEvent(event, m_tokenGet))
+        while (m_server->tryGetEvent(event, m_tokenGet))
         {
-            DispatchEvent(event);
+            switch (event.type) {
+            case ENET_EVENT_TYPE_CONNECT:
+                handleEventConnection(event);
+                break;
+            case ENET_EVENT_TYPE_RECEIVE:
+                handleEventMessage(event);
+                break;
+            case ENET_EVENT_TYPE_DISCONNECT:
+                handleEventDisconnect(event);
+                break;
+            case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
+                handleEventTimeout(event);
+                break;
+            case ENET_EVENT_TYPE_NONE:
+            default:
+                continue;
+            }
         }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 
-void ThorQ::MessageDispatcher::DispatchEvent(const ENetEvent& event)
+void ThorQ::MessageDispatcher::handleEventConnection(const ENetEvent& event)
+{
+    // Dont worry, its ok to have a seemingly dangling pointer here (ENet keeps track of the pointer)
+
+    ThorQ::Instance* instance = new ThorQ::Instance(event.peer);
+
+    std::vector<std::uint8_t> message;
+/*
+    flatbuffers::FlatBufferBuilder builder;
+    ThorQ::Serialization::VersionBuilder versionBuilder(builder);
+    versionBuilder.
+
+    thorq_payload_version_pack(message, THORQ_APP_LINK, THORQ_VERSION_LINK);
+    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
+
+    thorq_payload_version_pack(message, THORQ_APP_CLIENT, THORQ_VERSION_CLIENT);
+    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
+
+    thorq_payload_version_pack(message, THORQ_APP_SERVER, THORQ_VERSION_SERVER);
+    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
+
+    thorq_payload_heartbeat_pack(message, 500); // TODO: get from config
+    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
+*/
+    char addr[40];
+    if (enet_peer_get_ip(event.peer, addr, 40) == 0)
+    {
+        fmt::print("[{}] Connected\n", addr);
+    }
+}
+void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
 {
     if (event.channelID > (std::uint8_t)THORQ_CHANNEL::_MAX)
     {
@@ -125,6 +172,31 @@ void ThorQ::MessageDispatcher::DispatchEvent(const ENetEvent& event)
     case THORQ_PAYLOAD_ID::_MAX:
     case THORQ_PAYLOAD_ID::_INVALID:
         return;
+    }
+}
+void ThorQ::MessageDispatcher::handleEventDisconnect(const ENetEvent& event)
+{
+    // Get instance
+    ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
+
+    // Remove pointer
+    event.peer->data = nullptr;
+
+    // Yeet
+    delete instance;
+
+    char addr[40];
+    if (enet_peer_get_ip(event.peer, addr, 40) == 0)
+    {
+        fmt::print("[{}] disconnected\n", addr);
+    }
+}
+void ThorQ::MessageDispatcher::handleEventTimeout(const ENetEvent &event)
+{
+    char addr[40];
+    if (enet_peer_get_ip(event.peer, addr, 40) == 0)
+    {
+        fmt::print("[{}] timed out\n", addr);
     }
 }
 

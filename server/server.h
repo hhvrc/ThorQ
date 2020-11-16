@@ -81,11 +81,6 @@ protected:
 private:
     void run();
 
-    void handleEventConnection(const ENetEvent& event);
-    void handleEventMessage(const ENetEvent &event);
-    void handleEventDisconnect(const ENetEvent& event);
-    void handleEventTimeout(const ENetEvent& event);
-
     ENetHost* m_host;
 
     std::thread* m_thread;
