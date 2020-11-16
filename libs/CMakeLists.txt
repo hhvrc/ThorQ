@@ -78,22 +78,6 @@ set(${project}_HEADERS
     ${${project}_SCHEMAS}
 )
 
-if (WIN32)
-    set(GLOB_LINK_DIRS
-	${CMAKE_CURRENT_SOURCE_DIR}/tbb/lib/windows
-	${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/windows
-
-	CACHE PATH "List of library directories that contains binaries to link agaisnt"
-    )
-else()
-    set(GLOB_LINK_DIRS
-	${CMAKE_CURRENT_SOURCE_DIR}/tbb/lib/linux
-	${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/linux
-
-	CACHE PATH "List of library directories that contains binaries to link agaisnt"
-    )
-endif()
-
 link_directories(
     ${GLOB_LINK_DIRS}
 )
@@ -101,7 +85,6 @@ link_directories(
 set(GLOB_INCLUDE_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/tbb/include
     ${CMAKE_CURRENT_SOURCE_DIR}/fmt/include
     ${CMAKE_CURRENT_SOURCE_DIR}/enet/include
     ${CMAKE_CURRENT_SOURCE_DIR}/sodium/include
@@ -129,5 +112,4 @@ target_link_libraries(${project}
     flatbuffers
     sodium
     fmt
-    tbb
 )

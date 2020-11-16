@@ -5,7 +5,6 @@
 #include <atomic>
 #include <thread>
 #include <future>
-#include <tbb/concurrent_unordered_map.h>
 
 #include <fmt/core.h>
 #include <schemas/session_generated.h>

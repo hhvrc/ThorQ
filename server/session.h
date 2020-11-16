@@ -3,8 +3,8 @@
 
 #include <atomic>
 #include <cstdint>
-#include <unordered_set>
-#include <tbb/concurrent_unordered_map.h>
+#include <shared_mutex>
+#include <unordered_map>
 
 #include "uuid.h"
 #include "typedefs_server.h"
@@ -28,7 +28,8 @@ private:
         std::shared_ptr<ThorQ::Account> account = nullptr;
         std::atomic_uint8_t permissions = 0;
     };
-    tbb::concurrent_unordered_map<std::string, Participant> m_participants;
+    std::shared_mutex l_participants;
+    std::unordered_map<std::string, Participant> m_participants;
 };
 }
 
