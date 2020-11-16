@@ -62,10 +62,10 @@ ThorQ::Server::Server()
     , m_totalSentPackets(0)
     , m_totalReceivedData(0)
     , m_totalReceivedPackets(0)
-    , m_rxToken(m_rxQueue)
     , m_rxQueue()
-    , m_txToken(m_txQueue)
+    , m_rxToken(m_rxQueue)
     , m_txQueue()
+    , m_txToken(m_txQueue)
 {
 }
 ThorQ::Server::~Server()

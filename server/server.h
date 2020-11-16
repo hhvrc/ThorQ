@@ -102,11 +102,11 @@ private:
     std::atomic_uint64_t m_totalReceivedData;
     std::atomic_uint64_t m_totalReceivedPackets;
 
-    moodycamel::ConsumerToken m_rxToken;
     moodycamel::ConcurrentQueue<ENetEvent> m_rxQueue;
+    moodycamel::ConsumerToken m_rxToken;
 
-    moodycamel::ProducerToken m_txToken;
     moodycamel::ConcurrentQueue<QueuedEvent> m_txQueue;
+    moodycamel::ProducerToken m_txToken;
 };
 }
 
