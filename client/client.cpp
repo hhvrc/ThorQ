@@ -866,7 +866,7 @@ void Client::handlePayloadCollar(std::vector<std::uint8_t> &payload)
 
 ENetPacket* Client::packetEncode(const std::span<std::uint8_t> data, bool encrypt, bool reliable)
 {
-    ENetPacket* packet = enet_packet_create(nullptr, data.size(), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED);
+    ENetPacket* packet = enet_packet_create(nullptr, ThorQ::calculatePacketSize(data.size(), encrypt), reliable ? ENET_PACKET_FLAG_RELIABLE : ENET_PACKET_FLAG_UNSEQUENCED);
 
     if (packet != nullptr)
     {
