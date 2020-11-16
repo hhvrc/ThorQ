@@ -112,14 +112,18 @@ bool ThorQ::packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data,
     return true;
 }
 
-bool ThorQ::packetDecode(const ENetPacket* packet, std::span<std::uint8_t> data, std::shared_ptr<ThorQ::Crypto> crypto)
+bool ThorQ::packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& data, std::shared_ptr<ThorQ::Crypto> crypto)
 {
-    if (data.size() != calculateDataSize(packet) ||
+    std::size_t sizeNeeded = ThorQ::calculateDataSize(packet);
+
+    if (data.size() < sizeNeeded ||
         packet->dataLength > THORQ_PAYLOAD_LEN_MAX ||
         packet->dataLength < THORQ_PAYLOAD_LEN_MIN)
     {
         return false;
     }
+
+    data.resize(sizeNeeded);
 
     // Get data sections
     std::span<std::uint8_t> packetData(packet->data, packet->dataLength);
