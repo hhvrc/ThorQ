@@ -16,15 +16,6 @@ set(CXXOPTS_BUILD_TESTS    OFF CACHE BOOL "Set to ON to build tests"    FORCE)
 set(CXXOPTS_ENABLE_INSTALL OFF CACHE BOOL "Generate the install target" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cxxopts)
 
-if (WIN32)
-    include_directories(
-	"C:\\Program Files (x86)\\TBB\\include"
-    )
-    link_directories(
-	"C:\\Program Files (x86)\\TBB\\lib"
-    )
-endif()
-
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.cpp
