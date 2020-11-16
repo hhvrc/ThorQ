@@ -129,7 +129,7 @@ void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance* instance,
 
             //
             ENetPacket* packet = ThorQ::Memory::packetGet(size, ENET_PACKET_FLAG_RELIABLE);
-            ThorQ::packetEncode(packet, builder.GetBufferSpan());
+            ThorQ::packetEncode(packet, std::span<std::uint8_t>(builder.GetBufferPointer(), builder.GetSize()));
             m_server->tryQueueMessage(instance->peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
         }
     }
