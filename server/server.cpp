@@ -326,9 +326,3 @@ void ThorQ::Server::run()
 
     m_status = ServerStatus::Stopped;
 }
-void ThorQ::Server::handleEventDisconnect(const ENetEvent& event)
-{
-}
-void ThorQ::Server::handleEventTimeout(const ENetEvent& event)
-{
-}

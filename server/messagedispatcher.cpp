@@ -101,6 +101,11 @@ void ThorQ::MessageDispatcher::handleEventConnection(const ENetEvent& event)
 }
 void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
 {
+    if (event.peer == nullptr || event.peer->data == nullptr)
+    {
+        return;
+    }
+
     if (event.channelID > (std::uint8_t)THORQ_CHANNEL::_MAX)
     {
         return;
