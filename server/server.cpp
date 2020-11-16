@@ -304,8 +304,10 @@ void ThorQ::Server::run()
             }
         }
 
-        if (++iterations > 100)
+        if (++iterations > 1000)
         {
+            iterations = 0;
+
             m_totalSentData += m_host->totalSentData;
             m_host->totalSentData = 0;
 
@@ -318,6 +320,8 @@ void ThorQ::Server::run()
             m_totalReceivedPackets += m_host->totalReceivedPackets;
             m_host->totalReceivedPackets = 0;
         }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     m_status = ServerStatus::Stopped;
