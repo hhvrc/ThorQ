@@ -78,6 +78,20 @@ set(${project}_HEADERS
     ${${project}_SCHEMAS}
 )
 
+if (WIN32)
+    set(GLOB_LINK_DIRS
+	${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/windows
+
+	CACHE PATH "List of library directories that contains binaries to link agaisnt"
+    )
+else()
+    set(GLOB_LINK_DIRS
+	${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/linux
+
+	CACHE PATH "List of library directories that contains binaries to link agaisnt"
+    )
+endif()
+
 link_directories(
     ${GLOB_LINK_DIRS}
 )
