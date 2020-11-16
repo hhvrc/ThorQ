@@ -253,7 +253,7 @@ bool ThorQ::Server::tryBroadcastAnnouncement(const std::span<std::uint8_t> paylo
     return false;
 }
 
-bool ThorQ::Server::tryGetEvent(ENetEvent& event, moodycamel::ConsumerToken token)
+bool ThorQ::Server::tryGetEvent(ENetEvent& event, moodycamel::ConsumerToken& token)
 {
     return m_rxQueue.try_dequeue(token, event);
 }

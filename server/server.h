@@ -75,7 +75,7 @@ protected:
         THORQ_DISCONNECT_REASON reason;
     };
 
-    bool tryGetEvent(ENetEvent& event, moodycamel::ConsumerToken token);
+    bool tryGetEvent(ENetEvent& event, moodycamel::ConsumerToken& token);
     bool tryQueueMessage(ENetPeer* peer, ENetPacket* packet, THORQ_CHANNEL channel, const moodycamel::ProducerToken& token);
     bool tryQueueDisconnect(ENetPeer* peer, bool force, THORQ_DISCONNECT_REASON reason, const moodycamel::ProducerToken& token);
 private:

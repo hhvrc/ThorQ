@@ -14,11 +14,13 @@
 namespace ThorQ {
 class MessageDispatcher
 {
-    friend ThorQ::Server;
-    MessageDispatcher(ThorQ::Server* server);
 public:
-    void DispatchEvent(const ENetEvent& event);
+    MessageDispatcher(ThorQ::Server* server);
+    ~MessageDispatcher();
+
 private:
+    void run();
+    void DispatchEvent(const ENetEvent& event);
     void handleMessageHeartbeat(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
     void handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
     void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
@@ -31,9 +33,11 @@ private:
     void handleMessageToy(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
     void handleMessageCollar(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
     void handleMessageAck(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
-private:
+
+
     Server* m_server;
     std::thread* m_thread;
+    std::atomic_bool m_closing;
     std::vector<std::uint8_t> m_buffer;
     moodycamel::ConsumerToken m_tokenGet;
     moodycamel::ProducerToken m_tokenQueue;

@@ -23,10 +23,33 @@
 
 ThorQ::MessageDispatcher::MessageDispatcher(ThorQ::Server* server)
     : m_server(server)
+    , m_closing(false)
     , m_buffer(THORQ_PAYLOAD_LEN_MAX)
     , m_tokenGet(server->m_rxQueue)
     , m_tokenQueue(server->m_txQueue)
 {
+    m_thread = new std::thread(&ThorQ::MessageDispatcher::run, this);
+}
+
+ThorQ::MessageDispatcher::~MessageDispatcher()
+{
+    m_closing = true;
+    if (m_thread->joinable())
+    {
+        m_thread->join();
+    }
+}
+
+void ThorQ::MessageDispatcher::run()
+{
+    while (!m_closing)
+    {
+        ENetEvent event;
+        if (m_server->tryGetEvent(event, m_tokenGet))
+        {
+            DispatchEvent(event);
+        }
+    }
 }
 
 void ThorQ::MessageDispatcher::DispatchEvent(const ENetEvent& event)
