@@ -12,6 +12,7 @@ message("Configuring ${project}...")
 # --- OpenVR ---
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/headers)
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/lib/${BUILD_OS}${VPTR_BITS}) # eg. win64 / linux32
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/openvr/bin/${BUILD_OS}${VPTR_BITS}/  DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 # --------------
 
 # --- Find and configure Qt ---
