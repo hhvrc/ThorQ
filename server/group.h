@@ -15,19 +15,22 @@ class Session
 public:
     enum class Type
     {
-        Direct,
-        FreeForAll,
+        Master,
+        FreeForAll
     } ;
 
     Session();
 private:
     ThorQ::Uuid m_id;
+    std::string m_name;
+    ThorQ::Uuid m_image;
+
     struct Participant
     {
-        ThorQ::Uuid m_id;
         std::shared_ptr<ThorQ::Account> account = nullptr;
-        std::atomic_uint8_t permissions = 0;
+        std::atomic_uint8_t max_strength = 100;
     };
+
     std::shared_mutex l_participants;
     std::unordered_map<std::string, Participant> m_participants;
 };

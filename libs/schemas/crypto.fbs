@@ -1,13 +1,23 @@
 namespace ThorQ.Serialization.Crypto;
 
-enum Type : ubyte {
+enum MessageType : ubyte {
+  /// Sent from client/server to re-establish shared secret key
   Request,
+
+  /// Sent from client and server, with public key as data
   Establish,
+
+  /// [ Server ] Encrypt, Send
+  /// [ Client ] Decrypt, Encrypt, Send back
+  /// Used to verify that shared secret is established
   Verify,
-  Ok
+
+  /// Sent from server to tell client that encryption went ok
+  Acknowledge
 }
 
-table Command {
-  type:Type;
-  data:[ubyte];
+table Message {
+  type : Crypto.MessageType;
+  data : [ ubyte ];
 }
+

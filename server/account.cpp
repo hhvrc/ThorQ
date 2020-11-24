@@ -7,8 +7,9 @@
 #include <future>
 
 #include <fmt/core.h>
-#include <schemas/session_generated.h>
-#include <schemas/relationship_generated.h>
+#include <schemas/user_generated.h>
+#include <schemas/group_generated.h>
+#include <schemas/account_generated.h>
 
 #include "lsql/connection.h"
 #include "lsql/transaction.h"
@@ -16,7 +17,6 @@
 #include "lsql/query.h"
 
 #include "instance.h"
-#include "relationship.h"
 
 std::shared_mutex g_accounts_lock;
 std::unordered_map<std::string, std::shared_ptr<ThorQ::Account>> g_accounts;

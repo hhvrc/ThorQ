@@ -1,0 +1,48 @@
+include  "uuid.fbs";
+
+namespace ThorQ.Serialization.FriendRequest;
+
+/// [REQ] Friend request
+table Request {
+  user_name : string;
+}
+
+/// [OBJ] Pending Request
+table Incoming {
+  user_id : Uuid;
+}
+
+/// [OBJ] Pending Request
+table Outgoing {
+  user_id : Uuid;
+}
+
+/// [REQ] Reply to incoming friend request
+table Reply {
+  user_id : Uuid;
+  accept : bool;
+}
+
+/// [REQ] Remove outgoing friend request
+table RemoveOutgoing {
+  user_id : Uuid;
+}
+
+/// [SIG] Signals that Incoming/Outgoing request was removed
+table Removed {
+  user_id : Uuid;
+}
+
+/// Yada, yada...
+union Any {
+  request : FriendRequest.Request,
+  incoming : FriendRequest.Incoming,
+  outgoing : FriendRequest.Outgoing,
+  reply : FriendRequest.Reply,
+  remove_outgoing : FriendRequest.RemoveOutgoing,
+  removed : FriendRequest.Removed
+}
+
+table Message {
+  any : FriendRequest.Any;
+}

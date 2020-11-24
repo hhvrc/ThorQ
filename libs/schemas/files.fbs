@@ -3,8 +3,6 @@ include  "uuid.fbs";
 namespace ThorQ.Serialization.Files;
 
 struct Image {
-  uuid:Uuid;
-  
-  /// 64*64*4 (64*64 SRGB bitmap)
-  data:[ubyte:16384];
+  /// 256*256*4 (256*256 SRGB bitmap)
+  data : [ ulong : 32768 ];
 }

@@ -1,40 +1,98 @@
-include  "uuid.fbs";
+include "uuid.fbs";
+include "user.fbs";
+include "files.fbs";
 
 namespace ThorQ.Serialization.Account;
 
 struct AuthToken {
-  token:[ubyte:64];
+  token : [ ubyte : 64 ];
+}
+struct PasswordSeed {
+  seed : [ ubyte : 32 ];
 }
 
-enum AccountCommandCode : ubyte {
-  Register,
-  Delete,
-  LoginCookie,
-  LoginPassword,
-  Logout,
-  LogoutAll,
-  Recover
+table GetAccount {
+  username : string;
 }
 
-table AccountCommand {
-  cmd:AccountCommandCode;
-  username:string;
-  password:string;
-  auth_token:AuthToken;
-  discord_id:string;
-  remember_me:bool;
+table Account {
+  user_id : Uuid;
+  password_seed : Account.PasswordSeed;
 }
 
-enum AccountResponseCode : ubyte {
-  Ok,
-  Denied,
-  Created,
-  Removed,
-  Error
+table GetAuthToken {
+  user_id : Uuid;
+  password_hash : string;
 }
 
-table AccountResponse {
-  response:AccountResponseCode;
-  explenation:string;
-  session_cookie:[ubyte];
+struct Login {
+  user_id : Uuid;
+  auth_token : Account.AuthToken;
+}
+
+table Register {
+  user_id : Uuid;
+  email : string;
+  password_hash : string;
+}
+
+table Recover {
+  email : string;
+}
+
+table Delete {
+  password_hash : string;
+}
+
+table Logout {
+  logout_all : bool;
+}
+
+table SetUsername {
+  username : string;
+  password_hash : string;
+}
+
+/// Sent from client to server to ask server to generate a new password seed for a new password
+table GeneratePasswordSeed {
+  password_hash : string;
+}
+/// Sent from server to client when seed has been generated
+table PasswordSeedGenerated {
+  password_seed : Account.PasswordSeed;
+}
+/// Sent from client to server after hash has been generated with seed
+table SetPassword {
+  new_password_hash : string;
+}
+
+table SetEmail {
+  email : string;
+  password_hash : string;
+}
+
+table SetImage {
+  image : Files.Image;
+}
+
+/// Yada, yada...
+union Body {
+  get_account : Account.GetAccount,
+  account : Account.Account,
+  get_auth_token : Account.GetAuthToken,
+  login : Account.Login,
+  register : Account.Register,
+  recover : Account.Recover,
+  delete : Account.Delete,
+  logout : Account.Logout,
+  generate_seed : Account.GeneratePasswordSeed,
+  seed_generated : Account.PasswordSeedGenerated,
+  set_username : Account.SetUsername,
+  set_password : Account.SetPassword,
+  set_email : Account.SetEmail,
+  set_image : Account.SetImage
+}
+
+table Message {
+  body : Account.Body;
 }

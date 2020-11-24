@@ -5,13 +5,13 @@
 
 #include <thorq_message.h>
 #include <flatbuffers/flatbuffers.h>
+#include <schemas/message_generated.h>
 #include <schemas/heartbeat_generated.h>
 #include <schemas/version_generated.h>
 #include <schemas/crypto_generated.h>
 #include <schemas/systemid_generated.h>
 #include <schemas/account_generated.h>
-#include <schemas/session_generated.h>
-#include <schemas/relationship_generated.h>
+#include <schemas/group_generated.h>
 #include <schemas/moderation_generated.h>
 #include <schemas/announcement_generated.h>
 #include <schemas/collar_generated.h>
@@ -28,15 +28,15 @@ ThorQ::MessageDispatcher::MessageDispatcher(ThorQ::Server* server)
     , m_tokenGet(server->m_rxQueue)
     , m_tokenQueue(server->m_txQueue)
 {
-    m_thread = new std::thread(&ThorQ::MessageDispatcher::run, this);
+    m_thread = std::thread(&ThorQ::MessageDispatcher::run, this);
 }
 
 ThorQ::MessageDispatcher::~MessageDispatcher()
 {
     m_closing = true;
-    if (m_thread->joinable())
+    if (m_thread.joinable())
     {
-        m_thread->join();
+        m_thread.join();
     }
 }
 
@@ -228,7 +228,8 @@ void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance* instance,
             std::size_t size = ThorQ::calculatePacketSize(builder.GetSize(), false);
 
             //
-            ENetPacket* packet = ThorQ::Memory::packetGet(size, ENET_PACKET_FLAG_RELIABLE);
+            ENetPacket* packet = ThorQ::Memory::packetGet(size);
+            packet->flags = ENET_PACKET_FLAG_RELIABLE;
             ThorQ::packetEncode(packet, std::span<std::uint8_t>(builder.GetBufferPointer(), builder.GetSize()));
             m_server->tryQueueMessage(instance->peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
         }
@@ -246,19 +247,22 @@ void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance* instance, c
     if (protoVersion->Verify(verifier))
     {
         std::uint8_t app = protoVersion->app();
+
+        const char* name;
         ThorQ::Version version = *protoVersion;
         ThorQ::Version currentVersion;
 
-        const char* name = ThorQ::Serialization::EnumNameApp(protoVersion->app());
-
-        switch (app) {
-        case ThorQ::Serialization::App_Server:
+        switch ((THORQ_APP)app) {
+        case THORQ_APP::SERVER:
+            name = "Server";
             currentVersion = THORQ_VERSION_SERVER;
             break;
-        case ThorQ::Serialization::App_Client:
+        case THORQ_APP::CLIENT:
+            name = "Client";
             currentVersion = THORQ_VERSION_CLIENT;
             break;
-        case ThorQ::Serialization::App_Link:
+        case THORQ_APP::LINK:
+            name = "Link";
             currentVersion = THORQ_VERSION_LINK;
             break;
         default:

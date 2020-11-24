@@ -320,7 +320,7 @@ private slots:
 
     /// These should be self-explanatory
     void handleMessage(ENetPacket* packet);
-	void handlePayloadHeartbeat(std::vector<std::uint8_t>& payload);
+    void handlePayloadHeartbeat(const std::vector<std::uint8_t>& payload);
 	void handlePayloadVersion(std::vector<std::uint8_t>& payload);
 	void handlePayloadCrypto(std::vector<std::uint8_t>& payload);
     void handlePayloadSystemID(std::vector<std::uint8_t>& payload);

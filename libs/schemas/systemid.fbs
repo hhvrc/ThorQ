@@ -6,6 +6,6 @@ enum Command : ubyte {
 }
 
 table SystemId {
-  cmd:Command;
-  data:[byte];
+  cmd : Command;
+  data : [ byte ];
 }

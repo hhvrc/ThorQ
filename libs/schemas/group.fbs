@@ -1,0 +1,45 @@
+include  "uuid.fbs";
+
+namespace ThorQ.Serialization.Group;
+
+table Group {
+  uuid : Uuid;
+
+  name : string;
+  image_id : Uuid;
+
+  owner_id : Uuid;
+
+  master_ids : [ Uuid ];
+  participant_ids : [ Uuid ];
+}
+
+table Create {
+  participant_ids : [ Uuid ];
+}
+
+table Invite {
+  group_id : Uuid;
+}
+
+table GetGroup {
+  group_id : Uuid;
+}
+
+table InviteResponse {
+  group_id : Uuid;
+  accept : bool;
+}
+
+/// Yada, yada...
+union Body {
+  group : Group.Group,
+  create : Group.Create,
+  get_group : Group.GetGroup,
+  invite : Group.Invite,
+  invite_response : Group.InviteResponse
+}
+
+table Message {
+  body : Group.Body;
+}

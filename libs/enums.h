@@ -7,9 +7,9 @@ enum class THORQ_APP : std::uint8_t
 {
     _INVALID,
 
-	THORQ_APP_SERVER,
-	THORQ_APP_CLIENT,
-	THORQ_APP_LINK,
+    SERVER,
+    CLIENT,
+    LINK,
 
     _MAX
 };

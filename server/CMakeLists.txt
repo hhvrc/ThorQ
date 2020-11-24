@@ -25,8 +25,6 @@ set(${project}_SOURCES
 
     ${CMAKE_CURRENT_SOURCE_DIR}/account.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/session.cpp
-
-    ${CMAKE_CURRENT_SOURCE_DIR}/relationship.cpp
 )
 set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/server.h
@@ -41,7 +39,6 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/session.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/authtoken.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/relationship.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_server.h
 )

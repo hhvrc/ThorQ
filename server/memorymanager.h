@@ -9,7 +9,7 @@ namespace ThorQ {
 namespace Memory {
 ENetCallbacks Initialize();
 void DeInitialize();
-[[nodiscard("Ignoring return value will result in a memory leak")]] ENetPacket* packetGet(std::size_t size, std::uint32_t flags);
+[[nodiscard("Ignoring return value will result in a memory leak")]] ENetPacket* packetGet(std::size_t size);
 void packetFree(ENetPacket* packet);
 }
 }

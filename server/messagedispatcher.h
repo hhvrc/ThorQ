@@ -41,7 +41,7 @@ private:
 
 
     Server* m_server;
-    std::thread* m_thread;
+    std::thread m_thread;
     std::atomic_bool m_closing;
     std::vector<std::uint8_t> m_buffer;
     moodycamel::ConsumerToken m_tokenGet;

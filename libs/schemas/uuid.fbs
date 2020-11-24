@@ -1,5 +1,5 @@
 namespace ThorQ.Serialization;
 
 struct Uuid {
-  data:[ubyte:16];
+  data : [ ubyte : 16 ];
 }

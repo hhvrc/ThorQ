@@ -1,14 +1,8 @@
 namespace ThorQ.Serialization;
 
-enum App : ubyte {
-  Link,
-  Client,
-  Server
-}
-
 table Version {
-  app:App;
-  major:ubyte;
-  minor:ubyte;
-  patch:ubyte;
+  app : ubyte;
+  major : ubyte;
+  minor : ubyte;
+  patch : ubyte;
 }

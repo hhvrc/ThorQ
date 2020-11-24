@@ -12,10 +12,12 @@ moodycamel::ConcurrentQueue<ENetPacket*> g_packetPool;
 
 ENetPacket *packetGetEnet(const void *data, size_t dataLength, enet_uint32 flags)
 {
-    ENetPacket *packet = ThorQ::Memory::packetGet(dataLength, flags);
+    ENetPacket *packet = ThorQ::Memory::packetGet(dataLength);
 
     if (packet != nullptr)
     {
+        packet->flags = flags;
+
         if (flags & ENET_PACKET_FLAG_NO_ALLOCATE)
         {
             packet->data = (std::uint8_t*)data;
@@ -52,7 +54,7 @@ void ThorQ::Memory::DeInitialize()
 
 }
 
-ENetPacket* ThorQ::Memory::packetGet(std::size_t size, std::uint32_t flags)
+ENetPacket* ThorQ::Memory::packetGet(std::size_t size)
 {
     if (size < THORQ_PAYLOAD_LEN_MAX)
     {
@@ -73,8 +75,8 @@ ENetPacket* ThorQ::Memory::packetGet(std::size_t size, std::uint32_t flags)
 
         // Set rest of data
         packet->referenceCount = 0;
-        packet->flags        = flags;
-        packet->dataLength   = size;
+        packet->flags          = 0;
+        packet->dataLength     = size;
 
         return packet;
     }

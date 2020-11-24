@@ -237,11 +237,15 @@ std::uint64_t ThorQ::Server::totalPacketsReceived() const
 
 bool ThorQ::Server::tryBroadcastAnnouncement(const std::span<std::uint8_t> payload, bool reliable, bool unsequenced)
 {
-    ENetPacket* packet = ThorQ::Memory::packetGet(ThorQ::calculatePacketSize(payload.size(), false), (ENET_PACKET_FLAG_RELIABLE * reliable) | (ENET_PACKET_FLAG_UNSEQUENCED * unsequenced));
+    ENetPacket* packet = ThorQ::Memory::packetGet(ThorQ::calculatePacketSize(payload.size(), false));
 
     if (packet != nullptr)
     {
+        packet->flags |= ENET_PACKET_FLAG_RELIABLE * reliable;
+        packet->flags |= ENET_PACKET_FLAG_UNSEQUENCED * unsequenced;
+
         ThorQ::packetEncode(packet, payload);
+
         m_txQueue.enqueue(Server::QueuedEvent{ nullptr,
                                                packet,
                                                THORQ_CHANNEL::AUTHORITY,

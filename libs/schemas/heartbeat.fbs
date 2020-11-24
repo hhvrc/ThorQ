@@ -1,6 +1,5 @@
 namespace ThorQ.Serialization;
 
 table Heartbeat {
-  counter:ulong;
-  interval:uint;
+  interval : uint;
 }

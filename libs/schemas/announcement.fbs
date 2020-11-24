@@ -1,16 +1,6 @@
-namespace ThorQ.Serialization.Announcement;
+namespace ThorQ.Serialization;
 
-enum Type : ubyte {
-  AdminMessage,
-  ServerAlert,
-  ServerNotice,
-  UpdateNotice
-}
-
-table Command {
-  flags:ubyte;
-  shock:ubyte;
-  vibration:ubyte;
-  beep:ubyte;
-  auto:ubyte;
+table Announcement {
+  announcement_type : ubyte;
+  message : string;
 }

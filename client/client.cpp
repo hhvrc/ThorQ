@@ -37,7 +37,6 @@
 #include <schemas/version_generated.h>
 #include <schemas/account_generated.h>
 #include <schemas/systemid_generated.h>
-#include <schemas/session_generated.h>
 #include <schemas/heartbeat_generated.h>
 #include <schemas/announcement_generated.h>
 #include <schemas/systemid_generated.h>
@@ -123,6 +122,7 @@ Client::Client(ENetHost* host)
 	, m_serviceTimer(new QTimer())
     , m_awaitingHeartbeat(false)
     , m_lastCheck(0)
+    , m_heartbeatInterval(1000)
     , m_heartbeatTimer(new QElapsedTimer())
 	, m_host(host)
 	, m_peer(nullptr)
@@ -423,13 +423,14 @@ void Client::Service()
 			enet_peer_disconnect(m_peer, 0);
 		}
 		else
-		{
+        {
             std::uint64_t elapsed = m_heartbeatTimer->elapsed();
 
             // If there has been been more than the set interval of ms since last heartbeat got sent,
             // then update the RTT and resend heartbeat
             if ((elapsed - m_lastCheck) > m_heartbeatInterval)
 			{
+                qDebug() << "Sending heartbeat!";
                 if (m_awaitingHeartbeat)
                 {
                     // We still havent received a heart,
@@ -443,12 +444,22 @@ void Client::Service()
                     m_heartbeatTimer->start();
                     m_lastCheck = 0;
 				}
-/*
+
                 // Send a heartbeat, and set awaiting to true
                 std::vector<std::uint8_t> payload;
-                thorq_payload_heartbeat_pack(payload, m_heartbeatInterval);
-                SendPayload(payload, false, false);
-                m_awaitingHeartbeat = true;*/
+
+                // Build flatbuffer
+                flatbuffers::FlatBufferBuilder builder;
+                auto offset = ThorQ::Serialization::CreateHeartbeat(builder, Rtt());
+                builder.Finish(offset);
+
+                // Calculate packet size
+                std::size_t size = ThorQ::calculatePacketSize(builder.GetSize(), false);
+
+                //
+                ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
+                ThorQ::packetEncode(packet, std::span<std::uint8_t>(builder.GetBufferPointer(), builder.GetSize()));
+                packetSend(packet, THORQ_CHANNEL::MAIN);
 			}
 		}
     }
@@ -665,16 +676,22 @@ void Client::handleMessage(ENetPacket* packet)
     }*/
 }
 
-void Client::handlePayloadHeartbeat(std::vector<std::uint8_t>& payload)
-{/*
-	// Set interval from server
-	thorq_payload_heartbeat_unpack(payload, m_heartbeatInterval);
+void Client::handlePayloadHeartbeat(const std::vector<std::uint8_t>& message)
+{
+    if (m_awaitingHeartbeat)
+    {
+        flatbuffers::Verifier verifier(message.data(), message.size());
 
-	if (m_awaitingHeartbeat)
-	{
-		m_awaitingHeartbeat = false;
-		SetRtt(m_heartbeatTimer->elapsed());
-    }*/
+        const ThorQ::Serialization::Heartbeat* heartbeat = flatbuffers::GetRoot<ThorQ::Serialization::Heartbeat>(message.data());
+
+        if (heartbeat->Verify(verifier))
+        {
+            qDebug() << "Heartbeat!";
+            // Set interval from server
+            m_awaitingHeartbeat = false;
+            SetRtt(m_heartbeatTimer->elapsed());
+        }
+    }
 }
 void Client::handlePayloadVersion(std::vector<std::uint8_t>& payload)
 {/*
@@ -921,7 +938,7 @@ void Client::requestEncryptionHandshake()
     SetCryptoState(THORQ_STATE_CRYPTO_REQUESTED);
 
     flatbuffers::FlatBufferBuilder builder;
-    auto offset = ThorQ::Serialization::Crypto::CreateCommandDirect(builder, ThorQ::Serialization::Crypto::Type_Request);
+    auto offset = ThorQ::Serialization::Crypto::CreateMessageDirect(builder, ThorQ::Serialization::Crypto::MessageType_Request);
     builder.Finish(offset);
 
     packetSend(packetEncode(builder.GetBufferSpan(), false, true), THORQ_CHANNEL::MAIN);

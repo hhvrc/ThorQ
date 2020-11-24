@@ -143,7 +143,7 @@ bool ThorQ::packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& da
     else
     {
         // Get data sections
-        std::span<std::uint8_t> packetPayload = packetData.subspan(PacketEncPayloadOffset);
+        std::span<std::uint8_t> packetPayload = packetData.subspan(PacketRawPayloadOffset);
 
         std::copy(packetPayload.begin(), packetPayload.end(), data.begin());
     }

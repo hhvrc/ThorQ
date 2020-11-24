@@ -1,9 +1,9 @@
 namespace ThorQ.Serialization.Collar;
 
 table Command {
-  flags:ubyte;
-  shock:ubyte;
-  vibration:ubyte;
-  beep:ubyte;
-  auto:ubyte;
+  flags : ubyte;
+  shock : ubyte;
+  vibration : ubyte;
+  beep : ubyte;
+  auto : ubyte;
 }

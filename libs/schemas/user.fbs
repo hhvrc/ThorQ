@@ -1,0 +1,54 @@
+include  "uuid.fbs";
+
+namespace ThorQ.Serialization.User;
+
+enum Friendship : ubyte {
+  None,
+  Friend,
+  Favorite
+}
+
+table User {
+  /// public id of the user
+  uuid : Uuid;
+
+  /// Name of user
+  name : string;
+
+  /// Profile picture of user
+  image_id : Uuid;
+}
+table UserOther {
+  user : User.User;
+  is_friend : bool;
+  is_blocked : bool;
+}
+
+table UserSelf {
+  user : User.User;
+  email : string;
+  relationships : [ UserOther ];
+}
+
+table Get {
+  user_id : Uuid;
+}
+
+table Block {
+  user_id : Uuid;
+  blocked : bool;
+}
+
+/// Yada, yada...
+union Body {
+  user : User.User,
+  get_user : User.Get,
+  block_user : User.Block
+}
+
+table Message {
+  body : User.Body;
+}
+
+
+

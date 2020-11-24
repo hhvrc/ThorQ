@@ -1,12 +1,10 @@
 include "account.fbs";
 include "announcement.fbs";
-include "collar.fbs";
 include "crypto.fbs";
 include "files.fbs";
 include "heartbeat.fbs";
 include "moderation.fbs";
-include "relationship.fbs";
-include "session.fbs";
+include "group.fbs";
 include "systemid.fbs";
 include "uuid.fbs";
 include "version.fbs";
@@ -14,9 +12,17 @@ include "version.fbs";
 namespace ThorQ.Serialization;
 
 union Message {
+  heartbeat : Heartbeat,
+  account : Account.Message,
+  announcement : Announcement,
+  crypto : Crypto.Message,
+  moderation : Moderation.Message,
 
 }
 
 table MessageBuffer {
-  message_array : [Message];
+  sequence : ulong;
+  message_array : [ Message ];
 }
+
+root_type MessageBuffer;

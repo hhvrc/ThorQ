@@ -1,10 +1,23 @@
+include "uuid.fbs";
+
 namespace ThorQ.Serialization.Moderation;
 
-enum Type : ubyte {
-  Ban
+table Ban {
+  time : ulong;
+  reason : string;
 }
 
-table Command {
-  type:Type;
-  reason:string;
+table Report {
+  relationship_id : Uuid;
+  reason : string;
+}
+
+/// Yada, yada...
+union Body {
+  ban : Moderation.Ban,
+  report : Moderation.Report
+}
+
+table Message {
+  body : Moderation.Body;
 }
