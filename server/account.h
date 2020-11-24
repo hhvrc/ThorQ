@@ -78,7 +78,7 @@ private:
     std::set<std::shared_ptr<ThorQ::Account>> m_requests_outgoing;
 
     std::shared_mutex l_sessions;
-    std::set<std::shared_ptr<ThorQ::Session>> m_sessions;
+    std::set<std::shared_ptr<ThorQ::Group>> m_sessions;
 
     std::shared_mutex l_instances;
     std::set<ThorQ::Instance*> m_instances;

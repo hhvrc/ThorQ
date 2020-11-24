@@ -1,6 +1,6 @@
-#include "session.h"
+#include "group.h"
 
-ThorQ::Session::Session()
+ThorQ::Group::Group()
     : m_participants()
 {
 

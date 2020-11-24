@@ -10,7 +10,7 @@
 #include "typedefs_server.h"
 
 namespace ThorQ {
-class Session
+class Group
 {
 public:
     enum class Type
@@ -19,7 +19,7 @@ public:
         FreeForAll
     } ;
 
-    Session();
+    Group();
 private:
     ThorQ::Uuid m_id;
     std::string m_name;
