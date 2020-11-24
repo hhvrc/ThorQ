@@ -15,8 +15,8 @@
 #include "typedefs_global.h"
 
 namespace ThorQ {
-constexpr std::size_t calculateDataSize(const ENetPacket* const pakcet);
-constexpr std::size_t calculatePacketSize(std::size_t dataSize, bool encrypt);
+std::size_t calculateDataSize(const ENetPacket* const pakcet);
+std::size_t calculatePacketSize(std::size_t dataSize, bool encrypt);
 bool packetEncode(ENetPacket* pakcet, const std::span<std::uint8_t> data);
 bool packetEncode(ENetPacket* pakcet, const std::span<std::uint8_t> data, std::shared_ptr<ThorQ::Crypto> crypto);
 bool packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& data, std::shared_ptr<ThorQ::Crypto> crypto);

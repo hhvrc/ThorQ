@@ -37,7 +37,7 @@ constexpr std::size_t PacketEncNonceOffset = PacketEncMacOffset + ThorQ::Crypto:
 constexpr std::size_t PacketEncPayloadOffset = PacketEncNonceOffset + ThorQ::Crypto::NonceLen;
 constexpr std::size_t PacketRawPayloadOffset = 1;
 
-constexpr std::size_t ThorQ::calculateDataSize(const ENetPacket* const packet)
+std::size_t ThorQ::calculateDataSize(const ENetPacket* const packet)
 {
     std::size_t dataSize = packet->dataLength;
 
@@ -51,7 +51,7 @@ constexpr std::size_t ThorQ::calculateDataSize(const ENetPacket* const packet)
     return dataSize;
 }
 
-constexpr std::size_t ThorQ::calculatePacketSize(std::size_t dataSize, bool encrypt)
+std::size_t ThorQ::calculatePacketSize(std::size_t dataSize, bool encrypt)
 {
     dataSize += 1; // PreEncryption flag
 
