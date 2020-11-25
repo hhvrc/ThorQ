@@ -76,6 +76,7 @@ ENetPacket* ThorQ::Memory::packetGet(std::size_t size)
         // Set rest of data
         packet->referenceCount = 0;
         packet->flags          = 0;
+        packet->data           = (std::uint8_t*)packet + sizeof(ENetPacket);
         packet->dataLength     = size;
 
         return packet;
