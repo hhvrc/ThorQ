@@ -140,13 +140,13 @@ void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
         return;
     }
 
-    switch ((THORQ_PAYLOAD_ID)m_buffer[0]) {
-    case THORQ_PAYLOAD_ID::HEARTBEAT:
+    switch (fbsMessage->body_type()) {
+    case ThorQ::Serialization::Body_heartbeat:
         handleMessageHeartbeat(instance, fbsMessage->body_as_heartbeat(), fbsVerifier);
         break;
-    case THORQ_PAYLOAD_ID::VERSION:
+    case ThorQ::Serialization::Body_version:
         handleMessageVersion(instance, fbsMessage->body_as_version(), fbsVerifier);
-        break;
+        break;/*
     case THORQ_PAYLOAD_ID::CRYPTO:
         handleMessageCrypto(instance, m_buffer);
         break;
@@ -174,9 +174,10 @@ void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
     case THORQ_PAYLOAD_ID::ACK:
     case THORQ_PAYLOAD_ID::ANNOUNCEMENT:
         fmt::print("Unexpected messageID from client: {}\n", m_buffer[0]);
-        break;
-    case THORQ_PAYLOAD_ID::_MAX:
-    case THORQ_PAYLOAD_ID::_INVALID:
+        break;*/
+    case ThorQ::Serialization::Body_MIN:
+    case ThorQ::Serialization::Body_MAX:
+    default:
         return;
     }
 }
