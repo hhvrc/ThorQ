@@ -113,6 +113,7 @@ void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
 
     ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
 
+    m_buffer.resize(ThorQ::calculateDataSize(event.packet));
     if (!ThorQ::packetDecode(event.packet, m_buffer, instance->crypto))
     {
         return;
@@ -253,8 +254,6 @@ void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance* instance, c
 
 void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance* instance, const ThorQ::Serialization::Heartbeat* fbsHeartbeat, flatbuffers::Verifier fbsVerifier)
 {
-    fmt::print("[MSG] Heartbeat!\n");
-
     if (fbsHeartbeat->Verify(fbsVerifier))
     {
         std::uint32_t interval = m_server->heartbeatInterval();

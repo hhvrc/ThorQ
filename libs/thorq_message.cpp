@@ -120,6 +120,7 @@ bool ThorQ::packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& da
         packet->dataLength > THORQ_PAYLOAD_LEN_MAX ||
         packet->dataLength < THORQ_PAYLOAD_LEN_MIN)
     {
+        printf("Invalid size\n");
         return false;
     }
 
@@ -137,6 +138,7 @@ bool ThorQ::packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& da
 
         if (!crypto->decrypt(data, packetPayload, packetMAC, packetNonce))
         {
+            printf("Decrypt failed\n");
             return false;
         }
     }
