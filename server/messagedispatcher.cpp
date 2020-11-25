@@ -263,8 +263,8 @@ void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance* instance,
         {
             // Build flatbuffer
             flatbuffers::FlatBufferBuilder builder;
-            auto offset = ThorQ::Serialization::CreateHeartbeat(builder, interval);
-            builder.Finish(offset);
+            auto msg = ThorQ::Serialization::CreateMessage(builder, 1, ThorQ::Serialization::Body_heartbeat, ThorQ::Serialization::CreateHeartbeat(builder, interval).Union());
+            builder.Finish(msg);
 
             // Calculate packet size
             std::size_t size = ThorQ::calculatePacketSize(builder.GetSize(), false);
