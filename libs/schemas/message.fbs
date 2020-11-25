@@ -11,18 +11,18 @@ include "version.fbs";
 
 namespace ThorQ.Serialization;
 
-union Message {
+union Body {
+  version : Version,
   heartbeat : Heartbeat,
   account : Account.Message,
   announcement : Announcement,
   crypto : Crypto.Message,
   moderation : Moderation.Message,
-
 }
 
-table MessageBuffer {
+table Message {
   sequence : ulong;
-  message_array : [ Message ];
+  body : Serialization.Body;
 }
 
-root_type MessageBuffer;
+root_type Message;
