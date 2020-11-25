@@ -330,6 +330,7 @@ void Client::Service()
 			requestEncryptionHandshake();
 			break;
 		case ENET_EVENT_TYPE_RECEIVE:
+            qDebug() << "packet";
             handleMessage(event.packet);
 			enet_packet_destroy(event.packet);
 			break;
@@ -431,8 +432,7 @@ void Client::Service()
             // If there has been been more than the set interval of ms since last heartbeat got sent,
             // then update the RTT and resend heartbeat
             if ((elapsed - m_lastCheck) > m_heartbeatInterval)
-			{
-                qDebug() << "Sending heartbeat!";
+            {
                 if (m_awaitingHeartbeat)
                 {
                     // We still havent received a heart,
@@ -463,6 +463,7 @@ void Client::Service()
                 ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
                 ThorQ::packetEncode(packet, std::span<std::uint8_t>(builder.GetBufferPointer(), builder.GetSize()));
                 packetSend(packet, THORQ_CHANNEL::MAIN);
+                m_awaitingHeartbeat = true;
 			}
 		}
     }
@@ -608,12 +609,14 @@ void Client::handleMessage(ENetPacket* packet)
 
     switch (msg->body_type()) {
     case ThorQ::Serialization::Body_version:
+        qDebug() << "version";
         handlePayloadVersion(msg->body_as_version(), verifier);
         return;
     case ThorQ::Serialization::Body_heartbeat:
         handlePayloadHeartbeat(msg->body_as_heartbeat(), verifier);
         return;
     case ThorQ::Serialization::Body_crypto:
+        qDebug() << "crypto";
         handlePayloadCrypto(msg->body_as_crypto(), verifier);
         return;/*
 	case THORQ_PAYLOAD_ID_SYSTEMID:
@@ -671,6 +674,7 @@ void Client::handleMessage(ENetPacket* packet)
 		}
         return;*/
 	default:
+        qDebug() << "oops";
         if (HwidState() != THORQ_STATE_HWID_OK)
 		{
 			return;
@@ -716,13 +720,14 @@ void Client::handlePayloadVersion(const ThorQ::Serialization::Version* table, fl
         return;
     }*/
 }
-void Client::handlePayloadHeartbeat(const ThorQ::Serialization::Heartbeat* table, flatbuffers::Verifier verifier)
+void Client::handlePayloadHeartbeat(const ThorQ::Serialization::Heartbeat* fbsHeartbeat, flatbuffers::Verifier fbsVerifier)
 {
-    if (m_awaitingHeartbeat && table->Verify(verifier))
+    if (m_awaitingHeartbeat && fbsHeartbeat->Verify(fbsVerifier))
     {
-        qDebug() << "Heartbeat!";
-        // Set interval from server
         m_awaitingHeartbeat = false;
+
+        // Set interval from server
+        m_heartbeatInterval = fbsHeartbeat->interval();
         SetRtt(m_heartbeatTimer->elapsed());
     }
 }
