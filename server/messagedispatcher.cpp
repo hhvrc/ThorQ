@@ -209,7 +209,7 @@ void ThorQ::MessageDispatcher::handleEventTimeout(const ENetEvent &event)
 
 void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance* instance, const ThorQ::Serialization::Version* fbsVersion, flatbuffers::Verifier fbsVerifier)
 {
-    fmt::print("[MSG] Version!");
+    fmt::print("[MSG] Version!\n");
 
 
 
@@ -241,11 +241,11 @@ void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance* instance, c
 
         if (receivedVersion == currentVersion)
         {
-            fmt::print("Client {}[{}] version matched!", name, receivedVersion.toString());
+            fmt::print("Client {}[{}] version matched!\n", name, receivedVersion.toString());
         }
         else
         {
-            fmt::print("Client expects {0}[{1}], current is {0}[{2}]\nDisconnecting peer...", name, receivedVersion.toString(), currentVersion.toString());
+            fmt::print("Client expects {0}[{1}], current is {0}[{2}]\nDisconnecting peer...\n", name, receivedVersion.toString(), currentVersion.toString());
             m_server->tryQueueDisconnect(instance->peer, false, THORQ_DISCONNECT_REASON::VERSION_INCOMPATIBLE, m_tokenQueue);
         }
     }
@@ -253,7 +253,7 @@ void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance* instance, c
 
 void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance* instance, const ThorQ::Serialization::Heartbeat* fbsHeartbeat, flatbuffers::Verifier fbsVerifier)
 {
-    fmt::print("[MSG] Heartbeat!");
+    fmt::print("[MSG] Heartbeat!\n");
 
     if (fbsHeartbeat->Verify(fbsVerifier))
     {

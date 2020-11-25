@@ -292,11 +292,14 @@ void ThorQ::Server::run()
     {
         while (enet_host_service(m_host, &event, 0) > 0)
         {
-            m_rxQueue.enqueue(event);
+            if (!m_rxQueue.enqueue(m_rxToken, event))
+            {
+                fmt::print("Failed to enqueue");
+            }
         }
 
         QueuedEvent queuedMessage;
-        while (m_txQueue.try_dequeue(queuedMessage))
+        while (m_txQueue.try_dequeue(m_txToken, queuedMessage))
         {
             if (queuedMessage.peer != nullptr)
             {
