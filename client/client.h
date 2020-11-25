@@ -12,7 +12,15 @@
 
 #include <enums.h>
 #include <typedefs_global.h>
-#include <schemas/version_generated.h>
+
+#include <schemas/message_generated.h>
+#include <schemas/account_generated.h>
+#include <schemas/collar_generated.h>
+#include <schemas/account_generated.h>
+#include <schemas/systemid_generated.h>
+#include <schemas/announcement_generated.h>
+#include <schemas/systemid_generated.h>
+
 
 #include "user.h"
 
@@ -61,7 +69,7 @@ public:
     /**
      * @return
      */
-    THORQ_STATE_HWID AuthState() const;
+    THORQ_STATE_HWID HwidState() const;
 
     /**
      * @return
@@ -320,9 +328,9 @@ private slots:
 
     /// These should be self-explanatory
     void handleMessage(ENetPacket* packet);
-    void handlePayloadHeartbeat(const std::vector<std::uint8_t>& payload);
-	void handlePayloadVersion(std::vector<std::uint8_t>& payload);
-	void handlePayloadCrypto(std::vector<std::uint8_t>& payload);
+    void handlePayloadVersion(const ThorQ::Serialization::Version* table, flatbuffers::Verifier verifier);
+    void handlePayloadHeartbeat(const ThorQ::Serialization::Heartbeat* table, flatbuffers::Verifier verifier);
+    void handlePayloadCrypto(const ThorQ::Serialization::Crypto::Message* table, flatbuffers::Verifier verifier);
     void handlePayloadSystemID(std::vector<std::uint8_t>& payload);
 	void handlePayloadAccount(std::vector<std::uint8_t>& payload);
 	void handlePayloadRelation(std::vector<std::uint8_t>& payload);

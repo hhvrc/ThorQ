@@ -113,14 +113,15 @@ void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
 
     ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
 
+    if (!ThorQ::packetDecode(event.packet, m_buffer, instance->crypto))
     {
-        if (!ThorQ::packetDecode(event.packet, m_buffer, instance->crypto))
-        {
-            return;
-        }
+        return;
     }
 
-    if (m_buffer[0] > (std::uint8_t)THORQ_PAYLOAD_ID::_MAX)
+    auto fbsMessage = flatbuffers::GetRoot<ThorQ::Serialization::Message>(m_buffer.data());
+    auto fbsVerifier = flatbuffers::Verifier(m_buffer.data(), m_buffer.size());
+
+    if (!fbsMessage->Verify(fbsVerifier))
     {
         return;
     }
@@ -141,10 +142,10 @@ void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
 
     switch ((THORQ_PAYLOAD_ID)m_buffer[0]) {
     case THORQ_PAYLOAD_ID::HEARTBEAT:
-        handleMessageHeartbeat(instance, m_buffer);
+        handleMessageHeartbeat(instance, fbsMessage->body_as_heartbeat(), fbsVerifier);
         break;
     case THORQ_PAYLOAD_ID::VERSION:
-        handleMessageVersion(instance, m_buffer);
+        handleMessageVersion(instance, fbsMessage->body_as_version(), fbsVerifier);
         break;
     case THORQ_PAYLOAD_ID::CRYPTO:
         handleMessageCrypto(instance, m_buffer);
@@ -205,52 +206,19 @@ void ThorQ::MessageDispatcher::handleEventTimeout(const ENetEvent &event)
     }
 }
 
-void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
-{
-    fmt::print("[MSG] Heartbeat!");
-
-    flatbuffers::Verifier verifier(message.data(), message.size());
-
-    const ThorQ::Serialization::Heartbeat* heartbeat = flatbuffers::GetRoot<ThorQ::Serialization::Heartbeat>(message.data());
-
-    if (heartbeat->Verify(verifier))
-    {
-        std::uint32_t interval = m_server->heartbeatInterval();
-
-        if (heartbeat->interval() != interval)
-        {
-            // Build flatbuffer
-            flatbuffers::FlatBufferBuilder builder;
-            auto offset = ThorQ::Serialization::CreateHeartbeat(builder, interval);
-            builder.Finish(offset);
-
-            // Calculate packet size
-            std::size_t size = ThorQ::calculatePacketSize(builder.GetSize(), false);
-
-            //
-            ENetPacket* packet = ThorQ::Memory::packetGet(size);
-            packet->flags = ENET_PACKET_FLAG_RELIABLE;
-            ThorQ::packetEncode(packet, std::span<std::uint8_t>(builder.GetBufferPointer(), builder.GetSize()));
-            m_server->tryQueueMessage(instance->peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
-        }
-    }
-}
-
-void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
+void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance* instance, const ThorQ::Serialization::Version* fbsVersion, flatbuffers::Verifier fbsVerifier)
 {
     fmt::print("[MSG] Version!");
 
-    flatbuffers::Verifier verifier(message.data(), message.size());
 
-    const ThorQ::Serialization::Version* protoVersion = flatbuffers::GetRoot<ThorQ::Serialization::Version>(message.data());
 
-    if (protoVersion->Verify(verifier))
+    if (fbsVersion->Verify(fbsVerifier))
     {
-        std::uint8_t app = protoVersion->app();
+        std::uint8_t app = fbsVersion->app();
 
         const char* name;
-        ThorQ::Version version = *protoVersion;
         ThorQ::Version currentVersion;
+        ThorQ::Version receivedVersion(fbsVersion);
 
         switch ((THORQ_APP)app) {
         case THORQ_APP::SERVER:
@@ -266,18 +234,45 @@ void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance* instance, c
             currentVersion = THORQ_VERSION_LINK;
             break;
         default:
-            fmt::print("Client expects invalid version {}[{}]\n", app, version.toString());
+            fmt::print("Client expects invalid version {}[{}]\n", app, receivedVersion.toString());
             return;
         }
 
-        if (version == currentVersion)
+        if (receivedVersion == currentVersion)
         {
-            fmt::print("Client {}[{}] version matched!", name, version.toString());
+            fmt::print("Client {}[{}] version matched!", name, receivedVersion.toString());
         }
         else
         {
-            fmt::print("Client expects {0}[{1}], current is {0}[{2}]\nDisconnecting peer...", name, version.toString(), currentVersion.toString());
+            fmt::print("Client expects {0}[{1}], current is {0}[{2}]\nDisconnecting peer...", name, receivedVersion.toString(), currentVersion.toString());
             m_server->tryQueueDisconnect(instance->peer, false, THORQ_DISCONNECT_REASON::VERSION_INCOMPATIBLE, m_tokenQueue);
+        }
+    }
+}
+
+void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance* instance, const ThorQ::Serialization::Heartbeat* fbsHeartbeat, flatbuffers::Verifier fbsVerifier)
+{
+    fmt::print("[MSG] Heartbeat!");
+
+    if (fbsHeartbeat->Verify(fbsVerifier))
+    {
+        std::uint32_t interval = m_server->heartbeatInterval();
+
+        if (fbsHeartbeat->interval() != interval)
+        {
+            // Build flatbuffer
+            flatbuffers::FlatBufferBuilder builder;
+            auto offset = ThorQ::Serialization::CreateHeartbeat(builder, interval);
+            builder.Finish(offset);
+
+            // Calculate packet size
+            std::size_t size = ThorQ::calculatePacketSize(builder.GetSize(), false);
+
+            //
+            ENetPacket* packet = ThorQ::Memory::packetGet(size);
+            packet->flags = ENET_PACKET_FLAG_RELIABLE;
+            ThorQ::packetEncode(packet, std::span<std::uint8_t>(builder.GetBufferPointer(), builder.GetSize()));
+            m_server->tryQueueMessage(instance->peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
         }
     }
 }

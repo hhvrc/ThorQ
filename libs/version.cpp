@@ -19,10 +19,10 @@ ThorQ::Version::Version(const ThorQ::Version& other)
     , m_patch(other.patch())
 {}
 
-ThorQ::Version::Version(const ThorQ::Serialization::Version& other)
-    : m_major(other.major())
-    , m_minor(other.minor())
-    , m_patch(other.patch())
+ThorQ::Version::Version(const ThorQ::Serialization::Version* other)
+    : m_major(other->major())
+    , m_minor(other->minor())
+    , m_patch(other->patch())
 {}
 
 std::uint8_t ThorQ::Version::major() const

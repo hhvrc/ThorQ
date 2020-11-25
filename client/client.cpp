@@ -30,7 +30,9 @@
 #include <crypto.h>
 #include <systemid.h>
 #include <thorq_message.h>
+
 #include <flatbuffers/flatbuffers.h>
+#include <schemas/message_generated.h>
 #include <schemas/crypto_generated.h>
 #include <schemas/account_generated.h>
 #include <schemas/collar_generated.h>
@@ -197,7 +199,7 @@ THORQ_STATE_CRYPTO Client::CryptoState() const
 	return m_cryptoState.load();
 }
 
-THORQ_STATE_HWID Client::AuthState() const
+THORQ_STATE_HWID Client::HwidState() const
 {
 	return m_authState.load();
 }
@@ -450,8 +452,9 @@ void Client::Service()
 
                 // Build flatbuffer
                 flatbuffers::FlatBufferBuilder builder;
-                auto offset = ThorQ::Serialization::CreateHeartbeat(builder, Rtt());
-                builder.Finish(offset);
+                auto offset_hrt = ThorQ::Serialization::CreateHeartbeat(builder, Rtt()).Union();
+                auto offset_msg = ThorQ::Serialization::CreateMessage(builder, 1, ThorQ::Serialization::Body_heartbeat, offset_hrt);
+                builder.Finish(offset_msg);
 
                 // Calculate packet size
                 std::size_t size = ThorQ::calculatePacketSize(builder.GetSize(), false);
@@ -586,32 +589,33 @@ void Client::handleMessage(ENetPacket* packet)
 	if (ConnectionState() != THORQ_STATE_CONNECTION_CONNECTED)
 		return;
 
-	std::vector<std::uint8_t> message(packet->data, packet->data + packet->dataLength);
-/*
-    if (!thorqPacketDecode(message, m_crypto))
+    std::vector<std::uint8_t> message;
+    message.resize(ThorQ::calculateDataSize(packet));
+
+    if (!ThorQ::packetDecode(packet, message, m_crypto))
 	{
         return;
 	}
 
-	switch (message[0]) {
-	case THORQ_PAYLOAD_ID_HEARTBEAT:
-		if (thorq_payload_heartbeat_is_valid(message))
-		{
-			handlePayloadHeartbeat(message);
-		}
-		return;
-    case THORQ_PAYLOAD_ID_VERSION:
-        if (thorq_payload_version_is_valid(message))
-		{
-			handlePayloadVersion(message);
-		}
-		return;
-    case THORQ_PAYLOAD_ID_CRYPTO:
-        if (thorq_payload_crypto_is_valid(message))
-		{
-			handlePayloadCrypto(message);
-		}
-		return;
+    const ThorQ::Serialization::Message* msg = flatbuffers::GetRoot<ThorQ::Serialization::Message>(message.data());
+    flatbuffers::Verifier verifier(message.data(), message.size());
+
+    if (!msg->Verify(verifier))
+    {
+        qDebug() << "Received invlaid buffer";
+        return;
+    }
+
+    switch (msg->body_type()) {
+    case ThorQ::Serialization::Body_version:
+        handlePayloadVersion(msg->body_as_version(), verifier);
+        return;
+    case ThorQ::Serialization::Body_heartbeat:
+        handlePayloadHeartbeat(msg->body_as_heartbeat(), verifier);
+        return;
+    case ThorQ::Serialization::Body_crypto:
+        handlePayloadCrypto(msg->body_as_crypto(), verifier);
+        return;/*
 	case THORQ_PAYLOAD_ID_SYSTEMID:
 		if (thorq_payload_systemid_is_valid(message))
 		{
@@ -665,71 +669,64 @@ void Client::handleMessage(ENetPacket* packet)
 		{
 			handlePayloadAck(message);
 		}
-		return;
+        return;*/
 	default:
-		if (AuthState() != THORQ_STATE_AUTH_OK)
+        if (HwidState() != THORQ_STATE_HWID_OK)
 		{
 			return;
 		}
 
 		break;
-    }*/
-}
-
-void Client::handlePayloadHeartbeat(const std::vector<std::uint8_t>& message)
-{
-    if (m_awaitingHeartbeat)
-    {
-        flatbuffers::Verifier verifier(message.data(), message.size());
-
-        const ThorQ::Serialization::Heartbeat* heartbeat = flatbuffers::GetRoot<ThorQ::Serialization::Heartbeat>(message.data());
-
-        if (heartbeat->Verify(verifier))
-        {
-            qDebug() << "Heartbeat!";
-            // Set interval from server
-            m_awaitingHeartbeat = false;
-            SetRtt(m_heartbeatTimer->elapsed());
-        }
     }
 }
-void Client::handlePayloadVersion(std::vector<std::uint8_t>& payload)
-{/*
-    THORQ_APP app;
+
+void Client::handlePayloadVersion(const ThorQ::Serialization::Version* table, flatbuffers::Verifier verifier)
+{
+    THORQ_APP app;/*
     ThorQ::Version version;
     thorq_payload_version_unpack(payload, app, version);
 
-	switch (app) {
-	case THORQ_APP_SERVER:
-		if (version > THORQ_VERSION_SERVER)
+    switch (app) {
+    case THORQ_APP_SERVER:
+        if (version > THORQ_VERSION_SERVER)
         { qDebug() << tr("Server has updated from %1 to %2").arg(THORQ_VERSION_SERVER.toString().c_str()).arg(version.toString().c_str()); }
-		else if (version < THORQ_VERSION_SERVER)
+        else if (version < THORQ_VERSION_SERVER)
         { qDebug() << tr("Server had downdated from %1 to %2").arg(THORQ_VERSION_SERVER.toString().c_str()).arg(version.toString().c_str()); }
-		else
-		{ qDebug() << tr("Server version compatible"); }
-		break;
-	case THORQ_APP_CLIENT:
-		if (version > THORQ_VERSION_CLIENT)
+        else
+        { qDebug() << tr("Server version compatible"); }
+        break;
+    case THORQ_APP_CLIENT:
+        if (version > THORQ_VERSION_CLIENT)
         { qDebug() << tr("Client has updated from %1 to %2").arg(THORQ_VERSION_CLIENT.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("New update available!\nClient v%1").arg(version.toString().c_str())); }
-		else if (version < THORQ_VERSION_CLIENT)
+        else if (version < THORQ_VERSION_CLIENT)
         { qDebug() << tr("Client has downgraded from %1 to %2").arg(THORQ_VERSION_CLIENT.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("Hello future-person!\nServer expects: Client v%1\nYou have: Client v%2").arg(version.toString().c_str()).arg(THORQ_VERSION_CLIENT.toString().c_str())); }
-		else
-		{ qDebug() << tr("Client version compatible"); }
-		break;
-	case THORQ_APP_LINK:
-		if (version > THORQ_VERSION_LINK)
+        else
+        { qDebug() << tr("Client version compatible"); }
+        break;
+    case THORQ_APP_LINK:
+        if (version > THORQ_VERSION_LINK)
         { qDebug() << tr("Protocol has updated from %1 to %2").arg(THORQ_VERSION_LINK.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("Version incompatible!\nPlease upgrade")); }
-		else if (version < THORQ_VERSION_LINK)
+        else if (version < THORQ_VERSION_LINK)
         { qDebug() << tr("Protocol has downgraded from %1 to %2").arg(THORQ_VERSION_LINK.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("Version inompatible!\nPlease downgrade")); }
-		else
-		{ qDebug() << tr("Protocol version compatible"); }
-		break;
-	default:
+        else
+        { qDebug() << tr("Protocol version compatible"); }
+        break;
+    default:
         qDebug() << tr("Got ivalid version %1[%2]").arg(app).arg(version.toString().c_str());
-		return;
+        return;
     }*/
 }
-void Client::handlePayloadCrypto(std::vector<std::uint8_t>& payload)
+void Client::handlePayloadHeartbeat(const ThorQ::Serialization::Heartbeat* table, flatbuffers::Verifier verifier)
+{
+    if (m_awaitingHeartbeat && table->Verify(verifier))
+    {
+        qDebug() << "Heartbeat!";
+        // Set interval from server
+        m_awaitingHeartbeat = false;
+        SetRtt(m_heartbeatTimer->elapsed());
+    }
+}
+void Client::handlePayloadCrypto(const ThorQ::Serialization::Crypto::Message* table, flatbuffers::Verifier verifier)
 {/*
     std::vector<std::uint8_t> response;
 

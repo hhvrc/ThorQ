@@ -9,7 +9,24 @@ typedef struct _ENetAddress ENetAddress;
 typedef struct _ENetCallbacks ENetCallbacks;
 
 namespace ThorQ {
+
 class Crypto;
+
+namespace Serialization {
+
+class Heartbeat;
+class Version;
+
+namespace Crypto {
+
+class Message;
+
+} // ThorQ::Serialization::Crypto
+} // ThorQ::Serialization
+} // ThorQ
+
+namespace flatbuffers {
+class Verifier;
 }
 
 #endif // TYPEDEFS_GLOBAL_H

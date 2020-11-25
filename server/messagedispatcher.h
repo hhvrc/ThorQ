@@ -5,10 +5,11 @@
 #include <vector>
 #include <cstdint>
 
-#include "concurrentqueue.h"
+#include <concurrentqueue.h>
 
-#include "constants.h"
-#include "typedefs_global.h"
+#include <constants.h>
+#include <typedefs_global.h>
+
 #include "typedefs_server.h"
 
 namespace ThorQ {
@@ -26,8 +27,8 @@ private:
     void handleEventDisconnect(const ENetEvent& event);
     void handleEventTimeout(const ENetEvent& event);
 
-    void handleMessageHeartbeat(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
-    void handleMessageVersion(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
+    void handleMessageVersion(ThorQ::Instance* instance, const ThorQ::Serialization::Version* fbsVersion, flatbuffers::Verifier fbsVerifier);
+    void handleMessageHeartbeat(ThorQ::Instance* instance, const ThorQ::Serialization::Heartbeat* fbsHeartbeat, flatbuffers::Verifier fbsVerifier);
     void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
     void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
     void handleMessageAccount(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
