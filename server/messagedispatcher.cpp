@@ -114,7 +114,7 @@ void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
     ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
 
     m_buffer.resize(ThorQ::calculateDataSize(event.packet));
-    if (!ThorQ::packetDecode(event.packet, m_buffer, instance->crypto))
+    if (!ThorQ::packetDecode(event.packet, m_buffer, instance->m_crypto))
     {
         return;
     }
