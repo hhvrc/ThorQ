@@ -22,8 +22,8 @@ struct Instance
 {
     Instance() = delete;
     Instance(ENetPeer* peer)
-        : peer(peer)
-        , crypto(new ThorQ::Crypto())
+        : m_peer(peer)
+        , m_crypto(new ThorQ::Crypto())
         , l_account()
         , m_account()
         , l_systemID()
@@ -35,8 +35,8 @@ struct Instance
         peer->data = this;
     }
 
-    ENetPeer* peer;
-     std::shared_ptr<ThorQ::Crypto> crypto;
+    ENetPeer* m_peer;
+    std::shared_ptr<ThorQ::Crypto> m_crypto;
 
     std::shared_mutex l_account;
     std::shared_ptr<ThorQ::Account> m_account;

@@ -21,7 +21,6 @@ union Body {
 }
 
 table Message {
-  sequence : ulong;
   body : Serialization.Body;
 }
 

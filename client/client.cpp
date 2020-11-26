@@ -350,18 +350,28 @@ void Client::Service()
 
 	// Send stuff
 	if (ConnectionState() == THORQ_STATE_CONNECTION_CONNECTED)
-    {/*
+    {
         if (LoginState() == THORQ_STATE_LOGIN_LOGGEDIN)
         {
             if ((actions & ACTION_Logout) != 0)
             {
                 std::vector<std::uint8_t> payload;
 
-				thorq_payload_account_logout_pack(payload);
-                SendPayload(payload, THORQ_CHANNEL_MAIN, true, true);
+                flatbuffers::FlatBufferBuilder builder;
+                auto msg = ThorQ::Serialization::CreateMessage(builder, ThorQ::Serialization::Body_account, ThorQ::Serialization::Account::CreateMessage(builder, ThorQ::Serialization::Account::Body_logout, ThorQ::Serialization::Account::CreateLogout(builder, false).Union()).Union());
+                builder.Finish(msg);
+
+                // Calculate packet size
+                std::size_t size = ThorQ::calculatePacketSize(builder.GetSize(), false);
+
+                //
+                ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
+                ThorQ::packetEncode(packet, std::span<std::uint8_t>(builder.GetBufferPointer(), builder.GetSize()));
+                packetSend(packet, THORQ_CHANNEL::MAIN);
+                m_awaitingHeartbeat = true;
 
 				SetLoginState(THORQ_STATE_LOGIN_LOGGINGOUT);
-            }
+            }/*
             else
             {
                 std::uint64_t collarState = m_collarState.fetch_and(~0xFF);
@@ -397,8 +407,8 @@ void Client::Service()
                         SetSessionState(THORQ_STATE_SESSION_NONE);
                     }
                 }
-            }
-        }
+            }*/
+        }/*
         else if (LoginState() == THORQ_STATE_LOGIN_LOGGEDOUT)
         {
             if ((actions & ACTION_Login) != 0)
@@ -412,9 +422,8 @@ void Client::Service()
                 SetLoginState(THORQ_STATE_LOGIN_LOGGINGIN);
             }
 
-        }
+        }*/
 
-*/
         /**
          * Disconnects client gracefully
          * If [STATE] ACTION_Connected is not set, then the clients should not be connected
@@ -453,7 +462,7 @@ void Client::Service()
                 // Build flatbuffer
                 flatbuffers::FlatBufferBuilder builder;
                 auto offset_hrt = ThorQ::Serialization::CreateHeartbeat(builder, Rtt()).Union();
-                auto offset_msg = ThorQ::Serialization::CreateMessage(builder, 1, ThorQ::Serialization::Body_heartbeat, offset_hrt);
+                auto offset_msg = ThorQ::Serialization::CreateMessage(builder, ThorQ::Serialization::Body_heartbeat, offset_hrt);
                 builder.Finish(offset_msg);
 
                 // Calculate packet size

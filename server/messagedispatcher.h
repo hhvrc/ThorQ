@@ -29,7 +29,7 @@ private:
 
     void handleMessageVersion(ThorQ::Instance* instance, const ThorQ::Serialization::Version* fbsVersion, flatbuffers::Verifier fbsVerifier);
     void handleMessageHeartbeat(ThorQ::Instance* instance, const ThorQ::Serialization::Heartbeat* fbsHeartbeat, flatbuffers::Verifier fbsVerifier);
-    void handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
+    void handleMessageCrypto(ThorQ::Instance* instance, const ThorQ::Serialization::Crypto::Message* fbsCrypto, flatbuffers::Verifier fbsVerifier);
     void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
     void handleMessageAccount(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
     void handleMessageRelation(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);

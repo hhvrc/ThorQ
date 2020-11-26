@@ -247,7 +247,7 @@ void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance* instance, c
         else
         {
             fmt::print("Client expects {0}[{1}], current is {0}[{2}]\nDisconnecting peer...\n", name, receivedVersion.toString(), currentVersion.toString());
-            m_server->tryQueueDisconnect(instance->peer, false, THORQ_DISCONNECT_REASON::VERSION_INCOMPATIBLE, m_tokenQueue);
+            m_server->tryQueueDisconnect(instance->m_peer, false, THORQ_DISCONNECT_REASON::VERSION_INCOMPATIBLE, m_tokenQueue);
         }
     }
 }
@@ -262,7 +262,7 @@ void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance* instance,
         {
             // Build flatbuffer
             flatbuffers::FlatBufferBuilder builder;
-            auto msg = ThorQ::Serialization::CreateMessage(builder, 1, ThorQ::Serialization::Body_heartbeat, ThorQ::Serialization::CreateHeartbeat(builder, interval).Union());
+            auto msg = ThorQ::Serialization::CreateMessage(builder, ThorQ::Serialization::Body_heartbeat, ThorQ::Serialization::CreateHeartbeat(builder, interval).Union());
             builder.Finish(msg);
 
             // Calculate packet size
@@ -272,79 +272,91 @@ void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance* instance,
             ENetPacket* packet = ThorQ::Memory::packetGet(size);
             packet->flags = ENET_PACKET_FLAG_RELIABLE;
             ThorQ::packetEncode(packet, std::span<std::uint8_t>(builder.GetBufferPointer(), builder.GetSize()));
-            m_server->tryQueueMessage(instance->peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
+            m_server->tryQueueMessage(instance->m_peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
         }
     }
 }
 
-void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
-{/*
+void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, const ThorQ::Serialization::Crypto::Message* fbsCrypto, flatbuffers::Verifier fbsVerifier)
+{
     fmt::print("[MSG] Crypto!");
-
-    flatbuffers::Verifier verifier(message.data(), message.size());
-
-    const ThorQ::Serialization::Crypto::Command* crypto = flatbuffers::GetRoot<ThorQ::Serialization::Crypto::Command>(message.data());
-
-    crypto->Verify(verifier);
-
-    switch (crypto->type()) {
-    case ThorQ::Serialization::Crypto::Type_Request:
+/*
+    if (fbsCrypto->Verify(fbsVerifier))
     {
-        fmt::print("[MSG] Crypto request!");
-        instance->crypto->generateKeyPair();
-
-        // Build flatbuffer
-        flatbuffers::FlatBufferBuilder builder;
-        auto offset = ThorQ::Serialization::Crypto::CreateCommand(builder, ThorQ::Serialization::Crypto::Type_Establish);
-        builder.Finish(offset);
-
-        // Calculate packet size
-        std::size_t size = ThorQ::calculatePacketSize(builder.GetSize(), false);
-
-        //
-        ENetPacket* packet = ThorQ::Memory::packetGet(size, ENET_PACKET_FLAG_RELIABLE);
-        ThorQ::packetEncode(packet, builder.GetBufferSpan());
-        m_server->tryQueueMessage(instance->peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
-
-        instance->crypto->getPublicKey();
-        break;
-    }
-    case ThorQ::Serialization::Crypto::Type_Establish:
-    {
-        fmt::print("[MSG] Crypto establish!");
-        std::vector<std::uint8_t> data;
-
-        if (!instance->cryptoEstablish(crypto->data()))
+        switch (fbsCrypto->type()) {
+        case ThorQ::Serialization::Crypto::MessageType_Request:
         {
-            fmt::print(stderr, "Failed to create shared secret with %s\n", enet_peer_address_str(instance->peer()));
-            instance->disconnectPeer(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
-        }
-        break;
-    }
-    case ThorQ::Serialization::Crypto::Type_Verify:
-    {
-        fmt::print("[MSG] Crypto verify!");
-        std::vector<std::uint8_t> data;
-        thorq_payload_crypto_verify_unpack(message, data);
+            fmt::print("[MSG] Crypto request!");
+            instance->m_crypto->generateKeyPair();
 
-        if (instance->cryptoVerify(data))
-        {
-            fmt::print("[MSG] Crypto verified!");
-            thorq_payload_systemid_cmd_pack(response, THORQ_PAYLOAD_SYSTEMID_REQUEST);
-            instance->packetSend(response, THORQ_CHANNEL_MAIN, true, true);
-            instance->setAuthState(THORQ_STATE_HWID_REQUESTING);
+            std::vector<std::uint8_t> pubKey;
+            pubKey.resize(ThorQ::Crypto::PublicKeyLen);
+            instance->m_crypto->getPublicKey(pubKey);
+            // Build flatbuffer
+            flatbuffers::FlatBufferBuilder builder;
+            auto msg = ThorQ::Serialization::CreateMessage(builder, ThorQ::Serialization::Body_crypto,
+                                                           ThorQ::Serialization::Crypto::CreateMessageDirect(builder, ThorQ::Serialization::Crypto::MessageType_Establish, &pubKey).Union());
+            builder.Finish(msg);
+
+            // Calculate packet size
+            std::size_t size = ThorQ::calculatePacketSize(builder.GetSize(), false);
+
+            //
+
+            ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
+
+            ThorQ::packetEncode(packet, builder.GetBufferSpan());
+
+            m_server->tryQueueMessage(instance->m_peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
+
+            ;
+            break;
         }
-        else
+        case ThorQ::Serialization::Crypto::MessageType_Establish:
         {
-            fmt::print(stderr, "Failed to verify with %s\n", enet_peer_address_str(instance->peer()));
-            instance->disconnectPeer(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
+            fmt::print("[MSG] Crypto establish!");
+
+            std::span<std::uint8_t> data(fbsCrypto->data()->data(), fbsCrypto->data()->size());
+
+            if (instance->m_crypto->agree(data))
+            {
+                instance->m_verificationData.resize()
+            }
+            else
+            {
+                char buf[50];
+                enet_peer_get_ip(instance->m_peer, buf, 50);
+                fmt::print(stderr, "Failed to create shared secret with %s\n", buf);
+                m_server->tryQueueDisconnect(instance->m_peer, false, THORQ_DISCONNECT_REASON::CRYPTO_FAILED, m_tokenQueue);
+            }
+            break;
         }
-        break;
+        case ThorQ::Serialization::Crypto::MessageType_Verify:
+        {
+            fmt::print("[MSG] Crypto verify!");
+            std::vector<std::uint8_t> data;
+            thorq_payload_crypto_verify_unpack(message, data);
+
+            if (instance->cryptoVerify(data))
+            {
+                fmt::print("[MSG] Crypto verified!");
+                thorq_payload_systemid_cmd_pack(response, THORQ_PAYLOAD_SYSTEMID_REQUEST);
+                instance->packetSend(response, THORQ_CHANNEL_MAIN, true, true);
+                instance->setAuthState(THORQ_STATE_HWID_REQUESTING);
+            }
+            else
+            {
+                fmt::print(stderr, "Failed to verify with %s\n", enet_peer_address_str(instance->peer()));
+                instance->disconnectPeer(THORQ_DISCONNECT_REASON_CRYPT_FAILED);
+            }
+            break;
+        }
+        default:
+            fmt::print("[MSG] Crypto \?\?\?!");
+            return;
+        }
     }
-    default:
-        fmt::print("[MSG] Crypto \?\?\?!");
-        return;
-    }*/
+*/
 }
 
 void ThorQ::MessageDispatcher::handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
