@@ -77,6 +77,8 @@ private:
     enum class State : std::uint8_t
     {
         Uninitialized,
+        GeneratedKeys,
+        Ready
     };
 
     std::atomic<State> m_state;

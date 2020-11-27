@@ -36,68 +36,92 @@ void ThorQ::Crypto::reset()
 
 bool ThorQ::Crypto::ready() const
 {
-    return m_state != State::Uninitialized;
+    return m_state == State::Ready;
 }
 
 bool ThorQ::Crypto::generateKeyPair()
 {
     std::unique_lock l(m_modlock);
-    return crypto_kx_keypair(m_pk.data(), m_sk.data()) == 0;
+
+    if (crypto_kx_keypair(m_pk.data(), m_sk.data()) != 0)
+    {
+        return false;
+    }
+
+    m_state = State::GeneratedKeys;
+    return true;
 }
 
 bool ThorQ::Crypto::getPublicKey(std::span<std::uint8_t> publicKeyOut) const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
-    if (ready() && publicKeyOut.size() == Crypto::PublicKeyLen)
+    if (m_state != State::GeneratedKeys || publicKeyOut.size() != Crypto::PublicKeyLen)
     {
-        std::copy(m_pk.begin(), m_pk.end(), publicKeyOut.begin());
-        return true;
+        return false;
     }
 
-    return false;
+    std::copy(m_pk.begin(), m_pk.end(), publicKeyOut.begin());
+
+    return true;
 }
 
 bool ThorQ::Crypto::agree(const std::span<std::uint8_t> foreignKey)
 {
     std::unique_lock l(m_modlock);
-    if (ready() &&
-        foreignKey.size() == Crypto::PublicKeyLen)
+    if (m_state != State::GeneratedKeys || foreignKey.size() != Crypto::PublicKeyLen)
     {
-        return crypto_kx_server_session_keys(m_rx.data(), m_tx.data(), m_pk.data(), m_sk.data(), foreignKey.data()) == 0;
+        return false;
     }
 
-    return false;
+    if (crypto_kx_server_session_keys(m_rx.data(), m_tx.data(), m_pk.data(), m_sk.data(), foreignKey.data()) != 0)
+    {
+        return false;
+    }
+
+    m_state = State::Ready;
+    return true;
 }
 
 bool ThorQ::Crypto::encrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t> mac, std::span<std::uint8_t> nonce) const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
-    if (ready() &&
-        !dataIn.empty() &&
-        dataIn.size() == dataOut.size() &&
-        mac.size() == Crypto::MacLen &&
-        nonce.size() == Crypto::NonceLen)
+    if (!ready() ||
+        dataIn.empty() ||
+        dataIn.size() != dataOut.size() ||
+        mac.size() != Crypto::MacLen ||
+        nonce.size() != Crypto::NonceLen)
     {
-        randombytes_buf(nonce.data(), nonce.size());
-        return crypto_secretbox_detached(dataOut.data(), mac.data(), dataIn.data(), dataIn.size(), nonce.data(), m_tx.data()) == 0;
+        return false;
     }
 
-    return false;
+    randombytes_buf(nonce.data(), nonce.size());
+
+    if (crypto_secretbox_detached(dataOut.data(), mac.data(), dataIn.data(), dataIn.size(), nonce.data(), m_tx.data()) != 0)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 bool ThorQ::Crypto::decrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t> mac, std::span<std::uint8_t> nonce) const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
-    if (ready() &&
-        !dataIn.empty() &&
-        dataIn.size() == dataOut.size() &&
-        mac.size() == Crypto::MacLen &&
-        nonce.size() == Crypto::NonceLen)
+    if (!ready() ||
+        dataIn.empty() ||
+        dataIn.size() != dataOut.size() ||
+        mac.size() != Crypto::MacLen ||
+        nonce.size() != Crypto::NonceLen)
     {
-        return crypto_secretbox_open_detached(dataOut.data(), mac.data(), dataIn.data(), dataIn.size(), nonce.data(), m_rx.data()) == 0;
+        return false;
     }
 
-    return false;
+    if (crypto_secretbox_open_detached(dataOut.data(), mac.data(), dataIn.data(), dataIn.size(), nonce.data(), m_rx.data()) != 0)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 void ThorQ::Crypto::reset_nolock()
