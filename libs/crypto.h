@@ -25,7 +25,7 @@ public:
      * @param data Pointer to data to randomize
      * @param len Length of data to randomize
      */
-    static void RandomizeBytes(std::uint8_t* data, std::size_t len);
+    static void RandomizeBytes(std::span<std::uint8_t> bytes);
 
     Crypto();
     ~Crypto();

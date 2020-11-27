@@ -7,9 +7,9 @@
 #include <algorithm>
 #include <execution>
 
-void ThorQ::Crypto::RandomizeBytes(std::uint8_t* data, std::size_t len)
+void ThorQ::Crypto::RandomizeBytes(std::span<std::uint8_t> bytes)
 {
-    randombytes_buf(data, len);
+    randombytes_buf(bytes.data(), bytes.size());
 }
 
 ThorQ::Crypto::Crypto()
