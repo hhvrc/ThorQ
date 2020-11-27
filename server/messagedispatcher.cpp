@@ -301,7 +301,8 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
 
             // Send it!
             ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
-            ThorQ::packetEncode(packet, fbsBuilder.GetBufferSpan());
+            std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
+            ThorQ::packetEncode(packet, fbsBuilderSpan);
             m_server->tryQueueMessage(instance->m_peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
 
             ;
@@ -329,7 +330,8 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
 
                 // Send it!
                 ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
-                ThorQ::packetEncode(packet, fbsBuilder.GetBufferSpan(), instance->m_crypto);
+                std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
+                ThorQ::packetEncode(packet, fbsBuilderSpan, instance->m_crypto);
                 m_server->tryQueueMessage(instance->m_peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
             }
             else
@@ -361,7 +363,8 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
 
                 // Send it!
                 ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
-                ThorQ::packetEncode(packet, fbsBuilder.GetBufferSpan(), instance->m_crypto);
+                std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
+                ThorQ::packetEncode(packet, fbsBuilderSpan, instance->m_crypto);
                 m_server->tryQueueMessage(instance->m_peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
             }
             else
