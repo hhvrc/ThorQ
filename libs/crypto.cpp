@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <cassert>
 #include <algorithm>
-#include <execution>
 
 void ThorQ::Crypto::RandomizeBytes(std::span<std::uint8_t> bytes)
 {
@@ -65,7 +64,7 @@ bool ThorQ::Crypto::getPublicKey(std::span<std::uint8_t> publicKeyOut) const
     return true;
 }
 
-bool ThorQ::Crypto::agree(const std::span<std::uint8_t> foreignKey)
+bool ThorQ::Crypto::agreeAsServer(const std::span<std::uint8_t> foreignKey)
 {
     std::unique_lock l(m_modlock);
     if (m_state != State::GeneratedKeys || foreignKey.size() != Crypto::PublicKeyLen)
@@ -74,6 +73,23 @@ bool ThorQ::Crypto::agree(const std::span<std::uint8_t> foreignKey)
     }
 
     if (crypto_kx_server_session_keys(m_rx.data(), m_tx.data(), m_pk.data(), m_sk.data(), foreignKey.data()) != 0)
+    {
+        return false;
+    }
+
+    m_state = State::Ready;
+    return true;
+}
+
+bool ThorQ::Crypto::agreeAsClient(const std::span<std::uint8_t> foreignKey)
+{
+    std::unique_lock l(m_modlock);
+    if (m_state != State::GeneratedKeys || foreignKey.size() != Crypto::PublicKeyLen)
+    {
+        return false;
+    }
+
+    if (crypto_kx_client_session_keys(m_rx.data(), m_tx.data(), m_pk.data(), m_sk.data(), foreignKey.data()) != 0)
     {
         return false;
     }
@@ -116,7 +132,7 @@ bool ThorQ::Crypto::decrypt(std::span<std::uint8_t> dataOut, const std::span<std
         return false;
     }
 
-    if (crypto_secretbox_open_detached(dataOut.data(), mac.data(), dataIn.data(), dataIn.size(), nonce.data(), m_rx.data()) != 0)
+    if (crypto_secretbox_open_detached(dataOut.data(), dataIn.data(), mac.data(), dataIn.size(), nonce.data(), m_rx.data()) != 0)
     {
         return false;
     }

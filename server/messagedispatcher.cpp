@@ -314,7 +314,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
 
             std::span<std::uint8_t> data(const_cast<std::uint8_t*>(fbsCrypto->data()->data()), fbsCrypto->data()->size());
 
-            if (instance->m_crypto->agree(data))
+            if (instance->m_crypto->agreeAsServer(data))
             {
                 instance->m_verificationData.resize(32);
                 ThorQ::Crypto::RandomizeBytes(instance->m_verificationData);

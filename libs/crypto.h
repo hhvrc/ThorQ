@@ -30,8 +30,16 @@ public:
     Crypto();
     ~Crypto();
 
+    /**
+     * @brief Clear all instance data
+     * @return
+     */
     void reset();
 
+    /**
+     * @brief Checks if instance is ready to encrypt data
+     * @return
+     */
     bool ready() const;
 
     /**
@@ -41,37 +49,44 @@ public:
     bool generateKeyPair();
 
     /** Get the public key
-     * @param publicKeyOut
-     * @param outLen
+     * @param publicKeyOut Span to write publicKey to
      * @retval Returns if public key was successfully retrieved
      */
     bool getPublicKey(std::span<std::uint8_t> publicKeyOut) const;
 
     /** Establish secret key with foreign host
-     * @param foreignKey
-     * @param keySize
-     * @return
+     * @param foreignKey foreign public key to agree with
+     * @return Returns if shared secret was computed
      */
-    bool agree(const std::span<std::uint8_t> foreignKey);
+    bool agreeAsServer(const std::span<std::uint8_t> foreignKey);
+
+    /** Establish secret key with foreign host
+     * @param foreignKey foreign public key to agree with
+     * @return Returns if shared secret was computed
+     */
+    bool agreeAsClient(const std::span<std::uint8_t> foreignKey);
 
     /** Attempts to encrypt the data
-     * @param inputData
-     * @param outputData
-     * @param dataLen
-     * @param iv
+     * @param dataOut span to write encrypted data to, this is the same size as dataIn
+     * @param outputData span which contains cleartext to encrypt
+     * @param mac message authentication code, this is a size of MacLen
+     * @param nonce randomized data to make message unique, this is a size of NonceLen (encrypt function will randomize this)
      * @return
      */
     bool encrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t> mac, std::span<std::uint8_t> nonce) const;
 
     /** Attempts to decrypt the data
-     * @param inputData
-     * @param outputData
-     * @param dataLen
-     * @param iv
+     * @param dataOut span to write cleartext data to, this is the same size as dataIn
+     * @param outputData span which contains encrypted cleartext
+     * @param mac message authentication code, this is a size of MacLen
+     * @param nonce randomized data to make message unique, this is a size of NonceLen
      * @return
      */
     bool decrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t> mac, std::span<std::uint8_t> nonce) const;
 private:
+    /**
+     * @brief reset, but without locking the shared mutex
+     */
     void reset_nolock();
 
     enum class State : std::uint8_t

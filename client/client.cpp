@@ -761,7 +761,7 @@ void Client::handlePayloadCrypto(const ThorQ::Serialization::Crypto::Message* fb
             data.resize(fbsCrypto->data()->size());
             memcpy(data.data(), fbsCrypto->data()->data(), data.size());
 
-            if (m_crypto->generateKeyPair() && m_crypto->agree(data))
+            if (m_crypto->generateKeyPair() && m_crypto->agreeAsClient(data))
             {
                 data.resize(ThorQ::Crypto::PublicKeyLen);
                 m_crypto->getPublicKey(data);
@@ -777,7 +777,7 @@ void Client::handlePayloadCrypto(const ThorQ::Serialization::Crypto::Message* fb
 
                 // Send it!
                 ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
-                ThorQ::packetEncode(packet, fbsBuilder.GetBufferSpan(), m_crypto);
+                ThorQ::packetEncode(packet, fbsBuilder.GetBufferSpan());
                 packetSend(packet, THORQ_CHANNEL::MAIN);
             }
             else
