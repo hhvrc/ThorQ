@@ -24,4 +24,8 @@ table Message {
   body : Serialization.Body;
 }
 
+table MessageBuffer {
+  messages : [ Serialization.Message ];
+}
+
 root_type Message;

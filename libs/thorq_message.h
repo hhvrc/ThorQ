@@ -5,12 +5,10 @@
 #ifndef THORQ_MESSAGE_H
 #define THORQ_MESSAGE_H
 
-#include <cstdint>
+#include <span>
 #include <vector>
 #include <memory>
-#include <span>
-
-#include <flatbuffers/flatbuffers.h>
+#include <cstdint>
 
 #include "typedefs_global.h"
 

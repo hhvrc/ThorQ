@@ -147,10 +147,10 @@ void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
         break;
     case ThorQ::Serialization::Body_version:
         handleMessageVersion(instance, fbsMessage->body_as_version(), fbsVerifier);
-        break;/*
-    case THORQ_PAYLOAD_ID::CRYPTO:
-        handleMessageCrypto(instance, m_buffer);
         break;
+    case ThorQ::Serialization::Body_crypto:
+        handleMessageCrypto(instance, fbsMessage->body_as_crypto(), fbsVerifier);
+        break;/*
     case THORQ_PAYLOAD_ID::SYSTEMID:
         handleMessageSystemID(instance, m_buffer);
         break;
@@ -276,14 +276,14 @@ void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance* instance,
 
 void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, const ThorQ::Serialization::Crypto::Message* fbsCrypto, flatbuffers::Verifier fbsVerifier)
 {
-    fmt::print("[MSG] Crypto!");
+    fmt::print("[MSG] Crypto!\n");
 
     if (fbsCrypto->Verify(fbsVerifier))
     {
         switch (fbsCrypto->type()) {
         case ThorQ::Serialization::Crypto::MessageType_Request:
         {
-            fmt::print("[MSG] Crypto request!");
+            fmt::print("[MSG] Crypto request!\n");
             instance->m_crypto->generateKeyPair();
 
             std::vector<std::uint8_t> pubKey;
@@ -310,7 +310,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
         }
         case ThorQ::Serialization::Crypto::MessageType_Establish:
         {
-            fmt::print("[MSG] Crypto establish!");
+            fmt::print("[MSG] Crypto establish!\n");
 
             std::span<std::uint8_t> data(const_cast<std::uint8_t*>(fbsCrypto->data()->data()), fbsCrypto->data()->size());
 
@@ -345,12 +345,12 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
         }
         case ThorQ::Serialization::Crypto::MessageType_Verify:
         {
-            fmt::print("[MSG] Crypto verify!");
+            fmt::print("[MSG] Crypto verify!\n");
 
             if (fbsCrypto->data()->size() == instance->m_verificationData.size() &&
                 memcmp(fbsCrypto->data()->data(), instance->m_verificationData.data(), instance->m_verificationData.size()))
             {
-                fmt::print("[MSG] Crypto verified!");
+                fmt::print("[MSG] Crypto verified!\n");
 
                 // Build flatbuffer
                 flatbuffers::FlatBufferBuilder fbsBuilder;
@@ -378,7 +378,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
             break;
         }
         default:
-            fmt::print("[MSG] Crypto \?\?\?!");
+            fmt::print("[MSG] Crypto \?\?\?!\n");
             return;
         }
     }
