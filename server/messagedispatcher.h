@@ -7,6 +7,7 @@
 
 #include <concurrentqueue.h>
 
+#include <enums.h>
 #include <constants.h>
 #include <typedefs_global.h>
 
@@ -40,6 +41,7 @@ private:
     void handleMessageCollar(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
     void handleMessageAck(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
 
+    void sendPacket(ThorQ::Instance* instance, std::span<uint8_t> data, bool encrypt, uint32_t flags, THORQ_CHANNEL channel);
 
     Server* m_server;
     std::thread m_thread;

@@ -258,18 +258,14 @@ void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance* instance,
         if (fbsHeartbeat->interval() != interval)
         {
             // Build flatbuffer
-            flatbuffers::FlatBufferBuilder builder;
-            auto msg = ThorQ::Serialization::CreateMessage(builder, ThorQ::Serialization::Body_heartbeat, ThorQ::Serialization::CreateHeartbeat(builder, interval).Union());
-            builder.Finish(msg);
+            flatbuffers::FlatBufferBuilder fbsBuilder;
+            auto fbsHeartbeat = ThorQ::Serialization::CreateHeartbeat(fbsBuilder, interval).Union();
+            auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_heartbeat, fbsHeartbeat);
+            fbsBuilder.Finish(fbsMessage);
 
-            // Calculate packet size
-            std::size_t size = ThorQ::calculatePacketSize(builder.GetSize(), false);
+            std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
 
-            //
-            ENetPacket* packet = ThorQ::Memory::packetGet(size);
-            packet->flags = ENET_PACKET_FLAG_RELIABLE;
-            ThorQ::packetEncode(packet, std::span<std::uint8_t>(builder.GetBufferPointer(), builder.GetSize()));
-            m_server->tryQueueMessage(instance->m_peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
+            sendPacket(instance, fbsBuilderSpan, false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
         }
     }
 }
@@ -298,16 +294,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
 
             std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
 
-            // Calculate packet size
-            std::size_t packetSize = ThorQ::calculatePacketSize(fbsBuilderSpan.size(), false);
-
-            // Send it!
-            ENetPacket* packet = ThorQ::Memory::packetGet(packetSize);
-            packet->flags = ENET_PACKET_FLAG_RELIABLE;
-            ThorQ::packetEncode(packet, fbsBuilderSpan);
-            m_server->tryQueueMessage(instance->m_peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
-
-            ;
+            sendPacket(instance, fbsBuilderSpan, false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
             break;
         }
         case ThorQ::Serialization::Crypto::MessageType_Establish:
@@ -329,14 +316,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
 
                 std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
 
-                // Calculate packet size
-                std::size_t packetSize = ThorQ::calculatePacketSize(fbsBuilderSpan.size(), true);
-
-                // Send it!
-                ENetPacket* packet = ThorQ::Memory::packetGet(packetSize);
-                packet->flags = ENET_PACKET_FLAG_RELIABLE;
-                ThorQ::packetEncode(packet, fbsBuilderSpan, instance->m_crypto);
-                m_server->tryQueueMessage(instance->m_peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
+                sendPacket(instance, fbsBuilderSpan, true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
             }
             else
             {
@@ -364,14 +344,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
 
                 std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
 
-                // Calculate packet size
-                std::size_t packetSize = ThorQ::calculatePacketSize(fbsBuilderSpan.size(), true);
-
-                // Send it!
-                ENetPacket* packet = ThorQ::Memory::packetGet(packetSize);
-                packet->flags = ENET_PACKET_FLAG_RELIABLE;
-                ThorQ::packetEncode(packet, fbsBuilderSpan, instance->m_crypto);
-                m_server->tryQueueMessage(instance->m_peer, packet, THORQ_CHANNEL::MAIN, m_tokenQueue);
+                sendPacket(instance, fbsBuilderSpan, true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
             }
             else
             {
@@ -719,3 +692,26 @@ void ThorQ::MessageDispatcher::handleMessageAck(ThorQ::Instance* instance, const
     (void)message;
     fmt::print("Unexpected ack message...\n");
 */}
+
+void ThorQ::MessageDispatcher::sendPacket(ThorQ::Instance* instance, std::span<uint8_t> data, bool encrypt, uint32_t flags, THORQ_CHANNEL channel)
+{
+    // Get packet
+    ENetPacket* packet = ThorQ::Memory::packetGet(ThorQ::calculatePacketSize(data.size(), encrypt));
+
+    // Set flags
+    packet->flags = flags;
+
+    if (encrypt)
+    {
+        // Encode packet
+        ThorQ::packetEncode(packet, data, instance->m_crypto);
+    }
+    else
+    {
+        // Encode packet
+        ThorQ::packetEncode(packet, data);
+    }
+
+    // Queue message
+    m_server->tryQueueMessage(instance->m_peer, packet, channel, m_tokenQueue);
+}
