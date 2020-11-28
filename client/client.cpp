@@ -985,8 +985,6 @@ void Client::requestEncryptionHandshake()
     if (ConnectionState() != THORQ_STATE_CONNECTION_CONNECTED)
         return;
 
-    m_crypto->reset();
-    m_crypto->generateKeyPair();
     SetCryptoState(THORQ_STATE_CRYPTO_REQUESTED);
 
     flatbuffers::FlatBufferBuilder fbsBuilder;
