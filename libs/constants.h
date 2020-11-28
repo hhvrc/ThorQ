@@ -24,8 +24,8 @@ const ThorQ::Version THORQ_VERSION_LINK = ThorQ::Version( THORQ_VERSION_LINK_MAJ
 /*
  *
  */
-constexpr std::size_t THORQ_PAYLOAD_LEN_MAX = 1024 * 64; ///< Maximum payload length
-constexpr std::size_t THORQ_PAYLOAD_LEN_MIN = 1;   ///< Minimum payload length
+constexpr std::size_t THORQ_PAYLOAD_LEN_MAX = 1024 * 512; ///< Maximum payload length
+constexpr std::size_t THORQ_PAYLOAD_LEN_MIN = 1;          ///< Minimum payload length
 
 constexpr std::size_t THORQ_CRYPTO_VERIFICATION_DATA_LEN = 1024;
 
@@ -49,12 +49,10 @@ constexpr int THORQ_USERNAME_LEN_MAX = 32; ///< Maximum Username length
  */
 constexpr int THORQ_AUTHTOKEN_LEN = 256;
 
-/* Having a password less than 6 characters long is stupid and i wont allow supidity
- * The hashing algorithm used effectively truncates the password at 72 characters, so set the limit there
- * see: https://botan.randombit.net/handbook/api_ref/passhash.html
+/* Having a password less than 6 characters long is stupid and i wont allow supidity, more than 128 chars is also stupid
  */
-constexpr int THORQ_PASSWORD_LEN_MIN = 6; ///< Minimum Password length  // TODO: Update values
-constexpr int THORQ_PASSWORD_LEN_MAX = 72; ///< Maximum Password length // TODO: Update values
+constexpr int THORQ_PASSWORD_LEN_MIN = 6; ///< Minimum Password length
+constexpr int THORQ_PASSWORD_LEN_MAX = 128; ///< Maximum Password length
 
 /* Discord id limits
  */

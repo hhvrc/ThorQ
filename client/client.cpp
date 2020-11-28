@@ -600,8 +600,11 @@ void Client::SetPartner(const QString &username)
 
 void Client::handleMessage(ENetPacket* packet)
 {
-	if (ConnectionState() != THORQ_STATE_CONNECTION_CONNECTED)
-		return;
+    if (ConnectionState() != THORQ_STATE_CONNECTION_CONNECTED ||
+        !ThorQ::packetIsValidSize(packet))
+    {
+        return;
+    }
 
     std::vector<std::uint8_t> message;
     message.resize(ThorQ::calculateDataSize(packet));
@@ -687,7 +690,7 @@ void Client::handleMessage(ENetPacket* packet)
 		}
         return;*/
 	default:
-        qDebug() << "oops";
+        qWarning() << "Invalid packet type, packet might be corrupt";
         if (HwidState() != THORQ_STATE_HWID_OK)
 		{
 			return;
