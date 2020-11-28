@@ -316,17 +316,17 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
 
             if (instance->m_crypto->agreeAsServer(data))
             {
-                instance->m_verificationData.resize(32);
+                instance->m_verificationData.resize(256);
                 ThorQ::Crypto::RandomizeBytes(instance->m_verificationData);
 
                 // Build flatbuffer
                 flatbuffers::FlatBufferBuilder fbsBuilder;
-                auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessageDirect(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Verify, &instance->m_verificationData).Union();
+                auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Verify, fbsBuilder.CreateVector(instance->m_verificationData)).Union();
                 auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
                 fbsBuilder.Finish(fbsMessage);
 
                 // Calculate packet size
-                std::size_t size = ThorQ::calculatePacketSize(fbsBuilder.GetSize(), false);
+                std::size_t size = ThorQ::calculatePacketSize(fbsBuilder.GetSize(), true);
 
                 // Send it!
                 ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
