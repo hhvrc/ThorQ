@@ -1,6 +1,7 @@
 #ifndef MESSAGEDISPATCHER_H
 #define MESSAGEDISPATCHER_H
 
+#include <span>
 #include <thread>
 #include <vector>
 #include <cstdint>
