@@ -31,6 +31,11 @@ add_subdirectory(flatbuffers)
 set(CMAKE_CXX_FLAGS ${PREV_FLAGS})
 
 find_program (FLATC_EXEC flatc)
+
+if(${FLATC_EXEC} STREQUAL "FLATC_EXEC-NOTFOUND")
+    message(FATAL_ERROR "Could not find flatbuffers compiler, please make sure it exists in path!")
+endif()
+
 file(GLOB ${project}_SCHEMAS "${CMAKE_CURRENT_SOURCE_DIR}/schemas/*.fbs")
 set(FLATC_OUTPUT_DIR  "${CMAKE_CURRENT_BINARY_DIR}/schemas")
 foreach(SCHEMA ${${project}_SCHEMAS})
