@@ -2,6 +2,7 @@
 
 #include <thread>
 #include <chrono>
+#include <array>
 
 #if defined(__GCC__) || defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
@@ -763,6 +764,8 @@ void Client::handlePayloadCrypto(const ThorQ::Serialization::Crypto::Message* fb
             std::vector<std::uint8_t> data;
             data.resize(fbsCrypto->data()->size());
             memcpy(data.data(), fbsCrypto->data()->data(), data.size());
+            std::array<std::uint8_t, ThorQ::Crypto::PublicKeyLen> data;
+            std::copy(fbsCrypto->data()->begin(), fbsCrypto->data()->end(), data.begin());
 
             if (m_crypto->generateKeyPair() && m_crypto->agreeAsClient(data))
             {
@@ -772,6 +775,7 @@ void Client::handlePayloadCrypto(const ThorQ::Serialization::Crypto::Message* fb
                 // Build flatbuffer
                 flatbuffers::FlatBufferBuilder fbsBuilder;
                 auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Establish, fbsBuilder.CreateVector(data)).Union();
+                auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Establish, fbsBuilder.CreateVector(data.data(), data.size())).Union();
                 auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
                 fbsBuilder.Finish(fbsMessage);
 

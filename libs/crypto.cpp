@@ -51,10 +51,10 @@ bool ThorQ::Crypto::generateKeyPair()
     return true;
 }
 
-bool ThorQ::Crypto::getPublicKey(std::span<std::uint8_t> publicKeyOut) const
+bool ThorQ::Crypto::getPublicKey(std::span<std::uint8_t, Crypto::PublicKeyLen> publicKeyOut) const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
-    if (m_state != State::GeneratedKeys || publicKeyOut.size() != Crypto::PublicKeyLen)
+    if (m_state != State::GeneratedKeys)
     {
         return false;
     }
@@ -64,10 +64,10 @@ bool ThorQ::Crypto::getPublicKey(std::span<std::uint8_t> publicKeyOut) const
     return true;
 }
 
-bool ThorQ::Crypto::agreeAsServer(const std::span<std::uint8_t> foreignKey)
+bool ThorQ::Crypto::agreeAsServer(const std::span<std::uint8_t, Crypto::PublicKeyLen> foreignKey)
 {
     std::unique_lock l(m_modlock);
-    if (m_state != State::GeneratedKeys || foreignKey.size() != Crypto::PublicKeyLen)
+    if (m_state != State::GeneratedKeys)
     {
         return false;
     }
@@ -81,10 +81,10 @@ bool ThorQ::Crypto::agreeAsServer(const std::span<std::uint8_t> foreignKey)
     return true;
 }
 
-bool ThorQ::Crypto::agreeAsClient(const std::span<std::uint8_t> foreignKey)
+bool ThorQ::Crypto::agreeAsClient(const std::span<std::uint8_t, Crypto::PublicKeyLen> foreignKey)
 {
     std::unique_lock l(m_modlock);
-    if (m_state != State::GeneratedKeys || foreignKey.size() != Crypto::PublicKeyLen)
+    if (m_state != State::GeneratedKeys)
     {
         return false;
     }
@@ -98,14 +98,12 @@ bool ThorQ::Crypto::agreeAsClient(const std::span<std::uint8_t> foreignKey)
     return true;
 }
 
-bool ThorQ::Crypto::encrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t> mac, std::span<std::uint8_t> nonce) const
+bool ThorQ::Crypto::encrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t, Crypto::MacLen> mac, std::span<std::uint8_t, Crypto::NonceLen> nonce) const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
     if (!ready() ||
         dataIn.empty() ||
-        dataIn.size() != dataOut.size() ||
-        mac.size() != Crypto::MacLen ||
-        nonce.size() != Crypto::NonceLen)
+        dataIn.size() != dataOut.size())
     {
         return false;
     }
@@ -120,14 +118,12 @@ bool ThorQ::Crypto::encrypt(std::span<std::uint8_t> dataOut, const std::span<std
     return true;
 }
 
-bool ThorQ::Crypto::decrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t> mac, std::span<std::uint8_t> nonce) const
+bool ThorQ::Crypto::decrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t, Crypto::MacLen> mac, std::span<std::uint8_t, Crypto::NonceLen> nonce) const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
     if (!ready() ||
         dataIn.empty() ||
-        dataIn.size() != dataOut.size() ||
-        mac.size() != Crypto::MacLen ||
-        nonce.size() != Crypto::NonceLen)
+        dataIn.size() != dataOut.size())
     {
         return false;
     }

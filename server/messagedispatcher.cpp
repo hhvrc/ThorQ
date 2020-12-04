@@ -279,13 +279,12 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
             fmt::print("[MSG] Crypto request!\n");
             instance->m_crypto->generateKeyPair();
 
-            std::vector<std::uint8_t> pubKey;
-            pubKey.resize(ThorQ::Crypto::PublicKeyLen);
+            std::array<std::uint8_t, ThorQ::Crypto::PublicKeyLen> pubKey;
             instance->m_crypto->getPublicKey(pubKey);
 
             // Build flatbuffer
             flatbuffers::FlatBufferBuilder fbsBuilder;
-            auto fbsEstablish     = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Establish, fbsBuilder.CreateVector(pubKey)).Union();
+            auto fbsEstablish     = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Establish, fbsBuilder.CreateVector(pubKey.data(), pubKey.size())).Union();
             auto fbsMessage       = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsEstablish);
             fbsBuilder.Finish(fbsMessage);
 
@@ -298,7 +297,16 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, co
         {
             fmt::print("[MSG] Crypto establish!\n");
 
-            std::span<std::uint8_t> data(const_cast<std::uint8_t*>(fbsCrypto->data()->data()), fbsCrypto->data()->size());
+            if (fbsCrypto->data()->size() != ThorQ::Crypto::PublicKeyLen)
+            {
+                fmt::print("Got key with invalid length!");
+                return;
+            }
+
+            std::span<std::uint8_t, ThorQ::Crypto::PublicKeyLen> data(
+                            const_cast<std::uint8_t*>(fbsCrypto->data()->data()),
+                            fbsCrypto->data()->size()
+                        );
 
             if (instance->m_crypto->agreeAsServer(data))
             {
