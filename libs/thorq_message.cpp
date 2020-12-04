@@ -74,7 +74,7 @@ bool ThorQ::packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data)
     packet->data[0] = (std::uint8_t)PREENCRYPTION_FLAG::NONE;
 
     // Copy in data
-    std::copy(data.begin(), data.end(), packet->data);
+    std::copy(data.begin(), data.end(), packet->data + 1);
 
     return true;
 }
