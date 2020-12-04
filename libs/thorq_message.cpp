@@ -41,11 +41,6 @@ constexpr std::size_t PacketOverhead(bool encrypted)
     return 1 + (encrypted * (ThorQ::Crypto::MacLen + ThorQ::Crypto::NonceLen));
 }
 
-constexpr std::size_t PacketEncMacOffset = 1;
-constexpr std::size_t PacketEncNonceOffset = PacketEncMacOffset + ThorQ::Crypto::MacLen;
-constexpr std::size_t PacketEncPayloadOffset = PacketEncNonceOffset + ThorQ::Crypto::NonceLen;
-constexpr std::size_t PacketRawPayloadOffset = 1;
-
 bool ThorQ::packetIsValidSize(const ENetPacket * const packet)
 {
     std::size_t overhead = PacketOverhead(PacketIsEncrypted(packet));
@@ -75,15 +70,11 @@ bool ThorQ::packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data)
         return false;
     }
 
-    // Get data sections
-    std::span<std::uint8_t> packetData(packet->data, packet->dataLength);
-    std::span<std::uint8_t> packetPayload = packetData.subspan(PacketRawPayloadOffset, data.size());
-
     // Set header
-    packetData[0] = (std::uint8_t)PREENCRYPTION_FLAG::NONE;
+    packet->data[0] = (std::uint8_t)PREENCRYPTION_FLAG::NONE;
 
     // Copy in data
-    std::copy(data.begin(), data.end(), packetPayload.begin());
+    std::copy(data.begin(), data.end(), packet->data);
 
     return true;
 }
@@ -99,14 +90,14 @@ bool ThorQ::packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data,
         return false;
     }
 
-    // Get data sections
-    std::span<std::uint8_t> packetData(packet->data, packet->dataLength);
-    std::span<std::uint8_t> packetMAC     = packetData.subspan(PacketEncMacOffset,     Crypto::MacLen);
-    std::span<std::uint8_t> packetNonce   = packetData.subspan(PacketEncNonceOffset,   Crypto::NonceLen);
-    std::span<std::uint8_t> packetPayload = packetData.subspan(PacketEncPayloadOffset, data.size());
-
     // Set header
-    packetData[0] = (std::uint8_t)PREENCRYPTION_FLAG::ENCRYPTED;
+    packet->data[0] = (std::uint8_t)PREENCRYPTION_FLAG::ENCRYPTED;
+
+    // Get data sections
+    std::span<std::uint8_t> packetData(packet->data + 1, packet->dataLength - 1);
+    std::span<std::uint8_t> packetPayload = packetData.subspan(0, data.size());
+    std::span<std::uint8_t> packetMAC     = packetData.subspan(data.size(), Crypto::MacLen);
+    std::span<std::uint8_t> packetNonce   = packetData.subspan(data.size() + Crypto::MacLen, Crypto::NonceLen);
 
     // Encrpyt the data, this will copy it and the generated IV into messageOut
     if (!crypto->encrypt(packetPayload, data, packetMAC, packetNonce))
@@ -128,15 +119,14 @@ bool ThorQ::packetDecode(const ENetPacket* packet, std::span<std::uint8_t> data,
         return false;
     }
 
-    // Get data sections
-    std::span<std::uint8_t> packetData(packet->data, packet->dataLength);
+    std::span<std::uint8_t> packetData(packet->data + 1, packet->dataLength - 1);
 
     if (PacketIsEncrypted(packet))
     {
         // Get data sections
-        std::span<std::uint8_t> packetMAC     = packetData.subspan(PacketEncMacOffset,     Crypto::MacLen);
-        std::span<std::uint8_t> packetNonce   = packetData.subspan(PacketEncNonceOffset,   Crypto::NonceLen);
-        std::span<std::uint8_t> packetPayload = packetData.subspan(PacketEncPayloadOffset, data.size());
+        std::span<std::uint8_t> packetPayload = packetData.subspan(0, data.size());
+        std::span<std::uint8_t> packetMAC     = packetData.subspan(data.size(), Crypto::MacLen);
+        std::span<std::uint8_t> packetNonce   = packetData.subspan(data.size() + Crypto::MacLen, Crypto::NonceLen);
 
         // Decrypt data
         if (!crypto->decrypt(data, packetPayload, packetMAC, packetNonce))
@@ -147,11 +137,8 @@ bool ThorQ::packetDecode(const ENetPacket* packet, std::span<std::uint8_t> data,
     }
     else
     {
-        // Get data sections
-        std::span<std::uint8_t> packetPayload = packetData.subspan(PacketRawPayloadOffset, data.size());
-
         // Copy out data
-        std::copy(packetPayload.begin(), packetPayload.end(), data.begin());
+        std::copy(packetData.begin(), packetData.end(), data.begin());
     }
 
     return true;
