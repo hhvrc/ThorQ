@@ -1,6 +1,6 @@
 include "uuid.fbs";
 include "user.fbs";
-include "files.fbs";
+include "file.fbs";
 
 namespace ThorQ.Serialization.Account;
 
@@ -72,7 +72,7 @@ table SetEmail {
 }
 
 table SetImage {
-  image : Files.Image;
+  image : File.Image;
 }
 
 /// Yada, yada...

@@ -2,19 +2,24 @@
 
 #include <enet.h>
 #include <fmt/core.h>
-
-#include <thorq_message.h>
 #include <flatbuffers/flatbuffers.h>
-#include <schemas/message_generated.h>
-#include <schemas/heartbeat_generated.h>
-#include <schemas/version_generated.h>
-#include <schemas/crypto_generated.h>
-#include <schemas/systemid_generated.h>
+
+#include <lsql/query.h>
+#include <lsql/column.h>
+#include <lsql/connection.h>
+#include <systemid.h>
+#include <thorq_message.h>
 #include <schemas/account_generated.h>
-#include <schemas/group_generated.h>
-#include <schemas/moderation_generated.h>
 #include <schemas/announcement_generated.h>
 #include <schemas/collar_generated.h>
+#include <schemas/crypto_generated.h>
+#include <schemas/file_generated.h>
+#include <schemas/heartbeat_generated.h>
+#include <schemas/version_generated.h>
+#include <schemas/systemid_generated.h>
+#include <schemas/message_generated.h>
+#include <schemas/group_generated.h>
+#include <schemas/moderation_generated.h>
 
 #include "server.h"
 #include "account.h"
@@ -139,42 +144,43 @@ void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
     }
 
     switch (fbsMessage->body_type()) {
+    case ThorQ::Serialization::Body_account:
+        handleMessageAccount(instance, fbsMessage->body(), fbsVerifier);
+        break;
     case ThorQ::Serialization::Body_heartbeat:
-        handleMessageHeartbeat(instance, fbsMessage->body_as_heartbeat(), fbsVerifier);
+        handleMessageHeartbeat(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_version:
-        handleMessageVersion(instance, fbsMessage->body_as_version(), fbsVerifier);
+        handleMessageVersion(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_crypto:
-        handleMessageCrypto(instance, fbsMessage->body_as_crypto(), fbsVerifier);
-        break;/*
-    case THORQ_PAYLOAD_ID::SYSTEMID:
-        handleMessageSystemID(instance, m_buffer);
+        handleMessageCrypto(instance, fbsMessage->body(), fbsVerifier);
         break;
-    case THORQ_PAYLOAD_ID::ACCOUNT:
-        handleMessageAccount(instance, m_buffer);
+    case ThorQ::Serialization::Body_system_id:
+        handleMessageSystemID(instance, fbsMessage->body(), fbsVerifier);
         break;
-    case THORQ_PAYLOAD_ID::RELATIONSHIP:
-        handleMessageRelation(instance, m_buffer);
+    case ThorQ::Serialization::Body_group:
+        handleMessageGroup(instance, fbsMessage->body(), fbsVerifier);
         break;
-    case THORQ_PAYLOAD_ID::SESSION:
-        handleMessageSession(instance, m_buffer);
+    case ThorQ::Serialization::Body_collar:
+        handleMessageCollar(instance, fbsMessage->body(), fbsVerifier);
         break;
-    case THORQ_PAYLOAD_ID::TOY:
-        handleMessageToy(instance, m_buffer);
+    case ThorQ::Serialization::Body_moderation:
+        handleMessageModeration(instance, fbsMessage->body(), fbsVerifier);
         break;
-    case THORQ_PAYLOAD_ID::COLLAR:
-        handleMessageCollar(instance, m_buffer);
+    case ThorQ::Serialization::Body_friend_request:
+        handleMessageFriendRequest(instance, fbsMessage->body(), fbsVerifier);
         break;
-    case THORQ_PAYLOAD_ID::MODERATION:
-        handleMessageModeration(instance, m_buffer);
+    case ThorQ::Serialization::Body_file:
+        handleMessageFile(instance, fbsMessage->body(), fbsVerifier);
         break;
-    case THORQ_PAYLOAD_ID::ACK:
-    case THORQ_PAYLOAD_ID::ANNOUNCEMENT:
+    case ThorQ::Serialization::Body_user:
+        handleMessageUser(instance, fbsMessage->body(), fbsVerifier);
+        break;
+    case ThorQ::Serialization::Body_announcement:
         fmt::print("Unexpected messageID from client: {}\n", m_buffer[0]);
-        break;*/
-    case ThorQ::Serialization::Body_MIN:
-    case ThorQ::Serialization::Body_MAX:
+        break;
+    case ThorQ::Serialization::Body_NONE:
     default:
         return;
     }
@@ -202,232 +208,16 @@ void ThorQ::MessageDispatcher::handleEventTimeout(const ENetEvent &event)
     }
 }
 
-void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance* instance, const ThorQ::Serialization::Version* fbsVersion, flatbuffers::Verifier fbsVerifier)
+void ThorQ::MessageDispatcher::handleMessageAccount(ThorQ::Instance *instance, const void* body, flatbuffers::Verifier fbsVerifier)
 {
-    fmt::print("[MSG] Version!\n");
+    auto fbsAccount = reinterpret_cast<const ThorQ::Serialization::Account::Message*>(body);
 
-
-
-    if (fbsVersion->Verify(fbsVerifier))
+    if (!fbsAccount->Verify(fbsVerifier))
     {
-        std::uint8_t app = fbsVersion->app();
-
-        const char* name;
-        ThorQ::Version currentVersion;
-        ThorQ::Version receivedVersion(fbsVersion);
-
-        switch ((THORQ_APP)app) {
-        case THORQ_APP::SERVER:
-            name = "Server";
-            currentVersion = THORQ_VERSION_SERVER;
-            break;
-        case THORQ_APP::CLIENT:
-            name = "Client";
-            currentVersion = THORQ_VERSION_CLIENT;
-            break;
-        case THORQ_APP::LINK:
-            name = "Link";
-            currentVersion = THORQ_VERSION_LINK;
-            break;
-        default:
-            fmt::print("Client expects invalid version {}[{}]\n", app, receivedVersion.toString());
-            return;
-        }
-
-        if (receivedVersion == currentVersion)
-        {
-            fmt::print("Client {}[{}] version matched!\n", name, receivedVersion.toString());
-        }
-        else
-        {
-            fmt::print("Client expects {0}[{1}], current is {0}[{2}]\nDisconnecting peer...\n", name, receivedVersion.toString(), currentVersion.toString());
-            m_server->tryQueueDisconnect(instance->m_peer, false, THORQ_DISCONNECT_REASON::VERSION_INCOMPATIBLE, m_tokenQueue);
-        }
-    }
-}
-
-void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance* instance, const ThorQ::Serialization::Heartbeat* fbsHeartbeat, flatbuffers::Verifier fbsVerifier)
-{
-    if (fbsHeartbeat->Verify(fbsVerifier))
-    {
-        std::uint32_t interval = m_server->heartbeatInterval();
-
-        if (fbsHeartbeat->interval() != interval)
-        {
-            // Build flatbuffer
-            flatbuffers::FlatBufferBuilder fbsBuilder;
-            auto fbsHeartbeat = ThorQ::Serialization::CreateHeartbeat(fbsBuilder, interval).Union();
-            auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_heartbeat, fbsHeartbeat);
-            fbsBuilder.Finish(fbsMessage);
-
-            std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
-
-            sendPacket(instance, fbsBuilderSpan, false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
-        }
-    }
-}
-
-void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance* instance, const ThorQ::Serialization::Crypto::Message* fbsCrypto, flatbuffers::Verifier fbsVerifier)
-{
-    fmt::print("[MSG] Crypto!\n");
-
-    if (fbsCrypto->Verify(fbsVerifier))
-    {
-        switch (fbsCrypto->type()) {
-        case ThorQ::Serialization::Crypto::MessageType_Request:
-        {
-            fmt::print("[MSG] Crypto request!\n");
-            instance->m_crypto->generateKeyPair();
-
-            std::array<std::uint8_t, ThorQ::Crypto::PublicKeyLen> pubKey;
-            instance->m_crypto->getPublicKey(pubKey);
-
-            // Build flatbuffer
-            flatbuffers::FlatBufferBuilder fbsBuilder;
-            auto fbsEstablish     = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Establish, fbsBuilder.CreateVector(pubKey.data(), pubKey.size())).Union();
-            auto fbsMessage       = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsEstablish);
-            fbsBuilder.Finish(fbsMessage);
-
-            std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
-
-            sendPacket(instance, fbsBuilderSpan, false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
-            break;
-        }
-        case ThorQ::Serialization::Crypto::MessageType_Establish:
-        {
-            fmt::print("[MSG] Crypto establish!\n");
-
-            if (fbsCrypto->data()->size() != ThorQ::Crypto::PublicKeyLen)
-            {
-                fmt::print("Got key with invalid length!");
-                return;
-            }
-
-            std::span<std::uint8_t, ThorQ::Crypto::PublicKeyLen> data(
-                            const_cast<std::uint8_t*>(fbsCrypto->data()->data()),
-                            fbsCrypto->data()->size()
-                        );
-
-            if (instance->m_crypto->agreeAsServer(data))
-            {
-                instance->m_verificationData.resize(256);
-                ThorQ::Crypto::RandomizeBytes(instance->m_verificationData);
-
-                // Build flatbuffer
-                flatbuffers::FlatBufferBuilder fbsBuilder;
-                auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Verify, fbsBuilder.CreateVector(instance->m_verificationData)).Union();
-                auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
-                fbsBuilder.Finish(fbsMessage);
-
-                std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
-
-                sendPacket(instance, fbsBuilderSpan, true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
-            }
-            else
-            {
-                char buf[50];
-                enet_peer_get_ip(instance->m_peer, buf, 50);
-                fmt::print(stderr, "Failed to create shared secret with {}\n", buf);
-                m_server->tryQueueDisconnect(instance->m_peer, false, THORQ_DISCONNECT_REASON::CRYPTO_FAILED, m_tokenQueue);
-            }
-            break;
-        }
-        case ThorQ::Serialization::Crypto::MessageType_Verify:
-        {
-            fmt::print("[MSG] Crypto verify!\n");
-
-            if (fbsCrypto->data()->size() == instance->m_verificationData.size() &&
-                memcmp(fbsCrypto->data()->data(), instance->m_verificationData.data(), instance->m_verificationData.size()))
-            {
-                fmt::print("[MSG] Crypto verified!\n");
-
-                // Build flatbuffer
-                flatbuffers::FlatBufferBuilder fbsBuilder;
-                auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessageDirect(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Acknowledge).Union();
-                auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
-                fbsBuilder.Finish(fbsMessage);
-
-                std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
-
-                sendPacket(instance, fbsBuilderSpan, true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
-            }
-            else
-            {
-                char buf[50];
-                enet_peer_get_ip(instance->m_peer, buf, 50);
-
-                fmt::print(stderr, "Failed to verify with {}\n", buf);
-                m_server->tryQueueDisconnect(instance->m_peer, false, THORQ_DISCONNECT_REASON::CRYPTO_FAILED, m_tokenQueue);
-            }
-            break;
-        }
-        default:
-            fmt::print("[MSG] Crypto \?\?\?!\n");
-            return;
-        }
-    }
-}
-
-void ThorQ::MessageDispatcher::handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
-{/*
-    std::vector<std::uint8_t> response;
-
-    THORQ_PAYLOAD_SYSTEMID cmd;
-    thorq_payload_systemid_get_cmd(message, cmd);
-
-    if (cmd != THORQ_PAYLOAD_SYSTEMID_SUBMIT)
-    {
-        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SYSTEMID, static_cast<std::uint8_t>(cmd), THORQ_PAYLOAD_ACK_INVALID);
-        instance->packetSend(response, THORQ_CHANNEL_MAIN, true, true);
         return;
     }
 
-    std::vector<std::uint8_t> data;
-    thorq_payload_systemid_submit_unpack(message, data);
-
-
-    if (!ThorQ::SystemID::systemid_validate(data))
-    {
-        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SYSTEMID, THORQ_PAYLOAD_SYSTEMID_SUBMIT, THORQ_PAYLOAD_ACK_DENIED);
-        instance->packetSend(response, THORQ_CHANNEL_MAIN, true, true);
-        return;
-    }
-
-    std::string systemID = ThorQ::SystemID::systemid_to_string(data);
-
-    fmt::print("SystemID: %s\n", systemID);
-
-    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
-
-    if (!connection.isOpen())
-    {
-        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SYSTEMID, THORQ_PAYLOAD_SYSTEMID_SUBMIT, THORQ_PAYLOAD_ACK_ERROR);
-        instance->packetSend(response, THORQ_CHANNEL_MAIN, true, true);
-        return;
-    }
-
-    LSql::Query query = connection.query("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?1);"
-                                                  "SELECT banned_at FROM system_ids WHERE system_id = ?1;");
-    query.bind(1, systemID);
-
-    if (!query.step() || query.columnCount() == 0)
-    {
-        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_SYSTEMID, THORQ_PAYLOAD_SYSTEMID_SUBMIT, THORQ_PAYLOAD_ACK_ERROR);
-        instance->packetSend(response, THORQ_CHANNEL_MAIN, true, true);
-        return;
-    }
-
-    bool isBanned = (query.column(0).type() == LSql::Type::Null);
-
-    if (isBanned)
-    {
-        instance->disconnectPeer(THORQ_DISCONNECT_REASON_AUTH_SYSTEMID_BANNED);
-        return;
-    }
-*/}
-
-void ThorQ::MessageDispatcher::handleMessageAccount(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
-{/*
+    /*
     std::vector<std::uint8_t> response;
 
     switch (thorq_payload_account_get_cmd(message)) {
@@ -482,10 +272,150 @@ void ThorQ::MessageDispatcher::handleMessageAccount(ThorQ::Instance* instance, c
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN, THORQ_PAYLOAD_ACK_NO_CHANGE);
         instance->packetSend(response, true, true);
     }
-*/}
+    */
+}
 
-void ThorQ::MessageDispatcher::handleMessageRelation(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
-{/*
+void ThorQ::MessageDispatcher::handleMessageCollar(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsCollar = reinterpret_cast<const ThorQ::Serialization::Collar::Message*>(body);
+
+    if (!fbsCollar->Verify(fbsVerifier))
+    {
+        return;
+    }
+
+    /*
+    if (instance->sessionState() == THORQ_STATE_SESSION_ACTIVE)
+        if (instance->partner() != nullptr)
+            instance->partner()->sendMessage(message, true, false);
+    */
+}
+
+void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Crypto::Message*>(body);
+
+    if (!fbsCrypto->Verify(fbsVerifier))
+    {
+        return;
+    }
+
+    fmt::print("[MSG] Crypto!\n");
+
+    switch (fbsCrypto->type()) {
+    case ThorQ::Serialization::Crypto::MessageType_Request:
+    {
+        fmt::print("[MSG] Crypto request!\n");
+        instance->m_crypto->generateKeyPair();
+
+        std::array<std::uint8_t, ThorQ::Crypto::PublicKeyLen> pubKey;
+        instance->m_crypto->getPublicKey(pubKey);
+
+        // Build flatbuffer
+        flatbuffers::FlatBufferBuilder fbsBuilder;
+        auto fbsEstablish     = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Establish, fbsBuilder.CreateVector(pubKey.data(), pubKey.size())).Union();
+        auto fbsMessage       = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsEstablish);
+        fbsBuilder.Finish(fbsMessage);
+
+        std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
+
+        sendPacket(instance, fbsBuilderSpan, false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+        break;
+    }
+    case ThorQ::Serialization::Crypto::MessageType_Establish:
+    {
+        fmt::print("[MSG] Crypto establish!\n");
+
+        if (fbsCrypto->data()->size() != ThorQ::Crypto::PublicKeyLen)
+        {
+            fmt::print("Got key with invalid length!");
+            return;
+        }
+
+        std::span<std::uint8_t, ThorQ::Crypto::PublicKeyLen> data(
+                        const_cast<std::uint8_t*>(fbsCrypto->data()->data()),
+                        fbsCrypto->data()->size()
+                    );
+
+        if (instance->m_crypto->agreeAsServer(data))
+        {
+            instance->m_verificationData.resize(256);
+            ThorQ::Crypto::RandomizeBytes(instance->m_verificationData);
+
+            // Build flatbuffer
+            flatbuffers::FlatBufferBuilder fbsBuilder;
+            auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Verify, fbsBuilder.CreateVector(instance->m_verificationData)).Union();
+            auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
+            fbsBuilder.Finish(fbsMessage);
+
+            std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
+
+            sendPacket(instance, fbsBuilderSpan, true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+        }
+        else
+        {
+            char buf[50];
+            enet_peer_get_ip(instance->m_peer, buf, 50);
+            fmt::print(stderr, "Failed to create shared secret with {}\n", buf);
+            m_server->tryQueueDisconnect(instance->m_peer, false, THORQ_DISCONNECT_REASON::CRYPTO_FAILED, m_tokenQueue);
+        }
+        break;
+    }
+    case ThorQ::Serialization::Crypto::MessageType_Verify:
+    {
+        fmt::print("[MSG] Crypto verify!\n");
+
+        if (fbsCrypto->data()->size() == instance->m_verificationData.size() &&
+            memcmp(fbsCrypto->data()->data(), instance->m_verificationData.data(), instance->m_verificationData.size()))
+        {
+            fmt::print("[MSG] Crypto verified!\n");
+
+            // Build flatbuffer
+            flatbuffers::FlatBufferBuilder fbsBuilder;
+            auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessageDirect(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Acknowledge).Union();
+            auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
+            fbsBuilder.Finish(fbsMessage);
+
+            std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
+
+            sendPacket(instance, fbsBuilderSpan, true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+        }
+        else
+        {
+            char buf[50];
+            enet_peer_get_ip(instance->m_peer, buf, 50);
+
+            fmt::print(stderr, "Failed to verify with {}\n", buf);
+            m_server->tryQueueDisconnect(instance->m_peer, false, THORQ_DISCONNECT_REASON::CRYPTO_FAILED, m_tokenQueue);
+        }
+        break;
+    }
+    default:
+        fmt::print("[MSG] Crypto \?\?\?!\n");
+        return;
+    }
+}
+
+void ThorQ::MessageDispatcher::handleMessageFile(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsFile = reinterpret_cast<const ThorQ::Serialization::File::Message*>(body);
+
+    if (!fbsFile->Verify(fbsVerifier))
+    {
+        return;
+    }
+}
+
+void ThorQ::MessageDispatcher::handleMessageFriendRequest(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsAccount = reinterpret_cast<const ThorQ::Serialization::FriendRequest::Message*>(body);
+
+    if (!fbsAccount->Verify(fbsVerifier))
+    {
+        return;
+    }
+
+    /*
     std::vector<std::uint8_t> response;
 
     THORQ_COMMAND_ID cmd;
@@ -651,10 +581,19 @@ void ThorQ::MessageDispatcher::handleMessageRelation(ThorQ::Instance* instance, 
         break;
     }
     }
-*/}
+    */
+}
 
-void ThorQ::MessageDispatcher::handleMessageSession(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
-{/*
+void ThorQ::MessageDispatcher::handleMessageGroup(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsGroup = reinterpret_cast<const ThorQ::Serialization::Group::Message*>(body);
+
+    if (!fbsGroup->Verify(fbsVerifier))
+    {
+        return;
+    }
+
+    /*
     std::vector<std::uint8_t> response;
 
     if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDIN)
@@ -669,34 +608,149 @@ void ThorQ::MessageDispatcher::handleMessageSession(ThorQ::Instance* instance, c
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGOUT, THORQ_PAYLOAD_ACK_NO_CHANGE);
         instance->packetSend(response, true, true);
     }
-*/}
+    */
+}
 
-void ThorQ::MessageDispatcher::handleMessageModeration(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
-{/*
-*/}
+void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsHeartbeat = reinterpret_cast<const ThorQ::Serialization::Heartbeat::Message*>(body);
 
-void ThorQ::MessageDispatcher::handleMessageAnnouncement(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
-{/*
-*/}
+    if (!fbsHeartbeat->Verify(fbsVerifier))
+    {
+        return;
+    }
 
-void ThorQ::MessageDispatcher::handleMessageToy(ThorQ::Instance *instance, const std::vector<uint8_t> &message)
-{/*
+    std::uint32_t interval = m_server->heartbeatInterval();
 
-*/}
+    if (fbsHeartbeat->interval() != interval)
+    {
+        // Build flatbuffer
+        flatbuffers::FlatBufferBuilder fbsBuilder;
+        auto fbsHeartbeat = ThorQ::Serialization::Heartbeat::CreateMessage(fbsBuilder, interval).Union();
+        auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_heartbeat, fbsHeartbeat);
+        fbsBuilder.Finish(fbsMessage);
 
-void ThorQ::MessageDispatcher::handleMessageCollar(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
-{/*
-    if (instance->sessionState() == THORQ_STATE_SESSION_ACTIVE)
-        if (instance->partner() != nullptr)
-            instance->partner()->sendMessage(message, true, false);
-*/}
+        std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
 
-void ThorQ::MessageDispatcher::handleMessageAck(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message)
-{/*
-    (void)instance;
-    (void)message;
-    fmt::print("Unexpected ack message...\n");
-*/}
+        sendPacket(instance, fbsBuilderSpan, false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+    }
+}
+
+void ThorQ::MessageDispatcher::handleMessageModeration(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsModeration = reinterpret_cast<const ThorQ::Serialization::Moderation::Message*>(body);
+
+    if (!fbsModeration->Verify(fbsVerifier))
+    {
+        return;
+    }
+}
+
+void ThorQ::MessageDispatcher::handleMessageSystemID(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsSystemId = reinterpret_cast<const ThorQ::Serialization::SystemId::Message*>(body);
+
+    if (!fbsSystemId->Verify(fbsVerifier))
+    {
+        return;
+    }
+
+    if (fbsSystemId->cmd() != ThorQ::Serialization::SystemId::Command_Submit)
+    {
+        return;
+    }
+
+    std::span<std::uint8_t> systemid(const_cast<std::uint8_t*>(fbsSystemId->data()->data()), fbsSystemId->data()->size());
+
+    if (!ThorQ::SystemID::systemid_validate(systemid))
+    {
+        return;
+    }
+
+    std::string systemID = ThorQ::SystemID::systemid_to_string(systemid);
+
+    fmt::print("SystemID: %s\n", systemID);
+
+    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
+
+    if (!connection.isOpen())
+    {
+        return;
+    }
+
+    LSql::Query query = connection.query("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?1);"
+                                                  "SELECT banned_at FROM system_ids WHERE system_id = ?1;");
+    query.bind(1, systemID);
+
+    if (!query.step() || query.columnCount() == 0)
+    {
+        return;
+    }
+
+    bool isBanned = (query.column(0).type() == LSql::Type::Null);
+
+    if (isBanned)
+    {
+        m_server->tryQueueDisconnect(instance->m_peer, false, THORQ_DISCONNECT_REASON::BANNED, m_tokenQueue);
+        return;
+    }
+}
+
+void ThorQ::MessageDispatcher::handleMessageUser(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsUser = reinterpret_cast<const ThorQ::Serialization::User::Message*>(body);
+
+    if (!fbsUser->Verify(fbsVerifier))
+    {
+        return;
+    }
+}
+
+void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsVersion = reinterpret_cast<const ThorQ::Serialization::Version*>(body);
+
+    if (!fbsVersion->Verify(fbsVerifier))
+    {
+        return;
+    }
+
+    fmt::print("[MSG] Version!\n");
+
+    std::uint8_t app = fbsVersion->app();
+
+    const char* name;
+    ThorQ::Version currentVersion;
+    ThorQ::Version receivedVersion(fbsVersion);
+
+    switch ((THORQ_APP)app) {
+    case THORQ_APP::SERVER:
+        name = "Server";
+        currentVersion = THORQ_VERSION_SERVER;
+        break;
+    case THORQ_APP::CLIENT:
+        name = "Client";
+        currentVersion = THORQ_VERSION_CLIENT;
+        break;
+    case THORQ_APP::LINK:
+        name = "Link";
+        currentVersion = THORQ_VERSION_LINK;
+        break;
+    default:
+        fmt::print("Client expects invalid version {}[{}]\n", app, receivedVersion.toString());
+        return;
+    }
+
+    if (receivedVersion == currentVersion)
+    {
+        fmt::print("Client {}[{}] version matched!\n", name, receivedVersion.toString());
+    }
+    else
+    {
+        fmt::print("Client expects {0}[{1}], current is {0}[{2}]\nDisconnecting peer...\n", name, receivedVersion.toString(), currentVersion.toString());
+        m_server->tryQueueDisconnect(instance->m_peer, false, THORQ_DISCONNECT_REASON::VERSION_INCOMPATIBLE, m_tokenQueue);
+    }
+}
 
 void ThorQ::MessageDispatcher::sendPacket(ThorQ::Instance* instance, std::span<uint8_t> data, bool encrypt, uint32_t flags, THORQ_CHANNEL channel)
 {

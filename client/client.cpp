@@ -466,7 +466,7 @@ void Client::Service()
 
                 // Build flatbuffer
                 flatbuffers::FlatBufferBuilder fbsBuilder;
-                auto fbsHeartbeat = ThorQ::Serialization::CreateHeartbeat(fbsBuilder, Rtt()).Union();
+                auto fbsHeartbeat = ThorQ::Serialization::Heartbeat::CreateMessage(fbsBuilder, Rtt()).Union();
                 auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_heartbeat, fbsHeartbeat);
                 fbsBuilder.Finish(fbsMessage);
 
@@ -615,81 +615,52 @@ void Client::handleMessage(ENetPacket* packet)
         return;
 	}
 
-    const ThorQ::Serialization::Message* msg = flatbuffers::GetRoot<ThorQ::Serialization::Message>(message.data());
-    flatbuffers::Verifier verifier(message.data(), message.size());
+    const ThorQ::Serialization::Message* fbsMessage = flatbuffers::GetRoot<ThorQ::Serialization::Message>(message.data());
+    flatbuffers::Verifier fbsVerifier(message.data(), message.size());
 
-    if (!msg->Verify(verifier))
+    if (!fbsMessage->Verify(fbsVerifier))
     {
         qDebug() << "Received invlaid buffer";
         return;
     }
 
-    switch (msg->body_type()) {
-    case ThorQ::Serialization::Body_version:
-        qDebug() << "version";
-        handlePayloadVersion(msg->body_as_version(), verifier);
-        return;
+    switch (fbsMessage->body_type()) {
+    case ThorQ::Serialization::Body_account:
+        handleMessageAccount(fbsMessage->body(), fbsVerifier);
+        break;
     case ThorQ::Serialization::Body_heartbeat:
-        handlePayloadHeartbeat(msg->body_as_heartbeat(), verifier);
-        return;
+        handleMessageHeartbeat(fbsMessage->body(), fbsVerifier);
+        break;
+    case ThorQ::Serialization::Body_version:
+        handleMessageVersion(fbsMessage->body(), fbsVerifier);
+        break;
     case ThorQ::Serialization::Body_crypto:
-        qDebug() << "crypto";
-        handlePayloadCrypto(msg->body_as_crypto(), verifier);
-        return;/*
-	case THORQ_PAYLOAD_ID_SYSTEMID:
-		if (thorq_payload_systemid_is_valid(message))
-		{
-			handlePayloadSystemID(message);
-		}
-        return;
-	case THORQ_PAYLOAD_ID_ACCOUNT:
-		if (thorq_payload_account_is_valid(message))
-		{
-			handlePayloadAccount(message);
-		}
-		return;
-	case THORQ_PAYLOAD_ID_RELATION:
-		if (thorq_payload_relation_is_valid(message))
-		{
-			handlePayloadRelation(message);
-		}
-		return;
-	case THORQ_PAYLOAD_ID_SESSION:
-		if (thorq_payload_session_is_valid(message))
-		{
-			handlePayloadSession(message);
-		}
-		return;
-	case THORQ_PAYLOAD_ID_ROOM:
-		if (thorq_payload_room_is_valid(message))
-		{
-			handlePayloadRoom(message);
-		}
-		return;
-	case THORQ_PAYLOAD_ID_MODERATION:
-		if (thorq_payload_moderation_is_valid(message))
-		{
-			handlePayloadModeration(message);
-		}
-		return;
-	case THORQ_PAYLOAD_ID_ANNOUNCEMENT:
-		if (thorq_payload_announcement_is_valid(message))
-		{
-			handlePayloadAnnouncement(message);
-		}
-		return;
-	case THORQ_PAYLOAD_ID_COLLAR:
-		if (thorq_payload_collar_is_valid(message))
-		{
-			handlePayloadCollar(message);
-		}
-		return;
-	case THORQ_PAYLOAD_ID_ACK:
-		if (thorq_payload_ack_is_valid(message))
-		{
-			handlePayloadAck(message);
-		}
-        return;*/
+        handleMessageCrypto(fbsMessage->body(), fbsVerifier);
+        break;
+    case ThorQ::Serialization::Body_system_id:
+        handleMessageSystemID(fbsMessage->body(), fbsVerifier);
+        break;
+    case ThorQ::Serialization::Body_group:
+        handleMessageGroup(fbsMessage->body(), fbsVerifier);
+        break;
+    case ThorQ::Serialization::Body_collar:
+        handleMessageCollar(fbsMessage->body(), fbsVerifier);
+        break;
+    case ThorQ::Serialization::Body_moderation:
+        handleMessageModeration(fbsMessage->body(), fbsVerifier);
+        break;
+    case ThorQ::Serialization::Body_friend_request:
+        handleMessageFriendRequest(fbsMessage->body(), fbsVerifier);
+        break;
+    case ThorQ::Serialization::Body_file:
+        handleMessageFile(fbsMessage->body(), fbsVerifier);
+        break;
+    case ThorQ::Serialization::Body_user:
+        handleMessageUser(fbsMessage->body(), fbsVerifier);
+        break;
+    case ThorQ::Serialization::Body_announcement:
+        handleMessageAnnouncement(fbsMessage->body(), fbsVerifier);
+        break;
 	default:
         qWarning() << "Invalid packet type, packet might be corrupt";
         if (HwidState() != THORQ_STATE_HWID_OK)
@@ -701,45 +672,56 @@ void Client::handleMessage(ENetPacket* packet)
     }
 }
 
-void Client::handlePayloadVersion(const ThorQ::Serialization::Version* fbsVersion, flatbuffers::Verifier fbsVerifier)
+void Client::handleMessageVersion(const void* body, flatbuffers::Verifier fbsVerifier)
 {
-    if (fbsVersion->Verify(fbsVerifier))
-    {
-        ThorQ::Version version(fbsVersion);
+    auto fbsVersion = reinterpret_cast<const ThorQ::Serialization::Version*>(body);
 
-        switch ((THORQ_APP)fbsVersion->app()) {
-        case THORQ_APP::SERVER:
-            if (version > THORQ_VERSION_SERVER)
-            { qDebug() << tr("Server has updated from %1 to %2").arg(THORQ_VERSION_SERVER.toString().c_str()).arg(version.toString().c_str()); }
-            else if (version < THORQ_VERSION_SERVER)
-            { qDebug() << tr("Server had downdated from %1 to %2").arg(THORQ_VERSION_SERVER.toString().c_str()).arg(version.toString().c_str()); }
-            else
-            { qDebug() << tr("Server version compatible"); }
-            break;
-        case THORQ_APP::CLIENT:
-            if (version > THORQ_VERSION_CLIENT)
-            { qDebug() << tr("Client has updated from %1 to %2").arg(THORQ_VERSION_CLIENT.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("New update available!\nClient v%1").arg(version.toString().c_str())); }
-            else if (version < THORQ_VERSION_CLIENT)
-            { qDebug() << tr("Client has downgraded from %1 to %2").arg(THORQ_VERSION_CLIENT.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("Hello future-person!\nServer expects: Client v%1\nYou have: Client v%2").arg(version.toString().c_str()).arg(THORQ_VERSION_CLIENT.toString().c_str())); }
-            else
-            { qDebug() << tr("Client version compatible"); }
-            break;
-        case THORQ_APP::LINK:
-            if (version > THORQ_VERSION_LINK)
-            { qDebug() << tr("Protocol has updated from %1 to %2").arg(THORQ_VERSION_LINK.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("Version incompatible!\nPlease upgrade")); }
-            else if (version < THORQ_VERSION_LINK)
-            { qDebug() << tr("Protocol has downgraded from %1 to %2").arg(THORQ_VERSION_LINK.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("Version inompatible!\nPlease downgrade")); }
-            else
-            { qDebug() << tr("Protocol version compatible"); }
-            break;
-        default:
-            qDebug() << tr("Got ivalid version %1[%2]").arg(fbsVersion->app()).arg(version.toString().c_str());
-            return;
-        }
+    if (!fbsVersion->Verify(fbsVerifier))
+    {
+        return;
+    }
+
+    ThorQ::Version version(fbsVersion);
+
+    switch ((THORQ_APP)fbsVersion->app()) {
+    case THORQ_APP::SERVER:
+        if (version > THORQ_VERSION_SERVER)
+        { qDebug() << tr("Server has updated from %1 to %2").arg(THORQ_VERSION_SERVER.toString().c_str()).arg(version.toString().c_str()); }
+        else if (version < THORQ_VERSION_SERVER)
+        { qDebug() << tr("Server had downdated from %1 to %2").arg(THORQ_VERSION_SERVER.toString().c_str()).arg(version.toString().c_str()); }
+        else
+        { qDebug() << tr("Server version compatible"); }
+        break;
+    case THORQ_APP::CLIENT:
+        if (version > THORQ_VERSION_CLIENT)
+        { qDebug() << tr("Client has updated from %1 to %2").arg(THORQ_VERSION_CLIENT.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("New update available!\nClient v%1").arg(version.toString().c_str())); }
+        else if (version < THORQ_VERSION_CLIENT)
+        { qDebug() << tr("Client has downgraded from %1 to %2").arg(THORQ_VERSION_CLIENT.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("Hello future-person!\nServer expects: Client v%1\nYou have: Client v%2").arg(version.toString().c_str()).arg(THORQ_VERSION_CLIENT.toString().c_str())); }
+        else
+        { qDebug() << tr("Client version compatible"); }
+        break;
+    case THORQ_APP::LINK:
+        if (version > THORQ_VERSION_LINK)
+        { qDebug() << tr("Protocol has updated from %1 to %2").arg(THORQ_VERSION_LINK.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("Version incompatible!\nPlease upgrade")); }
+        else if (version < THORQ_VERSION_LINK)
+        { qDebug() << tr("Protocol has downgraded from %1 to %2").arg(THORQ_VERSION_LINK.toString().c_str()).arg(version.toString().c_str()); emit Error(tr("Version inompatible!\nPlease downgrade")); }
+        else
+        { qDebug() << tr("Protocol version compatible"); }
+        break;
+    default:
+        qDebug() << tr("Got ivalid version %1[%2]").arg(fbsVersion->app()).arg(version.toString().c_str());
+        return;
     }
 }
-void Client::handlePayloadHeartbeat(const ThorQ::Serialization::Heartbeat* fbsHeartbeat, flatbuffers::Verifier fbsVerifier)
+void Client::handleMessageHeartbeat(const void* body, flatbuffers::Verifier fbsVerifier)
 {
+    auto fbsHeartbeat = reinterpret_cast<const ThorQ::Serialization::Heartbeat::Message*>(body);
+
+    if (!fbsHeartbeat->Verify(fbsVerifier))
+    {
+        return;
+    }
+
     if (m_awaitingHeartbeat && fbsHeartbeat->Verify(fbsVerifier))
     {
         m_awaitingHeartbeat = false;
@@ -749,55 +731,54 @@ void Client::handlePayloadHeartbeat(const ThorQ::Serialization::Heartbeat* fbsHe
         SetRtt(m_heartbeatTimer->elapsed());
     }
 }
-void Client::handlePayloadCrypto(const ThorQ::Serialization::Crypto::Message* fbsCrypto, flatbuffers::Verifier fbsVerifier)
+
+void Client::handleMessageUser(const void *body, flatbuffers::Verifier fbsVerifier)
 {
-    if (fbsCrypto->Verify(fbsVerifier))
+    auto fbsUser = reinterpret_cast<const ThorQ::Serialization::User::Message*>(body);
+
+    if (!fbsUser->Verify(fbsVerifier))
     {
-        switch (fbsCrypto->type()) {
-        case ThorQ::Serialization::Crypto::MessageType_Establish:
+        return;
+    }
+}
+
+void Client::handleMessageFile(const void *body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsFile = reinterpret_cast<const ThorQ::Serialization::File::Message*>(body);
+
+    if (!fbsFile->Verify(fbsVerifier))
+    {
+        return;
+    }
+}
+
+void Client::handleMessageCrypto(const void* body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Crypto::Message*>(body);
+
+    if (!fbsCrypto->Verify(fbsVerifier))
+    {
+        return;
+    }
+
+    switch (fbsCrypto->type()) {
+    case ThorQ::Serialization::Crypto::MessageType_Establish:
+    {
+        qDebug() << "CRYPTO: establish";
+        SetCryptoState(THORQ_STATE_CRYPTO_ESTABLISHING);
+
+        if (m_crypto->ready()) m_crypto->reset();
+
+        std::array<std::uint8_t, ThorQ::Crypto::PublicKeyLen> data;
+        std::copy(fbsCrypto->data()->begin(), fbsCrypto->data()->end(), data.begin());
+
+        if (m_crypto->generateKeyPair() && m_crypto->agreeAsClient(data))
         {
-            qDebug() << "CRYPTO: establish";
-            SetCryptoState(THORQ_STATE_CRYPTO_ESTABLISHING);
-
-            if (m_crypto->ready()) m_crypto->reset();
-
-            std::array<std::uint8_t, ThorQ::Crypto::PublicKeyLen> data;
-            std::copy(fbsCrypto->data()->begin(), fbsCrypto->data()->end(), data.begin());
-
-            if (m_crypto->generateKeyPair() && m_crypto->agreeAsClient(data))
-            {
-                m_crypto->getPublicKey(data);
-
-                // Build flatbuffer
-                flatbuffers::FlatBufferBuilder fbsBuilder;
-                auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Establish, fbsBuilder.CreateVector(data.data(), data.size())).Union();
-                auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
-                fbsBuilder.Finish(fbsMessage);
-
-                // Calculate packet size
-                std::size_t size = ThorQ::calculatePacketSize(fbsBuilder.GetSize(), false);
-
-                // Send it!
-                ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
-                ThorQ::packetEncode(packet, fbsBuilder.GetBufferSpan());
-                packetSend(packet, THORQ_CHANNEL::MAIN);
-            }
-            else
-            {
-                m_crypto->reset();
-                SetCryptoState(THORQ_STATE_CRYPTO_NONE);
-            }
-            break;
-        }
-        case ThorQ::Serialization::Crypto::MessageType_Verify:
-        {
-            qDebug() << "CRYPTO: verify";
-            SetCryptoState(THORQ_STATE_CRYPTO_VERIFYING);
+            m_crypto->getPublicKey(data);
 
             // Build flatbuffer
             flatbuffers::FlatBufferBuilder fbsBuilder;
-            auto fbsVector  = fbsBuilder.CreateVector(fbsCrypto->data()->data(), fbsCrypto->data()->size());
-            auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Establish, fbsVector).Union();
+            auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Establish, fbsBuilder.CreateVector(data.data(), data.size())).Union();
             auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
             fbsBuilder.Finish(fbsMessage);
 
@@ -806,24 +787,59 @@ void Client::handlePayloadCrypto(const ThorQ::Serialization::Crypto::Message* fb
 
             // Send it!
             ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
-            ThorQ::packetEncode(packet, fbsBuilder.GetBufferSpan(), m_crypto);
+            ThorQ::packetEncode(packet, fbsBuilder.GetBufferSpan());
             packetSend(packet, THORQ_CHANNEL::MAIN);
-            break;
         }
-        case ThorQ::Serialization::Crypto::MessageType_Acknowledge:
+        else
         {
-            qDebug() << "CRYPTO: ack";
-            SetCryptoState(THORQ_STATE_CRYPTO_ACTIVE);
-            break;
+            m_crypto->reset();
+            SetCryptoState(THORQ_STATE_CRYPTO_NONE);
         }
-        default:
-            qDebug() << "CRYPTO: Unexpected message:" << fbsCrypto->type();
-            return;
-        }
+        break;
+    }
+    case ThorQ::Serialization::Crypto::MessageType_Verify:
+    {
+        qDebug() << "CRYPTO: verify";
+        SetCryptoState(THORQ_STATE_CRYPTO_VERIFYING);
+
+        // Build flatbuffer
+        flatbuffers::FlatBufferBuilder fbsBuilder;
+        auto fbsVector  = fbsBuilder.CreateVector(fbsCrypto->data()->data(), fbsCrypto->data()->size());
+        auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Establish, fbsVector).Union();
+        auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
+        fbsBuilder.Finish(fbsMessage);
+
+        // Calculate packet size
+        std::size_t size = ThorQ::calculatePacketSize(fbsBuilder.GetSize(), false);
+
+        // Send it!
+        ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
+        ThorQ::packetEncode(packet, fbsBuilder.GetBufferSpan(), m_crypto);
+        packetSend(packet, THORQ_CHANNEL::MAIN);
+        break;
+    }
+    case ThorQ::Serialization::Crypto::MessageType_Acknowledge:
+    {
+        qDebug() << "CRYPTO: ack";
+        SetCryptoState(THORQ_STATE_CRYPTO_ACTIVE);
+        break;
+    }
+    default:
+        qDebug() << "CRYPTO: Unexpected message:" << fbsCrypto->type();
+        return;
     }
 }
-void Client::handlePayloadSystemID(std::vector<std::uint8_t>& payload)
-{/*
+
+void Client::handleMessageSystemID(const void* body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsSystemId = reinterpret_cast<const ThorQ::Serialization::SystemId::Message*>(body);
+
+    if (!fbsSystemId->Verify(fbsVerifier))
+    {
+        return;
+    }
+
+    /*
     std::vector<std::uint8_t> response;
 
 	THORQ_PAYLOAD_SYSTEMID cmd;
@@ -843,8 +859,16 @@ void Client::handlePayloadSystemID(std::vector<std::uint8_t>& payload)
 		break;
     }*/
 }
-void Client::handlePayloadAccount(std::vector<std::uint8_t>& payload)
-{/*
+void Client::handleMessageAccount(const void* body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsAccount = reinterpret_cast<const ThorQ::Serialization::Account::Message*>(body);
+
+    if (!fbsAccount->Verify(fbsVerifier))
+    {
+        return;
+    }
+
+    /*
 	THORQ_PAYLOAD_ACCOUNT cmd;
 	thorq_payload_account_get_cmd(payload, cmd);
 
@@ -857,25 +881,49 @@ void Client::handlePayloadAccount(std::vector<std::uint8_t>& payload)
 		break;
 	}
 
-    emit Announcement("Announcement!");*/
+    emit Announcement("Announcement!");
+    */
 }
 
-void Client::handlePayloadRelation(std::vector<uint8_t> &payload)
+void Client::handleMessageFriendRequest(const void* body, flatbuffers::Verifier fbsVerifier)
 {
+    auto fbsAccount = reinterpret_cast<const ThorQ::Serialization::FriendRequest::Message*>(body);
 
+    if (!fbsAccount->Verify(fbsVerifier))
+    {
+        return;
+    }
 }
 
-void Client::handlePayloadSession(std::vector<uint8_t> &payload)
+void Client::handleMessageGroup(const void* body, flatbuffers::Verifier fbsVerifier)
 {
+    auto fbsGroup = reinterpret_cast<const ThorQ::Serialization::Group::Message*>(body);
 
+    if (!fbsGroup->Verify(fbsVerifier))
+    {
+        return;
+    }
 }
 
-void Client::handlePayloadModeration(std::vector<uint8_t> &payload)
+void Client::handleMessageModeration(const void* body, flatbuffers::Verifier fbsVerifier)
 {
+    auto fbsModeration = reinterpret_cast<const ThorQ::Serialization::Moderation::Message*>(body);
 
+    if (!fbsModeration->Verify(fbsVerifier))
+    {
+        return;
+    }
 }
-void Client::handlePayloadAnnouncement(std::vector<std::uint8_t>& payload)
-{/*
+void Client::handleMessageAnnouncement(const void* body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsAnnouncement = reinterpret_cast<const ThorQ::Serialization::Announcement::Message*>(body);
+
+    if (!fbsAnnouncement->Verify(fbsVerifier))
+    {
+        return;
+    }
+
+    /*
 	QString message;
     THORQ_PAYLOAD_ANNOUNCEMENT_TYPE type;
     THORQ_PAYLOAD_ANNOUNCEMENT_REASON reason;
@@ -908,10 +956,19 @@ void Client::handlePayloadAnnouncement(std::vector<std::uint8_t>& payload)
         break;
     }
 
-    emit Announcement(QString("[%1] %2 announcement:\n%3").arg(type_str).arg(reason_str).arg(message));*/
+    emit Announcement(QString("[%1] %2 announcement:\n%3").arg(type_str).arg(reason_str).arg(message));
+    */
 }
-void Client::handlePayloadCollar(std::vector<std::uint8_t> &payload)
-{/*
+void Client::handleMessageCollar(const void* body, flatbuffers::Verifier fbsVerifier)
+{
+    auto fbsCollar = reinterpret_cast<const ThorQ::Serialization::Collar::Message*>(body);
+
+    if (!fbsCollar->Verify(fbsVerifier))
+    {
+        return;
+    }
+
+    /*
 	quint8 flags, shockVal, vibrateVal, beepVal, autoVal;
     thorq_payload_collar_unpack(payload, flags, shockVal, vibrateVal, beepVal, autoVal);
 
@@ -930,7 +987,8 @@ void Client::handlePayloadCollar(std::vector<std::uint8_t> &payload)
 	else if ((flags & THORQ_COLLAR_FLAG_AUTO) != 0)
 	{
 		emit ReceivedAuto(autoVal, shockVal, vibrateVal, beepVal);
-    }*/
+    }
+    */
 }
 
 ENetPacket* Client::packetEncode(const std::span<std::uint8_t> data, bool encrypt, bool reliable)

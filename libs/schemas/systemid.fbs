@@ -5,7 +5,7 @@ enum Command : ubyte {
   Submit
 }
 
-table SystemId {
+table Message {
   cmd : Command;
-  data : [ byte ];
+  data : [ ubyte ];
 }

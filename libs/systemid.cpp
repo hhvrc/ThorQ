@@ -78,7 +78,7 @@ std::vector<std::uint8_t> ThorQ::SystemID::systemid_generate()
 	return sys_id;
 }
 
-bool ThorQ::SystemID::systemid_validate(const std::vector<std::uint8_t>& sys_id)
+bool ThorQ::SystemID::systemid_validate(std::span<std::uint8_t> sys_id)
 {
     if (sys_id.size() <= (int)std::size(sysHid))
 		return false;
@@ -95,7 +95,7 @@ bool ThorQ::SystemID::systemid_validate(const std::vector<std::uint8_t>& sys_id)
     return checkSum == ntohs(hid[4]);
 }
 
-std::string ThorQ::SystemID::systemid_to_string(const std::vector<std::uint8_t>& bin_id)
+std::string ThorQ::SystemID::systemid_to_string(std::span<std::uint8_t> bin_id)
 {
     std::string str_id;
 

@@ -1,5 +1,5 @@
-namespace ThorQ.Serialization;
+namespace ThorQ.Serialization.Heartbeat;
 
-table Heartbeat {
+table Message {
   interval : uint;
 }

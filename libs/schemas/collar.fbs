@@ -1,6 +1,6 @@
 namespace ThorQ.Serialization.Collar;
 
-table Command {
+table Message {
   flags : ubyte;
   shock : ubyte;
   vibration : ubyte;

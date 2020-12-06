@@ -1,9 +1,10 @@
 #ifndef SYSTEMID_H
 #define SYSTEMID_H
 
-#include <cstdint>
+#include <span>
 #include <vector>
 #include <string>
+#include <cstdint>
 
 namespace ThorQ {
 namespace SystemID {
@@ -19,14 +20,14 @@ std::vector<std::uint8_t> systemid_generate();
  * @param sys_id
  * @return
  */
-bool systemid_validate(const std::vector<std::uint8_t>& sys_id);
+bool systemid_validate(std::span<std::uint8_t> sys_id);
 
 /**
  * @brief systemid_to_string
  * @param sys_id
  * @return
  */
-std::string systemid_to_string(const std::vector<std::uint8_t>& sys_id);
+std::string systemid_to_string(std::span<std::uint8_t> sys_id);
 
 namespace Internal {
 /**

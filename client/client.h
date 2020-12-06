@@ -328,16 +328,18 @@ private slots:
 
     /// These should be self-explanatory
     void handleMessage(ENetPacket* packet);
-    void handlePayloadVersion(const ThorQ::Serialization::Version* table, flatbuffers::Verifier verifier);
-    void handlePayloadHeartbeat(const ThorQ::Serialization::Heartbeat* table, flatbuffers::Verifier verifier);
-    void handlePayloadCrypto(const ThorQ::Serialization::Crypto::Message* table, flatbuffers::Verifier verifier);
-    void handlePayloadSystemID(std::vector<std::uint8_t>& payload);
-	void handlePayloadAccount(std::vector<std::uint8_t>& payload);
-	void handlePayloadRelation(std::vector<std::uint8_t>& payload);
-    void handlePayloadSession(std::vector<std::uint8_t>& payload);
-	void handlePayloadModeration(std::vector<std::uint8_t>& payload);
-	void handlePayloadAnnouncement(std::vector<std::uint8_t>& payload);
-    void handlePayloadCollar(std::vector<std::uint8_t>& payload);
+    void handleMessageVersion(const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageHeartbeat(const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageUser(const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageFile(const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageCrypto(const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageSystemID(const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageAccount(const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageFriendRequest(const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageGroup(const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageModeration(const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageAnnouncement(const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageCollar(const void* body, flatbuffers::Verifier fbsVerifier);
 
     ENetPacket* packetEncode(const std::span<std::uint8_t> data, bool encrypt = true, bool reliable = true);
     bool packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& payload);

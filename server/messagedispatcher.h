@@ -29,18 +29,17 @@ private:
     void handleEventDisconnect(const ENetEvent& event);
     void handleEventTimeout(const ENetEvent& event);
 
-    void handleMessageVersion(ThorQ::Instance* instance, const ThorQ::Serialization::Version* fbsVersion, flatbuffers::Verifier fbsVerifier);
-    void handleMessageHeartbeat(ThorQ::Instance* instance, const ThorQ::Serialization::Heartbeat* fbsHeartbeat, flatbuffers::Verifier fbsVerifier);
-    void handleMessageCrypto(ThorQ::Instance* instance, const ThorQ::Serialization::Crypto::Message* fbsCrypto, flatbuffers::Verifier fbsVerifier);
-    void handleMessageSystemID(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
-    void handleMessageAccount(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
-    void handleMessageRelation(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
-    void handleMessageSession(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
-    void handleMessageModeration(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
-    void handleMessageAnnouncement(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
-    void handleMessageToy(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
-    void handleMessageCollar(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
-    void handleMessageAck(ThorQ::Instance* instance, const std::vector<std::uint8_t>& message);
+    void handleMessageVersion(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageHeartbeat(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageUser(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageFile(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageCrypto(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageSystemID(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageAccount(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageFriendRequest(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageGroup(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageModeration(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageCollar(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
 
     void sendPacket(ThorQ::Instance* instance, std::span<uint8_t> data, bool encrypt, uint32_t flags, THORQ_CHANNEL channel);
 

@@ -1,23 +1,31 @@
 include "account.fbs";
 include "announcement.fbs";
+include "collar.fbs";
 include "crypto.fbs";
-include "files.fbs";
+include "file.fbs";
+include "friendrequest.fbs";
+include "group.fbs";
 include "heartbeat.fbs";
 include "moderation.fbs";
-include "group.fbs";
 include "systemid.fbs";
-include "uuid.fbs";
+include "user.fbs";
 include "version.fbs";
 
 namespace ThorQ.Serialization;
 
 union Body {
-  version : Version,
-  heartbeat : Heartbeat,
   account : Account.Message,
-  announcement : Announcement,
+  announcement : Announcement.Message,
+  collar : Collar.Message,
   crypto : Crypto.Message,
+  file : File.Message,
+  friend_request : FriendRequest.Message,
+  group : Group.Message,
+  heartbeat : Heartbeat.Message,
   moderation : Moderation.Message,
+  system_id : SystemId.Message,
+  user : User.Message,
+  version : Version
 }
 
 table Message {

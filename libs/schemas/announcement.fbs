@@ -1,6 +1,6 @@
-namespace ThorQ.Serialization;
+namespace ThorQ.Serialization.Announcement;
 
-table Announcement {
+table Message {
   announcement_type : ubyte;
   message : string;
 }
