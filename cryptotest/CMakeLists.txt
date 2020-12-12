@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(project KeyGen)
+set(project CryptoTest)
 project(
 	${project}
-	DESCRIPTION "Key pair generator"
+        DESCRIPTION "Test of cryptography classes"
 	LANGUAGES CXX
 )
 
