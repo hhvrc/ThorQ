@@ -366,7 +366,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
         fmt::print("[MSG] Crypto verify!\n");
 
         if (fbsCrypto->data()->size() == instance->m_verificationData.size() &&
-            memcmp(fbsCrypto->data()->data(), instance->m_verificationData.data(), instance->m_verificationData.size()))
+            memcmp(fbsCrypto->data()->data(), instance->m_verificationData.data(), instance->m_verificationData.size()) == 0)
         {
             fmt::print("[MSG] Crypto verified!\n");
 
