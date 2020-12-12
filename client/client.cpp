@@ -805,7 +805,7 @@ void Client::handleMessageCrypto(const void* body, flatbuffers::Verifier fbsVeri
         // Build flatbuffer
         flatbuffers::FlatBufferBuilder fbsBuilder;
         auto fbsVector  = fbsBuilder.CreateVector(fbsCrypto->data()->data(), fbsCrypto->data()->size());
-        auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Establish, fbsVector).Union();
+        auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Verify, fbsVector).Union();
         auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
         fbsBuilder.Finish(fbsMessage);
 
