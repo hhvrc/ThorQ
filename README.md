@@ -1,4 +1,4 @@
-# CollarControl
+# ThorQ
 
 Server and Client to control a shock-collar remotely from anywhere in the world.
 
@@ -9,8 +9,8 @@ Server and Client to control a shock-collar remotely from anywhere in the world.
 ## Setup
 ### Linux
 ```console
-$ git clone https://github.com/hhvrc/CollarControl.git
-$ cd CollarControl
+$ git clone https://github.com/hhvrc/ThorQ.git
+$ cd ThorQ
 $ git submodule update --init --recursive
 $ mkdir build
 $ cd build
@@ -19,8 +19,8 @@ $ make -j$((`nproc`+1))
 ```
 ### Windows
 ```powershell
-> git clone https://github.com/hhvrc/CollarControl.git
-> cd CollarControl
+> git clone https://github.com/hhvrc/ThorQ.git
+> cd ThorQ
 > git submodule update --init --recursive
 ```
 Open Visual Studio 2019
