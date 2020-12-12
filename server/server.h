@@ -55,8 +55,9 @@ protected:
     enum class DisconnectType : std::uint8_t
     {
         None,
+        Now,
         Later,
-        Force
+        Request
     };
 
     struct QueuedEvent

@@ -276,7 +276,7 @@ bool ThorQ::Server::tryQueueDisconnect(ENetPeer* peer, bool force, THORQ_DISCONN
     return m_txQueue.enqueue(token, Server::QueuedEvent{ peer,
                                                          nullptr,
                                                          THORQ_CHANNEL::_INVALID,
-                                                         force ? DisconnectType::Force : DisconnectType::Later,
+                                                         force ? DisconnectType::Now : DisconnectType::Later,
                                                          reason
                                                         });
 }
@@ -303,7 +303,25 @@ void ThorQ::Server::run()
         {
             if (queuedMessage.peer != nullptr)
             {
-                enet_peer_send(queuedMessage.peer, (std::uint8_t)queuedMessage.channel, queuedMessage.packet);
+                if (queuedMessage.packet != nullptr && queuedMessage.channel != THORQ_CHANNEL::_INVALID)
+                {
+                    enet_peer_send(queuedMessage.peer, (std::uint8_t)queuedMessage.channel, queuedMessage.packet);
+                }
+
+                switch (queuedMessage.disconnect) {
+                case ThorQ::Server::DisconnectType::Now:
+                    enet_peer_disconnect_now(queuedMessage.peer, (std::uint32_t)queuedMessage.reason);
+                    break;
+                case ThorQ::Server::DisconnectType::Later:
+                    enet_peer_disconnect_later(queuedMessage.peer, (std::uint32_t)queuedMessage.reason);
+                    break;
+                case ThorQ::Server::DisconnectType::Request:
+                    enet_peer_disconnect(queuedMessage.peer, (std::uint32_t)queuedMessage.reason);
+                    break;
+                case ThorQ::Server::DisconnectType::None:
+                default:
+                    break;
+                }
             }
             else
             {
