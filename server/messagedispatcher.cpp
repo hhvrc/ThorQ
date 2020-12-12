@@ -217,28 +217,39 @@ void ThorQ::MessageDispatcher::handleMessageAccount(ThorQ::Instance *instance, c
         return;
     }
 
-    /*
-    std::vector<std::uint8_t> response;
-
-    switch (thorq_payload_account_get_cmd(message)) {
-    case THORQ_PAYLOAD_ACCOUNT_REGISTER:
-        std::string username, password;
-        thorq_payload_account_register_unpack(message, username, password);
+    switch (fbsAccount->body_type())
+    {
+    case ThorQ::Serialization::Account::Body_get_account:
         break;
-    case THORQ_PAYLOAD_ACCOUNT_DELETE:
-        std::string username, password;
-        thorq_payload_account_login_unpack(message, username, password);
+    case ThorQ::Serialization::Account::Body_account:
         break;
-    case THORQ_PAYLOAD_ACCOUNT_LOGIN:
-        std::string username, password;
-        thorq_payload_account_login_unpack(message, username, password);
+    case ThorQ::Serialization::Account::Body_get_auth_token:
         break;
-    case THORQ_PAYLOAD_ACCOUNT_LOGIN_AUTHTOKEN:
-    case THORQ_PAYLOAD_ACCOUNT_LOGOUT:
+    case ThorQ::Serialization::Account::Body_login:
+        break;
+    case ThorQ::Serialization::Account::Body_register_:
+        break;
+    case ThorQ::Serialization::Account::Body_recover:
+        break;
+    case ThorQ::Serialization::Account::Body_delete_:
+        break;
+    case ThorQ::Serialization::Account::Body_logout:
+        break;
+    case ThorQ::Serialization::Account::Body_generate_seed:
+        break;
+    case ThorQ::Serialization::Account::Body_seed_generated:
+        break;
+    case ThorQ::Serialization::Account::Body_set_username:
+        break;
+    case ThorQ::Serialization::Account::Body_set_password:
+        break;
+    case ThorQ::Serialization::Account::Body_set_email:
+        break;
+    case ThorQ::Serialization::Account::Body_set_image:
+        break;
     default:
         break;
-    }
-
+    }/*
     std::string username, password;
     thorq_payload_login_get_username(message, username);
     thorq_payload_login_get_password(message, password);
@@ -271,8 +282,7 @@ void ThorQ::MessageDispatcher::handleMessageAccount(ThorQ::Instance *instance, c
     {
         thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN, THORQ_PAYLOAD_ACK_NO_CHANGE);
         instance->packetSend(response, true, true);
-    }
-    */
+    }*/
 }
 
 void ThorQ::MessageDispatcher::handleMessageCollar(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
@@ -328,7 +338,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
 
         if (fbsCrypto->data()->size() != ThorQ::Crypto::PublicKeyLen)
         {
-            fmt::print("Got key with invalid length!");
+            fmt::print("Got key with invalid length!\n");
             return;
         }
 
