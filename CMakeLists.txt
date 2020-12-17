@@ -52,19 +52,32 @@ endif()
 # -------------------------------
 
 # --- Set compiler flags ---
+# Debugging, and warnings
 add_definitions(-DBUILDER_STATIC_DEFINE)
 if(NOT ${CMAKE_BUILD_TYPE} MATCHES "Release")
     add_definitions(-DDEBUG)
+
+    if(MSVC)
+        # Remove all previously declared flags before adding new ones
+        string(REGEX REPLACE "[/-]W[0-4] ?" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+
+        # Verboseeeee
+        string(APPEND CMAKE_CXX_FLAGS " -Wall")
+    else()
+        # Verboseeeee
+        string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -pedantic -Wformat=2 -Wsign-conversion -Wundef -Wredundant-decls -Wwrite-strings -Wpointer-arith -Wcast-qual -Wmissing-include-dirs -Wcast-align -Wctor-dtor-privacy -Wdisabled-optimization -Winvalid-pch -Woverloaded-virtual -Wconversion -Wswitch-enum -Wno-ctor-dtor-privacy -Wno-format-nonliteral -Wnoexcept -Wno-dangling-else -Wno-unused-local-typedefs -Wdouble-promotion -Wtrampolines -Wzero-as-null-pointer-constant -Wuseless-cast -Wvector-operation-performance -Wsized-deallocation -Wshadow -Wshift-overflow=2 -Wnull-dereference -Wduplicated-cond")
+    endif()
 endif()
+
+# Optimization and compiler specific fixes
 if(MSVC)
     # Remove all previously declared flags before adding new ones
-    string(REGEX REPLACE "[/-]W[0-4] ?" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
     string(REGEX REPLACE "[/-][ML][DT]d? ?" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
     string(REGEX REPLACE "[/-]O[12bdgistxy] ?" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
     string(REGEX REPLACE "[/-]DEBUG:[a-zA-Z]+ ?" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
     # Enable max warnings (But dont spam the console)
-    string(APPEND CMAKE_CXX_FLAGS " -Wall -DNOMINMAX -wo9025 -wo5054")
+    string(APPEND CMAKE_CXX_FLAGS " -DNOMINMAX -wo9025 -wo5054")
 
     if(${CMAKE_BUILD_TYPE} MATCHES "Release")
 	string(APPEND CMAKE_CXX_FLAGS " -MT -DEBUG:NONE -O2")
@@ -72,8 +85,8 @@ if(MSVC)
 	string(APPEND CMAKE_CXX_FLAGS " -MTd -DEBUG:FULL -Od")
     endif()
 else()
-    # 64-bit, threading, and verbose
-    string(APPEND CMAKE_CXX_FLAGS " -m64 -pthread -Wall -Wextra -pedantic -Wformat=2 -Wsign-conversion -Wundef -Wredundant-decls -Wwrite-strings -Wpointer-arith -Wcast-qual -Wmissing-include-dirs -Wcast-align -Wctor-dtor-privacy -Wdisabled-optimization -Winvalid-pch -Woverloaded-virtual -Wconversion -Wswitch-enum -Wno-ctor-dtor-privacy -Wno-format-nonliteral -Wnoexcept -Wno-dangling-else -Wno-unused-local-typedefs -Wdouble-promotion -Wtrampolines -Wzero-as-null-pointer-constant -Wuseless-cast -Wvector-operation-performance -Wsized-deallocation -Wshadow -Wshift-overflow=2 -Wnull-dereference -Wduplicated-cond")
+    # 64-bit, and threading
+    string(APPEND CMAKE_CXX_FLAGS " -m64 -pthread")
 
     if(${CMAKE_BUILD_TYPE} MATCHES "Release")
 	string(APPEND CMAKE_CXX_FLAGS " -fstack-protector -O3 -g0 -s")
