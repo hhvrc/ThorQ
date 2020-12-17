@@ -88,6 +88,7 @@ private:
      * @brief reset, but without locking the shared mutex
      */
     void reset_nolock();
+    void reset_shared_nolock();
 
     enum class State : std::uint8_t
     {

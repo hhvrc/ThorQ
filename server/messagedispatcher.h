@@ -41,7 +41,7 @@ private:
     void handleMessageModeration(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
     void handleMessageCollar(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
 
-    void sendPacket(ThorQ::Instance* instance, std::span<uint8_t> data, bool encrypt, uint32_t flags, THORQ_CHANNEL channel);
+    void sendPacket(ThorQ::Instance* instance, std::span<std::uint8_t> data, bool encrypt, std::uint32_t flags, THORQ_CHANNEL channel);
 
     Server* m_server;
     std::thread m_thread;

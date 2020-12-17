@@ -80,24 +80,38 @@ void ThorQ::MessageDispatcher::handleEventConnection(const ENetEvent& event)
 
     ThorQ::Instance* instance = new ThorQ::Instance(event.peer);
 
-    std::vector<std::uint8_t> message;
-/*
-    flatbuffers::FlatBufferBuilder builder;
-    ThorQ::Serialization::VersionBuilder versionBuilder(builder);
-    versionBuilder.
+    flatbuffers::FlatBufferBuilder fbsBuilder;
+    flatbuffers::Offset<ThorQ::Serialization::Version> fbsVersion;
+    flatbuffers::Offset<ThorQ::Serialization::Heartbeat::Message> fbsHeartbeat;
+    flatbuffers::Offset<ThorQ::Serialization::Message> fbsMessage;
 
-    thorq_payload_version_pack(message, THORQ_APP_LINK, THORQ_VERSION_LINK);
-    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
+    // Link version
+    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::LINK, THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH);
+    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
+    fbsBuilder.Finish(fbsMessage);
+    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
 
-    thorq_payload_version_pack(message, THORQ_APP_CLIENT, THORQ_VERSION_CLIENT);
-    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
+    // Client version
+    fbsBuilder.Clear();
+    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::CLIENT, THORQ_VERSION_CLIENT_MAJOR, THORQ_VERSION_CLIENT_MINOR, THORQ_VERSION_CLIENT_PATCH);
+    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
+    fbsBuilder.Finish(fbsMessage);
+    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
 
-    thorq_payload_version_pack(message, THORQ_APP_SERVER, THORQ_VERSION_SERVER);
-    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
+    // Server version
+    fbsBuilder.Clear();
+    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::SERVER, THORQ_VERSION_SERVER_MAJOR, THORQ_VERSION_SERVER_MINOR, THORQ_VERSION_SERVER_PATCH);
+    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
+    fbsBuilder.Finish(fbsMessage);
+    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
 
-    thorq_payload_heartbeat_pack(message, 500); // TODO: get from config
-    instance->packetSend(message, THORQ_CHANNEL_MAIN, false, true);
-*/
+    // Initial heartbeat
+    fbsBuilder.Clear();
+    fbsHeartbeat = ThorQ::Serialization::Heartbeat::CreateMessage(fbsBuilder, m_server->heartbeatInterval());
+    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_heartbeat, fbsHeartbeat.Union());
+    fbsBuilder.Finish(fbsMessage);
+    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+
     char addr[40];
     if (enet_peer_get_ip(event.peer, addr, 40) == 0)
     {
@@ -327,9 +341,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
         auto fbsMessage       = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsEstablish);
         fbsBuilder.Finish(fbsMessage);
 
-        std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
-
-        sendPacket(instance, fbsBuilderSpan, false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+        sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
         break;
     }
     case ThorQ::Serialization::Crypto::MessageType_Establish:
@@ -358,9 +370,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
             auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
             fbsBuilder.Finish(fbsMessage);
 
-            std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
-
-            sendPacket(instance, fbsBuilderSpan, true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+            sendPacket(instance, fbsBuilder.GetBufferSpan(), true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
         }
         else
         {
@@ -386,9 +396,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
             auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
             fbsBuilder.Finish(fbsMessage);
 
-            std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
-
-            sendPacket(instance, fbsBuilderSpan, true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+            sendPacket(instance, fbsBuilder.GetBufferSpan(), true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
         }
         else
         {
@@ -640,9 +648,7 @@ void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance *instance,
         auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_heartbeat, fbsHeartbeat);
         fbsBuilder.Finish(fbsMessage);
 
-        std::span<std::uint8_t> fbsBuilderSpan(fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize());
-
-        sendPacket(instance, fbsBuilderSpan, false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+        sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
     }
 }
 
@@ -762,7 +768,7 @@ void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance *instance, c
     }
 }
 
-void ThorQ::MessageDispatcher::sendPacket(ThorQ::Instance* instance, std::span<uint8_t> data, bool encrypt, uint32_t flags, THORQ_CHANNEL channel)
+void ThorQ::MessageDispatcher::sendPacket(ThorQ::Instance* instance, std::span<std::uint8_t> data, bool encrypt, std::uint32_t flags, THORQ_CHANNEL channel)
 {
     // Get packet
     ENetPacket* packet = ThorQ::Memory::packetGet(ThorQ::calculatePacketSize(data.size(), encrypt));

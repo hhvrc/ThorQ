@@ -8,6 +8,7 @@
 
 void ThorQ::Crypto::RandomizeBytes(std::span<std::uint8_t> bytes)
 {
+    assert(sodium_init() >= 0);
     randombytes_buf(bytes.data(), bytes.size());
 }
 
@@ -24,7 +25,6 @@ ThorQ::Crypto::Crypto()
 
 ThorQ::Crypto::~Crypto()
 {
-    reset();
 }
 
 void ThorQ::Crypto::reset()
@@ -42,8 +42,10 @@ bool ThorQ::Crypto::generateKeyPair()
 {
     std::unique_lock l(m_modlock);
 
+    reset_shared_nolock();
     if (crypto_kx_keypair(m_pk.data(), m_sk.data()) != 0)
     {
+        reset_nolock();
         return false;
     }
 
@@ -74,6 +76,7 @@ bool ThorQ::Crypto::agreeAsServer(const std::span<std::uint8_t, Crypto::PublicKe
 
     if (crypto_kx_server_session_keys(m_rx.data(), m_tx.data(), m_pk.data(), m_sk.data(), foreignKey.data()) != 0)
     {
+        reset_shared_nolock();
         return false;
     }
 
@@ -91,6 +94,7 @@ bool ThorQ::Crypto::agreeAsClient(const std::span<std::uint8_t, Crypto::PublicKe
 
     if (crypto_kx_client_session_keys(m_rx.data(), m_tx.data(), m_pk.data(), m_sk.data(), foreignKey.data()) != 0)
     {
+        reset_shared_nolock();
         return false;
     }
 
@@ -138,9 +142,14 @@ bool ThorQ::Crypto::decrypt(std::span<std::uint8_t> dataOut, const std::span<std
 
 void ThorQ::Crypto::reset_nolock()
 {
-    m_state = State::Uninitialized;
     std::memset(m_pk.data(), 0, m_pk.size());
     std::memset(m_sk.data(), 0, m_sk.size());
+    reset_shared_nolock();
+    m_state = State::Uninitialized;
+}
+
+void ThorQ::Crypto::reset_shared_nolock()
+{
     std::memset(m_rx.data(), 0, m_rx.size());
     std::memset(m_tx.data(), 0, m_tx.size());
 }

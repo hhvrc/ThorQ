@@ -767,34 +767,41 @@ void Client::handleMessageCrypto(const void* body, flatbuffers::Verifier fbsVeri
         qDebug() << "CRYPTO: establish";
         SetCryptoState(THORQ_STATE_CRYPTO_ESTABLISHING);
 
-        if (m_crypto->ready()) m_crypto->reset();
+        m_crypto->reset();
 
-        std::array<std::uint8_t, ThorQ::Crypto::PublicKeyLen> data;
-        std::copy(fbsCrypto->data()->begin(), fbsCrypto->data()->end(), data.begin());
-
-        if (m_crypto->generateKeyPair() && m_crypto->agreeAsClient(data))
+        if (fbsCrypto->data()->size() != ThorQ::Crypto::PublicKeyLen || !m_crypto->generateKeyPair())
         {
-            m_crypto->getPublicKey(data);
-
-            // Build flatbuffer
-            flatbuffers::FlatBufferBuilder fbsBuilder;
-            auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Establish, fbsBuilder.CreateVector(data.data(), data.size())).Union();
-            auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
-            fbsBuilder.Finish(fbsMessage);
-
-            // Calculate packet size
-            std::size_t size = ThorQ::calculatePacketSize(fbsBuilder.GetSize(), false);
-
-            // Send it!
-            ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
-            ThorQ::packetEncode(packet, fbsBuilder.GetBufferSpan());
-            packetSend(packet, THORQ_CHANNEL::MAIN);
+            SetCryptoState(THORQ_STATE_CRYPTO_NONE);
+            return;
         }
-        else
+
+        std::array<std::uint8_t, ThorQ::Crypto::PublicKeyLen> myPublicKey, foreignPublicKey;
+
+        m_crypto->getPublicKey(myPublicKey);
+        std::copy(fbsCrypto->data()->begin(), fbsCrypto->data()->end(), foreignPublicKey.begin());
+
+        if (!m_crypto->agreeAsClient(foreignPublicKey))
         {
             m_crypto->reset();
             SetCryptoState(THORQ_STATE_CRYPTO_NONE);
+            return;
         }
+
+        // Build flatbuffer
+        flatbuffers::FlatBufferBuilder fbsBuilder;
+        auto fbsVector  = fbsBuilder.CreateVector(myPublicKey.data(), myPublicKey.size());
+        auto fbsEstablish = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Establish, fbsVector).Union();
+        auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsEstablish);
+        fbsBuilder.Finish(fbsMessage);
+
+        // Calculate packet size
+        std::size_t size = ThorQ::calculatePacketSize(fbsBuilder.GetSize(), false);
+
+        // Send it!
+        ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
+        ThorQ::packetEncode(packet, fbsBuilder.GetBufferSpan());
+        packetSend(packet, THORQ_CHANNEL::MAIN);
+
         break;
     }
     case ThorQ::Serialization::Crypto::MessageType_Verify:
@@ -810,7 +817,7 @@ void Client::handleMessageCrypto(const void* body, flatbuffers::Verifier fbsVeri
         fbsBuilder.Finish(fbsMessage);
 
         // Calculate packet size
-        std::size_t size = ThorQ::calculatePacketSize(fbsBuilder.GetSize(), false);
+        std::size_t size = ThorQ::calculatePacketSize(fbsBuilder.GetSize(), true);
 
         // Send it!
         ENetPacket* packet = enet_packet_create(nullptr, size, ENET_PACKET_FLAG_RELIABLE);
