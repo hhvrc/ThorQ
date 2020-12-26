@@ -11,9 +11,9 @@ ThorQ::Uuid ThorQ::Uuid::NewUuid()
 {
     ThorQ::Uuid id;
 #if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
-    CoCreateGuid(reinterpret_cast<GUID*>(id.m_data));
+    CoCreateGuid(reinterpret_cast<GUID*>(id.m_data.data()));
 #elif __linux__
-    uuid_generate_random((uuid_t&)id.m_data);
+    uuid_generate_random(id.m_data.data());
 #endif
     return id;
 }
@@ -21,48 +21,44 @@ ThorQ::Uuid ThorQ::Uuid::NewUuid()
 bool ThorQ::Uuid::TryParse(const std::string& str, ThorQ::Uuid& guidOut)
 {
 #if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
-    return UuidFromStringA((std::uint8_t*)str.data(), (GUID*)guidOut.m_data) == RPC_S_OK;
+    return UuidFromStringA((std::uint8_t*)str.data(), (GUID*)guidOut.m_data.data()) == RPC_S_OK;
 #elif __linux__
-    return uuid_parse(str.data(), (uuid_t&)guidOut.m_data) == 0;
+    return uuid_parse(str.data(), guidOut.m_data.data()) == 0;
 #endif
 }
 
-const ThorQ::Uuid ThorQ::Uuid::Empty{};
+const ThorQ::Uuid ThorQ::Uuid::Empty()
+{
+    return ThorQ::Uuid();
+}
 
 ThorQ::Uuid::Uuid() noexcept
 {
-    memset(m_data, 0, 16);
+    memset(m_data.data(), 0, 16);
 }
 
 ThorQ::Uuid::Uuid(const ThorQ::Uuid& other) noexcept
 {
-    memcpy(m_data, other.m_data, 16);
+    std::copy(other.m_data.begin(), other.m_data.end(), m_data.begin());
 }
 
-ThorQ::Uuid::Uuid(std::array<uint8_t, 16> data)
+ThorQ::Uuid::Uuid(std::array<uint8_t, 16> data) noexcept
 {
-    memcpy(m_data, data.data(), 16);
+    std::copy(m_data.begin(), m_data.end(), data.begin());
 }
 
-constexpr bool ThorQ::Uuid::isEmpty() const
+std::array<std::uint8_t, 16> empty{0};
+bool ThorQ::Uuid::isEmpty() const noexcept
 {
-    for (uint8_t i = 0; i < 16; i++)
-    {
-        if (m_data[i] != 0)
-        {
-            return false;
-        }
-    }
-    return true;
+    return m_data == empty;
 }
-
 
 std::string ThorQ::Uuid::toString() const
 {
     std::string str;
 #if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
     std::uint8_t* ptr;
-    if (UuidToStringA((UUID*)m_data, &ptr) != RPC_S_OK)
+    if (UuidToStringA((UUID*)m_data.data(), &ptr) != RPC_S_OK)
     {
         return str;
     }
@@ -72,7 +68,7 @@ std::string ThorQ::Uuid::toString() const
     RpcStringFreeA(&ptr);
 #elif __linux__
     str.resize(36);
-    uuid_unparse_lower(m_data, str.data());
+    uuid_unparse_lower(m_data.data(), str.data());
 #endif
 
     return str;
@@ -81,13 +77,13 @@ std::string ThorQ::Uuid::toString() const
 std::array<uint8_t, 16> ThorQ::Uuid::toBytes() const
 {
     std::array<uint8_t, 16> ret;
-    memcpy(ret.data(), m_data, 16);
+    std::copy(m_data.begin(), m_data.end(), ret.begin());
     return ret;
 }
 
 bool ThorQ::Uuid::operator==(const ThorQ::Uuid& rhs) const noexcept
 {
-    return memcmp(m_data, rhs.m_data, 16) == 0;
+    return m_data == rhs.m_data;
 }
 bool ThorQ::Uuid::operator!=(const ThorQ::Uuid& rhs) const noexcept
 {
@@ -95,7 +91,7 @@ bool ThorQ::Uuid::operator!=(const ThorQ::Uuid& rhs) const noexcept
 }
 bool ThorQ::Uuid::operator<(const ThorQ::Uuid& rhs) const noexcept
 {
-    return memcmp(m_data, rhs.m_data, 16) < 0;
+    return m_data < rhs.m_data;
 }
 bool ThorQ::Uuid::operator<=(const ThorQ::Uuid& rhs) const noexcept
 {
@@ -110,8 +106,13 @@ bool ThorQ::Uuid::operator>=(const ThorQ::Uuid& rhs) const noexcept
     return !(*this < rhs);
 }
 
+void ThorQ::Uuid::swap(ThorQ::Uuid& other) noexcept
+{
+    m_data.swap(other.m_data);
+}
+
 ThorQ::Uuid ThorQ::Uuid::operator=(const ThorQ::Uuid& other) noexcept
 {
-    memcpy(m_data, other.m_data, 16);
+    std::copy(other.m_data.begin(), other.m_data.end(), m_data.begin());
     return *this;
 }

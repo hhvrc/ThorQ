@@ -11,13 +11,13 @@ class Uuid
 public:
     static ThorQ::Uuid NewUuid();
     static bool TryParse(const std::string& str, ThorQ::Uuid& guidOut);
-    static const ThorQ::Uuid Empty;
+    static const ThorQ::Uuid Empty();
 
     Uuid() noexcept;
     Uuid(const Uuid& other) noexcept;
-    Uuid(std::array<std::uint8_t, 16> data);
+    Uuid(std::array<std::uint8_t, 16> data) noexcept;
 
-    constexpr bool isEmpty() const;
+    bool isEmpty() const noexcept;
 
     std::string toString() const;
     std::array<std::uint8_t, 16> toBytes() const;
@@ -29,23 +29,29 @@ public:
     bool operator> (const ThorQ::Uuid& rhs) const noexcept;
     bool operator>=(const ThorQ::Uuid& rhs) const noexcept;
 
+    void swap(ThorQ::Uuid& other) noexcept;
+
     ThorQ::Uuid operator=(const ThorQ::Uuid& other) noexcept;
 private:
-    std::uint8_t m_data[16];
+    std::array<std::uint8_t, 16> m_data;
 };
 }
 
 namespace std {
-
-  template <>
-  struct hash<ThorQ::Uuid>
-  {
-    std::size_t operator()(const ThorQ::Uuid& k) const
-    {
-        return (std::hash<std::uint64_t>()(*reinterpret_cast<const std::uint64_t*>(k.m_data + 0)) ^
-               (std::hash<std::uint64_t>()(*reinterpret_cast<const std::uint64_t*>(k.m_data + 8)) << 1)) >> 1;
-    }
-  };
+template <>
+struct hash<ThorQ::Uuid>
+{
+std::size_t operator()(const ThorQ::Uuid& k) const noexcept
+{
+    return (std::hash<std::uint64_t>()(*reinterpret_cast<const std::uint64_t*>(k.m_data.data() + 0)) ^
+           (std::hash<std::uint64_t>()(*reinterpret_cast<const std::uint64_t*>(k.m_data.data() + 8)) << 1)) >> 1;
+}
+};
+template<>
+void swap(ThorQ::Uuid& lhs, ThorQ::Uuid& rhs) noexcept
+{
+   lhs.swap(rhs);
+}
 }
 
 #endif // UUID_H
