@@ -3,400 +3,156 @@
 
 #include <span>
 #include <atomic>
-#include <mutex>
 #include <vector>
+#include <shared_mutex>
 
 #include <QObject>
+#include <QUuid>
 #include <QTimer>
+#include <QThread>
 #include <QElapsedTimer>
+
+#include <QWeakPointer>
+#include <QSharedPointer>
 
 #include <enums.h>
 #include <typedefs_global.h>
 
-#include <schemas/message_generated.h>
-#include <schemas/account_generated.h>
-#include <schemas/collar_generated.h>
-#include <schemas/account_generated.h>
-#include <schemas/systemid_generated.h>
-#include <schemas/announcement_generated.h>
-#include <schemas/systemid_generated.h>
-
-
-#include "user.h"
-
-/// @class Client
+namespace ThorQ {
+class ClientConnection;
 class Client : public QObject
 {
-	Q_OBJECT
-	Q_DISABLE_COPY(Client)
+    Q_OBJECT
+    Q_DISABLE_COPY(Client)
 
-    friend ThorQ::User;
-
-    /**
-     * @param client
-     */
-	Client(ENetHost* client);
+    Client(ENetHost* host, QObject* parent);
 public:
-    /**
-     * @return
-     */
-	static Client* NewClient();
+    static const char* Version();
+    static bool Initialize();
+    static void DeInitialize();
 
-    /**
-     */
-	~Client();
+    static ThorQ::Client* NewClient(std::uint8_t channelLimit, QObject* parent);
+    static ThorQ::Client* NewClient(QString hostname, std::uint16_t port, std::size_t peerLimit, std::uint8_t channelLimit, QObject* parent);
+    ~Client();
 
-    /**
-     * @return
-     */
-	static QString Version();
+    QList<ThorQ::ClientConnection*> connections();
 
-    /**
-     * @return
-     */
-    quint16 Rtt() const;
-
-    /**
-     * @return
-     */
-	THORQ_STATE_CONNECTION ConnectionState() const;
-
-    /**
-     * @return
-     */
-	THORQ_STATE_CRYPTO CryptoState() const;
-
-    /**
-     * @return
-     */
-    THORQ_STATE_HWID HwidState() const;
-
-    /**
-     * @return
-     */
-	THORQ_STATE_LOGIN LoginState() const;
-
-    /**
-     * @return
-     */
-	THORQ_STATE_SESSION SessionState() const;
+    std::uint64_t txData() const;
+    std::uint32_t txSpeed() const;
+    std::uint64_t rxData() const;
+    std::uint32_t rxSpeed() const;
 public slots:
-    /**
-     * @param address
-     * @param port
-     */
-    void Connect(const char* address, quint16 port);
-
-    /**
-     * @brief blah blah blah
-     */
-	void Reconnect();
-
-    /**
-     * @brief blah blah blah
-     */
-	void Disconnect();
-
-    /**
-     * @param Username
-     */
-	void Login(const QString& Username);
-
-    /**
-     * @brief blah blah blah
-     */
-	void Logout();
-
-    /**
-     * @param username
-     */
-	void RequestSession(const QString& username);
-
-    /**
-     * @brief blah blah blah
-     */
-    void AcceptRequest();
-
-    /**
-     * @brief blah blah blah
-     */
-    void DenyRequest();
-
-    /**
-     * @brief LeaveSession
-     */
-	void LeaveSession();
-
-    /**
-     * @param strengt
-     */
-    void SetShock(quint8 strengt);
-
-    /**
-     * @param strength
-     */
-    void SetVibrate(quint8 strength);
-
-    /**
-     * @param strength
-     */
-    void SetBeep(quint8 strength);
-
-    /**
-     * @param sensitivity
-     */
-    void EnableAuto(quint8 sensitivity);
-
-    /**
-     */
-	void DisableAuto();
-
-    /**
-     */
-	void SendImpulse();
-
-    /**
-     * @param regKey
-     */
-    void submitRegistrationKey(const QString& regKey);
+    void connect(QUuid connectionID, QString hostname, std::uint16_t port, std::uint8_t channelCount);
 signals:
-    /**
-     * @param Address
-     */
-	void AddressChanged(const QString& Address);
+    void connectionIncoming(ThorQ::ClientConnection* connection);
+    void connectionEstablished(ThorQ::ClientConnection* connection);
+    void connectionFailed(QUuid connectionID);
 
-    /**
-     * @param Port
-     */
-    void PortChanged(quint16 Port);
+    void txDataChanged(std::uint64_t txData);
+    void txSpeedChanged(std::uint32_t txSpeed);
+    void rxDataChanged(std::uint64_t rxData);
+    void rxSpeedChanged(std::uint32_t rxSpeed);
 
-    /**
-     * @param ping
-     */
-    void RttChanged(quint16 ping);
-
-    /**
-     * @param state
-     */
-	void ConnectionStateChanged(THORQ_STATE_CONNECTION state);
-
-    /**
-     * @param state
-     */
-	void CryptoStateChanged(THORQ_STATE_CRYPTO state);
-
-    /**
-     * @param state
-     */
-    void AuthStateChanged(THORQ_STATE_HWID state);
-
-    /**
-     * @param state
-     */
-	void LoginStateChanged(THORQ_STATE_LOGIN state);
-
-    /**
-     * @param state
-     */
-	void SessionStateChanged(THORQ_STATE_SESSION state);
-
-    /**
-     * @param username
-     */
-	void usernameChanged(const QString& username);
-
-    /**
-     * @param username
-     */
-	void partnerChanged(const QString& username);
-
-    /**
-     * @param user
-     * @param state
-     */
-    void userUpdate(const QString& user, quint8 state);
-
-    /**
-     * @param user
-     */
-	void UserOffline(const QString& user);
-
-    /**
-     * @param user
-     */
-    void SessionRequested(const QString& user);
-
-    /**
-     * @param user
-     */
-    void SessionStarted(const QString& user);
-
-    /**
-     * @param strength
-     */
-    void ReceivedShock(quint8 strength);
-
-    /**
-     * @param strength
-     */
-    void ReceivedVibrate(quint8 strength);
-
-    /**
-     * @param count
-     */
-    void ReceivedBeep(quint8 count);
-
-    /**
-     * @param sensitivity
-     * @param shockStrength
-     * @param vibrateStrength
-     * @param beepCount
-     */
-    void ReceivedAuto(quint8 sensitivity, quint8 shockStrength, quint8 vibrateStrength, quint8 beepCount);
-
-    /**
-     * @brief blah blah blah
-     */
-	void ReceivedManual();
-
-    /**
-     * @brief blah blah blah
-     */
-	void RequestingRegistrationKey();
-
-	void Warning(const QString& what);
-	void Error(const QString& what);
-    void Announcement(const QString& what);
+    void warning(const QString& what);
+    void error(const QString& what);
 private slots:
-    /**
-     * @brief blah blah blah
-     */
-	void Service();
+    void service();
+    void updateStats();
 
-    void SetRtt(quint16 rtt);
-
-    /**
-     * @brief [Thread-Safe] Sets the state of the connection
-     * @brief Will affect CryptoState, as there can be no cryptographic agreement if client is disconnected
-	 *
-     * @param state State to set
-	 */
-	void SetConnectionState(THORQ_STATE_CONNECTION state);
-
-    /**
-     * @brief [Thread-Safe] Sets the state of the cryptographic agreement
-     * @brief Will affect AuthState, as a client should not be sending sensitive data over a unsecured connection
-     *
-     * @param state State to set
-	 */
-	void SetCryptoState(THORQ_STATE_CRYPTO state);
-
-    /**
-     * @brief [Thread-Safe] Sets the state of the authentication
-     * @brief Will affect LoginState, as a client should not be able to log in without having bought the application
-     *
-     * @param state State to set
-	 */
-    void SetAuthState(THORQ_STATE_HWID state);
-
-    /**
-     * @brief [Thread-Safe] Sets the state of the login
-     * @brief Will affect SessionState, as a user cannot be in a session without being logged in
-     *
-     * @param state State to set
-	 */
-	void SetLoginState(THORQ_STATE_LOGIN state);
-
-    /**
-     * @brief [Thread-Safe] Sets the state of the session
-     *
-     * @param state State to set
-	 */
-	void SetSessionState(THORQ_STATE_SESSION state);
-
-    /**
-     * @brief SetUsername
-     * @param username
-     */
-	void SetUsername(const QString& username);
-
-    /**
-     * @brief SetPartner
-     * @param username
-     */
-	void SetPartner(const QString& username);
-
-    /// These should be self-explanatory
-    void handleMessage(ENetPacket* packet);
-    void handleMessageVersion(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageHeartbeat(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageUser(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageFile(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageCrypto(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageSystemID(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageAccount(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageFriendRequest(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageGroup(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageModeration(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageAnnouncement(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageCollar(const void* body, flatbuffers::Verifier fbsVerifier);
-
-    ENetPacket* packetEncode(const std::span<std::uint8_t> data, bool encrypt = true, bool reliable = true);
-    bool packetDecode(const ENetPacket* packet, std::vector<std::uint8_t>& payload);
-
-    bool packetSend(ENetPacket* packet, THORQ_CHANNEL ch);
-
-    /**
-     * @brief requestEncryptionHandshake
-     */
-	void requestEncryptionHandshake();
-
-    void handleDisconnect(THORQ_DISCONNECT_REASON reason);
+    void handleEventConnection(const ENetEvent& event);
+    void handleEventMessage(const ENetEvent &event);
+    void handleEventTimeout(const ENetEvent& event);
+    void handleEventDisconnect(const ENetEvent& event);
 private:
-    std::shared_ptr<ThorQ::Crypto> m_crypto;
+    QTimer m_serviceTimer;
+    QTimer m_statisticsTimer;
 
-	std::atomic<THORQ_STATE_CONNECTION> m_connectionState;
-	std::atomic<THORQ_STATE_CRYPTO> m_cryptoState;
-    std::atomic<THORQ_STATE_HWID> m_authState;
-	std::atomic<THORQ_STATE_LOGIN> m_loginState;
-	std::atomic<THORQ_STATE_SESSION> m_sessionState;
-    std::atomic<quint16> m_rtt;
+    QList<ThorQ::ClientConnection*> m_connections;
 
-    std::mutex l_loginInfo;
-	QString m_username;
-	QString m_password;
+    ENetHost* m_host;
 
-    std::mutex l_partnerName;
-	QString m_partnerName;
-
-    std::mutex l_requestedPartner;
-	QString m_requestedPartner;
-
-    std::mutex l_requestingPartner;
-	QString m_requestingPartner;
-
-    std::mutex l_registrationKey;
-	QString m_registrationKey;
-
-    std::atomic_uint16_t m_actionFlags;
-    std::atomic_uint64_t m_collarState;
-
-	QThread* m_thread;
-	QTimer* m_serviceTimer;
-
-    bool m_awaitingHeartbeat;
-    std::uint64_t m_lastCheck;
-    std::uint16_t m_heartbeatInterval;
-    QElapsedTimer* m_heartbeatTimer;
-
-	ENetHost* m_host;
-	ENetPeer* m_peer;
-
-    std::mutex l_requestedHost;
-	QString m_requestedHostName;
-	quint16 m_requestedHostPort;
-
-	ENetAddress* m_address;
+    std::atomic_uint64_t m_totalDataTx;
+    std::atomic_uint64_t m_totalDataRx;
+    std::atomic_uint32_t m_speedTx;
+    std::atomic_uint32_t m_speedRx;
 };
+
+class ClientMessage
+{
+protected:
+    friend ThorQ::ClientConnection;
+    ClientMessage(ENetPacket* packet, std::uint8_t channelID);
+public:
+    ClientMessage();
+    ClientMessage(const ClientMessage& other);
+    ClientMessage& operator=(const ClientMessage& other);
+    ~ClientMessage();
+
+    std::shared_ptr<ENetPacket> packet() const;
+    std::uint8_t channelID() const;
+private:
+    std::shared_ptr<ENetPacket> m_packet;
+    std::uint8_t m_channelID;
+};
+
+class ClientConnection : public QObject
+{
+    Q_OBJECT
+    Q_DISABLE_COPY(ClientConnection)
+protected:
+    friend ThorQ::Client;
+    ClientConnection(QUuid id, ENetPeer* peer, ThorQ::Client* client);
+protected slots:
+    ENetPeer* peer() const;
+    void clear();
+    void updateStats();
+    void handleEventMessage(const ENetEvent &event);
+    void handleEventTimeout(const ENetEvent& event);
+    void handleEventDisconnect(const ENetEvent& event);
+public:
+    ~ClientConnection();
+
+    QUuid id() const;
+
+    bool connected() const;
+
+    std::uint16_t rtt() const;
+    std::uint64_t txData() const;
+    std::uint32_t txSpeed() const;
+    std::uint64_t rxData() const;
+    std::uint32_t rxSpeed() const;
+signals:
+    void rttChanged(std::uint16_t rtt);
+    void txDataChanged(std::uint64_t txData);
+    void txSpeedChanged(std::uint32_t txSpeed);
+    void rxDataChanged(std::uint64_t rxData);
+    void rxSpeedChanged(std::uint32_t rxSpeed);
+
+    void packetReceived(ClientMessage message);
+
+    void disconnected(std::uint32_t reason);
+public slots:
+    void packetSend(QByteArray data, std::uint8_t channel);
+    void packetSendReliable(QByteArray data, std::uint8_t channel);
+    void packetSendSequenced(QByteArray data, std::uint8_t channel);
+
+    void disconnect(std::uint32_t reason);
+    void disconnectNow(std::uint32_t reason);
+    void disconnectLater(std::uint32_t reason);
+private:
+    void sendPacket(const QByteArray& data, std::uint32_t flags, std::uint8_t channel);
+
+    QUuid m_id;
+
+    ENetPeer* m_peer;
+
+    std::atomic_uint64_t m_totalDataTx;
+    std::atomic_uint64_t m_totalDataRx;
+    std::atomic_uint32_t m_speedTx;
+    std::atomic_uint32_t m_speedRx;
+    std::atomic_uint16_t m_rtt;
+};
+}
+Q_DECLARE_METATYPE(ThorQ::ClientMessage)
 
 #endif // CLIENT_H

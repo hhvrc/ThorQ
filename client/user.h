@@ -4,17 +4,15 @@
 #include <QObject>
 #include <QString>
 
-class Client;
-
 namespace ThorQ {
+class ClientConnection;
 class User : public QObject
 {
     Q_OBJECT
     Q_DISABLE_COPY(User)
 protected:
     User() = delete;
-    User(QObject*) = delete;
-    User(Client* client);
+    User(ThorQ::ClientConnection* client);
 public:
     const QString& name() const;
 
@@ -45,7 +43,7 @@ protected slots:
     void setHasCollarConnected(bool hasCollarConnected);
     void setIsRequestingSession(bool isRequestingSession);
 
-    friend Client;
+    friend ThorQ::ClientConnection;
 private:
     QString m_name;
     bool m_isInSession;

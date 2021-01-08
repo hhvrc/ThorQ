@@ -36,7 +36,7 @@ public:
 
     ServerStatus status() const;
 
-    bool start(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount, bool noDelay);
+    bool start(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount);
     void stop();
 
     std::uint32_t heartbeatInterval() const;

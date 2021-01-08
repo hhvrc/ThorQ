@@ -98,7 +98,7 @@ int main(int argc, char** argv)
 
     ThorQ::Server server;
 
-    if (!server.start(port, 1024, (std::uint8_t)THORQ_CHANNEL::_MAX, true))
+    if (!server.start(port, 1024, (std::uint8_t)THORQ_CHANNEL::_MAX))
     {
             fmt::print("Failed to start Server!\n");
             return EXIT_FAILURE;

@@ -20,7 +20,6 @@
 #include <fmt/core.h>
 #include <thorq_message.h>
 #include <schemas/version_generated.h>
-#include <schemas/heartbeat_generated.h>
 
 #include "account.h"
 #include "instance.h"
@@ -135,7 +134,7 @@ ThorQ::Server::ServerStatus ThorQ::Server::status() const
     return m_status;
 }
 
-bool ThorQ::Server::start(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount, bool noDelay)
+bool ThorQ::Server::start(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount)
 {
     if (m_thread != nullptr) return true;
 
@@ -155,9 +154,7 @@ bool ThorQ::Server::start(std::uint16_t port, std::size_t maxPeers, std::uint8_t
 
         if (m_host != nullptr)
         {
-            enet_socket_set_option(m_host->socket, ENET_SOCKOPT_NODELAY, noDelay);
-
-            m_host->maximumPacketSize = 65536; // 64kB (enough to hold a 80x80 rgba image, and enough to hold a compiled arduino program)
+            m_host->maximumPacketSize = 1024 * 1024; // 1MB (enough to hold 4 256*256 rgba images)
 
             m_run = true;
 

@@ -43,6 +43,7 @@ message("Found Qt ${Qt5Core_VERSION}")
 set(${project}_SOURCES
 	${CMAKE_CURRENT_SOURCE_DIR}/user.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/client.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/serverhandler.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/serial.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
 	${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.cpp
@@ -59,6 +60,7 @@ set(${project}_SOURCES
 set(${project}_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/user.h
 	${CMAKE_CURRENT_SOURCE_DIR}/client.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/serverhandler.h
 	${CMAKE_CURRENT_SOURCE_DIR}/serial.h
 	${CMAKE_CURRENT_SOURCE_DIR}/procmon.h
 	${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.h
@@ -67,6 +69,7 @@ set(${project}_HEADERS
 	${CMAKE_CURRENT_SOURCE_DIR}/userlistitem.h
 	${CMAKE_CURRENT_SOURCE_DIR}/userlistwidget.h
 
+        ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_client.h
 	${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.h
 	${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.h
 	${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.h

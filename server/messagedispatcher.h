@@ -30,7 +30,6 @@ private:
     void handleEventTimeout(const ENetEvent& event);
 
     void handleMessageVersion(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageHeartbeat(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
     void handleMessageUser(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
     void handleMessageFile(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
     void handleMessageCrypto(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);

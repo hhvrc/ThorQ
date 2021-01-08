@@ -14,7 +14,6 @@
 #include <schemas/collar_generated.h>
 #include <schemas/crypto_generated.h>
 #include <schemas/file_generated.h>
-#include <schemas/heartbeat_generated.h>
 #include <schemas/version_generated.h>
 #include <schemas/systemid_generated.h>
 #include <schemas/message_generated.h>
@@ -82,7 +81,6 @@ void ThorQ::MessageDispatcher::handleEventConnection(const ENetEvent& event)
 
     flatbuffers::FlatBufferBuilder fbsBuilder;
     flatbuffers::Offset<ThorQ::Serialization::Version> fbsVersion;
-    flatbuffers::Offset<ThorQ::Serialization::Heartbeat::Message> fbsHeartbeat;
     flatbuffers::Offset<ThorQ::Serialization::Message> fbsMessage;
 
     // Link version
@@ -102,13 +100,6 @@ void ThorQ::MessageDispatcher::handleEventConnection(const ENetEvent& event)
     fbsBuilder.Clear();
     fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::SERVER, THORQ_VERSION_SERVER_MAJOR, THORQ_VERSION_SERVER_MINOR, THORQ_VERSION_SERVER_PATCH);
     fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
-    fbsBuilder.Finish(fbsMessage);
-    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
-
-    // Initial heartbeat
-    fbsBuilder.Clear();
-    fbsHeartbeat = ThorQ::Serialization::Heartbeat::CreateMessage(fbsBuilder, m_server->heartbeatInterval());
-    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_heartbeat, fbsHeartbeat.Union());
     fbsBuilder.Finish(fbsMessage);
     sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
 
@@ -160,9 +151,6 @@ void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
     switch (fbsMessage->body_type()) {
     case ThorQ::Serialization::Body_account:
         handleMessageAccount(instance, fbsMessage->body(), fbsVerifier);
-        break;
-    case ThorQ::Serialization::Body_heartbeat:
-        handleMessageHeartbeat(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_version:
         handleMessageVersion(instance, fbsMessage->body(), fbsVerifier);
@@ -423,7 +411,7 @@ void ThorQ::MessageDispatcher::handleMessageFile(ThorQ::Instance *instance, cons
         return;
     }
 }
-
+#include <flatbuffers/flexbuffers.h>
 void ThorQ::MessageDispatcher::handleMessageFriendRequest(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
 {
     auto fbsAccount = reinterpret_cast<const ThorQ::Serialization::FriendRequest::Message*>(body);
@@ -627,29 +615,6 @@ void ThorQ::MessageDispatcher::handleMessageGroup(ThorQ::Instance *instance, con
         instance->packetSend(response, true, true);
     }
     */
-}
-
-void ThorQ::MessageDispatcher::handleMessageHeartbeat(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
-{
-    auto fbsHeartbeat = reinterpret_cast<const ThorQ::Serialization::Heartbeat::Message*>(body);
-
-    if (!fbsHeartbeat->Verify(fbsVerifier))
-    {
-        return;
-    }
-
-    std::uint32_t interval = m_server->heartbeatInterval();
-
-    if (fbsHeartbeat->interval() != interval)
-    {
-        // Build flatbuffer
-        flatbuffers::FlatBufferBuilder fbsBuilder;
-        auto fbsHeartbeat = ThorQ::Serialization::Heartbeat::CreateMessage(fbsBuilder, interval).Union();
-        auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_heartbeat, fbsHeartbeat);
-        fbsBuilder.Finish(fbsMessage);
-
-        sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
-    }
 }
 
 void ThorQ::MessageDispatcher::handleMessageModeration(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)

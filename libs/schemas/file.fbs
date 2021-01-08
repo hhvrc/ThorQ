@@ -2,16 +2,11 @@ include  "uuid.fbs";
 
 namespace ThorQ.Serialization.File;
 
-struct Image {
-  /// 256*256*4 (256*256 SRGB bitmap)
-  data : [ ulong : 32768 ];
+enum FileType : ubyte {
+  Image
 }
-
-/// Yada, yada...
-union Any {
-  image : File.Image
-}
-
 table Message {
-  any : File.Any;
+  uuid : Uuid;
+  type : FileType;
+  data : [ ubyte ];
 }

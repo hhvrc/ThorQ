@@ -38,17 +38,17 @@ std::uint8_t ThorQ::Version::patch() const
     return m_patch;
 }
 
-void ThorQ::Version::setMajor(uint8_t major)
+void ThorQ::Version::setMajor(std::uint8_t major)
 {
     m_major = major;
 }
 
-void ThorQ::Version::setMinor(uint8_t minor)
+void ThorQ::Version::setMinor(std::uint8_t minor)
 {
     m_minor = minor;
 }
 
-void ThorQ::Version::setPatch(uint8_t patch)
+void ThorQ::Version::setPatch(std::uint8_t patch)
 {
     m_patch = patch;
 }

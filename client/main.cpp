@@ -31,17 +31,22 @@ Q_DECLARE_METATYPE(THORQ_STATE_LOGIN)
 
 #include <thorq_message.h>
 
+#include <serverhandler.h>
+
+std::uint16_t i = 0;
 int main(int argc, char** argv)
 {
-	qRegisterMetaType<THORQ_STATE_CONNECTION>("ThorqConnectionState");
-    qRegisterMetaType<THORQ_STATE_CRYPTO>("ThorqCryptoState");
-    qRegisterMetaType<THORQ_STATE_HWID>("ThorqHwidState");
-	qRegisterMetaType<THORQ_STATE_LOGIN>("ThorqLoginState");
+    qRegisterMetaType<QSharedPointer<ThorQ::ClientMessage>>("ENetMessage");
 
 	// TODO: customize GUI
     // TODO: enable support for SteamVR
 
 	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QCoreApplication::setApplicationName(THORQ_APPLICATION_NAME);
+    QCoreApplication::setApplicationVersion(THORQ_VERSION_CLIENT.toString().c_str());
+    QCoreApplication::setOrganizationName(THORQ_ORGANIZATION_NAME);
+    QCoreApplication::setOrganizationDomain(THORQ_ORGANIZATION_DOMAIN);
+
     QApplication app(argc, argv);
 #if COMTEST
 	QString stylesheet;
@@ -59,24 +64,23 @@ int main(int argc, char** argv)
 		stylesheet = stream.readAll();
 	}
 
-	app.setStyleSheet(stylesheet);
-	app.setApplicationName(THORQ_APPLICATION_NAME);
-	app.setDesktopFileName(THORQ_APPLICATION_NAME);
-    app.setApplicationVersion(THORQ_VERSION_CLIENT.toString().c_str());
+    app.setStyleSheet(stylesheet);
+    app.setDesktopFileName(THORQ_APPLICATION_NAME);
 	app.setWindowIcon(QIcon(":/shockGrey.ico"));
     //app.setQuitOnLastWindowClosed(false);
 
 	// Initialize ENet
-	if (enet_initialize() < 0)
+    if (!ThorQ::Client::Initialize())
 	{
-        qDebug() << "Failed to initialize ENet";
+        qDebug() << "Failed to initialize networking";
         return EXIT_FAILURE;
 	}
 
 	LoginWidget loginWidget;
     MainWidget mainWidget;
-	Client* cli = Client::NewClient();
-
+    ThorQ::Client* cli = ThorQ::Client::NewClient("::", 12347, 128, 8, &app);
+    ThorQ::ServerHandler* handler = new ThorQ::ServerHandler(cli, &app);
+/*
 	QMessageBox errorBox(&loginWidget);
 	errorBox.setIcon(QMessageBox::Critical);
 	errorBox.setWindowTitle("error");
@@ -85,18 +89,18 @@ int main(int argc, char** argv)
 	warningBox.setIcon(QMessageBox::Warning);
 	errorBox.setWindowTitle("warning");
 
-    QObject::connect(cli, &Client::RttChanged, &mainWidget, &MainWidget::setConnectionPing);
-	QObject::connect(cli, &Client::LoginStateChanged, &mainWidget, &MainWidget::setLoginState);
-	QObject::connect(cli, &Client::SessionStateChanged, &mainWidget, &MainWidget::setSessionState);
+    QObject::connect(cli, &ThorQ::Client::rttChanged, &mainWidget, &MainWidget::setConnectionPing);
+    QObject::connect(cli, &ThorQ::Client::LoginStateChanged, &mainWidget, &MainWidget::setLoginState);
+    QObject::connect(cli, &ThorQ::Client::SessionStateChanged, &mainWidget, &MainWidget::setSessionState);
 
-    QObject::connect(cli, &Client::RttChanged, &loginWidget, &LoginWidget::setConnectionPing);
-    QObject::connect(cli, &Client::ConnectionStateChanged, &loginWidget, &LoginWidget::setConnectionState);
-    QObject::connect(cli, &Client::CryptoStateChanged, &loginWidget, &LoginWidget::setCryptoState);
-    QObject::connect(cli, &Client::AuthStateChanged, &loginWidget, &LoginWidget::setHwidState);
-	QObject::connect(cli, &Client::LoginStateChanged, &loginWidget, &LoginWidget::setLoginState);
+    QObject::connect(cli, &ThorQ::Client::RttChanged, &loginWidget, &LoginWidget::setConnectionPing);
+    QObject::connect(cli, &ThorQ::Client::ConnectionStateChanged, &loginWidget, &LoginWidget::setConnectionState);
+    QObject::connect(cli, &ThorQ::Client::CryptoStateChanged, &loginWidget, &LoginWidget::setCryptoState);
+    QObject::connect(cli, &ThorQ::Client::AuthStateChanged, &loginWidget, &LoginWidget::setHwidState);
+    QObject::connect(cli, &ThorQ::Client::LoginStateChanged, &loginWidget, &LoginWidget::setLoginState);
 
-    QObject::connect(cli, &Client::Error, &errorBox, &QMessageBox::setText);
-	QObject::connect(cli, &Client::Error, &errorBox, &QWidget::show);
+    QObject::connect(cli, &ThorQ::Client::Error, &errorBox, &QMessageBox::setText);
+    QObject::connect(cli, &ThorQ::Client::Error, &errorBox, &QWidget::show);
 	//QObject::connect(cli, &Client::Error, [&](){ app.setQuitOnLastWindowClosed(true); loginWidget.hide(); mainWidget.hide(); warningBox.hide(); });
 
 	QObject::connect(cli, &Client::Warning, &warningBox, &QMessageBox::setText);
@@ -109,9 +113,7 @@ int main(int argc, char** argv)
 	QObject::connect(&mainWidget, &MainWidget::logoutButtonClicked, cli, &Client::Logout);
 
     loginWidget.show();
-
-    cli->Connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT);
-
+*/
 #else
     QPixmap pix(":/uwu.png");
 	QLabel lab;
@@ -128,7 +130,7 @@ int main(int argc, char** argv)
 
 #if COMTEST
     delete cli;
-    enet_deinitialize();
+    ThorQ::Client::DeInitialize();
 #endif
     return retval;
 }

@@ -2,17 +2,25 @@
 #define SETTINGSWIDGET_H
 
 #include <QWidget>
+#include <QSettings>
 
 /**
  * @brief The SettingsWidget class
  */
-class SettingsWidget
+namespace ThorQ {
+class SettingsWidget : public QWidget
 {
+    Q_OBJECT
+    Q_DISABLE_COPY(SettingsWidget)
 public:
-    /**
-     * @brief SettingsWidget
-     */
-	SettingsWidget();
+    SettingsWidget(QWidget* parent = nullptr);
+    ~SettingsWidget();
+
+public slots:
+    void cleanup();
+private:
+    QSettings* m_settings;
 };
+}
 
 #endif // SETTINGSWIDGET_H

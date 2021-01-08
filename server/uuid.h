@@ -47,11 +47,13 @@ std::size_t operator()(const ThorQ::Uuid& k) const noexcept
            (std::hash<std::uint64_t>()(*reinterpret_cast<const std::uint64_t*>(k.m_data.data() + 8)) << 1)) >> 1;
 }
 };
+/*
 template<>
 void swap(ThorQ::Uuid& lhs, ThorQ::Uuid& rhs) noexcept
 {
    lhs.swap(rhs);
 }
+*/
 }
 
 #endif // UUID_H

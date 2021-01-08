@@ -57,10 +57,12 @@ constexpr int THORQ_PASSWORD_LEN_MAX = 128; ///< Maximum Password length
 /* Discord id limits
  */
 constexpr int THORQ_DISCORDID_LEN_MIN = 5; ///< Minimum id length (1 char + "#xxxx")
-constexpr int THORQ_DISCORDID_LEN_MAX = 36; ///< Maximum id length (32 chars + "#xxxx")
+constexpr int THORQ_DISCORDID_LEN_MAX = 37; ///< Maximum id length (32 chars + "#xxxx")
 
 /* TODO: move this to a config file
  */
+constexpr const char*   THORQ_ORGANIZATION_NAME = "MyDomain";
+constexpr const char*   THORQ_ORGANIZATION_DOMAIN = "MyDomain.com";
 constexpr const char*   THORQ_APPLICATION_NAME = "ThorQ";
 constexpr const char*   THORQ_APPLICATION_DESCRIPTION = "Software to control 3rd party collars across the internet";
 constexpr const char*   THORQ_SERVER_HOSTNAME = "www.dededededede.de";
