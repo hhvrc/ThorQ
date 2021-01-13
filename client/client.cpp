@@ -42,13 +42,13 @@ static std::string enetaddr_to_str(const ENetAddress* addr)
 }
 
 #define VER_STRING(MAJOR, MINOR, PATCH) #MAJOR "." #MINOR "." #PATCH
-const char* ThorQ::Client::Version()
+const char* ThorQ::Networking::Client::Version()
 {
     return "ENet-" VER_STRING(ENET_VERSION_MAJOR, ENET_VERSION_MINOR, ENET_VERSION_PATCH);
 }
 
 std::atomic_bool g_initialized = false;
-bool ThorQ::Client::Initialize()
+bool ThorQ::Networking::Client::Initialize()
 {
     if (!g_initialized)
     {
@@ -57,7 +57,7 @@ bool ThorQ::Client::Initialize()
 
     return g_initialized;
 }
-void ThorQ::Client::DeInitialize()
+void ThorQ::Networking::Client::DeInitialize()
 {
     if (g_initialized)
     {
@@ -66,24 +66,24 @@ void ThorQ::Client::DeInitialize()
     }
 }
 
-ThorQ::Client* ThorQ::Client::NewClient(std::uint8_t channelLimit, QObject* parent)
+ThorQ::Networking::Client* ThorQ::Networking::Client::NewClient(std::uint8_t channelLimit, QObject* parent)
 {
-    if (ThorQ::Client::Initialize())
+    if (ThorQ::Networking::Client::Initialize())
     {
         ENetHost* host = enet_host_create(nullptr, 1, channelLimit, 0, 0);
 
         if (host != nullptr)
         {
-            return new ThorQ::Client(host, parent);
+            return new ThorQ::Networking::Client(host, parent);
         }
     }
 
     return nullptr;
 }
 
-ThorQ::Client* ThorQ::Client::NewClient(QString hostname, std::uint16_t port, std::size_t peerLimit, std::uint8_t channelLimit, QObject *parent)
+ThorQ::Networking::Client* ThorQ::Networking::Client::NewClient(QString hostname, std::uint16_t port, std::size_t peerLimit, std::uint8_t channelLimit, QObject *parent)
 {
-    if (ThorQ::Client::Initialize())
+    if (ThorQ::Networking::Client::Initialize())
     {
         ENetAddress addr;
 
@@ -93,9 +93,10 @@ ThorQ::Client* ThorQ::Client::NewClient(QString hostname, std::uint16_t port, st
 
             ENetHost* host = enet_host_create(&addr, peerLimit, channelLimit, 0, 0);
 
+
             if (host != nullptr)
             {
-                return new ThorQ::Client(host, parent);
+                return new ThorQ::Networking::Client(host, parent);
             }
         }
     }
@@ -103,7 +104,7 @@ ThorQ::Client* ThorQ::Client::NewClient(QString hostname, std::uint16_t port, st
     return nullptr;
 }
 
-ThorQ::Client::Client(ENetHost* host, QObject* parent)
+ThorQ::Networking::Client::Client(ENetHost* host, QObject* parent)
     : QObject(parent)
     , m_serviceTimer(this)
     , m_statisticsTimer(this)
@@ -111,19 +112,19 @@ ThorQ::Client::Client(ENetHost* host, QObject* parent)
     , m_host(host)
 {
     // Service timer
-    QObject::connect(&m_serviceTimer, &QTimer::timeout, this, &ThorQ::Client::service);
+    QObject::connect(&m_serviceTimer, &QTimer::timeout, this, &ThorQ::Networking::Client::service);
     m_serviceTimer.setSingleShot(false);
     m_serviceTimer.setInterval(5);
     m_serviceTimer.start();
 
     // Statistics timer
-    QObject::connect(&m_statisticsTimer, &QTimer::timeout, this, &ThorQ::Client::updateStats);
+    QObject::connect(&m_statisticsTimer, &QTimer::timeout, this, &ThorQ::Networking::Client::updateStats);
     m_statisticsTimer.setSingleShot(false);
     m_statisticsTimer.setInterval(250);
     m_statisticsTimer.start();
 }
 
-ThorQ::Client::~Client()
+ThorQ::Networking::Client::~Client()
 {
     m_statisticsTimer.stop();
     m_serviceTimer.stop();
@@ -135,32 +136,32 @@ ThorQ::Client::~Client()
     }
 }
 
-QList<ThorQ::ClientConnection*> ThorQ::Client::connections()
+QList<ThorQ::Networking::Connection*> ThorQ::Networking::Client::connections()
 {
     return m_connections;
 }
 
-std::uint64_t ThorQ::Client::txData() const
+std::uint64_t ThorQ::Networking::Client::txData() const
 {
     return m_totalDataTx;
 }
 
-std::uint32_t ThorQ::Client::txSpeed() const
+std::uint32_t ThorQ::Networking::Client::txSpeed() const
 {
     return m_speedTx;
 }
 
-std::uint64_t ThorQ::Client::rxData() const
+std::uint64_t ThorQ::Networking::Client::rxData() const
 {
     return m_totalDataRx;
 }
 
-std::uint32_t ThorQ::Client::rxSpeed() const
+std::uint32_t ThorQ::Networking::Client::rxSpeed() const
 {
     return m_speedRx;
 }
 
-void ThorQ::Client::connect(QUuid connectionID, QString hostname, std::uint16_t port, std::uint8_t channelCount)
+void ThorQ::Networking::Client::connect(QUuid connectionID, QString hostname, std::uint16_t port, std::uint8_t channelCount)
 {
     ENetAddress addr;
 
@@ -177,11 +178,11 @@ void ThorQ::Client::connect(QUuid connectionID, QString hostname, std::uint16_t 
     if (peer != nullptr)
     {
         // This is ok
-        new ThorQ::ClientConnection(connectionID, peer, this);
+        new ThorQ::Networking::Connection(connectionID, peer, this);
     }
 }
 
-void ThorQ::Client::service()
+void ThorQ::Networking::Client::service()
 {
     ENetEvent event;
     while (enet_host_service(m_host, &event, 0) > 0)
@@ -206,7 +207,7 @@ void ThorQ::Client::service()
     }
 }
 
-void ThorQ::Client::updateStats()
+void ThorQ::Networking::Client::updateStats()
 {
     std::uint32_t incTxData = m_host->totalSentData;
     std::uint32_t incRxData = m_host->totalReceivedData;
@@ -240,34 +241,34 @@ void ThorQ::Client::updateStats()
     }
 }
 
-void ThorQ::Client::handleEventConnection(const ENetEvent& event)
+void ThorQ::Networking::Client::handleEventConnection(const ENetEvent& event)
 {
-    ThorQ::ClientConnection* connection;
+    ThorQ::Networking::Connection* connection;
 
     if (event.peer != nullptr)
     {
-        connection = reinterpret_cast<ThorQ::ClientConnection*>(event.peer->data);
+        connection = reinterpret_cast<ThorQ::Networking::Connection*>(event.peer->data);
 
         if (connection == nullptr)
         {
-            connection = new ThorQ::ClientConnection(QUuid::createUuid(), event.peer, this);
+            connection = new ThorQ::Networking::Connection(QUuid::createUuid(), event.peer, this);
 
-            QObject::connect(&m_statisticsTimer, &QTimer::timeout, connection, &ThorQ::ClientConnection::updateStats);
+            QObject::connect(&m_statisticsTimer, &QTimer::timeout, connection, &ThorQ::Networking::Connection::updateStats);
             m_connections.push_back(connection);
             emit connectionIncoming(connection);
         }
         else
         {
-            QObject::connect(&m_statisticsTimer, &QTimer::timeout, connection, &ThorQ::ClientConnection::updateStats);
+            QObject::connect(&m_statisticsTimer, &QTimer::timeout, connection, &ThorQ::Networking::Connection::updateStats);
             m_connections.push_back(connection);
             emit connectionEstablished(connection);
         }
     }
 }
 
-void ThorQ::Client::handleEventMessage(const ENetEvent& event)
+void ThorQ::Networking::Client::handleEventMessage(const ENetEvent& event)
 {
-    auto connection = reinterpret_cast<ClientConnection*>(event.peer->data);
+    auto connection = reinterpret_cast<Connection*>(event.peer->data);
 
     if (connection != nullptr)
     {
@@ -275,9 +276,9 @@ void ThorQ::Client::handleEventMessage(const ENetEvent& event)
     }
 }
 
-void ThorQ::Client::handleEventTimeout(const ENetEvent& event)
+void ThorQ::Networking::Client::handleEventTimeout(const ENetEvent& event)
 {
-    auto connection = reinterpret_cast<ClientConnection*>(event.peer->data);
+    auto connection = reinterpret_cast<Connection*>(event.peer->data);
 
     if (connection != nullptr)
     {
@@ -287,9 +288,9 @@ void ThorQ::Client::handleEventTimeout(const ENetEvent& event)
     handleEventDisconnect(event);
 }
 
-void ThorQ::Client::handleEventDisconnect(const ENetEvent &event)
+void ThorQ::Networking::Client::handleEventDisconnect(const ENetEvent &event)
 {
-    auto connection = reinterpret_cast<ClientConnection*>(event.peer->data);
+    auto connection = reinterpret_cast<Connection*>(event.peer->data);
 
     if (connection != nullptr)
     {
@@ -299,14 +300,14 @@ void ThorQ::Client::handleEventDisconnect(const ENetEvent &event)
         }
 
         connection->clear();
-        QObject::disconnect(&m_statisticsTimer, &QTimer::timeout, connection, &ThorQ::ClientConnection::updateStats);
+        QObject::disconnect(&m_statisticsTimer, &QTimer::timeout, connection, &ThorQ::Networking::Connection::updateStats);
         connection->handleEventDisconnect(event);
         connection->deleteLater();
     }
 }
 
 
-ThorQ::ClientConnection::ClientConnection(QUuid id, ENetPeer* peer, ThorQ::Client* client)
+ThorQ::Networking::Connection::Connection(QUuid id, ENetPeer* peer, ThorQ::Networking::Client* client)
     : QObject(client)
     , m_id(id)
     , m_peer(peer)
@@ -319,22 +320,22 @@ ThorQ::ClientConnection::ClientConnection(QUuid id, ENetPeer* peer, ThorQ::Clien
     m_peer->data = this;
 }
 
-ThorQ::ClientConnection::~ClientConnection()
+ThorQ::Networking::Connection::~Connection()
 {
     clear();
 }
 
-QUuid ThorQ::ClientConnection::id() const
+QUuid ThorQ::Networking::Connection::id() const
 {
     return m_id;
 }
 
-ENetPeer* ThorQ::ClientConnection::peer() const
+ENetPeer* ThorQ::Networking::Connection::peer() const
 {
     return m_peer;
 }
 
-void ThorQ::ClientConnection::clear()
+void ThorQ::Networking::Connection::clear()
 {
     if (m_peer != nullptr)
     {
@@ -349,7 +350,7 @@ void ThorQ::ClientConnection::clear()
     }
 }
 
-void ThorQ::ClientConnection::updateStats()
+void ThorQ::Networking::Connection::updateStats()
 {
     if (m_peer == nullptr) return;
 
@@ -392,73 +393,43 @@ void ThorQ::ClientConnection::updateStats()
     }
 }
 
-void ThorQ::ClientConnection::handleEventMessage(const ENetEvent& event)
+void ThorQ::Networking::Connection::handleEventMessage(const ENetEvent& event)
 {
-    emit packetReceived(ThorQ::ClientMessage(event.packet, event.channelID));
+    emit udpReceived(ThorQ::Networking::Message(event.packet, event.channelID));
 }
 
-void ThorQ::ClientConnection::handleEventTimeout(const ENetEvent& event)
+void ThorQ::Networking::Connection::handleEventTimeout(const ENetEvent& event)
 {
     Q_UNUSED(event)
     emit disconnected((std::uint32_t)THORQ_DISCONNECT_REASON::TIMED_OUT);
 }
 
-void ThorQ::ClientConnection::handleEventDisconnect(const ENetEvent& event)
+void ThorQ::Networking::Connection::handleEventDisconnect(const ENetEvent& event)
 {
     emit disconnected(event.data);
 }
 
-std::uint64_t ThorQ::ClientConnection::txData() const
+std::uint64_t ThorQ::Networking::Connection::txData() const
 {
     return m_totalDataTx;
 }
 
-std::uint32_t ThorQ::ClientConnection::txSpeed() const
+std::uint32_t ThorQ::Networking::Connection::txSpeed() const
 {
     return m_speedTx;
 }
 
-std::uint64_t ThorQ::ClientConnection::rxData() const
+std::uint64_t ThorQ::Networking::Connection::rxData() const
 {
     return m_totalDataRx;
 }
 
-std::uint32_t ThorQ::ClientConnection::rxSpeed() const
+std::uint32_t ThorQ::Networking::Connection::rxSpeed() const
 {
     return m_speedRx;
 }
 
-void ThorQ::ClientConnection::packetSend(QByteArray data, uint8_t channel)
-{
-    sendPacket(data, ENET_PACKET_FLAG_UNSEQUENCED, channel);
-}
-
-void ThorQ::ClientConnection::packetSendReliable(QByteArray data, uint8_t channel)
-{
-    sendPacket(data, ENET_PACKET_FLAG_RELIABLE, channel);
-}
-
-void ThorQ::ClientConnection::packetSendSequenced(QByteArray data, uint8_t channel)
-{
-    sendPacket(data, 0, channel);
-}
-
-void ThorQ::ClientConnection::disconnect(std::uint32_t reason)
-{
-    enet_peer_disconnect(m_peer, reason);
-}
-
-void ThorQ::ClientConnection::disconnectNow(std::uint32_t reason)
-{
-    enet_peer_disconnect_now(m_peer, reason);
-}
-
-void ThorQ::ClientConnection::disconnectLater(std::uint32_t reason)
-{
-    enet_peer_disconnect_later(m_peer, reason);
-}
-
-void ThorQ::ClientConnection::sendPacket(const QByteArray &data, std::uint32_t flags, uint8_t channel)
+void ThorQ::Networking::Connection::udpSend(ThorQ::Networking::Message message)
 {
     if (m_peer == nullptr)
     {
@@ -466,57 +437,63 @@ void ThorQ::ClientConnection::sendPacket(const QByteArray &data, std::uint32_t f
         return;
     }
 
-    ENetPacket* packet = enet_packet_create(data.data(), data.size(), flags);
-
-    if (packet == nullptr)
+    if (enet_peer_send(m_peer, message.channelID(), message.packet()) == -1)
     {
-        // ERROR
-        return;
-    }
-
-    if (enet_peer_send(m_peer, channel, packet) == -1)
-    {
-        enet_packet_destroy(packet);
         // ERROR
         return;
     }
 }
 
-ThorQ::ClientMessage::ClientMessage(ENetPacket* packet, std::uint8_t channelID)
-    : m_packet(packet, [](ENetPacket* packet){ enet_packet_destroy(packet); })
-    , m_channelID(channelID)
+void ThorQ::Networking::Connection::disconnect(std::uint32_t reason)
 {
+    enet_peer_disconnect(m_peer, reason);
 }
 
-ThorQ::ClientMessage::ClientMessage()
+void ThorQ::Networking::Connection::disconnectNow(std::uint32_t reason)
+{
+    enet_peer_disconnect_now(m_peer, reason);
+}
+
+void ThorQ::Networking::Connection::disconnectLater(std::uint32_t reason)
+{
+    enet_peer_disconnect_later(m_peer, reason);
+}
+
+ThorQ::Networking::Message::Message()
     : m_packet(nullptr)
     , m_channelID(0)
 {
 }
 
-ThorQ::ClientMessage::ClientMessage(const ThorQ::ClientMessage &other)
+ThorQ::Networking::Message::Message(const ThorQ::Networking::Message &other)
     : m_packet(other.m_packet)
     , m_channelID(other.m_channelID)
 {
 }
 
-ThorQ::ClientMessage& ThorQ::ClientMessage::operator=(const ThorQ::ClientMessage& other)
+ThorQ::Networking::Message::Message(ENetPacket* packet, std::uint8_t channelID)
+    : m_packet(packet, [](ENetPacket* packet){ enet_packet_destroy(packet); })
+    , m_channelID(channelID)
+{
+}
+
+ThorQ::Networking::Message::~Message()
+{
+}
+
+ENetPacket* ThorQ::Networking::Message::packet() const
+{
+    return m_packet.get();
+}
+
+std::uint8_t ThorQ::Networking::Message::channelID() const
+{
+    return m_channelID;
+}
+
+ThorQ::Networking::Message& ThorQ::Networking::Message::operator=(const ThorQ::Networking::Message& other)
 {
     m_packet = other.m_packet;
     m_channelID = other.m_channelID;
     return *this;
-}
-
-ThorQ::ClientMessage::~ClientMessage()
-{
-}
-
-std::shared_ptr<ENetPacket> ThorQ::ClientMessage::packet() const
-{
-    return m_packet;
-}
-
-std::uint8_t ThorQ::ClientMessage::channelID() const
-{
-    return m_channelID;
 }

@@ -19,7 +19,25 @@
 #include <typedefs_global.h>
 
 namespace ThorQ {
-class ClientConnection;
+namespace Networking {
+class Message
+{
+public:
+    Message();
+    Message(ENetPacket* packet, std::uint8_t channelID);
+    Message(const ThorQ::Networking::Message& other);
+    ~Message();
+
+    ENetPacket* packet() const;
+    std::uint8_t channelID() const;
+
+    ThorQ::Networking::Message& operator=(const ThorQ::Networking::Message& other);
+private:
+    std::shared_ptr<ENetPacket> m_packet;
+    std::uint8_t m_channelID;
+};
+
+class Connection;
 class Client : public QObject
 {
     Q_OBJECT
@@ -31,11 +49,11 @@ public:
     static bool Initialize();
     static void DeInitialize();
 
-    static ThorQ::Client* NewClient(std::uint8_t channelLimit, QObject* parent);
-    static ThorQ::Client* NewClient(QString hostname, std::uint16_t port, std::size_t peerLimit, std::uint8_t channelLimit, QObject* parent);
+    static ThorQ::Networking::Client* NewClient(std::uint8_t channelLimit, QObject* parent);
+    static ThorQ::Networking::Client* NewClient(QString hostname, std::uint16_t port, std::size_t peerLimit, std::uint8_t channelLimit, QObject* parent);
     ~Client();
 
-    QList<ThorQ::ClientConnection*> connections();
+    QList<ThorQ::Networking::Connection*> connections();
 
     std::uint64_t txData() const;
     std::uint32_t txSpeed() const;
@@ -44,8 +62,8 @@ public:
 public slots:
     void connect(QUuid connectionID, QString hostname, std::uint16_t port, std::uint8_t channelCount);
 signals:
-    void connectionIncoming(ThorQ::ClientConnection* connection);
-    void connectionEstablished(ThorQ::ClientConnection* connection);
+    void connectionIncoming(ThorQ::Networking::Connection* connection);
+    void connectionEstablished(ThorQ::Networking::Connection* connection);
     void connectionFailed(QUuid connectionID);
 
     void txDataChanged(std::uint64_t txData);
@@ -67,7 +85,7 @@ private:
     QTimer m_serviceTimer;
     QTimer m_statisticsTimer;
 
-    QList<ThorQ::ClientConnection*> m_connections;
+    QList<ThorQ::Networking::Connection*> m_connections;
 
     ENetHost* m_host;
 
@@ -77,31 +95,14 @@ private:
     std::atomic_uint32_t m_speedRx;
 };
 
-class ClientMessage
-{
-protected:
-    friend ThorQ::ClientConnection;
-    ClientMessage(ENetPacket* packet, std::uint8_t channelID);
-public:
-    ClientMessage();
-    ClientMessage(const ClientMessage& other);
-    ClientMessage& operator=(const ClientMessage& other);
-    ~ClientMessage();
 
-    std::shared_ptr<ENetPacket> packet() const;
-    std::uint8_t channelID() const;
-private:
-    std::shared_ptr<ENetPacket> m_packet;
-    std::uint8_t m_channelID;
-};
-
-class ClientConnection : public QObject
+class Connection : public QObject
 {
     Q_OBJECT
-    Q_DISABLE_COPY(ClientConnection)
+    Q_DISABLE_COPY(Connection)
 protected:
-    friend ThorQ::Client;
-    ClientConnection(QUuid id, ENetPeer* peer, ThorQ::Client* client);
+    friend ThorQ::Networking::Client;
+    Connection(QUuid id, ENetPeer* peer, ThorQ::Networking::Client* client);
 protected slots:
     ENetPeer* peer() const;
     void clear();
@@ -110,7 +111,7 @@ protected slots:
     void handleEventTimeout(const ENetEvent& event);
     void handleEventDisconnect(const ENetEvent& event);
 public:
-    ~ClientConnection();
+    ~Connection();
 
     QUuid id() const;
 
@@ -128,20 +129,16 @@ signals:
     void rxDataChanged(std::uint64_t rxData);
     void rxSpeedChanged(std::uint32_t rxSpeed);
 
-    void packetReceived(ClientMessage message);
+    void udpReceived(ThorQ::Networking::Message message);
 
     void disconnected(std::uint32_t reason);
 public slots:
-    void packetSend(QByteArray data, std::uint8_t channel);
-    void packetSendReliable(QByteArray data, std::uint8_t channel);
-    void packetSendSequenced(QByteArray data, std::uint8_t channel);
+    void udpSend(ThorQ::Networking::Message message);
 
     void disconnect(std::uint32_t reason);
     void disconnectNow(std::uint32_t reason);
     void disconnectLater(std::uint32_t reason);
 private:
-    void sendPacket(const QByteArray& data, std::uint32_t flags, std::uint8_t channel);
-
     QUuid m_id;
 
     ENetPeer* m_peer;
@@ -153,6 +150,7 @@ private:
     std::atomic_uint16_t m_rtt;
 };
 }
-Q_DECLARE_METATYPE(ThorQ::ClientMessage)
+}
+Q_DECLARE_METATYPE(ThorQ::Networking::Message)
 
 #endif // CLIENT_H

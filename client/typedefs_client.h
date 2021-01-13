@@ -2,9 +2,11 @@
 #define TYPEDEFS_CLIENT_H
 
 namespace ThorQ {
+namespace Networking {
+class Message;
 class Client;
-class ClientMessage;
-class ClientConnection;
+class Connection;
+}
 class ServerHandler;
 } // ThorQ
 

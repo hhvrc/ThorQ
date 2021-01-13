@@ -36,12 +36,12 @@ Q_DECLARE_METATYPE(THORQ_STATE_LOGIN)
 std::uint16_t i = 0;
 int main(int argc, char** argv)
 {
-    qRegisterMetaType<QSharedPointer<ThorQ::ClientMessage>>("ENetMessage");
+    qRegisterMetaType<QSharedPointer<ThorQ::Networking::Message>>("ThorQNetworkingMessage");
 
-	// TODO: customize GUI
+    // TODO: customize GUI
     // TODO: enable support for SteamVR
 
-	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
+    QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QCoreApplication::setApplicationName(THORQ_APPLICATION_NAME);
     QCoreApplication::setApplicationVersion(THORQ_VERSION_CLIENT.toString().c_str());
     QCoreApplication::setOrganizationName(THORQ_ORGANIZATION_NAME);
@@ -49,7 +49,7 @@ int main(int argc, char** argv)
 
     QApplication app(argc, argv);
 #if COMTEST
-	QString stylesheet;
+    QString stylesheet;
 
     const char* fileName;
     if (QFile::exists("stylesheet.css"))
@@ -58,66 +58,68 @@ int main(int argc, char** argv)
     { fileName = ":/stylesheet.css"; }
 
     QFile file(fileName);
-	if (file.open(QFile::ReadOnly | QFile::Text))
-	{
-		QTextStream stream(&file);
-		stylesheet = stream.readAll();
-	}
+    if (file.open(QFile::ReadOnly | QFile::Text))
+    {
+        QTextStream stream(&file);
+        stylesheet = stream.readAll();
+    }
 
     app.setStyleSheet(stylesheet);
     app.setDesktopFileName(THORQ_APPLICATION_NAME);
-	app.setWindowIcon(QIcon(":/shockGrey.ico"));
+    app.setWindowIcon(QIcon(":/shockGrey.ico"));
     //app.setQuitOnLastWindowClosed(false);
 
-	// Initialize ENet
-    if (!ThorQ::Client::Initialize())
-	{
+    // Initialize ENet
+    if (!ThorQ::Networking::Client::Initialize())
+    {
         qDebug() << "Failed to initialize networking";
         return EXIT_FAILURE;
-	}
+    }
 
-	LoginWidget loginWidget;
+    LoginWidget loginWidget;
     MainWidget mainWidget;
-    ThorQ::Client* cli = ThorQ::Client::NewClient("::", 12347, 128, 8, &app);
-    ThorQ::ServerHandler* handler = new ThorQ::ServerHandler(cli, &app);
+    ThorQ::Networking::Client* cli = ThorQ::Networking::Client::NewClient("0.0.0.0", 63486, 8, 8, &app);
+
+
+    ThorQ::ServerHandler* handler = new ThorQ::ServerHandler(&app);
 /*
-	QMessageBox errorBox(&loginWidget);
-	errorBox.setIcon(QMessageBox::Critical);
-	errorBox.setWindowTitle("error");
+    QMessageBox errorBox(&loginWidget);
+    errorBox.setIcon(QMessageBox::Critical);
+    errorBox.setWindowTitle("error");
 
-	QMessageBox warningBox(&loginWidget);
-	warningBox.setIcon(QMessageBox::Warning);
-	errorBox.setWindowTitle("warning");
+    QMessageBox warningBox(&loginWidget);
+    warningBox.setIcon(QMessageBox::Warning);
+    errorBox.setWindowTitle("warning");
 
-    QObject::connect(cli, &ThorQ::Client::rttChanged, &mainWidget, &MainWidget::setConnectionPing);
-    QObject::connect(cli, &ThorQ::Client::LoginStateChanged, &mainWidget, &MainWidget::setLoginState);
-    QObject::connect(cli, &ThorQ::Client::SessionStateChanged, &mainWidget, &MainWidget::setSessionState);
+    QObject::connect(cli, &ThorQ::Networking::Client::rttChanged, &mainWidget, &MainWidget::setConnectionPing);
+    QObject::connect(cli, &ThorQ::Networking::Client::LoginStateChanged, &mainWidget, &MainWidget::setLoginState);
+    QObject::connect(cli, &ThorQ::Networking::Client::SessionStateChanged, &mainWidget, &MainWidget::setSessionState);
 
-    QObject::connect(cli, &ThorQ::Client::RttChanged, &loginWidget, &LoginWidget::setConnectionPing);
-    QObject::connect(cli, &ThorQ::Client::ConnectionStateChanged, &loginWidget, &LoginWidget::setConnectionState);
-    QObject::connect(cli, &ThorQ::Client::CryptoStateChanged, &loginWidget, &LoginWidget::setCryptoState);
-    QObject::connect(cli, &ThorQ::Client::AuthStateChanged, &loginWidget, &LoginWidget::setHwidState);
-    QObject::connect(cli, &ThorQ::Client::LoginStateChanged, &loginWidget, &LoginWidget::setLoginState);
+    QObject::connect(cli, &ThorQ::Networking::Client::RttChanged, &loginWidget, &LoginWidget::setConnectionPing);
+    QObject::connect(cli, &ThorQ::Networking::Client::ConnectionStateChanged, &loginWidget, &LoginWidget::setConnectionState);
+    QObject::connect(cli, &ThorQ::Networking::Client::CryptoStateChanged, &loginWidget, &LoginWidget::setCryptoState);
+    QObject::connect(cli, &ThorQ::Networking::Client::AuthStateChanged, &loginWidget, &LoginWidget::setHwidState);
+    QObject::connect(cli, &ThorQ::Networking::Client::LoginStateChanged, &loginWidget, &LoginWidget::setLoginState);
 
-    QObject::connect(cli, &ThorQ::Client::Error, &errorBox, &QMessageBox::setText);
-    QObject::connect(cli, &ThorQ::Client::Error, &errorBox, &QWidget::show);
-	//QObject::connect(cli, &Client::Error, [&](){ app.setQuitOnLastWindowClosed(true); loginWidget.hide(); mainWidget.hide(); warningBox.hide(); });
+    QObject::connect(cli, &ThorQ::Networking::Client::Error, &errorBox, &QMessageBox::setText);
+    QObject::connect(cli, &ThorQ::Networking::Client::Error, &errorBox, &QWidget::show);
+    //QObject::connect(cli, &Client::Error, [&](){ app.setQuitOnLastWindowClosed(true); loginWidget.hide(); mainWidget.hide(); warningBox.hide(); });
 
-	QObject::connect(cli, &Client::Warning, &warningBox, &QMessageBox::setText);
-	QObject::connect(cli, &Client::Warning, &warningBox, &QWidget::show);
+    QObject::connect(cli, &Client::Warning, &warningBox, &QMessageBox::setText);
+    QObject::connect(cli, &Client::Warning, &warningBox, &QWidget::show);
 
-	QObject::connect(&loginWidget, &LoginWidget::usernameEntered, cli, &Client::Login);
+    QObject::connect(&loginWidget, &LoginWidget::usernameEntered, cli, &Client::Login);
 
     QObject::connect(cli, &Client::userUpdate, &mainWidget, &MainWidget::updateUser);
     QObject::connect(cli, &Client::UserOffline, &mainWidget, &MainWidget::removeUser);
-	QObject::connect(&mainWidget, &MainWidget::logoutButtonClicked, cli, &Client::Logout);
+    QObject::connect(&mainWidget, &MainWidget::logoutButtonClicked, cli, &Client::Logout);
 
     loginWidget.show();
 */
 #else
     QPixmap pix(":/uwu.png");
-	QLabel lab;
-	lab.setPixmap(pix);
+    QLabel lab;
+    lab.setPixmap(pix);
 
     OpenVROverlayController* ovr = new OpenVROverlayController(&app);
 
@@ -126,11 +128,11 @@ int main(int argc, char** argv)
     QObject::connect(ovr, &OpenVROverlayController::vrQuit, ovr, &QObject::deleteLater);
 #endif
 
-	int retval = app.exec();
+    int retval = app.exec();
 
 #if COMTEST
     delete cli;
-    ThorQ::Client::DeInitialize();
+    ThorQ::Networking::Client::DeInitialize();
 #endif
     return retval;
 }

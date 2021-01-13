@@ -144,17 +144,13 @@ bool ThorQ::Server::start(std::uint16_t port, std::size_t maxPeers, std::uint8_t
         address.host = ENET_HOST_ANY;
         address.port = port;
 
-        if (m_host != nullptr)
-        {
-            enet_host_destroy(m_host);
-            m_host = nullptr;
-        }
+        enet_host_destroy(m_host); // Destroy any previous host
 
         m_host = enet_host_create(&address, maxPeers, channelCount, 0, 0);
 
         if (m_host != nullptr)
         {
-            m_host->maximumPacketSize = 1024 * 1024; // 1MB (enough to hold 4 256*256 rgba images)
+            m_host->maximumPacketSize = 1024 * 1024; // 1MB (enough to hold 15 256*256 rgba images)
 
             m_run = true;
 

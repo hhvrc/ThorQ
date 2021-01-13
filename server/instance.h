@@ -26,7 +26,7 @@ public:
     ~Instance();
 
     ENetPeer* m_peer;
-    std::shared_ptr<ThorQ::Crypto> m_crypto;
+    ThorQ::Crypto m_crypto;
 
     std::shared_mutex l_account;
     std::shared_ptr<ThorQ::Account> m_account;
@@ -34,7 +34,7 @@ public:
     std::shared_mutex l_systemID;
     std::vector<std::uint8_t> m_systemID;
 
-    std::vector<std::uint8_t> m_verificationData;
+    std::array<std::uint8_t, THORQ_CRYPTO_VERIFICATION_DATA_LEN> m_verificationData;
 
     std::atomic<THORQ_STATE_CRYPTO> m_cryptoState;
     std::atomic<THORQ_STATE_HWID>   m_hwidState;

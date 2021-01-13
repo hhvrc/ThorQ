@@ -79,7 +79,7 @@ bool ThorQ::packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data)
     return true;
 }
 
-bool ThorQ::packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data, std::shared_ptr<ThorQ::Crypto> crypto)
+bool ThorQ::packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data, const ThorQ::Crypto& crypto)
 {
     std::size_t sizeNeeded = ThorQ::calculatePacketSize(data.size(), true);
 
@@ -108,7 +108,7 @@ bool ThorQ::packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data,
                             );
 
     // Encrpyt the data, this will copy it and the generated IV into messageOut
-    if (!crypto->encrypt(packetPayload, data, packetMAC, packetNonce))
+    if (!crypto.encrypt(packetPayload, data, packetMAC, packetNonce))
     {
         return false;
     }
@@ -116,7 +116,7 @@ bool ThorQ::packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data,
     return true;
 }
 
-bool ThorQ::packetDecode(const ENetPacket* packet, std::span<std::uint8_t> data, std::shared_ptr<ThorQ::Crypto> crypto)
+bool ThorQ::packetDecode(const ENetPacket* packet, std::span<std::uint8_t> data, const ThorQ::Crypto& crypto)
 {
     std::size_t sizeNeeded = ThorQ::calculateDataSize(packet);
 
@@ -146,7 +146,7 @@ bool ThorQ::packetDecode(const ENetPacket* packet, std::span<std::uint8_t> data,
                                 );
 
         // Decrypt data
-        if (!crypto->decrypt(data, packetPayload, packetMAC, packetNonce))
+        if (!crypto.decrypt(data, packetPayload, packetMAC, packetNonce))
         {
             printf("Decrypt failed\n");
             return false;

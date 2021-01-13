@@ -318,10 +318,10 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
     case ThorQ::Serialization::Crypto::MessageType_Request:
     {
         fmt::print("[MSG] Crypto request!\n");
-        instance->m_crypto->generateKeyPair();
+        instance->m_crypto.generateKeyPair();
 
         std::array<std::uint8_t, ThorQ::Crypto::PublicKeyLen> pubKey;
-        instance->m_crypto->getPublicKey(pubKey);
+        instance->m_crypto.getPublicKey(pubKey);
 
         // Build flatbuffer
         flatbuffers::FlatBufferBuilder fbsBuilder;
@@ -347,14 +347,13 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
                         fbsCrypto->data()->size()
                     );
 
-        if (instance->m_crypto->agreeAsServer(data))
+        if (instance->m_crypto.agreeAsServer(data))
         {
-            instance->m_verificationData.resize(256);
             ThorQ::Crypto::RandomizeBytes(instance->m_verificationData);
 
             // Build flatbuffer
             flatbuffers::FlatBufferBuilder fbsBuilder;
-            auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Verify, fbsBuilder.CreateVector(instance->m_verificationData)).Union();
+            auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Verify, fbsBuilder.CreateVector(instance->m_verificationData.data(), instance->m_verificationData.size())).Union();
             auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
             fbsBuilder.Finish(fbsMessage);
 

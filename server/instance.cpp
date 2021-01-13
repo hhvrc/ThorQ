@@ -4,7 +4,7 @@
 
 ThorQ::Instance::Instance(ENetPeer *peer)
     : m_peer(peer)
-    , m_crypto(new ThorQ::Crypto())
+    , m_crypto()
     , l_account()
     , m_account()
     , l_systemID()

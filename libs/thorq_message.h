@@ -17,8 +17,8 @@ bool packetIsValidSize(const ENetPacket* const packet);
 std::size_t calculateDataSize(const ENetPacket* const packet);
 std::size_t calculatePacketSize(std::size_t dataSize, bool encrypt);
 bool packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data);
-bool packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data, std::shared_ptr<ThorQ::Crypto> crypto);
-bool packetDecode(const ENetPacket* packet, std::span<std::uint8_t> data, std::shared_ptr<ThorQ::Crypto> crypto);
+bool packetEncode(ENetPacket* packet, const std::span<std::uint8_t> data, const ThorQ::Crypto& crypto);
+bool packetDecode(const ENetPacket* packet, std::span<std::uint8_t> data, const ThorQ::Crypto& crypto);
 }
 
 #endif // THORQ_MESSAGE_H
