@@ -429,7 +429,10 @@ void ThorQ::Networking::Connection::udpSend(ThorQ::Networking::Message message)
         return;
     }
 
-    if (enet_peer_send(m_peer, message.channelID(), message.packet()) == -1)
+    // Make copy of packet
+    ENetPacket* packet = enet_packet_copy(message.packet());
+
+    if (enet_peer_send(m_peer, message.channelID(), packet) == -1)
     {
         // ERROR
         return;
