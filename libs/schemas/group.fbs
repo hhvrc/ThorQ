@@ -2,6 +2,11 @@ include  "uuid.fbs";
 
 namespace ThorQ.Serialization.Group;
 
+struct Participant {
+    user_id : Uuid;
+    is_master : bool;
+}
+
 table Group {
   uuid : Uuid;
 
@@ -10,34 +15,59 @@ table Group {
 
   owner_id : Uuid;
 
-  master_ids : [ Uuid ];
-  participant_ids : [ Uuid ];
+  participants : [ Participant ];
 }
-
 table Create {
+  name : string;
   participant_ids : [ Uuid ];
 }
-
-table Invite {
+table Invited {
   group_id : Uuid;
+  name : string;
+  image_id : Uuid;
+  participants : ulong;
 }
-
-table GetGroup {
-  group_id : Uuid;
-}
-
 table InviteResponse {
   group_id : Uuid;
   accept : bool;
 }
+table UserKick {
+  group_id : Uuid;
+  user_id : Uuid;
+}
+table UserInvite {
+  group_id : Uuid;
+  user_id : Uuid;
+}
+table SetName {
+  group_id : Uuid;
+  name : string;
+}
+table SetImage {
+  group_id : Uuid;
+  image : [ ubyte ];
+}
 
 /// Yada, yada...
 union Body {
+  /// [Server]
   group : Group.Group,
+  invited : Group.Invited,
+  removed : Uuid,
+
+  /// [Client]
+  get : Uuid,
   create : Group.Create,
-  get_group : Group.GetGroup,
-  invite : Group.Invite,
-  invite_response : Group.InviteResponse
+  destroy : Uuid,
+  leave : Uuid,
+
+  user_kick : Group.UserKick,
+  user_invite : Group.UserInvite,
+  invite_accept : Uuid,
+  invite_reject : Uuid,
+
+  set_name : Group.SetName,
+  set_image : Group.SetImage
 }
 
 table Message {

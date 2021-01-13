@@ -7,6 +7,7 @@
 #include <thorq_message.h>
 
 #include <schemas/message_generated.h>
+#include <schemas/friendrequest_generated.h>
 
 #include "client.h"
 

@@ -8,7 +8,7 @@ table Ban {
 }
 
 table Report {
-  relationship_id : Uuid;
+  user_id : Uuid;
   reason : string;
 }
 

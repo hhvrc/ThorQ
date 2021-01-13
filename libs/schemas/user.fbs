@@ -20,30 +20,22 @@ table User {
 }
 table UserOther {
   user : User.User;
-  is_friend : bool;
+  friendship : User.Friendship;
   is_blocked : bool;
 }
 
 table UserSelf {
   user : User.User;
   email : string;
-  relationships : [ UserOther ];
-}
-
-table Get {
-  user_id : Uuid;
-}
-
-table Block {
-  user_id : Uuid;
-  blocked : bool;
+  relationships : [ User.UserOther ];
 }
 
 /// Yada, yada...
 union Body {
   user : User.User,
-  get_user : User.Get,
-  block_user : User.Block
+  get : Uuid,
+  block : Uuid,
+  unblock : Uuid
 }
 
 table Message {

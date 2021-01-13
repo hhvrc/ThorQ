@@ -1,0 +1,28 @@
+include  "uuid.fbs";
+
+namespace ThorQ.Serialization.Peer2Peer;
+
+struct EndPoint {
+  /// IPv6 address
+  addr : [ ubyte : 16 ];
+  /// Port number
+  port : ushort;
+}
+
+struct Peer {
+  user_id : Uuid;
+  /// Local endpoint (inside NAT)
+  local_ep : EndPoint;
+  /// Global endpoint (outside NAT)
+  global_ep : EndPoint;
+}
+
+/// Yada, yada...
+union Body {
+  peer : Peer2Peer.Peer,
+  post_local : Peer2Peer.EndPoint,
+}
+
+table Message {
+  body : Peer2Peer.Body;
+}

@@ -9,6 +9,7 @@ include "moderation.fbs";
 include "systemid.fbs";
 include "user.fbs";
 include "version.fbs";
+include "p2p.fbs";
 
 namespace ThorQ.Serialization;
 
@@ -23,7 +24,8 @@ union Body {
   moderation : Moderation.Message,
   system_id : SystemId.Message,
   user : User.Message,
-  version : Version
+  version : Version,
+  p2p : Peer2Peer.Message
 }
 
 table Message {
