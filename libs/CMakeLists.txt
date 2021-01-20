@@ -144,6 +144,7 @@ target_link_libraries(${project}
     ${CMAKE_DL_LIBS}
     ${WIN_LIBS}
     flatbuffers
+    enet_static
     sodium
     fmt
 )
