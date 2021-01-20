@@ -11,6 +11,9 @@ message("Configuring ${project}...")
 
 add_subdirectory(fmt)
 
+set(ENET_STATIC ON)
+add_definitions(-DENET_FEATURE_ADDRESS_MAPPING)
+add_subdirectory(enet)
 # ------ flatbuffers ------
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFLATBUFFERS_USE_STD_SPAN") # C++20 :D
@@ -69,8 +72,6 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.cpp
 )
 set(${project}_HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/enet/include/enet.h
-
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
     ${CMAKE_CURRENT_SOURCE_DIR}/hashing.h
     ${CMAKE_CURRENT_SOURCE_DIR}/version.h
