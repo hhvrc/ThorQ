@@ -9,11 +9,20 @@ project(
 
 message("Configuring ${project}...")
 
+# ---------- fmt ----------
+
 add_subdirectory(fmt)
+
+# -------------------------
+
+# --------- enet ---------
 
 set(ENET_STATIC ON)
 add_definitions(-DENET_FEATURE_ADDRESS_MAPPING)
 add_subdirectory(enet)
+
+# -------------------------
+
 # ------ flatbuffers ------
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFLATBUFFERS_USE_STD_SPAN") # C++20 :D
