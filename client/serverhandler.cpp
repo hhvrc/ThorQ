@@ -109,8 +109,8 @@ void ThorQ::ServerHandler::parsePacket(ThorQ::Networking::Message message)
         qDebug() << "[MSG] group";
         //handleMessageGroup(fbsMessage->body(), fbsVerifier);
         break;
-    case ThorQ::Serialization::Body_collar:
-        qDebug() << "[MSG] collar";
+    case ThorQ::Serialization::Body_device:
+        qDebug() << "[MSG] device";
         //handleMessageCollar(fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_moderation:

@@ -1,6 +1,6 @@
 include "account.fbs";
 include "announcement.fbs";
-include "collar.fbs";
+include "device.fbs";
 include "crypto.fbs";
 include "file.fbs";
 include "friendrequest.fbs";
@@ -16,7 +16,7 @@ namespace ThorQ.Serialization;
 union Body {
   account : Account.Message,
   announcement : Announcement.Message,
-  collar : Collar.Message,
+  device : Device.Message,
   crypto : Crypto.Message,
   file : File.Message,
   friend_request : FriendRequest.Message,

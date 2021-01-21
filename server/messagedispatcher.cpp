@@ -11,7 +11,7 @@
 #include <thorq_message.h>
 #include <schemas/account_generated.h>
 #include <schemas/announcement_generated.h>
-#include <schemas/collar_generated.h>
+#include <schemas/device_generated.h>
 #include <schemas/crypto_generated.h>
 #include <schemas/file_generated.h>
 #include <schemas/version_generated.h>
@@ -167,8 +167,8 @@ void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
     case ThorQ::Serialization::Body_group:
         handleMessageGroup(instance, fbsMessage->body(), fbsVerifier);
         break;
-    case ThorQ::Serialization::Body_collar:
-        handleMessageCollar(instance, fbsMessage->body(), fbsVerifier);
+    case ThorQ::Serialization::Body_device:
+        handleMessageDevice(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_moderation:
         handleMessageModeration(instance, fbsMessage->body(), fbsVerifier);
@@ -290,11 +290,11 @@ void ThorQ::MessageDispatcher::handleMessageAccount(ThorQ::Instance *instance, c
     }*/
 }
 
-void ThorQ::MessageDispatcher::handleMessageCollar(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::MessageDispatcher::handleMessageDevice(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
 {
-    auto fbsCollar = reinterpret_cast<const ThorQ::Serialization::Collar::Message*>(body);
+    auto fbsDevice = reinterpret_cast<const ThorQ::Serialization::Device::Message*>(body);
 
-    if (!fbsCollar->Verify(fbsVerifier))
+    if (!fbsDevice->Verify(fbsVerifier))
     {
         return;
     }

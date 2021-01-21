@@ -38,7 +38,7 @@ private:
     void handleMessageFriendRequest(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
     void handleMessageGroup(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
     void handleMessageModeration(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageCollar(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageDevice(ThorQ::Instance* instance, const void* body, flatbuffers::Verifier fbsVerifier);
 
     void sendPacket(ThorQ::Instance* instance, std::span<std::uint8_t> data, bool encrypt, std::uint32_t flags, THORQ_CHANNEL channel);
 
