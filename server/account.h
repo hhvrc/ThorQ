@@ -17,7 +17,7 @@ namespace ThorQ {
 class Account
 {
     friend ThorQ::Instance;
-    Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const std::string& username, const std::string& passwordHash);
+    Account(std::int64_t dbId, const std::string& username, const std::string& passwordHash);
 public:
     static std::shared_ptr<ThorQ::Account> GetAccount(const std::string& username);
     static std::shared_ptr<ThorQ::Account> NewAccount(const std::string& username, const std::string& passwordHash);
@@ -66,8 +66,6 @@ private:
     std::string m_passwordHash;
 
     std::uint16_t m_activityState; // enum: thorq_user_activity_flag
-
-    THORQ_ACCOUNT_AUTHORITY m_authority;
 
     std::shared_mutex l_master;
     std::shared_ptr<ThorQ::Account> m_master; // This persons master

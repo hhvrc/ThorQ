@@ -14,6 +14,7 @@
 #include "mainwidget.h"
 #include "collar/serial.h"
 #include "networking/host.h"
+#include "networking/connectionhandler.h"
 #include "vr/openvroverlaycontroller.h"
 
 Q_DECLARE_METATYPE(THORQ_STATE_CONNECTION)
@@ -86,6 +87,7 @@ int main(int argc, char** argv)
     }
 
     ThorQ::ServerHandler* handler = new ThorQ::ServerHandler(&app);
+    QObject::connect(handler, &ThorQ::ServerHandler::requestConnect, cli, &ThorQ::Networking::Host::connect);
 
     cli->connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT, (std::uint8_t)THORQ_CHANNEL::_MAX, handler->connectionHandler());
 

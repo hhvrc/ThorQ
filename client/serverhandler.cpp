@@ -15,12 +15,9 @@ ThorQ::ServerHandler::ServerHandler(QObject *parent)
     : QObject(parent)
     , m_crypto()
     , m_buffer(THORQ_PAYLOAD_LEN_MAX)
-    , m_connectionHandler(new Networking::ConnectionHandler(this))
+    , m_connectionHandler(nullptr)
 {
-    QObject::connect(m_connectionHandler, &Networking::ConnectionHandler::connected, this, &ServerHandler::handleConnect);
-    QObject::connect(m_connectionHandler, &Networking::ConnectionHandler::disconnected, this, &ServerHandler::handleDisconnect);
-    QObject::connect(m_connectionHandler, &Networking::ConnectionHandler::udpReceived, this, &ServerHandler::parsePacket);
-
+    establishConnection();
 }
 
 ThorQ::ServerHandler::~ServerHandler()
@@ -46,6 +43,8 @@ void ThorQ::ServerHandler::handleConnect(std::uint32_t data)
 void ThorQ::ServerHandler::handleDisconnect(std::uint32_t data)
 {
     qDebug() << "Disconnected";
+
+    establishConnection();
 }
 
 void ThorQ::ServerHandler::parsePacket(ThorQ::Networking::Message message)
@@ -139,6 +138,19 @@ void ThorQ::ServerHandler::parsePacket(ThorQ::Networking::Message message)
     default:
         return;
     }
+}
+
+void ThorQ::ServerHandler::establishConnection()
+{
+    if (m_connectionHandler != nullptr) {
+        m_connectionHandler->deleteLater();
+    }
+
+    m_connectionHandler = new Networking::ConnectionHandler(this);
+    QObject::connect(m_connectionHandler, &Networking::ConnectionHandler::connected, this, &ServerHandler::handleConnect);
+    QObject::connect(m_connectionHandler, &Networking::ConnectionHandler::disconnected, this, &ServerHandler::handleDisconnect);
+    QObject::connect(m_connectionHandler, &Networking::ConnectionHandler::udpReceived, this, &ServerHandler::parsePacket);
+    emit requestConnect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT, (std::uint8_t)THORQ_CHANNEL::_MAX, m_connectionHandler);
 }
 
 void ThorQ::ServerHandler::sendPacket(std::span<std::uint8_t> span, bool encrypt, std::uint32_t flags, THORQ_CHANNEL channelID)

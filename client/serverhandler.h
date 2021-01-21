@@ -33,7 +33,7 @@ public:
 
     Networking::ConnectionHandler* connectionHandler() const;
 signals:
-    void requestConnect();
+    void requestConnect(QString hostname, std::uint16_t port, std::uint8_t channelCount, ThorQ::Networking::ConnectionHandler* handler);
     void requestDisconnect(std::uint32_t reason);
     void packetGenerated(ThorQ::Networking::Message message);
 public slots:
@@ -41,6 +41,8 @@ public slots:
     void handleDisconnect(std::uint32_t data);
     void parsePacket(ThorQ::Networking::Message message);
 private:
+    void establishConnection();
+
     void resetState();
     void sendPacket(std::span<std::uint8_t> span, bool encrypt, std::uint32_t flags, THORQ_CHANNEL channelID);
     void handleMessageVersion(const void* body, flatbuffers::Verifier fbsVerifier);

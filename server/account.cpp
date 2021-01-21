@@ -21,11 +21,10 @@
 std::shared_mutex g_accounts_lock;
 std::unordered_map<std::string, std::shared_ptr<ThorQ::Account>> g_accounts;
 
-ThorQ::Account::Account(std::int64_t dbId, THORQ_ACCOUNT_AUTHORITY authority, const std::string& username, const std::string& passwordHash)
+ThorQ::Account::Account(std::int64_t dbId, const std::string& username, const std::string& passwordHash)
     : m_dbId(dbId)
     , m_username(username)
     , m_passwordHash(passwordHash)
-    , m_authority(authority)
     , m_sessions()
     , m_instances()
     , m_relationships()
@@ -83,12 +82,12 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& us
 
     // Get authority
     int authority = col.getInt();
-    if (authority < THORQ_ACCOUNT_AUTHORITY_NONE || authority > THORQ_ACCOUNT_AUTHORITY_FOUNDER)
+    if (false)//authority < THORQ_ACCOUNT_AUTHORITY_NONE || authority > THORQ_ACCOUNT_AUTHORITY_FOUNDER)
     {
         return nullptr;
     }
 
-    return std::shared_ptr<ThorQ::Account>(new ThorQ::Account(query.column(0).getInt64(), (THORQ_ACCOUNT_AUTHORITY)authority, username, query.column(1).getText()));
+    return std::shared_ptr<ThorQ::Account>(new ThorQ::Account(query.column(0).getInt64(), /*(THORQ_ACCOUNT_AUTHORITY)authority, */username, query.column(1).getText()));
 }
 
 std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& username, const std::string& passwordHash)
@@ -153,7 +152,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 		return nullptr;
 	}
 
-    return std::shared_ptr<ThorQ::Account>(new ThorQ::Account(i, THORQ_ACCOUNT_AUTHORITY_NONE, username, passwordHash));
+    return std::shared_ptr<ThorQ::Account>(new ThorQ::Account(i, /*THORQ_ACCOUNT_AUTHORITY_NONE, */username, passwordHash));
 }
 
 int64_t ThorQ::Account::databaseId() const
