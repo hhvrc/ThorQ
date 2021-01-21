@@ -1,0 +1,32 @@
+include  "uuid.fbs";
+
+namespace ThorQ.Serialization.Device;
+
+enum Type : ubyte {
+  None,
+  Collar,
+  Toy
+}
+
+table Device {
+  /// id of the device
+  uuid : Uuid;
+
+  /// Name of device
+  name : string;
+
+  /// Type of device
+  type : Device.Type;
+
+  /// Icon of device
+  image_id : Uuid;
+}
+
+/// Yada, yada...
+union Body {
+  device : Device.Device
+}
+
+table Message {
+  body : Device.Body;
+}

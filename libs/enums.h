@@ -26,52 +26,6 @@ enum class THORQ_CHANNEL : std::uint8_t
     _MAX
 };
 
-/// Flags to describe the payload of a message
-enum class THORQ_PAYLOAD_ID : std::uint8_t
-{
-    _INVALID,
-
-    // Main & Event channel
-    HEARTBEAT,    ///< Heartbeat to keep connection alive and determine RTT
-    VERSION,      ///< Request updated version info
-    CRYPTO,       ///< Cryptographic handshake messages
-    SYSTEMID,     ///< SystemID messages
-    ACCOUNT,      ///< Create/Delete/Recover/Login/Logout
-    RELATIONSHIP, ///< Friend/Block/AcceptFriend/DenyFriend/UnFriend/GetRelations
-    SESSION,      ///< Sessions with other people
-    ACK,          ///< Acknowledge
-
-    // Impulse channel
-    TOY,          ///< Toys
-    COLLAR,       ///< Collars
-
-    // Authority channel
-    MODERATION,   ///< Bans/Reporting
-    ANNOUNCEMENT, ///< Server notifications/Admin notifications
-
-    _MAX
-};
-
-
-/// Acknowledgement of message sent from remote host
-enum class THORQ_PAYLOAD_ACK : std::uint8_t
-{
-    _INVALID,
-
-    OK,            ///< Command succeeded
-    IN_PROGRESS,   ///< Command accepted, and is in progress
-    NO_CHANGE,     ///< Command was ignored, because it didnt change anything
-
-    DENIED,        ///< Command was denied
-    INVALID,       ///< Command itself or its format is invalid
-    LOGIN_NEEDED,  ///< Client has not logged in
-    UNAUTHORIZED,  ///< Client has not authenticated (Crypto + Auth)
-
-    ERROR_OCCURED, ///< Server experienced an error executing command
-
-    _MAX
-};
-
 /// Id of a device or service that client has
 enum THORQ_USER_ACTIVITY_FLAG : std::uint8_t
 {
@@ -101,37 +55,6 @@ enum class THORQ_DISCONNECT_REASON : std::uint32_t
     TIMED_OUT,
 
     _MAX
-};
-
-////////////////////////////////////////////////////
-/// USER STATES
-////////////////////////////////////////////////////
-
-/// Friend relationship status
-enum class THORQ_RELATIONSHIP_STATUS : std::uint8_t
-{
-    BLOCKED, ///< Target is blocked
-    NONE,    ///< No relationship status
-    PENDING, ///< Outgoing friend-request
-    FRIENDS, ///< Account is friended
-};
-
-/// Actions to be taken on session requested
-enum class THORQ_RELATIONSHIP_AUTHORITY : std::uint8_t
-{
-    REJECT,   ///< Always reject this persons requests
-    SILENT,   ///< Persons requests will not prompt me
-    NOTIFY,   ///< Prompt me if this person requests control
-    ACCEPT,   ///< Accept if this person requests
-    EXCLUSIVE ///< This person can invoke exclusive access to me (will kick everyone else out)
-};
-
-enum THORQ_ACCOUNT_AUTHORITY : std::uint8_t
-{
-    THORQ_ACCOUNT_AUTHORITY_NONE,          ///< Just a normie
-    THORQ_ACCOUNT_AUTHORITY_MODERATOR,     ///< Can moderate users (kick/ban)
-    THORQ_ACCOUNT_AUTHORITY_ADMINISTRATOR, ///< Can manage server parameters
-    THORQ_ACCOUNT_AUTHORITY_FOUNDER        ///< Exclusive to HeavenVR
 };
 
 ////////////////////////////////////////////////////

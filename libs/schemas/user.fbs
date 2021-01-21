@@ -2,10 +2,22 @@ include  "uuid.fbs";
 
 namespace ThorQ.Serialization.User;
 
+enum Presence : ubyte {
+  Offline,
+  Idle,
+  Online
+}
+
 enum Friendship : ubyte {
-  None,
   Friend,
   Favorite
+}
+
+enum Authority : ubyte {
+  None,
+  Moderator,
+  Administrator,
+  Founder
 }
 
 table User {
@@ -17,17 +29,30 @@ table User {
 
   /// Profile picture of user
   image_id : Uuid;
+
+  /// User presence
+  presence : User.Presence;
+
+  /// User authorities
+  authority : [ User.Authority ];
+
+  /// Devices online right now (Collar/Toy/etc...)
+  devices : [ Uuid ];
 }
 table UserOther {
   user : User.User;
+  nickname : string;
   friendship : User.Friendship;
+  is_muted : bool;
   is_blocked : bool;
+  auto_accept : bool;
+  notify_online : bool;
 }
 
 table UserSelf {
   user : User.User;
   email : string;
-  relationships : [ User.UserOther ];
+  relationships : [ Uuid ];
 }
 
 /// Yada, yada...
@@ -41,6 +66,3 @@ union Body {
 table Message {
   body : User.Body;
 }
-
-
-

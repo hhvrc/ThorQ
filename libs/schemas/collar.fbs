@@ -1,9 +1,0 @@
-namespace ThorQ.Serialization.Collar;
-
-table Message {
-  flags : ubyte;
-  shock : ubyte;
-  vibration : ubyte;
-  beep : ubyte;
-  auto : ubyte;
-}
