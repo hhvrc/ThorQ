@@ -90,21 +90,21 @@ void ThorQ::MessageDispatcher::handleEventConnection(const ENetEvent& event)
     fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::LINK, THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH);
     fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
     fbsBuilder.Finish(fbsMessage);
-    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
 
     // Client version
     fbsBuilder.Clear();
     fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::CLIENT, THORQ_VERSION_CLIENT_MAJOR, THORQ_VERSION_CLIENT_MINOR, THORQ_VERSION_CLIENT_PATCH);
     fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
     fbsBuilder.Finish(fbsMessage);
-    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
 
     // Server version
     fbsBuilder.Clear();
     fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::SERVER, THORQ_VERSION_SERVER_MAJOR, THORQ_VERSION_SERVER_MINOR, THORQ_VERSION_SERVER_PATCH);
     fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
     fbsBuilder.Finish(fbsMessage);
-    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
 
     char addr[40];
     if (enet_peer_get_ip(event.peer, addr, 40) == 0)
@@ -138,11 +138,11 @@ void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
     }
 
     switch ((THORQ_CHANNEL)event.channelID) {
-    case THORQ_CHANNEL::MAIN:
+    case THORQ_CHANNEL::API:
         break;
     case THORQ_CHANNEL::EVENTS:
         break;
-    case THORQ_CHANNEL::STREAM:
+    case THORQ_CHANNEL::RTC:
         break;
     case THORQ_CHANNEL::AUTHORITY:
         break;
@@ -332,7 +332,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
         auto fbsMessage       = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsEstablish);
         fbsBuilder.Finish(fbsMessage);
 
-        sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+        sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
         break;
     }
     case ThorQ::Serialization::Crypto::MessageType_Establish:
@@ -360,7 +360,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
             auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
             fbsBuilder.Finish(fbsMessage);
 
-            sendPacket(instance, fbsBuilder.GetBufferSpan(), true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+            sendPacket(instance, fbsBuilder.GetBufferSpan(), true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
         }
         else
         {
@@ -386,7 +386,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
             auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
             fbsBuilder.Finish(fbsMessage);
 
-            sendPacket(instance, fbsBuilder.GetBufferSpan(), true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::MAIN);
+            sendPacket(instance, fbsBuilder.GetBufferSpan(), true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
         }
         else
         {

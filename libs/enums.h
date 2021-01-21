@@ -18,10 +18,10 @@ enum class THORQ_CHANNEL : std::uint8_t
 {
     _INVALID,
 
-    MAIN,      ///< Main channel (login/logout/friend/request)
-    EVENTS,    ///< Events (status/relation)
-    STREAM,    ///< For data streams
-    AUTHORITY, ///< Moderations/Announcements/Admin
+    API,       ///< For api queries, this channel should always use reliable packets (upgrade this to use TCP in the future)
+    EVENTS,    ///< Api events?
+    RTC,       ///< Real time communication (unsequenced, unreliable packet stream) this will be sent from peer to peer, and through server if the peers cant connect
+    AUTHORITY, ///< Moderations/Announcements/Admin (remove me maybe?)
 
     _MAX
 };
