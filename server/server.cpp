@@ -34,6 +34,7 @@ void ThorQ::Server::DeInitialize()
     if (g_initialized)
     {
         enet_deinitialize();
+        ThorQ::Memory::DeInitialize();
         g_initialized = false;
     }
 }
@@ -67,6 +68,10 @@ ThorQ::Server::~Server()
 
         for (ENetPeer* peer = firstPeer; peer != lastPeer; peer++)
         {
+            if (peer->data != nullptr) {
+                delete reinterpret_cast<ThorQ::Instance*>(peer->data);
+                peer->data = nullptr;
+            }
             enet_peer_disconnect_now(peer, (std::uint32_t)THORQ_DISCONNECT_REASON::SHUTDOWN_CLOSED);
         }
 
@@ -113,6 +118,16 @@ ThorQ::Server::~Server()
     {
         fmt::print(stderr, "Unknown Exception occured destroying host\n");
     }
+
+    ENetEvent enetEvent;
+    while (m_rxQueue.try_dequeue(enetEvent)) {
+        ThorQ::Memory::packetFree(enetEvent.packet);
+    }
+    QueuedEvent queuedEvent;
+    while (m_txQueue.try_dequeue(queuedEvent)) {
+        ThorQ::Memory::packetFree(queuedEvent.packet);
+    }
+
     fmt::print("Server closed\n");
 }
 
@@ -130,6 +145,7 @@ bool ThorQ::Server::start(std::uint16_t port, std::size_t maxPeers, std::uint8_t
     try
     {
         ENetAddress address;
+        memset(&address, 0, sizeof(address));
         address.host = ENET_HOST_ANY;
         address.port = port;
 
@@ -242,12 +258,17 @@ bool ThorQ::Server::tryBroadcastAnnouncement(const std::span<std::uint8_t> paylo
 
         ThorQ::packetEncode(packet, payload);
 
-        m_txQueue.enqueue(Server::QueuedEvent{ nullptr,
+        if (m_txQueue.enqueue(Server::QueuedEvent{ nullptr,
                                                packet,
                                                THORQ_CHANNEL::AUTHORITY,
                                                DisconnectType::None,
                                                THORQ_DISCONNECT_REASON::UNKNOWN
-                                             });
+                                             }))
+        {
+            return true;
+        }
+
+        ThorQ::Memory::packetFree(packet); // If we cant queue it, then free it to avoid a memory leak
     }
 
     return false;

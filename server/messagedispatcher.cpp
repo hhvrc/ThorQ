@@ -755,5 +755,7 @@ void ThorQ::MessageDispatcher::sendPacket(ThorQ::Instance* instance, std::span<s
     }
 
     // Queue message
-    m_server->tryQueueMessage(instance->m_peer, packet, channel, m_tokenQueue);
+    if (!m_server->tryQueueMessage(instance->m_peer, packet, channel, m_tokenQueue)) {
+        ThorQ::Memory::packetFree(packet); // If we cant queue it, then free it to avoid a memory leak
+    }
 }

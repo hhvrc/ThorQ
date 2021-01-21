@@ -51,6 +51,10 @@ ENetCallbacks ThorQ::Memory::Initialize()
 
 void ThorQ::Memory::DeInitialize()
 {
+    ENetPacket* packet;
+    while (g_packetPool.try_dequeue(packet)) {
+        free(packet);
+    }
 
 }
 
@@ -89,6 +93,8 @@ void ThorQ::Memory::packetFree(ENetPacket *packet)
     if (packet != nullptr)
     {
         packet->~_ENetPacket();
-        g_packetPool.enqueue(packet);
+        if (!g_packetPool.enqueue(packet)) {
+            free(packet); // If we cant re-queue it, then free it to avoid a memory leak
+        }
     }
 }

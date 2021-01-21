@@ -129,5 +129,7 @@ int main(int argc, char** argv)
 
     server.stop();
 
+    ThorQ::Server::DeInitialize();
+
     return EXIT_SUCCESS;
 }
