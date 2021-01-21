@@ -79,17 +79,17 @@ int main(int argc, char** argv)
 
     LoginWidget loginWidget;
     MainWidget mainWidget;
-    ThorQ::Networking::Host* cli = ThorQ::Networking::Host::CreateHost(8, &app);
+    ThorQ::Networking::Host* host = ThorQ::Networking::Host::CreateHost(8, &app);
 
-    if (cli == nullptr) {
-        qDebug() << "Failed to create client";
+    if (host == nullptr) {
+        qDebug() << "Failed to create host";
         return EXIT_FAILURE;
     }
 
     ThorQ::ServerHandler* handler = new ThorQ::ServerHandler(&app);
-    QObject::connect(handler, &ThorQ::ServerHandler::requestConnect, cli, &ThorQ::Networking::Host::connect);
+    QObject::connect(handler, &ThorQ::ServerHandler::requestConnect, host, &ThorQ::Networking::Host::connect);
 
-    cli->connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT, (std::uint8_t)THORQ_CHANNEL::_MAX, handler->connectionHandler());
+    host->connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT, (std::uint8_t)THORQ_CHANNEL::_MAX, handler->connectionHandler());
 
 
 /*
@@ -141,7 +141,7 @@ int main(int argc, char** argv)
     int retval = app.exec();
 
 #if COMTEST
-    delete cli;
+    delete host;
     ThorQ::Networking::Host::DeInitialize();
 #endif
     return retval;
