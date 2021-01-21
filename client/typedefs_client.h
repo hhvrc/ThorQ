@@ -4,7 +4,7 @@
 namespace ThorQ {
 namespace Networking {
 class Message;
-class Client;
+class Host;
 class Connection;
 }
 class ServerHandler;

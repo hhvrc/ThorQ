@@ -2,8 +2,6 @@
 
 #include <QObject>
 
-#include "client.h"
-
 ThorQ::User::User(ThorQ::ClientConnection* client)
     : QObject((QObject*)client)
     , m_name()

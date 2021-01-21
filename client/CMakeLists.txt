@@ -10,9 +10,9 @@ project(
 message("Configuring ${project}...")
 
 # --- OpenVR ---
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/headers)
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/openvr/lib/${BUILD_OS}${VPTR_BITS}) # eg. win64 / linux32
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/openvr/bin/${BUILD_OS}${VPTR_BITS}/  DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/vr/openvr/headers)
+link_directories(${CMAKE_CURRENT_SOURCE_DIR}/vr/openvr/lib/${BUILD_OS}${VPTR_BITS}) # eg. win64 / linux32
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/vr/openvr/bin/${BUILD_OS}${VPTR_BITS}/  DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 # --------------
 
 # --- Find and configure Qt ---
@@ -42,38 +42,44 @@ message("Found Qt ${Qt5Core_VERSION}")
 # --- Build ---
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/user.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/client.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/serverhandler.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/serial.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.cpp
-
     ${CMAKE_CURRENT_SOURCE_DIR}/userlistitem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/userlistwidget.cpp
-
     ${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/collar/serial.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/host.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/message.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/connectionhandler.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/openvroverlaycontroller.cpp
 )
 set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/user.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/client.h
     ${CMAKE_CURRENT_SOURCE_DIR}/serverhandler.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/serial.h
     ${CMAKE_CURRENT_SOURCE_DIR}/procmon.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.h
-
     ${CMAKE_CURRENT_SOURCE_DIR}/userlistitem.h
     ${CMAKE_CURRENT_SOURCE_DIR}/userlistwidget.h
-
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_client.h
     ${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/openvroverlaycontroller.h
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/collar/serial.h
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/host.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/message.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/connectionhandler.h
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/openvroverlaycontroller.h
 )
 set(${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc)
 

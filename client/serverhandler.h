@@ -16,7 +16,13 @@
 #include <typedefs_global.h>
 #include "typedefs_client.h"
 
+#include "networking/message.h"
+
 namespace ThorQ {
+namespace Networking {
+class ConnectionHandler;
+}
+
 class ServerHandler : public QObject
 {
     Q_OBJECT
@@ -24,15 +30,18 @@ class ServerHandler : public QObject
 public:
     ServerHandler(QObject* parent);
     ~ServerHandler();
+
+    Networking::ConnectionHandler* connectionHandler() const;
 signals:
     void requestConnect();
     void requestDisconnect(std::uint32_t reason);
-
     void packetGenerated(ThorQ::Networking::Message message);
 public slots:
-    void resetState();
+    void handleConnect(std::uint32_t data);
+    void handleDisconnect(std::uint32_t data);
     void parsePacket(ThorQ::Networking::Message message);
 private:
+    void resetState();
     void sendPacket(std::span<std::uint8_t> span, bool encrypt, std::uint32_t flags, THORQ_CHANNEL channelID);
     void handleMessageVersion(const void* body, flatbuffers::Verifier fbsVerifier);
     void handleMessageUser(const void* body, flatbuffers::Verifier fbsVerifier);
@@ -45,9 +54,9 @@ private:
     void handleMessageModeration(const void* body, flatbuffers::Verifier fbsVerifier);
     void handleMessageCollar(const void* body, flatbuffers::Verifier fbsVerifier);
 
-    QUuid m_connectionID;
     ThorQ::Crypto m_crypto;
     std::vector<std::uint8_t> m_buffer;
+    Networking::ConnectionHandler* m_connectionHandler;
 };
 }
 

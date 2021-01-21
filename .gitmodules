@@ -2,7 +2,7 @@
 	path = libs/enet
 	url = https://github.com/zpl-c/enet.git
 [submodule "client/openvr"]
-	path = client/openvr
+	path = client/vr/openvr
 	url = https://github.com/ValveSoftware/openvr.git
 [submodule "server/concurrentqueue"]
 	path = server/concurrentqueue

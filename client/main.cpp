@@ -10,11 +10,11 @@
 
 #include <enet.h>
 
-#include "client.h"
-#include "serial.h"
 #include "loginwidget.h"
-#include "openvroverlaycontroller.h"
 #include "mainwidget.h"
+#include "collar/serial.h"
+#include "networking/host.h"
+#include "vr/openvroverlaycontroller.h"
 
 Q_DECLARE_METATYPE(THORQ_STATE_CONNECTION)
 Q_DECLARE_METATYPE(THORQ_STATE_CRYPTO)
@@ -70,7 +70,7 @@ int main(int argc, char** argv)
     //app.setQuitOnLastWindowClosed(false);
 
     // Initialize ENet
-    if (!ThorQ::Networking::Client::Initialize())
+    if (!ThorQ::Networking::Host::Initialize())
     {
         qDebug() << "Failed to initialize networking";
         return EXIT_FAILURE;
@@ -78,10 +78,18 @@ int main(int argc, char** argv)
 
     LoginWidget loginWidget;
     MainWidget mainWidget;
-    ThorQ::Networking::Client* cli = ThorQ::Networking::Client::NewClient("0.0.0.0", 63486, 8, 8, &app);
+    ThorQ::Networking::Host* cli = ThorQ::Networking::Host::CreateHost(8, &app);
 
+    if (cli == nullptr) {
+        qDebug() << "Failed to create client";
+        return EXIT_FAILURE;
+    }
 
     ThorQ::ServerHandler* handler = new ThorQ::ServerHandler(&app);
+
+    cli->connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT, (std::uint8_t)THORQ_CHANNEL::_MAX, handler->connectionHandler());
+
+
 /*
     QMessageBox errorBox(&loginWidget);
     errorBox.setIcon(QMessageBox::Critical);
@@ -132,7 +140,7 @@ int main(int argc, char** argv)
 
 #if COMTEST
     delete cli;
-    ThorQ::Networking::Client::DeInitialize();
+    ThorQ::Networking::Host::DeInitialize();
 #endif
     return retval;
 }

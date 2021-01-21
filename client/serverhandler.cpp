@@ -9,23 +9,43 @@
 #include <schemas/message_generated.h>
 #include <schemas/friendrequest_generated.h>
 
-#include "client.h"
+#include "networking/connectionhandler.h"
 
 ThorQ::ServerHandler::ServerHandler(QObject *parent)
     : QObject(parent)
     , m_crypto()
     , m_buffer(THORQ_PAYLOAD_LEN_MAX)
+    , m_connectionHandler(new Networking::ConnectionHandler(this))
 {
+    QObject::connect(m_connectionHandler, &Networking::ConnectionHandler::connected, this, &ServerHandler::handleConnect);
+    QObject::connect(m_connectionHandler, &Networking::ConnectionHandler::disconnected, this, &ServerHandler::handleDisconnect);
+    QObject::connect(m_connectionHandler, &Networking::ConnectionHandler::udpReceived, this, &ServerHandler::parsePacket);
+
 }
 
 ThorQ::ServerHandler::~ServerHandler()
 {
 }
 
+ThorQ::Networking::ConnectionHandler *ThorQ::ServerHandler::connectionHandler() const
+{
+    return m_connectionHandler;
+}
+
 void ThorQ::ServerHandler::resetState()
 {
     m_crypto.reset();
     m_buffer.clear();
+}
+
+void ThorQ::ServerHandler::handleConnect(std::uint32_t data)
+{
+    qDebug() << "Connected";
+}
+
+void ThorQ::ServerHandler::handleDisconnect(std::uint32_t data)
+{
+    qDebug() << "Disconnected";
 }
 
 void ThorQ::ServerHandler::parsePacket(ThorQ::Networking::Message message)
@@ -66,8 +86,7 @@ void ThorQ::ServerHandler::parsePacket(ThorQ::Networking::Message message)
         break;
     case THORQ_CHANNEL::AUTHORITY:
         break;
-    case THORQ_CHANNEL::_MAX:
-    case THORQ_CHANNEL::_INVALID:
+    default:
         return;
     }
 
