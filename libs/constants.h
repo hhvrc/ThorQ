@@ -65,7 +65,7 @@ constexpr const char*   THORQ_ORGANIZATION_NAME = "MyDomain";
 constexpr const char*   THORQ_ORGANIZATION_DOMAIN = "MyDomain.com";
 constexpr const char*   THORQ_APPLICATION_NAME = "ThorQ";
 constexpr const char*   THORQ_APPLICATION_DESCRIPTION = "Software to control 3rd party collars across the internet";
-constexpr const char*   THORQ_SERVER_HOSTNAME = "www.dededededede.de";
+constexpr const char*   THORQ_SERVER_HOSTNAME = "localhost";
 constexpr std::uint16_t THORQ_SERVER_PORT = 12345;
 
 #endif // CONSTANTS_H
