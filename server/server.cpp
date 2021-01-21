@@ -58,6 +58,7 @@ ThorQ::Server::~Server()
 
     stop();
 
+    fmt::print("Force disconnecting remaining peers...\n");
     try
     {
         // Disconnect all clients
@@ -112,6 +113,7 @@ ThorQ::Server::~Server()
     {
         fmt::print(stderr, "Unknown Exception occured destroying host\n");
     }
+    fmt::print("Server closed\n");
 }
 
 ThorQ::Server::ServerStatus ThorQ::Server::status() const
@@ -122,6 +124,8 @@ ThorQ::Server::ServerStatus ThorQ::Server::status() const
 bool ThorQ::Server::start(std::uint16_t port, std::size_t maxPeers, std::uint8_t channelCount)
 {
     if (m_thread != nullptr) return true;
+
+    fmt::print("Starting server...\n");
 
     try
     {
@@ -141,7 +145,9 @@ bool ThorQ::Server::start(std::uint16_t port, std::size_t maxPeers, std::uint8_t
 
             m_thread = new std::thread(&ThorQ::Server::run, this);
 
-            unsigned int nProc = std::thread::hardware_concurrency();
+            fmt::print("Creating dispatchers...\n");
+
+            unsigned int nProc = std::thread::hardware_concurrency() * 10;
             for (unsigned int i = 0; i < nProc; i++)
             {
                 m_dispatchers.push_back(new ThorQ::MessageDispatcher(this));
@@ -169,18 +175,30 @@ bool ThorQ::Server::start(std::uint16_t port, std::size_t maxPeers, std::uint8_t
 
 void ThorQ::Server::stop()
 {
+    if (m_status != ServerStatus::Running) {
+        return;
+    }
+
+    fmt::print("Stopping server...\n");
+
+    m_status = ServerStatus::Stopping;
+
     for (std::size_t i = 0; i < m_dispatchers.size(); i++)
     {
         delete m_dispatchers[i];
     }
     m_dispatchers.clear();
 
+    fmt::print("Closed all dispatchers\n");
+
     if (m_thread != nullptr)
     {
+        fmt::print("Stopping server thread...\n");
         m_run = false;
         m_thread->join();
         delete  m_thread;
         m_thread = nullptr;
+        fmt::print("Server thread stopped\n");
     }
 }
 

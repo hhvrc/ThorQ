@@ -42,6 +42,7 @@ private:
 
     void sendPacket(ThorQ::Instance* instance, std::span<std::uint8_t> data, bool encrypt, std::uint32_t flags, THORQ_CHANNEL channel);
 
+    std::uint16_t m_id;
     Server* m_server;
     std::thread m_thread;
     std::atomic_bool m_closing;

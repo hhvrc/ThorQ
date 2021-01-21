@@ -1,3 +1,4 @@
+#include <csignal>
 #include <iostream>
 #include <exception>
 #include <signal.h>
@@ -39,14 +40,29 @@ bool InitializeDB(const char* path) noexcept
 }
 void exit_handler(int s)
 {
-    char buf[64];
-#ifdef _WIN32
-    strerror_s(buf, sizeof(buf), s);
-#else
-    strerror_r(s, buf, sizeof(buf));
-#endif
+    const char* str;
+    switch (s) {
+    case SIGINT:
+        str = "interrupt";
+        break;
+    case SIGTERM:
+        str = "terminate";
+        break;
+    case SIGABRT:
+        str = "abort";
+        break;
+    case SIGSEGV:
+        str = "segmentation fault";
+        break;
+    case SIGFPE:
+        str = "erroneous arithmetic operation";
+        break;
+    default:
+        str = "unknown";
+        break;
+    }
 
-    fmt::print("Caught signal {}\n", buf);
+    fmt::print("\nCaught {} signal\n", str);
 
     runServer.store(false);
 }
@@ -104,7 +120,14 @@ int main(int argc, char** argv)
             return EXIT_FAILURE;
     }
 
+    std::signal(SIGINT, exit_handler);
+    std::signal(SIGTERM, exit_handler);
+    std::signal(SIGABRT, exit_handler);
+    std::signal(SIGSEGV, exit_handler);
+    std::signal(SIGFPE, exit_handler);
     while (runServer) { std::this_thread::sleep_for(std::chrono::milliseconds(500)); }
 
     server.stop();
+
+    return EXIT_SUCCESS;
 }
