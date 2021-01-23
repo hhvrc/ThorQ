@@ -73,7 +73,7 @@ protected:
 
         // For disconnects
         DisconnectType disconnect;
-        THORQ_DISCONNECT_REASON reason;
+        THORQ_DISCONNECT_REASON disconnectReason;
     };
 
     bool tryGetEvent(ENetEvent& event, moodycamel::ConsumerToken& token);

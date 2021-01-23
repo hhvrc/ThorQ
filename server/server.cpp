@@ -327,13 +327,13 @@ void ThorQ::Server::run()
 
                 switch (queuedMessage.disconnect) {
                 case ThorQ::Server::DisconnectType::Now:
-                    enet_peer_disconnect_now(queuedMessage.peer, (std::uint32_t)queuedMessage.reason);
+                    enet_peer_disconnect_now(queuedMessage.peer, (std::uint32_t)queuedMessage.disconnectReason);
                     break;
                 case ThorQ::Server::DisconnectType::Later:
-                    enet_peer_disconnect_later(queuedMessage.peer, (std::uint32_t)queuedMessage.reason);
+                    enet_peer_disconnect_later(queuedMessage.peer, (std::uint32_t)queuedMessage.disconnectReason);
                     break;
                 case ThorQ::Server::DisconnectType::Request:
-                    enet_peer_disconnect(queuedMessage.peer, (std::uint32_t)queuedMessage.reason);
+                    enet_peer_disconnect(queuedMessage.peer, (std::uint32_t)queuedMessage.disconnectReason);
                     break;
                 case ThorQ::Server::DisconnectType::None:
                 default:
