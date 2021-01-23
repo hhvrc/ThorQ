@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "gamepad",
+  "controller_type": "hpmotioncontroller",
   "description": "",
-  "name": "gamepad defaults"
+  "name": "HP Motion controller defaults"
 }

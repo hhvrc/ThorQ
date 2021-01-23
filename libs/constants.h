@@ -61,11 +61,11 @@ constexpr int THORQ_DISCORDID_LEN_MAX = 37; ///< Maximum id length (32 chars + "
 
 /* TODO: move this to a config file
  */
-constexpr const char*   THORQ_ORGANIZATION_NAME = "MyDomain";
-constexpr const char*   THORQ_ORGANIZATION_DOMAIN = "MyDomain.com";
-constexpr const char*   THORQ_APPLICATION_NAME = "ThorQ";
-constexpr const char*   THORQ_APPLICATION_DESCRIPTION = "Software to control 3rd party collars across the internet";
-constexpr const char*   THORQ_SERVER_HOSTNAME = "localhost";
-constexpr std::uint16_t THORQ_SERVER_PORT = 12345;
+#define THORQ_ORGANIZATION_NAME "HeavenVR"
+#define THORQ_ORGANIZATION_DOMAIN "exampledomain.com"
+#define THORQ_APPLICATION_NAME "ThorQ"
+#define THORQ_APPLICATION_DESCRIPTION "Software to control 3rd party collars across the internet"
+#define THORQ_SERVER_HOSTNAME "localhost"
+#define THORQ_SERVER_PORT 12345
 
 #endif // CONSTANTS_H

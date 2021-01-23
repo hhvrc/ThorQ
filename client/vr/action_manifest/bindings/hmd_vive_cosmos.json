@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "vive",
+  "controller_type": "vive_cosmos",
   "description": "",
-  "name": "vive defaults"
+  "name": "Vive Cosmos defaults"
 }

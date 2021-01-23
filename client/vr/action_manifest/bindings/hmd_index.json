@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "holographic_controller",
+  "controller_type": "indexhmd",
   "description": "",
-  "name": "Default bindings for Windows Mixed Reality Controllers"
+  "name": "Valve Index defaults"
 }

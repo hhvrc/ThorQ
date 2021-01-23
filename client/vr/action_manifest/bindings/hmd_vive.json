@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "vive_pro",
+  "controller_type": "vive",
   "description": "",
-  "name": "vive_pro defaults"
+  "name": "Vive defaults"
 }

@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "knuckles",
+  "controller_type": "vive_controller",
   "description": "",
-  "name": "knuckles_default"
+  "name": "Vive controller defaults"
 }

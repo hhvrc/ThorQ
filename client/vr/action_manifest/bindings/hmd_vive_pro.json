@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "holographic_hmd",
+  "controller_type": "vive_pro",
   "description": "",
-  "name": "holographic_hmd defaults"
+  "name": "Vive Pro defaults"
 }

@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "knuckles_ev1",
+  "controller_type": "holographic_controller",
   "description": "",
-  "name": "knuckles_ev1 default"
+  "name": "Lenovo Windows Holographic controller defaults"
 }

@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "vive_cosmos",
+  "controller_type": "knuckles_ev1",
   "description": "",
-  "name": "vive cosmos hmd defaults"
+  "name": "Knuckles EV1 controller defaults"
 }

@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "hpmotioncontroller",
+  "controller_type": "knuckles",
   "description": "",
-  "name": "hpmotioncontroller defaults"
+  "name": "Knuckles controller defaults"
 }

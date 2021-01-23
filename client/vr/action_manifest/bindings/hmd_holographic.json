@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "rift",
+  "controller_type": "holographic_hmd",
   "description": "",
-  "name": "rift defaults"
+  "name": "Holographic defaults"
 }

@@ -22,7 +22,7 @@ Q_DECLARE_METATYPE(THORQ_STATE_CRYPTO)
 Q_DECLARE_METATYPE(THORQ_STATE_HWID)
 Q_DECLARE_METATYPE(THORQ_STATE_LOGIN)
 
-#define COMTEST 1
+#define COMTEST 0
 
 #include <constants.h>
 #include <crypto.h>
@@ -49,7 +49,26 @@ int main(int argc, char** argv)
     QCoreApplication::setOrganizationDomain(THORQ_ORGANIZATION_DOMAIN);
 
     QApplication app(argc, argv);
-#if COMTEST
+
+    if (!ThorQ::VR::Initialize()) {
+        qDebug() << "Failed to init VR";
+        return EXIT_FAILURE;
+    }
+
+    if (ThorQ::VR::IsManifestInstalled()) {
+        ThorQ::VR::RemoveManifest();
+    }
+
+    if (!ThorQ::VR::CreateManifest()) {
+        qDebug() << "Failed to create VR manifest files";
+        return EXIT_FAILURE;
+    }
+
+    if (!ThorQ::VR::InstallManifest()) {
+        qDebug() << "Failed to install VR manifest files";
+        return EXIT_FAILURE;
+    }
+
     QString stylesheet;
 
     const char* fileName;
@@ -69,7 +88,7 @@ int main(int argc, char** argv)
     app.setDesktopFileName(THORQ_APPLICATION_NAME);
     app.setWindowIcon(QIcon(":/shockGrey.ico"));
     //app.setQuitOnLastWindowClosed(false);
-
+#if COMTEST
     // Initialize ENet
     if (!ThorQ::Networking::Host::Initialize())
     {
@@ -143,6 +162,8 @@ int main(int argc, char** argv)
 #if COMTEST
     delete host;
     ThorQ::Networking::Host::DeInitialize();
+#else
+    ThorQ::VR::Shutdown();
 #endif
     return retval;
 }

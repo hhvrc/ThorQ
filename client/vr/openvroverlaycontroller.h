@@ -15,6 +15,27 @@
 #include <QtWidgets/QGraphicsScene>
 #include <QtGui/QOffscreenSurface>
 
+#include "constants.h"
+
+#define OPENVR_APPLICATION_NAME THORQ_APPLICATION_NAME
+#define OPENVR_APPLICATION_KEY THORQ_ORGANIZATION_NAME "." THORQ_APPLICATION_NAME
+
+namespace ThorQ {
+namespace VR {
+bool IsSteamVRInstalled();
+bool IsSteamVRRunning();
+bool IsHmdPresent();
+
+bool Initialize();
+void Shutdown();
+
+bool IsManifestInstalled();
+bool CreateManifest();
+bool InstallManifest();
+bool RemoveManifest();
+}
+}
+
 /**
  * @brief The OpenVROverlayController class
  */
@@ -23,23 +44,6 @@ class OpenVROverlayController : public QObject
 	Q_OBJECT
 	Q_DISABLE_COPY(OpenVROverlayController)
 public:
-	/**
-	 * @brief Checks if SteamVR is installed
-	 * @return Returns if SteamVR is installed
-	 */
-	static bool IsSteamVRInstalled();
-
-	/**
-	 * @brief Checks if SteamVR is running
-	 * @return Returns if SteamVR is running
-	 */
-	static bool IsSteamVRRunning();
-
-	/**
-	 * @brief Checks if a VR headset is connected to the computer
-	 * @return Returns if a VR headset is connected to the computer
-	 */
-    static bool IsHmdPresent();
 public:
 	OpenVROverlayController(QObject* parent = nullptr);
 	~OpenVROverlayController() override;
@@ -190,12 +194,6 @@ private:
 	QGraphicsProxyWidget* m_proxyWidget;
     QTimer* m_updateLogicTimer;
 
-    // OpenVR stuff
-    vr::IVRSystem*   m_apiSystem;
-    vr::IVRInput*    m_apiInput;
-    vr::IVROverlay*  m_apiOverlay;
-    vr::IVRSettings* m_apiSettings;
-
     // Overlay stuff
     vr::VROverlayHandle_t    m_overlayHandle;
     vr::HmdMatrix34_t        m_overlayOffset;
@@ -231,8 +229,6 @@ private:
     // Input handling
     QPointF m_lastMousePoint;
     Qt::MouseButtons m_lastMouseButtons;
-
-	std::string m_vrManifestPath;
 };
 
 

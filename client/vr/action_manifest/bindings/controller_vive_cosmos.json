@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "indexhmd",
+  "controller_type": "vive_cosmos_controller",
   "description": "",
-  "name": "index hmd defaults"
+  "name": "Vive Cosmos controller defaults"
 }

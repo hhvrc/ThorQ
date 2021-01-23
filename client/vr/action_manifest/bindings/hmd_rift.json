@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "vive_cosmos_controller",
+  "controller_type": "rift",
   "description": "",
-  "name": "vive_cosmos_controller"
+  "name": "Oculus Rift defaults"
 }

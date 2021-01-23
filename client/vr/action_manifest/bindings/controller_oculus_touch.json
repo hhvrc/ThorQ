@@ -8,7 +8,7 @@
       "skeleton": []
     }
   },
-  "controller_type": "vive_controller",
+  "controller_type": "oculus_touch",
   "description": "",
-  "name": "vive_controller"
+  "name": "Oculus Touch controller defaults"
 }

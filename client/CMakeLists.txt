@@ -58,6 +58,10 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/message.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/connectionhandler.cpp
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrdevice.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovraction.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrsettings.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovractionset.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/openvroverlaycontroller.cpp
 )
 set(${project}_HEADERS
@@ -79,6 +83,10 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/message.h
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/connectionhandler.h
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrdevice.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovraction.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrsettings.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovractionset.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/openvroverlaycontroller.h
 )
 set(${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc)
