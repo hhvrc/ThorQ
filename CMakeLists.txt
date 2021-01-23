@@ -109,4 +109,4 @@ add_subdirectory(client)
 add_subdirectory(server)
 add_subdirectory(cryptotest)
 
-message("Building ${project} in ${CMAKE_BUILD_TYPE} mode for ${BUILD_OS} x86_${VPTR_BITS} with ${BUILD_COMPILER}")
+message("Building ${project} in ${CMAKE_BUILD_TYPE} mode for ${VPTR_BITS}-bit ${BUILD_OSL}, using ${BUILD_COMPILER}")
