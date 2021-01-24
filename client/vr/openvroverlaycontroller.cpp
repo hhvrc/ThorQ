@@ -19,6 +19,12 @@
 
 #include "constants.h"
 
+#ifdef _WIN32
+#define THOR_MAX_PATH_LEN MAX_PATH
+#else
+#define THORQ_MAX_PATH_LEN PATH_MAX
+#endif
+
 inline void ToQMatrix(const vr::HmdMatrix34_t& mat, QMatrix4x4& out)
 {
     for (int i = 0; i < 3; i++)
@@ -188,10 +194,10 @@ bool ThorQ::VR::RemoveManifest()
     vr::EVRApplicationError err;
 
     std::string directory;
-    directory.resize(MAX_PATH);
+    directory.resize(THORQ_MAX_PATH_LEN);
 
     // Get directory of manifest
-    std::uint32_t len = vr::VRApplications()->GetApplicationPropertyString(OPENVR_APPLICATION_KEY, vr::VRApplicationProperty_WorkingDirectory_String, directory.data(), MAX_PATH, &err);
+    std::uint32_t len = vr::VRApplications()->GetApplicationPropertyString(OPENVR_APPLICATION_KEY, vr::VRApplicationProperty_WorkingDirectory_String, directory.data(), THORQ_MAX_PATH_LEN, &err);
     if (err != vr::VRApplicationError_None)
     {
         fmt::print(stderr, "Failed to get old working dir, skipping removal: {}\n", vr::VRApplications()->GetApplicationsErrorNameFromEnum(err));
