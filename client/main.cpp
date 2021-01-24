@@ -22,7 +22,7 @@ Q_DECLARE_METATYPE(THORQ_STATE_CRYPTO)
 Q_DECLARE_METATYPE(THORQ_STATE_HWID)
 Q_DECLARE_METATYPE(THORQ_STATE_LOGIN)
 
-#define COMTEST 0
+#define COMTEST 1
 
 #include <constants.h>
 #include <crypto.h>
@@ -49,7 +49,8 @@ int main(int argc, char** argv)
     QCoreApplication::setOrganizationDomain(THORQ_ORGANIZATION_DOMAIN);
 
     QApplication app(argc, argv);
-
+#if COMTEST
+#else
     if (!ThorQ::VR::Initialize()) {
         qDebug() << "Failed to init VR";
         return EXIT_FAILURE;
@@ -68,7 +69,7 @@ int main(int argc, char** argv)
         qDebug() << "Failed to install VR manifest files";
         return EXIT_FAILURE;
     }
-
+#endif
     QString stylesheet;
 
     const char* fileName;
