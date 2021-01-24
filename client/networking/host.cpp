@@ -92,7 +92,7 @@ ThorQ::Networking::Host::Host(ENetHost* host, QObject* parent)
     // Service timer
     QObject::connect(&m_serviceTimer, &QTimer::timeout, this, &ThorQ::Networking::Host::service);
     m_serviceTimer.setSingleShot(false);
-    m_serviceTimer.setInterval(5);
+    m_serviceTimer.setInterval(1);
     m_serviceTimer.start();
 
     // Statistics timer
@@ -139,6 +139,8 @@ void ThorQ::Networking::Host::connect(QString hostname, std::uint16_t port, std:
         return;
     }
 
+    qDebug() << "Connecting to" << hostname;
+
     ENetAddress addr;
 
     if (enet_address_set_host_new(&addr, hostname.toStdString().c_str()) != 0)
@@ -152,7 +154,6 @@ void ThorQ::Networking::Host::connect(QString hostname, std::uint16_t port, std:
     ENetPeer* peer = enet_host_connect(m_host, &addr, channelCount, 0);
     if (peer != nullptr)
     {
-        peer->data = handler;
         handler->setPeer(peer);
         handler->setHost(this);
     }

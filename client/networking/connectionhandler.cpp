@@ -1,5 +1,7 @@
 #include "connectionhandler.h"
 
+#include <QDebug>
+
 #include <enums.h>
 
 #include "host.h"
@@ -43,21 +45,25 @@ uint32_t ThorQ::Networking::ConnectionHandler::rxSpeed() const
 
 void ThorQ::Networking::ConnectionHandler::sendUdp(ThorQ::Networking::Message message)
 {
+    qDebug() << "[Handler ] sendUdp";
     QMetaObject::invokeMethod(m_host, "sendUdp", Qt::QueuedConnection, Q_ARG(ENetPeer*, m_peer), Q_ARG(ThorQ::Networking::Message, message));
 }
 
 void ThorQ::Networking::ConnectionHandler::disconnect(std::uint32_t reason)
 {
+    qDebug() << "[Handler ] disconnect";
     QMetaObject::invokeMethod(m_host, "disconnect", Qt::QueuedConnection, Q_ARG(ENetPeer*, m_peer), Q_ARG(std::uint32_t, reason));
 }
 
 void ThorQ::Networking::ConnectionHandler::disconnectNow(std::uint32_t reason)
 {
+    qDebug() << "[Handler ] disconnectNow";
     QMetaObject::invokeMethod(m_host, "disconnectNow", Qt::QueuedConnection, Q_ARG(ENetPeer*, m_peer), Q_ARG(std::uint32_t, reason));
 }
 
 void ThorQ::Networking::ConnectionHandler::disconnectLater(std::uint32_t reason)
 {
+    qDebug() << "[Handler ] disconnectLater";
     QMetaObject::invokeMethod(m_host, "disconnectLater", Qt::QueuedConnection, Q_ARG(ENetPeer*, m_peer), Q_ARG(std::uint32_t, reason));
 }
 
@@ -85,6 +91,7 @@ void ThorQ::Networking::ConnectionHandler::setPeer(ENetPeer* peer)
 {
     clear();
     m_peer = peer;
+    m_peer->data = this;
 }
 
 void ThorQ::Networking::ConnectionHandler::updateStats()
@@ -137,16 +144,19 @@ void ThorQ::Networking::ConnectionHandler::handleEvent(ENetEvent event)
 {
     switch (event.type) {
     case ENET_EVENT_TYPE_CONNECT:
+        qDebug() << "[Handler ] event: connect";
         emit connected(event.data);
         break;
     case ENET_EVENT_TYPE_RECEIVE:
+        qDebug() << "[Handler ] event: receive";
         emit udpReceived(Networking::Message(event));
-        disconnect((std::uint32_t)THORQ_DISCONNECT_REASON::VERSION_INCOMPATIBLE);
         break;
     case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
+        qDebug() << "[Handler ] event: timeout";
         emit disconnected((std::uint32_t)THORQ_DISCONNECT_REASON::TIMED_OUT);
         break;
     case ENET_EVENT_TYPE_DISCONNECT:
+        qDebug() << "[Handler ] event: disconnect";
         emit disconnected(event.data);
         break;
     default:

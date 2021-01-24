@@ -34,13 +34,13 @@ public:
     Networking::ConnectionHandler* connectionHandler() const;
 signals:
     void requestConnect(QString hostname, std::uint16_t port, std::uint8_t channelCount, ThorQ::Networking::ConnectionHandler* handler);
-    void requestDisconnect(std::uint32_t reason);
     void packetGenerated(ThorQ::Networking::Message message);
 public slots:
     void handleConnect(std::uint32_t data);
     void handleDisconnect(std::uint32_t data);
     void parsePacket(ThorQ::Networking::Message message);
 private:
+    void requestCrypto();
     void establishConnection();
 
     void resetState();

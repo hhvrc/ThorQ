@@ -106,6 +106,8 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
+    QObject::connect(host, &ThorQ::Networking::Host::error, [](QString error){ qDebug().noquote() << "[Server] Error:" << error; });
+
     ThorQ::ServerHandler* handler = new ThorQ::ServerHandler(&app);
     QObject::connect(handler, &ThorQ::ServerHandler::requestConnect, host, &ThorQ::Networking::Host::connect);
 
