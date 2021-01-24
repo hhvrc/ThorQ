@@ -5,6 +5,9 @@
 
 #include "openvr.h"
 
+#include "ovrdevice.h"
+#include "ovractionset.h"
+
 namespace ThorQ {
 namespace VR {
 class OVRAction : public QObject
@@ -18,6 +21,8 @@ public:
 
     bool getDigitalData();
     bool getAnalogData();
+
+    vr::VRActionHandle_t handle() const { return m_handle; }
 private:
     vr::VRActionHandle_t m_handle;
 };

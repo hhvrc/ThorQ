@@ -20,7 +20,7 @@
 #include "constants.h"
 
 #ifdef _WIN32
-#define THOR_MAX_PATH_LEN MAX_PATH
+#define THORQ_MAX_PATH_LEN MAX_PATH
 #else
 #define THORQ_MAX_PATH_LEN PATH_MAX
 #endif

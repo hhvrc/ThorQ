@@ -11,7 +11,7 @@ class OVRActionSet : public QObject
 {
     Q_OBJECT
 public:
-    OVRActionSet(QObject* parent);
+    OVRActionSet(const char* actionSetName, QObject* parent);
     ~OVRActionSet();
 
     vr::VRActionSetHandle_t handle() const { return m_handle; }
