@@ -33,8 +33,7 @@ public:
     std::uint64_t totalDataReceived() const { return m_totalReceivedData; }
     std::uint64_t totalPacketsReceived() const { return m_totalReceivedPackets; }
 protected:
-    virtual bool onConnect(std::shared_ptr<ThorQ::Networking::Tcp::Connection> connection) = 0;
-    virtual void onDisconnect(std::shared_ptr<ThorQ::Networking::Tcp::Connection> connection) = 0;
+    virtual void onCreatedConnection(std::shared_ptr<ThorQ::Networking::Tcp::Connection> connection) = 0;
 private:
     asio::io_context m_asio;
 

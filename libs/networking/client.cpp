@@ -36,12 +36,20 @@ bool ThorQ::Networking::Tcp::Client::connect(const std::string& host, uint16_t p
     {
         try
         {
-            m_connection = std::make_shared<ThorQ::Networking::Tcp::Connection>(m_asio, asio::ip::tcp::socket(m_asio));
+            auto connection = std::make_shared<ThorQ::Networking::Tcp::Connection>(m_asio, asio::ip::tcp::socket(m_asio));
+
+            onCreatedConnection(connection);
+
+            if (connection->connectionHandler() == nullptr) {
+                return false;
+            }
+
+            m_connection = std::move(connection);
 
             asio::ip::tcp::resolver resolver(m_asio);
             auto endpoints = resolver.resolve(host, std::to_string(port));
 
-            m_connection->connect(endpoints, [this](){ onConnect(m_connection); });
+            m_connection->connect(endpoints);
 
             m_thread = std::thread([this](){ m_asio.run(); });
         }

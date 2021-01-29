@@ -54,16 +54,6 @@ void ThorQ::ApiConnectionHandler::onMessage(std::shared_ptr<std::vector<std::uin
 }
 
 /*
-#include <QDebug>
-
-#include <constants.h>
-#include <encoding.h>
-
-#include <schemas/message_generated.h>
-#include <schemas/friendrequest_generated.h>
-
-#include "
-
 ThorQ::ServerHandler::ServerHandler(QObject *parent)
     : QObject(parent)
     , m_crypto()

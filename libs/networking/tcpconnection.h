@@ -20,7 +20,7 @@ public:
     ~Connection();
 
     void accept();
-    void connect(const asio::ip::tcp::resolver::results_type& endpoints, std::function<void()> onConnect);
+    void connect(const asio::ip::tcp::resolver::results_type& endpoints);
     void disconnect() override;
 
     bool isConnected() const;

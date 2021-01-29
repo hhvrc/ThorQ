@@ -16,14 +16,7 @@ ThorQ::ApiClient::~ApiClient()
     fmt::print("[CLIENT] Destroyed\n");
 }
 
-bool ThorQ::ApiClient::onConnect(std::shared_ptr<ThorQ::Networking::Tcp::Connection> connection)
+void ThorQ::ApiClient::onCreatedConnection(std::shared_ptr<ThorQ::Networking::Tcp::Connection> connection)
 {
-    fmt::print("[CLIENT] Connected\n");
     connection->setConnectionHandler(std::make_shared<ThorQ::ApiConnectionHandler>());
-    return true;
-}
-
-void ThorQ::ApiClient::onDisconnect(std::shared_ptr<ThorQ::Networking::Tcp::Connection> connection)
-{
-    fmt::print("[CLIENT] Disconnected\n");
 }

@@ -27,12 +27,17 @@ void ThorQ::Networking::Tcp::Connection::accept()
     }
 }
 
-void ThorQ::Networking::Tcp::Connection::connect(const asio::ip::tcp::resolver::results_type& endpoints, std::function<void()> onConnect)
+void ThorQ::Networking::Tcp::Connection::connect(const asio::ip::tcp::resolver::results_type& endpoints)
 {
     asio::async_connect(m_socket, endpoints,
-                        [this, onConnect](std::error_code ec, asio::ip::tcp::endpoint endpoint)
+                        [this](std::error_code ec, asio::ip::tcp::endpoint endpoint)
     {
-        onConnect();
+        auto handler = connectionHandler();
+
+        if (handler != nullptr) {
+            handler->onConnect();
+        }
+
         THORQ_UNUSED(endpoint)
         if (!ec)
         {

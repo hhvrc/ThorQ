@@ -10,8 +10,7 @@ public:
     ApiClient();
     ~ApiClient();
 private:
-    bool onConnect(std::shared_ptr<ThorQ::Networking::Tcp::Connection> connection) override;
-    void onDisconnect(std::shared_ptr<ThorQ::Networking::Tcp::Connection> connection) override;
+    void onCreatedConnection(std::shared_ptr<ThorQ::Networking::Tcp::Connection> connection) override;
 };
 }
 
