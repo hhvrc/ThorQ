@@ -58,7 +58,7 @@ void ThorQ::SystemID::Internal::getMacHash(std::uint16_t& mac1, std::uint16_t& m
 	struct ifreq* ifr;
 	for ( ifr = conf.ifc_req; (std::int8_t*)ifr < (std::int8_t*)conf.ifc_req + conf.ifc_len; ifr++ )
 	{
-		if ( ifr->ifr_addr.sa_data == (ifr+1)->ifr_addr.sa_data )
+        if (memcmp(ifr->ifr_addr.sa_data, (ifr+1)->ifr_addr.sa_data, sizeof(sockaddr::sa_data)) == 0)
 			continue;  // duplicate, skip it
 
 		if ( ioctl( sock, SIOCGIFFLAGS, ifr ))
