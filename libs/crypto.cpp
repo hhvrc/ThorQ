@@ -1,10 +1,10 @@
 #include "crypto.h"
 
-#include <limits>
-#include <cstring>
-#include <cstdint>
-#include <cassert>
 #include <algorithm>
+#include <cstring>
+#include <cassert>
+#include <cstdint>
+#include <limits>
 
 void ThorQ::Crypto::RandomizeBytes(std::span<std::uint8_t> bytes)
 {
@@ -66,7 +66,7 @@ bool ThorQ::Crypto::getPublicKey(std::span<std::uint8_t, Crypto::PublicKeyLen> p
     return true;
 }
 
-bool ThorQ::Crypto::agreeAsServer(const std::span<std::uint8_t, Crypto::PublicKeyLen> foreignKey)
+bool ThorQ::Crypto::agreeAsServer(const std::span<const std::uint8_t, Crypto::PublicKeyLen> foreignKey)
 {
     std::unique_lock l(m_modlock);
     if (m_state != State::GeneratedKeys)
@@ -84,7 +84,7 @@ bool ThorQ::Crypto::agreeAsServer(const std::span<std::uint8_t, Crypto::PublicKe
     return true;
 }
 
-bool ThorQ::Crypto::agreeAsClient(const std::span<std::uint8_t, Crypto::PublicKeyLen> foreignKey)
+bool ThorQ::Crypto::agreeAsClient(const std::span<const std::uint8_t, Crypto::PublicKeyLen> foreignKey)
 {
     std::unique_lock l(m_modlock);
     if (m_state != State::GeneratedKeys)
@@ -102,7 +102,7 @@ bool ThorQ::Crypto::agreeAsClient(const std::span<std::uint8_t, Crypto::PublicKe
     return true;
 }
 
-bool ThorQ::Crypto::encrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t, Crypto::MacLen> mac, std::span<std::uint8_t, Crypto::NonceLen> nonce) const
+bool ThorQ::Crypto::encrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, std::span<std::uint8_t, Crypto::MacLen> mac, std::span<std::uint8_t, Crypto::NonceLen> nonce) const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
     if (!ready() ||
@@ -122,7 +122,7 @@ bool ThorQ::Crypto::encrypt(std::span<std::uint8_t> dataOut, const std::span<std
     return true;
 }
 
-bool ThorQ::Crypto::decrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t, Crypto::MacLen> mac, std::span<std::uint8_t, Crypto::NonceLen> nonce) const
+bool ThorQ::Crypto::decrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, const std::span<const std::uint8_t, Crypto::MacLen> mac, const std::span<const std::uint8_t, Crypto::NonceLen> nonce) const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
     if (!ready() ||

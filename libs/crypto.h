@@ -1,14 +1,15 @@
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
+#include <sodium.h>
+
+#include <shared_mutex>
 #include <span>
 #include <array>
 #include <atomic>
-#include <cstdint>
 #include <cstdlib>
-#include <shared_mutex>
+#include <cstdint>
 
-#include <sodium.h>
 
 namespace ThorQ {
 /// Class to make cryptography extremely easy to deal with
@@ -58,13 +59,13 @@ public:
      * @param foreignKey foreign public key to agree with
      * @return Returns if shared secret was computed
      */
-    bool agreeAsServer(const std::span<std::uint8_t, Crypto::PublicKeyLen> foreignKey);
+    bool agreeAsServer(const std::span<const std::uint8_t, Crypto::PublicKeyLen> foreignKey);
 
     /** Establish secret key with foreign host
      * @param foreignKey foreign public key to agree with
      * @return Returns if shared secret was computed
      */
-    bool agreeAsClient(const std::span<std::uint8_t, Crypto::PublicKeyLen> foreignKey);
+    bool agreeAsClient(const std::span<const std::uint8_t, Crypto::PublicKeyLen> foreignKey);
 
     /** Attempts to encrypt the data
      * @param dataOut span to write encrypted data to, this is the same size as dataIn
@@ -73,7 +74,7 @@ public:
      * @param nonce randomized data to make message unique, this is a size of NonceLen (encrypt function will randomize this)
      * @return
      */
-    bool encrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t, Crypto::MacLen> mac, std::span<std::uint8_t, Crypto::NonceLen> nonce) const;
+    bool encrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, std::span<std::uint8_t, Crypto::MacLen> mac, std::span<std::uint8_t, Crypto::NonceLen> nonce) const;
 
     /** Attempts to decrypt the data
      * @param dataOut span to write cleartext data to, this is the same size as dataIn
@@ -82,7 +83,7 @@ public:
      * @param nonce randomized data to make message unique, this is a size of NonceLen
      * @return
      */
-    bool decrypt(std::span<std::uint8_t> dataOut, const std::span<std::uint8_t> dataIn, std::span<std::uint8_t, Crypto::MacLen> mac, std::span<std::uint8_t, Crypto::NonceLen> nonce) const;
+    bool decrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, const std::span<const std::uint8_t, Crypto::MacLen> mac, const std::span<const std::uint8_t, Crypto::NonceLen> nonce) const;
 private:
     /**
      * @brief reset, but without locking the shared mutex
