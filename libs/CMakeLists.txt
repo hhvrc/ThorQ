@@ -88,6 +88,8 @@ set(${project}_SOURCES
 )
 set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/uuid.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
+
     ${CMAKE_CURRENT_SOURCE_DIR}/encoding.h
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/message.h
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/client.h

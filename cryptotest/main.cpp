@@ -1,12 +1,17 @@
+#include <crypto.h>
+#include <utils.h>
+
+#include <fmt/core.h>
+
 #include <array>
 #include <cstring>
 #include <memory>
 
-#include <crypto.h>
-#include <fmt/core.h>
-
 int main(int argc, char** argv)
 {
+    THORQ_UNUSED(argc)
+    THORQ_UNUSED(argv)
+
     ThorQ::Crypto client;
     ThorQ::Crypto server;
 
