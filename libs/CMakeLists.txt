@@ -79,6 +79,7 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/abstractconnection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/tcpconnection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/udpconnection.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/connectionhandler.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/hashing.cpp

@@ -1,9 +1,10 @@
 #include "apiconnectionhandler.h"
 
 #include <networking/message.h>
+#include <networking/abstractconnection.h>
 #include <systemid.h>
 #include <encoding.h>
-#include <crypto.h>
+#include <enums.h>
 
 #include <schemas/account_generated.h>
 #include <schemas/announcement_generated.h>
@@ -18,7 +19,12 @@
 
 #include <fmt/core.h>
 
+#include <mutex>
+
 ThorQ::ApiConnectionHandler::ApiConnectionHandler()
+    : m_crypto()
+    , l_buffer()
+    , m_buffer(THORQ_PAYLOAD_LEN_MAX)
 {
     fmt::print("[CONNECTION] Constructed\n");
 }
@@ -50,63 +56,17 @@ bool ThorQ::ApiConnectionHandler::onHeader(std::shared_ptr<ThorQ::Networking::Me
 
 void ThorQ::ApiConnectionHandler::onMessage(std::shared_ptr<std::vector<std::uint8_t>> message)
 {
-    fmt::print("[CONNECTION] Message\n");
-}
-
-/*
-ThorQ::ServerHandler::ServerHandler(QObject *parent)
-    : QObject(parent)
-    , m_crypto()
-    , m_buffer(THORQ_PAYLOAD_LEN_MAX)
-    , m_ApiConnection(nullptr)
-{
-    establishConnection();
-}
-
-ThorQ::ServerHandler::~ServerHandler()
-{
-}
-
-ThorQ::Networking::Tcp::ApiConnection *ThorQ::ServerHandler::ApiConnection() const
-{
-    return m_ApiConnection;
-}
-
-void ThorQ::ServerHandler::resetState()
-{
-    m_crypto.reset();
-    m_buffer.clear();
-}
-
-void ThorQ::ServerHandler::handleConnect(std::uint32_t data)
-{
-    qDebug() << "Connected";
-}
-
-void ThorQ::ServerHandler::handleDisconnect(std::uint32_t data)
-{
-    qDebug() << "Disconnected";
-
-    establishConnection();
-}
-
-void ThorQ::ServerHandler::parsePacket(ThorQ::Networking::Buffer message)
-{
-    qDebug() << "Packet";
-    ENetPacket* packet = message.packet();
-    std::uint8_t channelID = message.channelID();
-
-    if (packet == nullptr ||
-        channelID > (std::uint8_t)THORQ_CHANNEL::_MAX  ||
-        !ThorQ::checkDataSize(packet))
-    {
-        return;
+    if (!ThorQ::Encoding::validateEncodedData(*message)) {
+        fmt::print(stderr, "Message is invalid!!!\n");
     }
 
-    m_buffer.resize(ThorQ::calculateDataSize(packet));
-    if (!ThorQ::dataDecode(packet, m_buffer, m_crypto))
+    fmt::print("[CONNECTION] Message\n");
+
+    std::scoped_lock l(l_buffer);
+    m_buffer.resize(ThorQ::Encoding::calculateDecodedSize(*message));
+    if (!ThorQ::Encoding::dataDecode(*message, m_buffer, m_crypto))
     {
-        qDebug() << "Cannot unpack/decrypt packet";
+        fmt::print(stderr, "Cannot unpack/decrypt packet\n");
         return;
     }
 
@@ -115,26 +75,14 @@ void ThorQ::ServerHandler::parsePacket(ThorQ::Networking::Buffer message)
 
     if (!fbsMessage->Verify(fbsVerifier))
     {
-        qDebug() << "Invalid flatbuffer message";
-        return;
-    }
-
-    switch ((THORQ_CHANNEL)channelID) {
-    case THORQ_CHANNEL::API:
-        break;
-    case THORQ_CHANNEL::EVENTS:
-        break;
-    case THORQ_CHANNEL::RTC:
-        break;
-    case THORQ_CHANNEL::AUTHORITY:
-        break;
-    default:
+        fmt::print(stderr, "Invalid flatbuffer message\n");
         return;
     }
 
     switch (fbsMessage->body_type()) {
     case ThorQ::Serialization::Body_account:
-        qDebug() << "[MSG] account";
+        fmt::print("Invalid flatbuffer message\n");
+        fmt::print("[MSG] account\n");
         //handleMessageAccount(fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_version:
@@ -144,82 +92,57 @@ void ThorQ::ServerHandler::parsePacket(ThorQ::Networking::Buffer message)
         handleMessageCrypto(fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_system_id:
-        qDebug() << "[MSG] systemid";
+        fmt::print("[MSG] systemid\n");
         //handleMessageSystemID(fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_group:
-        qDebug() << "[MSG] group";
+        fmt::print("[MSG] group\n");
         //handleMessageGroup(fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_device:
-        qDebug() << "[MSG] device";
+        fmt::print("[MSG] device\n");
         //handleMessageCollar(fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_moderation:
-        qDebug() << "[MSG] moderation";
+        fmt::print("[MSG] moderation\n");
         //handleMessageModeration(fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_friend_request:
-        qDebug() << "[MSG] friend request";
+        fmt::print("[MSG] friend request\n");
         //handleMessageFriendRequest(fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_file:
-        qDebug() << "[MSG] file";
+        fmt::print("[MSG] file\n");
         //handleMessageFile(fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_user:
-        qDebug() << "[MSG] user";
+        fmt::print("[MSG] user\n");
         //handleMessageUser(fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_announcement:
-        qDebug() << "[MSG] announcement";
+        fmt::print("[MSG] announcement\n");
         //handleMessageAnnouncement(fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_NONE:
-        qDebug() << "[MSG] none";
+        fmt::print("[MSG] none\n");
     default:
         return;
     }
 }
 
-void ThorQ::ServerHandler::requestCrypto()
+void ThorQ::ApiConnectionHandler::requestCrypto()
 {
-    qDebug() << "Request Crypto";
+    fmt::print("Request Crypto\n");
 
     flatbuffers::FlatBufferBuilder fbsBuilder;
     auto fbsRequest = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Request).Union();
     auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsRequest);
     fbsBuilder.Finish(fbsMessage);
 
-    sendPacket(fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
+    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
 }
 
-void ThorQ::ServerHandler::establishConnection()
-{
-    if (m_ApiConnection != nullptr) {
-        m_ApiConnection->deleteLater();
-    }
-
-    m_ApiConnection = new Networking::Tcp::ApiConnection(this);
-    QObject::connect(m_ApiConnection, &Networking::Tcp::ApiConnection::connected, this, &ServerHandler::handleConnect);
-    QObject::connect(m_ApiConnection, &Networking::Tcp::ApiConnection::disconnected, this, &ServerHandler::handleDisconnect);
-    QObject::connect(m_ApiConnection, &Networking::Tcp::ApiConnection::udpReceived, this, &ServerHandler::parsePacket);
-    QObject::connect(this, &ServerHandler::packetGenerated, m_ApiConnection, &Networking::Tcp::ApiConnection::sendUdp);
-    emit requestConnect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT, (std::uint8_t)THORQ_CHANNEL::_MAX, m_ApiConnection);
-}
-
-void ThorQ::ServerHandler::sendPacket(std::span<std::uint8_t> span, bool encrypt, std::uint32_t flags, THORQ_CHANNEL channelID)
-{
-    std::size_t packetSize = ThorQ::calculatePacketSize(span.size(), encrypt);
-    ENetPacket* packet = enet_packet_create(nullptr, packetSize, flags);
-
-    if (packet != nullptr && ThorQ::dataEncode(packet, span))
-    {
-        emit packetGenerated(ThorQ::Networking::Buffer(packet, (std::uint8_t)channelID));
-    }
-}
-
-void ThorQ::ServerHandler::handleMessageVersion(const void *body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiConnectionHandler::handleMessageVersion(const void *body, flatbuffers::Verifier fbsVerifier)
 {
     auto fbsVersion = reinterpret_cast<const ThorQ::Serialization::Version*>(body);
 
@@ -227,7 +150,7 @@ void ThorQ::ServerHandler::handleMessageVersion(const void *body, flatbuffers::V
         return;
     }
 
-    qDebug() << "[MSG] version";
+    fmt::print("[MSG] version\n");
 
     ThorQ::Version version;
     version.setMajor(fbsVersion->major());
@@ -236,35 +159,35 @@ void ThorQ::ServerHandler::handleMessageVersion(const void *body, flatbuffers::V
 
     switch ((THORQ_APP)fbsVersion->app()) {
     case THORQ_APP::SERVER:
-        if (version == THORQ_VERSION_SERVER) {
-            qDebug() << "[VERSION] Server version matched";
+        if (version == ThorQ::ServerVersion) {
+            fmt::print("[VERSION] Server version matched\n");
         } else {
-            qDebug() << "[VERSION] Server version mismatched";
+            fmt::print("[VERSION] Server version mismatched\n");
         }
 
-        requestCrypto();
+        requestCrypto(); // TODO: this is bad
         break;
     case THORQ_APP::CLIENT:
-        if (version == THORQ_VERSION_CLIENT) {
-            qDebug() << "[VERSION] Client version matched";
+        if (version == ThorQ::ClientVersion) {
+            fmt::print("[VERSION] Client version matched\n");
         } else {
-            qDebug() << "[VERSION] Client version mismatched";
+            fmt::print("[VERSION] Client version mismatched\n");
         }
         break;
     case THORQ_APP::LINK:
-        if (version == THORQ_VERSION_LINK) {
-            qDebug() << "[VERSION] Link version matched";
+        if (version == ThorQ::LinkVersion) {
+            fmt::print("[VERSION] Link version matched\n");
         } else {
-            qDebug() << "[VERSION] Link version mismatched";
+            fmt::print("[VERSION] Link version mismatched\n");
         }
         break;
     default:
-        qDebug() << "[VERSION] invalid";
+        fmt::print("[VERSION] invalid\n");
         return;
     }
 }
 
-void ThorQ::ServerHandler::handleMessageCrypto(const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiConnectionHandler::handleMessageCrypto(const void* body, flatbuffers::Verifier fbsVerifier)
 {
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Crypto::Message*>(body);
 
@@ -272,16 +195,16 @@ void ThorQ::ServerHandler::handleMessageCrypto(const void* body, flatbuffers::Ve
         return;
     }
 
-    qDebug() << "[MSG] crypto";
+    fmt::print("[MSG] crypto\n");
 
     switch (fbsCrypto->type()) {
     case ThorQ::Serialization::Crypto::MessageType_Establish:
     {
-        qDebug() << "[MSG] crypto establish!";
+        fmt::print("[MSG] crypto establish!\n");
 
         if (fbsCrypto->data()->size() != ThorQ::Crypto::PublicKeyLen)
         {
-            qDebug() << "Got key with invalid length!";
+            fmt::print("Got key with invalid length!\n");
             return;
         }
 
@@ -302,22 +225,22 @@ void ThorQ::ServerHandler::handleMessageCrypto(const void* body, flatbuffers::Ve
             auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsEstablish);
             fbsBuilder.Finish(fbsMessage);
 
-            sendPacket(fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
+            encodeAndSend(fbsBuilder.GetBufferSpan(), false);
         }
         else
         {
-            qWarning() << "Failed to create shared secret";
-            m_ApiConnection->disconnect((std::uint32_t)THORQ_DISCONNECT_REASON::CRYPTO_FAILED);
+            fmt::print(stderr, "Failed to create shared secret\n");
+            connection()->disconnect(); // TODO: In the future should find a way to send reason for disconnet to server as well
         }
         break;
     }
     case ThorQ::Serialization::Crypto::MessageType_Verify:
     {
-        qDebug() << "[MSG] crypto verify!" << fbsCrypto->data()->size();
+        fmt::print("[MSG] crypto verify! {}\n", fbsCrypto->data()->size());;
 
         if (fbsCrypto->data()->size() == THORQ_CRYPTO_VERIFICATION_DATA_LEN)
         {
-            qDebug() << "[MSG] crypto verified!";
+            fmt::print("[MSG] crypto verified!\n");
 
             // Build flatbuffer
             flatbuffers::FlatBufferBuilder fbsBuilder;
@@ -325,18 +248,38 @@ void ThorQ::ServerHandler::handleMessageCrypto(const void* body, flatbuffers::Ve
             auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
             fbsBuilder.Finish(fbsMessage);
 
-            sendPacket(fbsBuilder.GetBufferSpan(), true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
+            encodeAndSend(fbsBuilder.GetBufferSpan(), true);
         }
         else
         {
-            qWarning() << "Failed to verify";
-            m_ApiConnection->disconnect((std::uint32_t)THORQ_DISCONNECT_REASON::CRYPTO_FAILED);
+            fmt::print(stderr, "Failed to verify\n");
+            connection()->disconnect(); // TODO: In the future should find a way to send reason for disconnet to server as well
         }
         break;
     }
     default:
-        qDebug() << "[MSG] crypto \?\?\?!\n";
+        fmt::print("[MSG] crypto \?\?\?!\n\n");
         return;
     }
 }
-*/
+
+void ThorQ::ApiConnectionHandler::encodeAndSend(flatbuffers::span<std::uint8_t> buffer, bool encrypt)
+{
+    auto message = std::make_shared<std::vector<std::uint8_t>>();
+    message->resize(ThorQ::Encoding::calculateEncodedSize(buffer.size(), encrypt));
+
+    if (encrypt) {
+        if (!ThorQ::Encoding::dataEncode(std::span<std::uint8_t>(buffer.data(), buffer.size()), *message, m_crypto)) {
+            fmt::print(stderr, "Failed to encrypt message\n");
+            return;
+        }
+    }
+    else {
+        if (!ThorQ::Encoding::dataEncode(std::span<std::uint8_t>(buffer.data(), buffer.size()), *message)) {
+            fmt::print(stderr, "Failed to encode message\n");
+            return;
+        }
+    }
+
+    connection()->send(message);
+}
