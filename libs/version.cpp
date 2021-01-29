@@ -1,4 +1,6 @@
 #include "version.h"
+
+#include "fmt/compile.h"
 #include "fmt/core.h"
 
 ThorQ::Version::Version()
@@ -55,5 +57,5 @@ void ThorQ::Version::setPatch(std::uint8_t patch)
 
 std::string ThorQ::Version::toString() const
 {
-    return fmt::format("{}.{}.{}", m_major, m_minor, m_patch);
+    return fmt::format(FMT_COMPILE("{}.{}.{}"), m_major, m_minor, m_patch);
 }

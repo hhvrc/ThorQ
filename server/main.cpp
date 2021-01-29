@@ -81,9 +81,9 @@ int main(int argc, char** argv)
         return EXIT_SUCCESS;
     }
 
-    fmt::print("ThorQ Server {}\n", THORQ_VERSION_SERVER.toString());
-    fmt::print("Using link {}\n", THORQ_VERSION_LINK.toString());
-    fmt::print("Expecting client {}\n", THORQ_VERSION_CLIENT.toString());
+    fmt::print("Using server version     [{}]\n", ThorQ::ServerVersion.toString());
+    fmt::print("Using link version       [{}]\n", ThorQ::LinkVersion.toString());
+    fmt::print("Expecting client version [{}]\n", ThorQ::ClientVersion.toString());
 
 #if PARSE_PORT
     cxxopts::OptionValue portValue = result["port"];

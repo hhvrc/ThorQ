@@ -1,10 +1,10 @@
 #ifndef VERSION_H
 #define VERSION_H
 
-#include <cstdint>
-#include <string>
-
 #include "schemas/version_generated.h"
+
+#include <string>
+#include <cstdint>
 
 namespace ThorQ {
 /// Version type

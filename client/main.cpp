@@ -36,7 +36,7 @@ int main(int argc, char** argv)
 
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QCoreApplication::setApplicationName(THORQ_APPLICATION_NAME);
-    QCoreApplication::setApplicationVersion(THORQ_VERSION_CLIENT.toString().c_str());
+    QCoreApplication::setApplicationVersion(ThorQ::ClientVersion.toString().c_str());
     QCoreApplication::setOrganizationName(THORQ_ORGANIZATION_NAME);
     QCoreApplication::setOrganizationDomain(THORQ_ORGANIZATION_DOMAIN);
 
