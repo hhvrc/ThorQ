@@ -26,8 +26,6 @@ Q_DECLARE_METATYPE(THORQ_STATE_LOGIN)
 #include <crypto.h>
 #include <encoding.h>
 
-#include <serverhandler.h>
-
 std::uint16_t i = 0;
 int main(int argc, char** argv)
 {
