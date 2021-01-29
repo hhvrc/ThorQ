@@ -16,19 +16,16 @@
 void DelMe()
 {
 #if __linux__
-    char cmd[std::size("rm ") + MAXPATHLEN];
+    char buf[std::size("rm ") + MAXPATHLEN]{0};
 
-	strcpy(&cmd[0], "rm ");
+    memcpy(buf, "rm ", 3);
 
-	if (readlink("/proc/self/exe", &cmd[3], MAXPATHLEN) == -1)
-	{
-        char arr[256]{0};
-        strerror_r(errno, arr, 256);
-
-        fmt::print(stderr, "Error getting path to self: {}\n", arr);
+    if (readlink("/proc/self/exe", &buf[3], MAXPATHLEN) == -1)
+    {
+        fmt::print(stderr, "Error getting path to self: {}\n", strerror_r(errno, buf, 256));
 	}
 
-    fmt::print("System call success: {}\n", system(cmd) == EXIT_SUCCESS);
+    fmt::print("System call success: {}\n", system(buf) == EXIT_SUCCESS);
 #elif _WIN32
     TCHAR szModuleName[MAX_PATH];
     GetModuleFileName(NULL, szModuleName, MAX_PATH);
