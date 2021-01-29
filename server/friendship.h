@@ -1,8 +1,7 @@
 #ifndef FRIENDSHIP_H
 #define FRIENDSHIP_H
 
-#include <stduuid/include/uuid.h>
-
+#include <uuid.h>
 #include <enums.h>
 
 #include "account.h"

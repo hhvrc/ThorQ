@@ -1,7 +1,7 @@
 #ifndef FRIENDREQUEST_H
 #define FRIENDREQUEST_H
 
-#include <stduuid/include/uuid.h>
+#include <uuid.h>
 
 #include "account.h"
 

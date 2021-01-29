@@ -6,7 +6,8 @@
 #include <shared_mutex>
 #include <unordered_map>
 
-#include "uuid.h"
+#include <uuid.h>
+
 #include "typedefs_server.h"
 
 namespace ThorQ {

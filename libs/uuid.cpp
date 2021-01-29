@@ -1,11 +1,12 @@
 #include "uuid.h"
 
-#include <cstring>
 #if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
 #include <combaseapi.h>
 #elif __linux__
 #include <uuid/uuid.h>
 #endif
+
+#include <cstring>
 
 ThorQ::Uuid ThorQ::Uuid::NewUuid()
 {

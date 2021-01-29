@@ -71,6 +71,8 @@ add_subdirectory(concurrentqueue)
 # -------------------------
 
 set(${project}_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/uuid.cpp
+
     ${CMAKE_CURRENT_SOURCE_DIR}/encoding.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/client.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/server.cpp
@@ -85,6 +87,7 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid_${BUILD_OSL}.cpp
 )
 set(${project}_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/uuid.h
     ${CMAKE_CURRENT_SOURCE_DIR}/encoding.h
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/message.h
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/client.h

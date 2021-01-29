@@ -14,7 +14,7 @@ public:
     static const ThorQ::Uuid Empty();
 
     Uuid() noexcept;
-    Uuid(const Uuid& other) noexcept;
+    Uuid(const ThorQ::Uuid& other) noexcept;
     Uuid(std::array<std::uint8_t, 16> data) noexcept;
 
     bool isEmpty() const noexcept;

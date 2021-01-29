@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "uuid.h"
+#include <uuid.h>
 
 namespace ThorQ {
 class ImageCache
