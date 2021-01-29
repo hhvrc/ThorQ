@@ -10,13 +10,12 @@
 #include <schemas/user_generated.h>
 #include <schemas/group_generated.h>
 #include <schemas/account_generated.h>
+#include <lsql/connection.h>
+#include <lsql/transaction.h>
+#include <lsql/column.h>
+#include <lsql/query.h>
 
-#include "lsql/connection.h"
-#include "lsql/transaction.h"
-#include "lsql/column.h"
-#include "lsql/query.h"
-
-#include "instance.h"
+#include "apiconnectionhandler.h"
 
 std::shared_mutex g_accounts_lock;
 std::unordered_map<std::string, std::shared_ptr<ThorQ::Account>> g_accounts;
@@ -346,15 +345,11 @@ bool ThorQ::Account::containsRequestIncoming(std::shared_ptr<ThorQ::Account> sou
     return m_requests_incoming.contains(source);
 }
 
-void ThorQ::Account::requestSession(std::shared_ptr<ThorQ::Instance> source, std::shared_ptr<ThorQ::Account> targetAccount)
+void ThorQ::Account::requestSession(std::shared_ptr<ThorQ::ApiConnectionHandler> source, std::shared_ptr<ThorQ::Account> targetAccount)
 {
     std::vector<std::uint8_t> response;
 
-    std::shared_ptr<ThorQ::Account> sourceAccount;
-    {
-        std::shared_lock l(source->l_account);
-        sourceAccount = source->m_account;
-    }
+    std::shared_ptr<ThorQ::Account> sourceAccount = source->account();
 
     // If account is logged out
     if (sourceAccount == nullptr)
@@ -431,19 +426,19 @@ bool ThorQ::Account::isOnline() const
     return m_instances.size() > 0;
 }
 
-bool ThorQ::Account::addInstance(ThorQ::Instance* instance)
+bool ThorQ::Account::addInstance(std::shared_ptr<ThorQ::ApiConnectionHandler> instance)
 {
     std::unique_lock l(l_instances);
     return m_instances.insert(instance).second;
 }
 
-bool ThorQ::Account::removeInstance(ThorQ::Instance* instance)
+bool ThorQ::Account::removeInstance(std::shared_ptr<ThorQ::ApiConnectionHandler> instance)
 {
     std::unique_lock l(l_instances);
     return m_instances.erase(instance) > 0;
 }
 
-bool ThorQ::Account::containsInstance(ThorQ::Instance* instance) const
+bool ThorQ::Account::containsInstance(std::shared_ptr<ThorQ::ApiConnectionHandler> instance) const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(l_instances));
     return m_instances.contains(instance);

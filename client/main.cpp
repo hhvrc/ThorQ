@@ -7,14 +7,12 @@
 #include <QDebug>
 #include <QTranslator>
 #include <QMessageBox>
-
-#include <enet.h>
+#include <QVBoxLayout>
 
 #include "loginwidget.h"
 #include "mainwidget.h"
 #include "collar/serial.h"
-#include "networking/host.h"
-#include "networking/connectionhandler.h"
+#include "apiclient.h"
 #include "vr/openvroverlaycontroller.h"
 
 Q_DECLARE_METATYPE(THORQ_STATE_CONNECTION)
@@ -26,19 +24,13 @@ Q_DECLARE_METATYPE(THORQ_STATE_LOGIN)
 
 #include <constants.h>
 #include <crypto.h>
-#include <thorq_message.h>
-
-#include <QVBoxLayout>
-
-#include <thorq_message.h>
+#include <encoding.h>
 
 #include <serverhandler.h>
 
 std::uint16_t i = 0;
 int main(int argc, char** argv)
 {
-    qRegisterMetaType<QSharedPointer<ThorQ::Networking::Message>>("ThorQNetworkingMessage");
-
     // TODO: customize GUI
     // TODO: enable support for SteamVR
 
@@ -90,30 +82,11 @@ int main(int argc, char** argv)
     app.setWindowIcon(QIcon(":/shockGrey.ico"));
     //app.setQuitOnLastWindowClosed(false);
 #if COMTEST
-    // Initialize ENet
-    if (!ThorQ::Networking::Host::Initialize())
-    {
-        qDebug() << "Failed to initialize networking";
-        return EXIT_FAILURE;
-    }
-
     LoginWidget loginWidget;
     MainWidget mainWidget;
-    ThorQ::Networking::Host* host = ThorQ::Networking::Host::CreateHost(8, &app);
+    ThorQ::ApiClient apiClient;
 
-    if (host == nullptr) {
-        qDebug() << "Failed to create host";
-        return EXIT_FAILURE;
-    }
-
-    QObject::connect(host, &ThorQ::Networking::Host::error, [](QString error){ qDebug().noquote() << "[Server] Error:" << error; });
-
-    ThorQ::ServerHandler* handler = new ThorQ::ServerHandler(&app);
-    QObject::connect(handler, &ThorQ::ServerHandler::requestConnect, host, &ThorQ::Networking::Host::connect);
-
-    host->connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT, (std::uint8_t)THORQ_CHANNEL::_MAX, handler->connectionHandler());
-
-
+    apiClient.connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT);
 /*
     QMessageBox errorBox(&loginWidget);
     errorBox.setIcon(QMessageBox::Critical);
@@ -163,8 +136,7 @@ int main(int argc, char** argv)
     int retval = app.exec();
 
 #if COMTEST
-    delete host;
-    ThorQ::Networking::Host::DeInitialize();
+    apiClient.disconnect();
 #else
     ThorQ::VR::Shutdown();
 #endif

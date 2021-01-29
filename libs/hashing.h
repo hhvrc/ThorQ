@@ -1,15 +1,12 @@
 #ifndef HASHING_H
 #define HASHING_H
 
-#include <string>
-#include <cstddef>
+#include <span>
 #include <cstdint>
 
 namespace ThorQ {
-namespace Security {
 namespace Hashing {
-// Add normal hashing functions and password hashing functions here
-}
+std::uint32_t Crc32(const std::span<const std::uint8_t> data);
 }
 }
 

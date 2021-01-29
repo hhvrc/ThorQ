@@ -15,14 +15,6 @@ add_subdirectory(fmt)
 
 # -------------------------
 
-# --------- enet ---------
-
-set(ENET_STATIC ON)
-add_definitions(-DENET_FEATURE_ADDRESS_MAPPING)
-add_subdirectory(enet)
-
-# -------------------------
-
 # ------ flatbuffers ------
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFLATBUFFERS_USE_STD_SPAN") # C++20 :D
@@ -72,40 +64,54 @@ foreach(SCHEMA ${${project}_SCHEMAS})
 endforeach()
 # -------------------------
 
+# ---- concurrentqueue ----
+
+add_subdirectory(concurrentqueue)
+
+# -------------------------
+
 set(${project}_SOURCES
+    ${CMAKE_CURRENT_SOURCE_DIR}/encoding.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/client.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/server.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/abstractconnection.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/tcpconnection.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/udpconnection.cpp
+
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/hashing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/version.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid_${BUILD_OSL}.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.cpp
 )
 set(${project}_HEADERS
+    ${CMAKE_CURRENT_SOURCE_DIR}/encoding.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/message.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/client.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/server.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/abstractconnection.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/tcpconnection.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/udpconnection.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/networking/connectionhandler.h
+
     ${CMAKE_CURRENT_SOURCE_DIR}/crypto.h
     ${CMAKE_CURRENT_SOURCE_DIR}/hashing.h
     ${CMAKE_CURRENT_SOURCE_DIR}/version.h
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.h
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/asio_common.h
+
     ${CMAKE_CURRENT_SOURCE_DIR}/enums.h
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_global.h
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/thorq_message.h
     ${${project}_SCHEMAS}
 )
 
-if (WIN32)
-    set(GLOB_LINK_DIRS
-	${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/windows
+set(GLOB_LINK_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/${BUILD_OSL}
 
-	CACHE PATH "List of library directories that contains binaries to link agaisnt"
+    CACHE PATH "List of library directories for link libraries"
     )
-else()
-    set(GLOB_LINK_DIRS
-	${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/linux
-
-	CACHE PATH "List of library directories that contains binaries to link agaisnt"
-    )
-endif()
 
 link_directories(
     ${GLOB_LINK_DIRS}
@@ -115,14 +121,16 @@ set(GLOB_INCLUDE_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/fmt/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/enet/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/asio/asio/include
     ${CMAKE_CURRENT_SOURCE_DIR}/sodium/include
     ${CMAKE_CURRENT_SOURCE_DIR}/flatbuffers/include
 
     CACHE PATH "List of library directories for header includes"
 )
+
 include_directories(
     ${GLOB_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/concurrentqueue
 )
 
 add_library(${project} STATIC
@@ -130,21 +138,15 @@ add_library(${project} STATIC
     ${${project}_HEADERS}
 )
 
-if(WIN32)
-    set(WIN_LIBS Iphlpapi)
+if(UNIX)
+    set(UNIX_LIBS uuid)
 endif()
-
-# Get pthreads
-set(THREADS_PREFER_PTHREAD_FLAG ON)
-find_package(Threads REQUIRED)
 
 # Link libraries
 target_link_libraries(${project}
-    Threads::Threads
-    ${CMAKE_DL_LIBS}
-    ${WIN_LIBS}
+    ${UNIX_LIBS}
+    concurrentqueue
     flatbuffers
-    enet_static
     sodium
     fmt
 )

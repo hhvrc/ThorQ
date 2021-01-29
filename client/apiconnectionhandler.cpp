@@ -1,21 +1,74 @@
-#include "serverhandler.h"
+#include "apiconnectionhandler.h"
 
+#include <networking/message.h>
+#include <systemid.h>
+#include <encoding.h>
+#include <crypto.h>
+
+#include <schemas/account_generated.h>
+#include <schemas/announcement_generated.h>
+#include <schemas/device_generated.h>
+#include <schemas/crypto_generated.h>
+#include <schemas/file_generated.h>
+#include <schemas/version_generated.h>
+#include <schemas/systemid_generated.h>
+#include <schemas/message_generated.h>
+#include <schemas/group_generated.h>
+#include <schemas/moderation_generated.h>
+
+#include <fmt/core.h>
+
+ThorQ::ApiConnectionHandler::ApiConnectionHandler()
+{
+    fmt::print("[CONNECTION] Constructed\n");
+}
+
+ThorQ::ApiConnectionHandler::~ApiConnectionHandler()
+{
+    fmt::print("[CONNECTION] Destroyed\n");
+}
+
+void ThorQ::ApiConnectionHandler::onConnect()
+{
+    fmt::print("[CONNECTION] Connected\n");
+}
+
+void ThorQ::ApiConnectionHandler::onDisconnect()
+{
+    fmt::print("[CONNECTION] Disconnected\n");
+}
+
+bool ThorQ::ApiConnectionHandler::onHeader(std::shared_ptr<ThorQ::Networking::MessageHeader> header)
+{
+    fmt::print("[CONNECTION] Header\n");
+    if (header->size > ThorQ::Encoding::calculateEncodedSize(THORQ_PAYLOAD_LEN_MAX, true) || header->size < THORQ_PAYLOAD_LEN_MIN)
+    {
+        return false;
+    }
+    return true;
+}
+
+void ThorQ::ApiConnectionHandler::onMessage(std::shared_ptr<std::vector<std::uint8_t>> message)
+{
+    fmt::print("[CONNECTION] Message\n");
+}
+
+/*
 #include <QDebug>
 
-#include <enet.h>
 #include <constants.h>
-#include <thorq_message.h>
+#include <encoding.h>
 
 #include <schemas/message_generated.h>
 #include <schemas/friendrequest_generated.h>
 
-#include "networking/connectionhandler.h"
+#include "
 
 ThorQ::ServerHandler::ServerHandler(QObject *parent)
     : QObject(parent)
     , m_crypto()
     , m_buffer(THORQ_PAYLOAD_LEN_MAX)
-    , m_connectionHandler(nullptr)
+    , m_ApiConnection(nullptr)
 {
     establishConnection();
 }
@@ -24,9 +77,9 @@ ThorQ::ServerHandler::~ServerHandler()
 {
 }
 
-ThorQ::Networking::ConnectionHandler *ThorQ::ServerHandler::connectionHandler() const
+ThorQ::Networking::Tcp::ApiConnection *ThorQ::ServerHandler::ApiConnection() const
 {
-    return m_connectionHandler;
+    return m_ApiConnection;
 }
 
 void ThorQ::ServerHandler::resetState()
@@ -47,7 +100,7 @@ void ThorQ::ServerHandler::handleDisconnect(std::uint32_t data)
     establishConnection();
 }
 
-void ThorQ::ServerHandler::parsePacket(ThorQ::Networking::Message message)
+void ThorQ::ServerHandler::parsePacket(ThorQ::Networking::Buffer message)
 {
     qDebug() << "Packet";
     ENetPacket* packet = message.packet();
@@ -55,13 +108,13 @@ void ThorQ::ServerHandler::parsePacket(ThorQ::Networking::Message message)
 
     if (packet == nullptr ||
         channelID > (std::uint8_t)THORQ_CHANNEL::_MAX  ||
-        !ThorQ::packetIsValidSize(packet))
+        !ThorQ::checkDataSize(packet))
     {
         return;
     }
 
     m_buffer.resize(ThorQ::calculateDataSize(packet));
-    if (!ThorQ::packetDecode(packet, m_buffer, m_crypto))
+    if (!ThorQ::dataDecode(packet, m_buffer, m_crypto))
     {
         qDebug() << "Cannot unpack/decrypt packet";
         return;
@@ -153,16 +206,16 @@ void ThorQ::ServerHandler::requestCrypto()
 
 void ThorQ::ServerHandler::establishConnection()
 {
-    if (m_connectionHandler != nullptr) {
-        m_connectionHandler->deleteLater();
+    if (m_ApiConnection != nullptr) {
+        m_ApiConnection->deleteLater();
     }
 
-    m_connectionHandler = new Networking::ConnectionHandler(this);
-    QObject::connect(m_connectionHandler, &Networking::ConnectionHandler::connected, this, &ServerHandler::handleConnect);
-    QObject::connect(m_connectionHandler, &Networking::ConnectionHandler::disconnected, this, &ServerHandler::handleDisconnect);
-    QObject::connect(m_connectionHandler, &Networking::ConnectionHandler::udpReceived, this, &ServerHandler::parsePacket);
-    QObject::connect(this, &ServerHandler::packetGenerated, m_connectionHandler, &Networking::ConnectionHandler::sendUdp);
-    emit requestConnect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT, (std::uint8_t)THORQ_CHANNEL::_MAX, m_connectionHandler);
+    m_ApiConnection = new Networking::Tcp::ApiConnection(this);
+    QObject::connect(m_ApiConnection, &Networking::Tcp::ApiConnection::connected, this, &ServerHandler::handleConnect);
+    QObject::connect(m_ApiConnection, &Networking::Tcp::ApiConnection::disconnected, this, &ServerHandler::handleDisconnect);
+    QObject::connect(m_ApiConnection, &Networking::Tcp::ApiConnection::udpReceived, this, &ServerHandler::parsePacket);
+    QObject::connect(this, &ServerHandler::packetGenerated, m_ApiConnection, &Networking::Tcp::ApiConnection::sendUdp);
+    emit requestConnect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT, (std::uint8_t)THORQ_CHANNEL::_MAX, m_ApiConnection);
 }
 
 void ThorQ::ServerHandler::sendPacket(std::span<std::uint8_t> span, bool encrypt, std::uint32_t flags, THORQ_CHANNEL channelID)
@@ -170,9 +223,9 @@ void ThorQ::ServerHandler::sendPacket(std::span<std::uint8_t> span, bool encrypt
     std::size_t packetSize = ThorQ::calculatePacketSize(span.size(), encrypt);
     ENetPacket* packet = enet_packet_create(nullptr, packetSize, flags);
 
-    if (packet != nullptr && ThorQ::packetEncode(packet, span))
+    if (packet != nullptr && ThorQ::dataEncode(packet, span))
     {
-        emit packetGenerated(ThorQ::Networking::Message(packet, (std::uint8_t)channelID));
+        emit packetGenerated(ThorQ::Networking::Buffer(packet, (std::uint8_t)channelID));
     }
 }
 
@@ -264,7 +317,7 @@ void ThorQ::ServerHandler::handleMessageCrypto(const void* body, flatbuffers::Ve
         else
         {
             qWarning() << "Failed to create shared secret";
-            m_connectionHandler->disconnect((std::uint32_t)THORQ_DISCONNECT_REASON::CRYPTO_FAILED);
+            m_ApiConnection->disconnect((std::uint32_t)THORQ_DISCONNECT_REASON::CRYPTO_FAILED);
         }
         break;
     }
@@ -287,7 +340,7 @@ void ThorQ::ServerHandler::handleMessageCrypto(const void* body, flatbuffers::Ve
         else
         {
             qWarning() << "Failed to verify";
-            m_connectionHandler->disconnect((std::uint32_t)THORQ_DISCONNECT_REASON::CRYPTO_FAILED);
+            m_ApiConnection->disconnect((std::uint32_t)THORQ_DISCONNECT_REASON::CRYPTO_FAILED);
         }
         break;
     }
@@ -296,3 +349,4 @@ void ThorQ::ServerHandler::handleMessageCrypto(const void* body, flatbuffers::Ve
         return;
     }
 }
+*/

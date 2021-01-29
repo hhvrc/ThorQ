@@ -1,86 +1,87 @@
-#include "messagedispatcher.h"
+#include "apiconnectionhandler.h"
 
-#include <enet.h>
-#include <fmt/core.h>
-#include <flatbuffers/flatbuffers.h>
+#include <networking/message.h>
+#include <encoding.h>
+#include <crypto.h>
 
-#include <lsql/query.h>
-#include <lsql/column.h>
-#include <lsql/connection.h>
-#include <systemid.h>
-#include <thorq_message.h>
-#include <schemas/account_generated.h>
-#include <schemas/announcement_generated.h>
-#include <schemas/device_generated.h>
-#include <schemas/crypto_generated.h>
-#include <schemas/file_generated.h>
-#include <schemas/version_generated.h>
-#include <schemas/systemid_generated.h>
-#include <schemas/message_generated.h>
-#include <schemas/group_generated.h>
-#include <schemas/moderation_generated.h>
-
-#include "server.h"
-#include "account.h"
-#include "instance.h"
-#include "memorymanager.h"
-
-ThorQ::MessageDispatcher::MessageDispatcher(ThorQ::Server* server)
-    : m_id(server->m_dispatchers.size())
-    , m_server(server)
-    , m_closing(false)
-    , m_buffer(THORQ_PAYLOAD_LEN_MAX)
-    , m_tokenGet(server->m_rxQueue)
-    , m_tokenQueue(server->m_txQueue)
+ThorQ::ApiConnectionHandler::ApiConnectionHandler()
 {
-    m_thread = std::thread(&ThorQ::MessageDispatcher::run, this);
-    fmt::print("Created dispatcher [{}]\n", m_id);
 }
 
-ThorQ::MessageDispatcher::~MessageDispatcher()
+ThorQ::ApiConnectionHandler::~ApiConnectionHandler()
 {
-    m_closing = true;
-    if (m_thread.joinable())
+    setCrypto(nullptr);
+    setAccount(nullptr);
+    setSystemID(nullptr);
+}
+
+std::shared_ptr<ThorQ::Crypto> ThorQ::ApiConnectionHandler::crypto() const
+{
+    std::shared_lock l(const_cast<std::shared_mutex&>(l_crypto));
+    return m_crypto;
+}
+
+void ThorQ::ApiConnectionHandler::setCrypto(std::shared_ptr<ThorQ::Crypto> crypto)
+{
+    std::unique_lock l(l_crypto);
+    m_crypto = crypto;
+}
+
+std::shared_ptr<ThorQ::Account> ThorQ::ApiConnectionHandler::account() const
+{
+    std::shared_lock l(const_cast<std::shared_mutex&>(l_account));
+    return m_account;
+}
+
+void ThorQ::ApiConnectionHandler::setAccount(std::shared_ptr<ThorQ::Account> account)
+{
+    std::unique_lock l(l_account);
+    m_account = account;
+}
+
+std::shared_ptr<std::vector<uint8_t> > ThorQ::ApiConnectionHandler::systemID() const
+{
+    std::shared_lock l(const_cast<std::shared_mutex&>(l_systemID));
+    return m_systemID;
+}
+
+void ThorQ::ApiConnectionHandler::setSystemID(std::shared_ptr<std::vector<uint8_t> > systemID)
+{
+    std::unique_lock l(l_systemID);
+    m_systemID = systemID;
+}
+
+void ThorQ::ApiConnectionHandler::onConnect()
+{
+
+}
+
+void ThorQ::ApiConnectionHandler::onDisconnect()
+{
+
+}
+
+bool ThorQ::ApiConnectionHandler::onHeader(std::shared_ptr<ThorQ::Networking::MessageHeader> header)
+{
+    if (header->size > ThorQ::Encoding::calculateEncodedSize(THORQ_PAYLOAD_LEN_MAX, true) || header->size < THORQ_PAYLOAD_LEN_MIN)
     {
-        m_thread.join();
+        return false;
     }
-    fmt::print("Closed dispatcher  [{}]\n", m_id);
+    return true;
 }
 
-void ThorQ::MessageDispatcher::run()
+void ThorQ::ApiConnectionHandler::onMessage(std::shared_ptr<std::vector<std::uint8_t> > message)
 {
-    while (!m_closing)
-    {
-        ENetEvent event;
-        while (m_server->tryGetEvent(event, m_tokenGet))
-        {
-            switch (event.type) {
-            case ENET_EVENT_TYPE_CONNECT:
-                handleEventConnection(event);
-                break;
-            case ENET_EVENT_TYPE_RECEIVE:
-                handleEventMessage(event);
-                break;
-            case ENET_EVENT_TYPE_DISCONNECT:
-                handleEventDisconnect(event);
-                break;
-            case ENET_EVENT_TYPE_DISCONNECT_TIMEOUT:
-                handleEventTimeout(event);
-                break;
-            case ENET_EVENT_TYPE_NONE:
-            default:
-                continue;
-            }
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
+
 }
 
-void ThorQ::MessageDispatcher::handleEventConnection(const ENetEvent& event)
+
+#if 0
+void ThorQ::MessageHandler::handleEventConnection(const ENetEvent& event)
 {
     // Dont worry, its ok to have a seemingly dangling pointer here (ENet keeps track of the pointer)
 
-    ThorQ::Instance* instance = new ThorQ::Instance(event.peer);
+    ThorQ::ApiConnection* instance = new ThorQ::ApiConnection(event.peer);
 
     flatbuffers::FlatBufferBuilder fbsBuilder;
     flatbuffers::Offset<ThorQ::Serialization::Version> fbsVersion;
@@ -90,21 +91,21 @@ void ThorQ::MessageDispatcher::handleEventConnection(const ENetEvent& event)
     fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::LINK, THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH);
     fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
     fbsBuilder.Finish(fbsMessage);
-    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
+    sendPacket(instance., fbsBuilder.GetBufferSpan(), false);
 
     // Client version
     fbsBuilder.Clear();
     fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::CLIENT, THORQ_VERSION_CLIENT_MAJOR, THORQ_VERSION_CLIENT_MINOR, THORQ_VERSION_CLIENT_PATCH);
     fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
     fbsBuilder.Finish(fbsMessage);
-    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
+    sendPacket(instance, fbsBuilder.GetBufferSpan(), false);
 
     // Server version
     fbsBuilder.Clear();
     fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::SERVER, THORQ_VERSION_SERVER_MAJOR, THORQ_VERSION_SERVER_MINOR, THORQ_VERSION_SERVER_PATCH);
     fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
     fbsBuilder.Finish(fbsMessage);
-    sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
+    sendPacket(instance, fbsBuilder.GetBufferSpan(), false);
 
     char addr[40];
     if (enet_peer_get_ip(event.peer, addr, 40) == 0)
@@ -112,25 +113,25 @@ void ThorQ::MessageDispatcher::handleEventConnection(const ENetEvent& event)
         fmt::print("[{}] Connected\n", addr);
     }
 }
-void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
+void ThorQ::MessageHandler::handleEventMessage(const ENetEvent& event)
 {
     if (event.peer == nullptr || event.peer->data == nullptr ||
         event.channelID > (std::uint8_t)THORQ_CHANNEL::_MAX  ||
-        !ThorQ::packetIsValidSize(event.packet))
+        !ThorQ::checkDataSize(event.packet))
     {
         return;
     }
 
-    ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
+    ThorQ::ApiConnection* instance = reinterpret_cast<ThorQ::ApiConnection*>(event.peer->data);
 
-    m_buffer.resize(ThorQ::calculateDataSize(event.packet));
-    if (!ThorQ::packetDecode(event.packet, m_buffer, instance->m_crypto))
+    m_tempBuffer.resize(ThorQ::calculateDataSize(event.packet));
+    if (!ThorQ::dataDecode(event.packet, m_tempBuffer, instance->m_crypto))
     {
         return;
     }
 
-    auto fbsMessage = flatbuffers::GetRoot<ThorQ::Serialization::Message>(m_buffer.data());
-    auto fbsVerifier = flatbuffers::Verifier(m_buffer.data(), m_buffer.size());
+    auto fbsMessage = flatbuffers::GetRoot<ThorQ::Serialization::Message>(m_tempBuffer.data());
+    auto fbsVerifier = flatbuffers::Verifier(m_tempBuffer.data(), m_tempBuffer.size());
 
     if (!fbsMessage->Verify(fbsVerifier))
     {
@@ -153,47 +154,47 @@ void ThorQ::MessageDispatcher::handleEventMessage(const ENetEvent& event)
 
     switch (fbsMessage->body_type()) {
     case ThorQ::Serialization::Body_account:
-        handleMessageAccount(instance, fbsMessage->body(), fbsVerifier);
+        onMessageAccount(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_version:
-        handleMessageVersion(instance, fbsMessage->body(), fbsVerifier);
+        onMessageVersion(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_crypto:
-        handleMessageCrypto(instance, fbsMessage->body(), fbsVerifier);
+        onMessageCrypto(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_system_id:
-        handleMessageSystemID(instance, fbsMessage->body(), fbsVerifier);
+        onMessageSystemID(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_group:
-        handleMessageGroup(instance, fbsMessage->body(), fbsVerifier);
+        onMessageGroup(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_device:
-        handleMessageDevice(instance, fbsMessage->body(), fbsVerifier);
+        onMessageDevice(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_moderation:
-        handleMessageModeration(instance, fbsMessage->body(), fbsVerifier);
+        onMessageModeration(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_friend_request:
-        handleMessageFriendRequest(instance, fbsMessage->body(), fbsVerifier);
+        onMessageFriendRequest(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_file:
-        handleMessageFile(instance, fbsMessage->body(), fbsVerifier);
+        onMessageFile(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_user:
-        handleMessageUser(instance, fbsMessage->body(), fbsVerifier);
+        onMessageUser(instance, fbsMessage->body(), fbsVerifier);
         break;
     case ThorQ::Serialization::Body_announcement:
-        fmt::print("Unexpected messageID from client: {}\n", m_buffer[0]);
+        fmt::print("Unexpected messageID from client: {}\n", m_tempBuffer[0]);
         break;
     case ThorQ::Serialization::Body_NONE:
     default:
         return;
     }
 }
-void ThorQ::MessageDispatcher::handleEventDisconnect(const ENetEvent& event)
+void ThorQ::MessageHandler::handleEventDisconnect(const ENetEvent& event)
 {
     // Get instance
-    ThorQ::Instance* instance = reinterpret_cast<ThorQ::Instance*>(event.peer->data);
+    ThorQ::ApiConnection* instance = reinterpret_cast<ThorQ::ApiConnection*>(event.peer->data);
 
     // Yeet
     delete instance;
@@ -204,7 +205,7 @@ void ThorQ::MessageDispatcher::handleEventDisconnect(const ENetEvent& event)
         fmt::print("[{}] disconnected\n", addr);
     }
 }
-void ThorQ::MessageDispatcher::handleEventTimeout(const ENetEvent &event)
+void ThorQ::MessageHandler::handleEventTimeout(const ENetEvent &event)
 {
     char addr[40];
     if (enet_peer_get_ip(event.peer, addr, 40) == 0)
@@ -213,7 +214,7 @@ void ThorQ::MessageDispatcher::handleEventTimeout(const ENetEvent &event)
     }
 }
 
-void ThorQ::MessageDispatcher::handleMessageAccount(ThorQ::Instance *instance, const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::MessageHandler::onMessageAccount(ThorQ::ApiConnection *instance, const void* body, flatbuffers::Verifier fbsVerifier)
 {
     auto fbsAccount = reinterpret_cast<const ThorQ::Serialization::Account::Message*>(body);
 
@@ -290,7 +291,7 @@ void ThorQ::MessageDispatcher::handleMessageAccount(ThorQ::Instance *instance, c
     }*/
 }
 
-void ThorQ::MessageDispatcher::handleMessageDevice(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::MessageHandler::onMessageDevice(ThorQ::ApiConnection *instance, const void *body, flatbuffers::Verifier fbsVerifier)
 {
     auto fbsDevice = reinterpret_cast<const ThorQ::Serialization::Device::Message*>(body);
 
@@ -306,7 +307,7 @@ void ThorQ::MessageDispatcher::handleMessageDevice(ThorQ::Instance *instance, co
     */
 }
 
-void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::MessageHandler::onMessageCrypto(ThorQ::ApiConnection *instance, const void *body, flatbuffers::Verifier fbsVerifier)
 {
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Crypto::Message*>(body);
 
@@ -332,7 +333,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
         auto fbsMessage       = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsEstablish);
         fbsBuilder.Finish(fbsMessage);
 
-        sendPacket(instance, fbsBuilder.GetBufferSpan(), false, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
+        sendPacket(instance, fbsBuilder.GetBufferSpan(), false);
         break;
     }
     case ThorQ::Serialization::Crypto::MessageType_Establish:
@@ -360,7 +361,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
             auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
             fbsBuilder.Finish(fbsMessage);
 
-            sendPacket(instance, fbsBuilder.GetBufferSpan(), true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
+            sendPacket(instance, fbsBuilder.GetBufferSpan(), true);
         }
         else
         {
@@ -386,7 +387,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
             auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
             fbsBuilder.Finish(fbsMessage);
 
-            sendPacket(instance, fbsBuilder.GetBufferSpan(), true, ENET_PACKET_FLAG_RELIABLE, THORQ_CHANNEL::API);
+            sendPacket(instance, fbsBuilder.GetBufferSpan(), true);
         }
         else
         {
@@ -404,7 +405,7 @@ void ThorQ::MessageDispatcher::handleMessageCrypto(ThorQ::Instance *instance, co
     }
 }
 
-void ThorQ::MessageDispatcher::handleMessageFile(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::MessageHandler::onMessageFile(ThorQ::ApiConnection *instance, const void *body, flatbuffers::Verifier fbsVerifier)
 {
     auto fbsFile = reinterpret_cast<const ThorQ::Serialization::File::Message*>(body);
 
@@ -414,7 +415,7 @@ void ThorQ::MessageDispatcher::handleMessageFile(ThorQ::Instance *instance, cons
     }
 }
 #include <flatbuffers/flexbuffers.h>
-void ThorQ::MessageDispatcher::handleMessageFriendRequest(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::MessageHandler::onMessageFriendRequest(ThorQ::ApiConnection *instance, const void *body, flatbuffers::Verifier fbsVerifier)
 {
     auto fbsAccount = reinterpret_cast<const ThorQ::Serialization::FriendRequest::Message*>(body);
 
@@ -592,7 +593,7 @@ void ThorQ::MessageDispatcher::handleMessageFriendRequest(ThorQ::Instance *insta
     */
 }
 
-void ThorQ::MessageDispatcher::handleMessageGroup(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::MessageHandler::onMessageGroup(ThorQ::ApiConnection *instance, const void *body, flatbuffers::Verifier fbsVerifier)
 {
     auto fbsGroup = reinterpret_cast<const ThorQ::Serialization::Group::Message*>(body);
 
@@ -619,7 +620,7 @@ void ThorQ::MessageDispatcher::handleMessageGroup(ThorQ::Instance *instance, con
     */
 }
 
-void ThorQ::MessageDispatcher::handleMessageModeration(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::MessageHandler::onMessageModeration(ThorQ::ApiConnection *instance, const void *body, flatbuffers::Verifier fbsVerifier)
 {
     auto fbsModeration = reinterpret_cast<const ThorQ::Serialization::Moderation::Message*>(body);
 
@@ -629,7 +630,7 @@ void ThorQ::MessageDispatcher::handleMessageModeration(ThorQ::Instance *instance
     }
 }
 
-void ThorQ::MessageDispatcher::handleMessageSystemID(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::MessageHandler::onMessageSystemID(ThorQ::ApiConnection *instance, const void *body, flatbuffers::Verifier fbsVerifier)
 {
     auto fbsSystemId = reinterpret_cast<const ThorQ::Serialization::SystemId::Message*>(body);
 
@@ -679,7 +680,7 @@ void ThorQ::MessageDispatcher::handleMessageSystemID(ThorQ::Instance *instance, 
     }
 }
 
-void ThorQ::MessageDispatcher::handleMessageUser(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::MessageHandler::onMessageUser(ThorQ::ApiConnection *instance, const void *body, flatbuffers::Verifier fbsVerifier)
 {
     auto fbsUser = reinterpret_cast<const ThorQ::Serialization::User::Message*>(body);
 
@@ -689,7 +690,7 @@ void ThorQ::MessageDispatcher::handleMessageUser(ThorQ::Instance *instance, cons
     }
 }
 
-void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance *instance, const void *body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::MessageHandler::onMessageVersion(ThorQ::ApiConnection *instance, const void *body, flatbuffers::Verifier fbsVerifier)
 {
     auto fbsVersion = reinterpret_cast<const ThorQ::Serialization::Version*>(body);
 
@@ -735,7 +736,7 @@ void ThorQ::MessageDispatcher::handleMessageVersion(ThorQ::Instance *instance, c
     }
 }
 
-void ThorQ::MessageDispatcher::sendPacket(ThorQ::Instance* instance, std::span<std::uint8_t> data, bool encrypt, std::uint32_t flags, THORQ_CHANNEL channel)
+void ThorQ::MessageHandler::sendPacket(ThorQ::ApiConnection* instance, std::span<std::uint8_t> data, bool encrypt, std::uint32_t flags, THORQ_CHANNEL channel)
 {
     // Get packet
     ENetPacket* packet = ThorQ::Memory::packetGet(ThorQ::calculatePacketSize(data.size(), encrypt));
@@ -746,12 +747,12 @@ void ThorQ::MessageDispatcher::sendPacket(ThorQ::Instance* instance, std::span<s
     if (encrypt)
     {
         // Encode packet
-        ThorQ::packetEncode(packet, data, instance->m_crypto);
+        ThorQ::dataEncode(packet, data, instance->m_crypto);
     }
     else
     {
         // Encode packet
-        ThorQ::packetEncode(packet, data);
+        ThorQ::dataEncode(packet, data);
     }
 
     // Queue message
@@ -759,3 +760,4 @@ void ThorQ::MessageDispatcher::sendPacket(ThorQ::Instance* instance, std::span<s
         ThorQ::Memory::packetFree(packet); // If we cant queue it, then free it to avoid a memory leak
     }
 }
+#endif

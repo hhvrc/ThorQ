@@ -17,28 +17,21 @@ set(CXXOPTS_ENABLE_INSTALL OFF CACHE BOOL "Generate the install target" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cxxopts)
 
 set(${project}_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/server.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/memorymanager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/apiserver.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/apiconnectionhandler.cpp
     #${CMAKE_CURRENT_SOURCE_DIR}/imagecache.cpp
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/uuid.cpp
-
-    ${CMAKE_CURRENT_SOURCE_DIR}/instance.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/account.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/group.cpp
 )
 set(${project}_HEADERS
-    ${CMAKE_CURRENT_SOURCE_DIR}/server.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/messagedispatcher.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/memorymanager.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/apiserver.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/apiconnectionhandler.h
     #${CMAKE_CURRENT_SOURCE_DIR}/imagecache.h
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/uuid.h
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
     ${CMAKE_CURRENT_SOURCE_DIR}/config.h
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/instance.h
     ${CMAKE_CURRENT_SOURCE_DIR}/account.h
     ${CMAKE_CURRENT_SOURCE_DIR}/group.h
 
@@ -50,7 +43,6 @@ set(${project}_HEADERS
 include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/concurrentqueue
     ${CMAKE_CURRENT_SOURCE_DIR}/lsql/include
     ${CMAKE_CURRENT_SOURCE_DIR}/cxxopts/include
 )
@@ -61,12 +53,7 @@ add_executable(${project}
 	${${project}_HEADERS}
 )
 
-if(UNIX)
-    set(EXTRA_LIBS uuid)
-endif()
-
 target_link_libraries(${project}
-    ${EXTRA_LIBS}
     ThorQLib
     cxxopts
     lsql

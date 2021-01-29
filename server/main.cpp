@@ -13,17 +13,15 @@
 #endif
 
 #include <fmt/core.h>
-#include <thorq_message.h>
+#include <cxxopts.hpp>
+#include <lsql/connection.h>
 
-#include "cxxopts.hpp"
-#include "lsql/connection.h"
-#include "server.h"
-#include "account.h"
-#include "instance.h"
-#include "messagedispatcher.h"
+#include <constants.h>
+#include <networking/server.h>
+
+#include "apiserver.h"
 
 #define PARSE_PORT false
-#define SERVER_MAX_CONNECTIONS 1024
 
 std::atomic_bool runServer = true;
 
@@ -100,36 +98,50 @@ int main(int argc, char** argv)
 #else
     std::uint16_t port = THORQ_SERVER_PORT;
 #endif
-
+    // Initialize database
     if (!InitializeDB("database.db"))
     {
         return EXIT_FAILURE;
     }
 
-    if (!ThorQ::Server::Initialize())
+    // Create server
+    std::shared_ptr<ThorQ::ApiServer> apiServer;
+    try
     {
-            fmt::print("Failed to initialize Server!\n");
-            return EXIT_FAILURE;
+        apiServer = std::make_shared<ThorQ::ApiServer>(port);
+    }
+    catch (std::exception& ex)
+    {
+        fmt::print("Failed to create server instance: {}\n", ex.what());
+        return EXIT_FAILURE;
+    }
+    catch (...)
+    {
+        fmt::print("Failed to create server instance: Unknown error\n");
+        return EXIT_FAILURE;
     }
 
-    ThorQ::Server server;
-
-    if (!server.start(port, 1024, (std::uint8_t)THORQ_CHANNEL::_MAX))
+    // Start server
+    if (!apiServer->start(std::thread::hardware_concurrency() * 2))
     {
-            fmt::print("Failed to start Server!\n");
-            return EXIT_FAILURE;
+        fmt::print("Failed to start Server!\n");
+        return EXIT_FAILURE;
     }
 
+    apiServer->status();
+
+    // Register signal handlers
     std::signal(SIGINT, exit_handler);
     std::signal(SIGTERM, exit_handler);
     std::signal(SIGABRT, exit_handler);
     std::signal(SIGSEGV, exit_handler);
     std::signal(SIGFPE, exit_handler);
-    while (runServer) { std::this_thread::sleep_for(std::chrono::milliseconds(500)); }
 
-    server.stop();
+    // Hold
+    while (runServer) { std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
 
-    ThorQ::Server::DeInitialize();
+    // Stop server
+    apiServer->stop();
 
     return EXIT_SUCCESS;
 }

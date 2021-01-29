@@ -25,6 +25,7 @@ const ThorQ::Version THORQ_VERSION_LINK = ThorQ::Version( THORQ_VERSION_LINK_MAJ
  *
  */
 constexpr std::size_t THORQ_PAYLOAD_LEN_MAX = 1024 * 512; ///< Maximum payload length
+constexpr std::size_t THORQ_PAYLOAD_LEN_TYP = 1024;       ///< Typical payload length
 constexpr std::size_t THORQ_PAYLOAD_LEN_MIN = 1;          ///< Minimum payload length
 
 constexpr std::size_t THORQ_CRYPTO_VERIFICATION_DATA_LEN = 1024;
@@ -67,5 +68,6 @@ constexpr int THORQ_DISCORDID_LEN_MAX = 37; ///< Maximum id length (32 chars + "
 #define THORQ_APPLICATION_DESCRIPTION "Software to control 3rd party collars across the internet"
 #define THORQ_SERVER_HOSTNAME "localhost"
 #define THORQ_SERVER_PORT 12345
+#define THORQ_SERVER_MAX_CONNECTIONS 1024
 
 #endif // CONSTANTS_H

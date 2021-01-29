@@ -26,6 +26,23 @@ enum class THORQ_CHANNEL : std::uint8_t
     _MAX
 };
 
+enum class ProcessStatus
+{
+    Error,
+    Stopped,
+    Starting,
+    Running,
+    Stopping
+};
+enum class ConnectionStatus
+{
+    Error,
+    Disconnected,
+    Connecting,
+    Connected,
+    Disconnecting
+};
+
 /// Id of a device or service that client has
 enum THORQ_USER_ACTIVITY_FLAG : std::uint8_t
 {

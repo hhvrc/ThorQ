@@ -98,8 +98,17 @@ endif()
 
 # -- Set global libraries --
 if(WIN32)
-    link_libraries(ws2_32 winmm Rpcrt4)
+    set(WIN_LIBS ws2_32 winmm Rpcrt4 Iphlpapi)
 endif()
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
+link_libraries(
+    Threads::Threads
+    ${CMAKE_DL_LIBS}
+    ${WIN_LIBS}
+    )
 # --------------------------
 
 add_subdirectory(libs)
