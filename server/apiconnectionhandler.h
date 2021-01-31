@@ -45,8 +45,6 @@ private:
     std::shared_mutex l_systemID;
     std::shared_ptr<std::vector<std::uint8_t>> m_systemID;
 
-    std::array<std::uint8_t, THORQ_CRYPTO_VERIFICATION_DATA_LEN> m_verificationData;
-
     std::atomic<THORQ_STATE_CRYPTO> m_cryptoState;
     std::atomic<THORQ_STATE_HWID>   m_hwidState;
 };
