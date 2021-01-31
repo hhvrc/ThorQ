@@ -14,7 +14,7 @@ struct Message;
 struct IncomingMessage;
 } // Networking
 namespace Crypto {
-class Signing;
+class Signer;
 class Encryption;
 } // Crypto
 class Uuid;

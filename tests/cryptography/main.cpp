@@ -1,6 +1,7 @@
 #include <cryptography/random.h>
-#include <cryptography/signing.h>
+#include <cryptography/signer.h>
 #include <cryptography/encryption.h>
+#include <cryptography/passwordhash.h>
 #include <utils.h>
 
 #include <fmt/core.h>
@@ -96,7 +97,7 @@ bool testEncryption(std::size_t testDataSize, std::size_t iterations)
 
 bool testSigning()
 {
-    ThorQ::Crypto::Signing signer;
+    ThorQ::Crypto::Signer signer;
 
     // Generate keys
     if (!signer.generateKeyPair())
@@ -140,7 +141,7 @@ bool testSigning()
     std::array<std::uint8_t, 2048> testData;
     ThorQ::Crypto::RandomizeBytes(testData);
 
-    std::array<std::uint8_t, ThorQ::Crypto::Signing::SignatureLen> signature;
+    std::array<std::uint8_t, ThorQ::Crypto::Signer::SignatureLen> signature;
 
     if (!signer.sign(testData, signature))
     {
@@ -157,6 +158,25 @@ bool testSigning()
     return true;
 }
 
+bool testPasswordHashing()
+{
+    std::string password = "Very secure password";
+
+    std::array<std::uint8_t, ThorQ::Crypto::PasswordHash::HashLength> key;
+
+    if (!ThorQ::Crypto::PasswordHash::Generate(password.c_str(), password.length(), key)) {
+        fmt::print("PasswordHashing generate failed!\n");
+        return false;
+    }
+
+    if (!ThorQ::Crypto::PasswordHash::Verify(password.c_str(), password.length(), key)) {
+        fmt::print("PasswordHashing verify failed!\n");
+        return false;
+    }
+
+    return true;
+}
+
 int main(int argc, char** argv)
 {
     THORQ_UNUSED(argc)
@@ -167,6 +187,10 @@ int main(int argc, char** argv)
     }
 
     if (!testSigning()) {
+        return EXIT_FAILURE;
+    }
+
+    if (!testPasswordHashing()) {
         return EXIT_FAILURE;
     }
 

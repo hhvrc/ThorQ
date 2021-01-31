@@ -1,27 +1,20 @@
-#include <cryptography/random.h>
-#include <cryptography/signing.h>
-#include <cryptography/encryption.h>
+#include <cryptography/signer.h>
 #include <utils.h>
 
 #include <fmt/core.h>
-
-#include <array>
-#include <vector>
-#include <cstring>
-#include <memory>
 
 int main(int argc, char** argv)
 {
     THORQ_UNUSED(argc)
     THORQ_UNUSED(argv)
 
-    ThorQ::Crypto::Signing signing;
+    ThorQ::Crypto::Signer signer;
 
-    if (!signing.generateKeyPair()) {
+    if (!signer.generateKeyPair()) {
         fmt::print(stderr, "Failed to generate keypair\n");
     }
 
-    if (!signing.trySaveToFile("generated.pk", true) || !signing.trySaveToFile("generated.pksk", false)) {
+    if (!signer.trySaveToFile("generated.pk", true) || !signer.trySaveToFile("generated.pksk", false)) {
         fmt::print(stderr, "Failed to save files\n");
     }
 

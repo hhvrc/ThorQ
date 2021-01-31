@@ -14,17 +14,21 @@
 
 namespace ThorQ {
 namespace Crypto {
-class Signing final
+class Signer final
 {
 public:
     static constexpr std::size_t SignatureLen = crypto_sign_BYTES;
     static constexpr std::size_t PublicKeyLen = crypto_sign_PUBLICKEYBYTES;
     static constexpr std::size_t SecretKeyLen = crypto_sign_SECRETKEYBYTES;
 
-    static const std::array<std::uint8_t, Signing::PublicKeyLen> RootPk();
+    /**
+     * @brief One signer to rule them all, this one is here to verify signer updates
+     * @return The signer
+     */
+    static const std::array<std::uint8_t, Signer::PublicKeyLen> RootSigner();
 
-    Signing();
-    ~Signing();
+    Signer();
+    ~Signer();
 
     /**
      * @brief Clear all instance data
@@ -41,18 +45,20 @@ public:
      */
     bool generateKeyPair();
 
-    /** Get the public key
+    /**
+     * @brief Get the public key
      * @param publicKeyOut Span to write publicKey to
      * @retval Returns if public key was successfully retrieved
      */
-    bool getPublicKey(std::span<std::uint8_t, Signing::PublicKeyLen> publicKeyOut) const;
+    bool getPublicKey(std::span<std::uint8_t, Signer::PublicKeyLen> publicKeyOut) const;
+    bool setPublicKey(const std::span<const std::uint8_t, Signer::PublicKeyLen> publicKeyIn);
 
     /*
      *
      */
-    bool sign(const std::span<const std::uint8_t> data, std::span<std::uint8_t, Signing::SignatureLen> signatureOut) const;
+    bool sign(const std::span<const std::uint8_t> data, std::span<std::uint8_t, Signer::SignatureLen> signatureOut) const;
 
-    bool verify(const std::span<const std::uint8_t> data, const std::span<const std::uint8_t, Signing::SignatureLen> signatureIn) const;
+    bool verify(const std::span<const std::uint8_t> data, const std::span<const std::uint8_t, Signer::SignatureLen> signatureIn) const;
 private:
     void reset_nolock();
 
@@ -65,8 +71,8 @@ private:
 
     std::atomic<State> m_state;
     std::shared_mutex  m_modlock;
-    std::array<std::uint8_t, Signing::PublicKeyLen>  m_pk;
-    std::array<std::uint8_t, Signing::SecretKeyLen>  m_sk;
+    std::array<std::uint8_t, Signer::PublicKeyLen>  m_pk;
+    std::array<std::uint8_t, Signer::SecretKeyLen>  m_sk;
 };
 }
 }
