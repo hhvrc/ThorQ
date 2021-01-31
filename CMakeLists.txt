@@ -119,6 +119,8 @@ link_directories(${GLOB_LINK_DIRS})
 include_directories(${GLOB_INCLUDE_DIRS})
 add_subdirectory(client)
 add_subdirectory(server)
-add_subdirectory(cryptotest)
+
+add_subdirectory(tools)
+add_subdirectory(tests)
 
 message("Building ${project} in ${CMAKE_BUILD_TYPE} mode for ${VPTR_BITS}-bit ${BUILD_OSL}, using ${BUILD_COMPILER}")

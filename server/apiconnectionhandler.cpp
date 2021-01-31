@@ -2,7 +2,7 @@
 
 #include <networking/message.h>
 #include <encoding.h>
-#include <crypto.h>
+#include <cryptography/encryption.h>
 
 ThorQ::ApiConnectionHandler::ApiConnectionHandler()
 {
@@ -15,13 +15,13 @@ ThorQ::ApiConnectionHandler::~ApiConnectionHandler()
     setSystemID(nullptr);
 }
 
-std::shared_ptr<ThorQ::Crypto> ThorQ::ApiConnectionHandler::crypto() const
+std::shared_ptr<ThorQ::Crypto::Encryption> ThorQ::ApiConnectionHandler::crypto() const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(l_crypto));
     return m_crypto;
 }
 
-void ThorQ::ApiConnectionHandler::setCrypto(std::shared_ptr<ThorQ::Crypto> crypto)
+void ThorQ::ApiConnectionHandler::setCrypto(std::shared_ptr<ThorQ::Crypto::Encryption> crypto)
 {
     std::unique_lock l(l_crypto);
     m_crypto = crypto;
@@ -324,7 +324,7 @@ void ThorQ::MessageHandler::onMessageCrypto(ThorQ::ApiConnection *instance, cons
         fmt::print("[MSG] Crypto request!\n");
         instance->m_crypto.generateKeyPair();
 
-        std::array<std::uint8_t, ThorQ::Crypto::PublicKeyLen> pubKey;
+        std::array<std::uint8_t, ThorQ::Crypto::Encryption::PublicKeyLen> pubKey;
         instance->m_crypto.getPublicKey(pubKey);
 
         // Build flatbuffer
@@ -340,20 +340,20 @@ void ThorQ::MessageHandler::onMessageCrypto(ThorQ::ApiConnection *instance, cons
     {
         fmt::print("[MSG] Crypto establish!\n");
 
-        if (fbsCrypto->data()->size() != ThorQ::Crypto::PublicKeyLen)
+        if (fbsCrypto->data()->size() != ThorQ::Crypto::Encryption::PublicKeyLen)
         {
             fmt::print("Got key with invalid length!\n");
             return;
         }
 
-        std::span<std::uint8_t, ThorQ::Crypto::PublicKeyLen> data(
+        std::span<std::uint8_t, ThorQ::Crypto::Encryption::PublicKeyLen> data(
                         const_cast<std::uint8_t*>(fbsCrypto->data()->data()),
                         fbsCrypto->data()->size()
                     );
 
         if (instance->m_crypto.agreeAsServer(data))
         {
-            ThorQ::Crypto::RandomizeBytes(instance->m_verificationData);
+            ThorQ::Crypto::Encryption::RandomizeBytes(instance->m_verificationData);
 
             // Build flatbuffer
             flatbuffers::FlatBufferBuilder fbsBuilder;

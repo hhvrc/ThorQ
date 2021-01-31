@@ -2,7 +2,7 @@
 #define APICONNECTION_H
 
 #include <networking/connectionhandler.h>
-#include <crypto.h>
+#include <cryptography/encryption.h>
 #include <typedefs_global.h>
 #include <constants.h>
 
@@ -33,7 +33,7 @@ private:
 
     void encodeAndSend(flatbuffers::span<std::uint8_t> buffer, bool encrypt);
 
-    ThorQ::Crypto m_crypto;
+    ThorQ::Crypto::Encryption m_crypto;
 
     std::mutex l_buffer;
     std::vector<std::uint8_t> m_buffer;

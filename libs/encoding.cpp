@@ -1,6 +1,6 @@
 #include "encoding.h"
 
-#include "crypto.h"
+#include <cryptography/encryption.h>
 #include "constants.h"
 #include "enums.h"
 
@@ -35,7 +35,7 @@ constexpr bool IsDataEncrypted(const std::span<const std::uint8_t> packet)
 }
 constexpr std::size_t PacketOverhead(bool encrypted)
 {
-    return 1 + (encrypted * (ThorQ::Crypto::MacLen + ThorQ::Crypto::NonceLen));
+    return 1 + (encrypted * (ThorQ::Crypto::Encryption::Encryption::MacLen + ThorQ::Crypto::Encryption::Encryption::NonceLen));
 }
 
 bool ThorQ::Encoding::validateEncodedData(const std::span<const std::uint8_t> data)
@@ -76,7 +76,7 @@ bool ThorQ::Encoding::dataEncode(const std::span<const std::uint8_t> in, std::sp
     return true;
 }
 
-bool ThorQ::Encoding::dataEncode(const std::span<const std::uint8_t> in, std::span<std::uint8_t> out, const ThorQ::Crypto &crypto)
+bool ThorQ::Encoding::dataEncode(const std::span<const std::uint8_t> in, std::span<std::uint8_t> out, const ThorQ::Crypto::Encryption &crypto)
 {
     std::size_t sizeNeeded = calculateEncodedSize(in.size(), true);
 
@@ -95,9 +95,9 @@ bool ThorQ::Encoding::dataEncode(const std::span<const std::uint8_t> in, std::sp
     // Get data sections
     std::span<std::uint8_t> packetPayload(it, in.size());
     // it += in.size();
-    std::span<std::uint8_t, Crypto::MacLen> packetMAC(packetPayload.end(), Crypto::MacLen);
+    std::span<std::uint8_t, ThorQ::Crypto::Encryption::MacLen> packetMAC(packetPayload.end(), ThorQ::Crypto::Encryption::MacLen);
     // it += Crypto::MacLen;
-    std::span<std::uint8_t, Crypto::NonceLen> packetNonce(packetMAC.end(), Crypto::NonceLen);
+    std::span<std::uint8_t, ThorQ::Crypto::Encryption::NonceLen> packetNonce(packetMAC.end(), ThorQ::Crypto::Encryption::NonceLen);
     // it += Crypto::NonceLen;
 
     // Encrpyt the data, this will copy it and the generated IV into messageOut
@@ -109,7 +109,7 @@ bool ThorQ::Encoding::dataEncode(const std::span<const std::uint8_t> in, std::sp
     return true;
 }
 
-bool ThorQ::Encoding::dataDecode(const std::span<const std::uint8_t> in, std::span<std::uint8_t> out, const ThorQ::Crypto &crypto)
+bool ThorQ::Encoding::dataDecode(const std::span<const std::uint8_t> in, std::span<std::uint8_t> out, const ThorQ::Crypto::Encryption &crypto)
 {
     std::size_t sizeNeeded = calculateDecodedSize(in);
 
@@ -126,8 +126,8 @@ bool ThorQ::Encoding::dataDecode(const std::span<const std::uint8_t> in, std::sp
     {
         // Get data sections
         const std::span<const std::uint8_t> packetPayload(it, sizeNeeded);
-        const std::span<const std::uint8_t, Crypto::MacLen> packetMAC(packetPayload.end(), Crypto::MacLen);
-        const std::span<const std::uint8_t, Crypto::NonceLen> packetNonce(packetMAC.end(), Crypto::NonceLen);
+        const std::span<const std::uint8_t, ThorQ::Crypto::Encryption::MacLen> packetMAC(packetPayload.end(), ThorQ::Crypto::Encryption::MacLen);
+        const std::span<const std::uint8_t, ThorQ::Crypto::Encryption::NonceLen> packetNonce(packetMAC.end(), ThorQ::Crypto::Encryption::NonceLen);
 
         // Decrypt data
         if (!crypto.decrypt(out, packetPayload, packetMAC, packetNonce))

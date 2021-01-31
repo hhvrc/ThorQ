@@ -1,4 +1,4 @@
-#include "crypto.h"
+#include "encryption.h"
 
 #include <algorithm>
 #include <cstring>
@@ -6,13 +6,7 @@
 #include <cstdint>
 #include <limits>
 
-void ThorQ::Crypto::RandomizeBytes(std::span<std::uint8_t> bytes)
-{
-    assert(sodium_init() >= 0);
-    randombytes_buf(bytes.data(), bytes.size());
-}
-
-ThorQ::Crypto::Crypto()
+ThorQ::Crypto::Encryption::Encryption()
     : m_state(State::Uninitialized)
     , m_modlock()
     , m_pk{0}
@@ -23,22 +17,24 @@ ThorQ::Crypto::Crypto()
     assert(sodium_init() >= 0);
 }
 
-ThorQ::Crypto::~Crypto()
+ThorQ::Crypto::Encryption::~Encryption()
 {
+    // Zero out memory to not leave a footprint in RAM
+    reset();
 }
 
-void ThorQ::Crypto::reset()
+void ThorQ::Crypto::Encryption::reset()
 {
     std::unique_lock l(m_modlock);
     reset_nolock();
 }
 
-bool ThorQ::Crypto::ready() const
+bool ThorQ::Crypto::Encryption::ready() const
 {
     return m_state == State::Ready;
 }
 
-bool ThorQ::Crypto::generateKeyPair()
+bool ThorQ::Crypto::Encryption::generateKeyPair()
 {
     std::unique_lock l(m_modlock);
 
@@ -53,7 +49,7 @@ bool ThorQ::Crypto::generateKeyPair()
     return true;
 }
 
-bool ThorQ::Crypto::getPublicKey(std::span<std::uint8_t, Crypto::PublicKeyLen> publicKeyOut) const
+bool ThorQ::Crypto::Encryption::getPublicKey(std::span<std::uint8_t, Encryption::Encryption::PublicKeyLen> publicKeyOut) const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
     if (m_state != State::GeneratedKeys)
@@ -66,7 +62,7 @@ bool ThorQ::Crypto::getPublicKey(std::span<std::uint8_t, Crypto::PublicKeyLen> p
     return true;
 }
 
-bool ThorQ::Crypto::agreeAsServer(const std::span<const std::uint8_t, Crypto::PublicKeyLen> foreignKey)
+bool ThorQ::Crypto::Encryption::agreeAsServer(const std::span<const std::uint8_t, Encryption::Encryption::PublicKeyLen> foreignKey)
 {
     std::unique_lock l(m_modlock);
     if (m_state != State::GeneratedKeys)
@@ -84,7 +80,7 @@ bool ThorQ::Crypto::agreeAsServer(const std::span<const std::uint8_t, Crypto::Pu
     return true;
 }
 
-bool ThorQ::Crypto::agreeAsClient(const std::span<const std::uint8_t, Crypto::PublicKeyLen> foreignKey)
+bool ThorQ::Crypto::Encryption::agreeAsClient(const std::span<const std::uint8_t, Encryption::Encryption::PublicKeyLen> foreignKey)
 {
     std::unique_lock l(m_modlock);
     if (m_state != State::GeneratedKeys)
@@ -102,7 +98,7 @@ bool ThorQ::Crypto::agreeAsClient(const std::span<const std::uint8_t, Crypto::Pu
     return true;
 }
 
-bool ThorQ::Crypto::encrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, std::span<std::uint8_t, Crypto::MacLen> mac, std::span<std::uint8_t, Crypto::NonceLen> nonce) const
+bool ThorQ::Crypto::Encryption::encrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, std::span<std::uint8_t, Encryption::MacLen> mac, std::span<std::uint8_t, Encryption::Encryption::NonceLen> nonce) const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
     if (!ready() ||
@@ -122,7 +118,7 @@ bool ThorQ::Crypto::encrypt(std::span<std::uint8_t> dataOut, const std::span<con
     return true;
 }
 
-bool ThorQ::Crypto::decrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, const std::span<const std::uint8_t, Crypto::MacLen> mac, const std::span<const std::uint8_t, Crypto::NonceLen> nonce) const
+bool ThorQ::Crypto::Encryption::decrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, const std::span<const std::uint8_t, Encryption::MacLen> mac, const std::span<const std::uint8_t, Encryption::Encryption::NonceLen> nonce) const
 {
     std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
     if (!ready() ||
@@ -140,7 +136,7 @@ bool ThorQ::Crypto::decrypt(std::span<std::uint8_t> dataOut, const std::span<con
     return true;
 }
 
-void ThorQ::Crypto::reset_nolock()
+void ThorQ::Crypto::Encryption::reset_nolock()
 {
     std::memset(m_pk.data(), 0, m_pk.size());
     std::memset(m_sk.data(), 0, m_sk.size());
@@ -148,7 +144,7 @@ void ThorQ::Crypto::reset_nolock()
     m_state = State::Uninitialized;
 }
 
-void ThorQ::Crypto::reset_shared_nolock()
+void ThorQ::Crypto::Encryption::reset_shared_nolock()
 {
     std::memset(m_rx.data(), 0, m_rx.size());
     std::memset(m_tx.data(), 0, m_tx.size());

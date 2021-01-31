@@ -22,8 +22,8 @@ public:
     ApiConnectionHandler();
     ~ApiConnectionHandler();
 
-    std::shared_ptr<ThorQ::Crypto> crypto() const;
-    void setCrypto(std::shared_ptr<ThorQ::Crypto> crypto);
+    std::shared_ptr<ThorQ::Crypto::Encryption> crypto() const;
+    void setCrypto(std::shared_ptr<ThorQ::Crypto::Encryption> crypto);
 
     std::shared_ptr<ThorQ::Account> account() const;
     void setAccount(std::shared_ptr<ThorQ::Account> account);
@@ -37,7 +37,7 @@ private:
     void onMessage(std::shared_ptr<std::vector<std::uint8_t>> message) override;
 
     std::shared_mutex l_crypto;
-    std::shared_ptr<ThorQ::Crypto> m_crypto;
+    std::shared_ptr<ThorQ::Crypto::Encryption> m_crypto;
 
     std::shared_mutex l_account;
     std::shared_ptr<ThorQ::Account> m_account;

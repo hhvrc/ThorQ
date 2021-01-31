@@ -17,8 +17,8 @@ std::size_t calculateEncodedSize(std::size_t size, bool encrypt);
 std::size_t calculateDecodedSize(const std::span<const std::uint8_t> data);
 
 bool dataEncode(const std::span<const std::uint8_t> in, std::span<std::uint8_t> out);
-bool dataEncode(const std::span<const std::uint8_t> in, std::span<std::uint8_t> out, const ThorQ::Crypto& crypto);
-bool dataDecode(const std::span<const std::uint8_t> in, std::span<std::uint8_t> out, const ThorQ::Crypto& crypto);
+bool dataEncode(const std::span<const std::uint8_t> in, std::span<std::uint8_t> out, const ThorQ::Crypto::Encryption& crypto);
+bool dataDecode(const std::span<const std::uint8_t> in, std::span<std::uint8_t> out, const ThorQ::Crypto::Encryption& crypto);
 
 }
 }

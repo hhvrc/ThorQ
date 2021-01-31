@@ -23,7 +23,7 @@ Q_DECLARE_METATYPE(THORQ_STATE_LOGIN)
 #define COMTEST 1
 
 #include <constants.h>
-#include <crypto.h>
+#include <cryptography/encryption.h>
 #include <encoding.h>
 
 std::uint16_t i = 0;

@@ -13,9 +13,12 @@ struct MessageHeader;
 struct Message;
 struct IncomingMessage;
 } // Networking
-class Crypto;
-class Version;
+namespace Crypto {
+class Signing;
+class Encryption;
+} // Crypto
 class Uuid;
+class Version;
 } // ThorQ
 
 namespace flatbuffers {

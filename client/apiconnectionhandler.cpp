@@ -202,7 +202,7 @@ void ThorQ::ApiConnectionHandler::handleMessageCrypto(const void* body, flatbuff
     {
         fmt::print("[MSG] crypto establish!\n");
 
-        if (fbsCrypto->data()->size() != ThorQ::Crypto::PublicKeyLen)
+        if (fbsCrypto->data()->size() != ThorQ::Crypto::Encryption::PublicKeyLen)
         {
             fmt::print("Got key with invalid length!\n");
             return;
@@ -210,7 +210,7 @@ void ThorQ::ApiConnectionHandler::handleMessageCrypto(const void* body, flatbuff
 
         m_crypto.generateKeyPair();
 
-        std::span<std::uint8_t, ThorQ::Crypto::PublicKeyLen> data(
+        std::span<std::uint8_t, ThorQ::Crypto::Encryption::PublicKeyLen> data(
                         const_cast<std::uint8_t*>(fbsCrypto->data()->data()),
                         fbsCrypto->data()->size()
                     );

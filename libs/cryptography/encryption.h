@@ -10,10 +10,10 @@
 #include <cstdlib>
 #include <cstdint>
 
-
 namespace ThorQ {
+namespace Crypto {
 /// Class to make cryptography extremely easy to deal with
-class Crypto
+class Encryption final
 {
 public:
     static constexpr std::size_t MacLen = crypto_secretbox_MACBYTES;
@@ -28,8 +28,8 @@ public:
      */
     static void RandomizeBytes(std::span<std::uint8_t> bytes);
 
-    Crypto();
-    ~Crypto();
+    Encryption();
+    ~Encryption();
 
     /**
      * @brief Clear all instance data
@@ -53,19 +53,19 @@ public:
      * @param publicKeyOut Span to write publicKey to
      * @retval Returns if public key was successfully retrieved
      */
-    bool getPublicKey(std::span<std::uint8_t, Crypto::PublicKeyLen> publicKeyOut) const;
+    bool getPublicKey(std::span<std::uint8_t, Encryption::PublicKeyLen> publicKeyOut) const;
 
     /** Establish secret key with foreign host
      * @param foreignKey foreign public key to agree with
      * @return Returns if shared secret was computed
      */
-    bool agreeAsServer(const std::span<const std::uint8_t, Crypto::PublicKeyLen> foreignKey);
+    bool agreeAsServer(const std::span<const std::uint8_t, Encryption::PublicKeyLen> foreignKey);
 
     /** Establish secret key with foreign host
      * @param foreignKey foreign public key to agree with
      * @return Returns if shared secret was computed
      */
-    bool agreeAsClient(const std::span<const std::uint8_t, Crypto::PublicKeyLen> foreignKey);
+    bool agreeAsClient(const std::span<const std::uint8_t, Encryption::PublicKeyLen> foreignKey);
 
     /** Attempts to encrypt the data
      * @param dataOut span to write encrypted data to, this is the same size as dataIn
@@ -74,7 +74,7 @@ public:
      * @param nonce randomized data to make message unique, this is a size of NonceLen (encrypt function will randomize this)
      * @return
      */
-    bool encrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, std::span<std::uint8_t, Crypto::MacLen> mac, std::span<std::uint8_t, Crypto::NonceLen> nonce) const;
+    bool encrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, std::span<std::uint8_t, Encryption::MacLen> mac, std::span<std::uint8_t, Encryption::NonceLen> nonce) const;
 
     /** Attempts to decrypt the data
      * @param dataOut span to write cleartext data to, this is the same size as dataIn
@@ -83,7 +83,7 @@ public:
      * @param nonce randomized data to make message unique, this is a size of NonceLen
      * @return
      */
-    bool decrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, const std::span<const std::uint8_t, Crypto::MacLen> mac, const std::span<const std::uint8_t, Crypto::NonceLen> nonce) const;
+    bool decrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, const std::span<const std::uint8_t, Encryption::MacLen> mac, const std::span<const std::uint8_t, Encryption::NonceLen> nonce) const;
 private:
     /**
      * @brief reset, but without locking the shared mutex
@@ -100,11 +100,12 @@ private:
 
     std::atomic<State> m_state;
     std::shared_mutex  m_modlock;
-    std::array<std::uint8_t, Crypto::PublicKeyLen>  m_pk;
-    std::array<std::uint8_t, Crypto::SecretKeyLen>  m_sk;
-    std::array<std::uint8_t, Crypto::SessionKeyLen> m_rx;
-    std::array<std::uint8_t, Crypto::SessionKeyLen> m_tx;
+    std::array<std::uint8_t, Encryption::PublicKeyLen>  m_pk;
+    std::array<std::uint8_t, Encryption::SecretKeyLen>  m_sk;
+    std::array<std::uint8_t, Encryption::SessionKeyLen> m_rx;
+    std::array<std::uint8_t, Encryption::SessionKeyLen> m_tx;
 };
+}
 }
 
 #endif // CRYPTO_H
