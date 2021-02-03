@@ -1,23 +1,32 @@
 namespace ThorQ.Serialization.Crypto;
 
-enum MessageType : ubyte {
-  /// Sent from client/server to re-establish shared secret key
-  Request,
+table EstablishCryptoClient {
+  public_key : [ ubyte ];
+}
 
-  /// Sent from client and server, with public key as data
-  Establish,
+table EstablishCryptoServer {
+  public_key : [ ubyte ];
+  signature : [ ubyte ];
+}
 
-  /// [ Server ] Encrypt, Send
-  /// [ Client ] Decrypt, Encrypt, Send back
-  /// Used to verify that shared secret is established
-  Verify,
+table UpdateServerSignKey {
+  new_key : [ ubyte ];
+  signature : [ ubyte ];
+}
 
-  /// Sent from server to tell client that encryption went ok
-  Acknowledge
+table UpdateServerEncryptKey {
+  new_key : [ ubyte ];
+  signature : [ ubyte ];
+}
+
+/// Yada, yada...
+union Body {
+  establish_crypto_client : Crypto.EstablishCryptoClient,
+  establish_crypto_server : Crypto.EstablishCryptoServer,
+  update_server_sign_key : Crypto.UpdateServerSignKey,
+  update_server_encrypt_key : Crypto.UpdateServerEncryptKey
 }
 
 table Message {
-  type : Crypto.MessageType;
-  data : [ ubyte ];
+  body : Crypto.Body;
 }
-

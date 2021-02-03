@@ -1,151 +1,137 @@
 #include "encryption.h"
 
+#include "utils.h"
+
 #include <algorithm>
 #include <cstring>
-#include <cassert>
 #include <cstdint>
 #include <limits>
 
+constexpr std::size_t MinFileSize = ThorQ::Crypto::Encryption::PublicKeyLen;
+constexpr std::size_t MaxFileSize = MinFileSize + ThorQ::Crypto::Encryption::SecretKeyLen;
+
 ThorQ::Crypto::Encryption::Encryption()
-    : m_state(State::Uninitialized)
-    , m_modlock()
-    , m_pk{0}
+    : m_pk{0}
     , m_sk{0}
-    , m_rx{0}
-    , m_tx{0}
+    , m_fk{0}
 {
-    assert(sodium_init() >= 0);
+    if (sodium_init() < 0) throw "Failed to initialize libsodium";
 }
 
 ThorQ::Crypto::Encryption::~Encryption()
 {
     // Zero out memory to not leave a footprint in RAM
-    reset();
+    clear();
 }
 
-void ThorQ::Crypto::Encryption::reset()
+bool ThorQ::Crypto::Encryption::trySaveToFile(const char *path, bool onlyPublicKey) const
 {
-    std::unique_lock l(m_modlock);
-    reset_nolock();
+    // Buffer to write to
+    std::vector<std::uint8_t> data;
+    data.reserve(MaxFileSize);
+
+    // Insert public key
+    data.insert(data.begin(), m_pk.begin(), m_pk.end());
+
+    // Insert secret key
+    if (!onlyPublicKey) {
+        data.insert(data.end(), m_sk.begin(), m_sk.end());
+    }
+
+    // Write to file
+    return tryWriteAll(path, data);
 }
 
-bool ThorQ::Crypto::Encryption::ready() const
+bool ThorQ::Crypto::Encryption::tryLoadFromFile(const char *path)
 {
-    return m_state == State::Ready;
+    // Buffer to write to
+    std::vector<std::uint8_t> data;
+    data.reserve(MaxFileSize);
+
+    // Read file
+    if (!tryReadAll(path, data, MaxFileSize)) {
+        return false;
+    }
+
+    // Check if the file size is valid (one of the two)
+    if (data.size() == MinFileSize) {
+        memcpy(m_pk.data(), data.data(), Encryption::PublicKeyLen);
+    }
+    else if (data.size() == MaxFileSize) {
+        memcpy(m_pk.data(), data.data(), Encryption::PublicKeyLen);
+        memcpy(m_sk.data(), data.data() + Encryption::PublicKeyLen, Encryption::SecretKeyLen);
+    }
+    else {
+        return false;
+    }
+
+    return true;
+}
+
+void ThorQ::Crypto::Encryption::clear()
+{
+    std::memset(m_pk.data(), 0, m_pk.size());
+    std::memset(m_sk.data(), 0, m_sk.size());
+    clearForgeinKey();
+}
+
+void ThorQ::Crypto::Encryption::clearForgeinKey()
+{
+    std::memset(m_fk.data(), 0, m_fk.size());
 }
 
 bool ThorQ::Crypto::Encryption::generateKeyPair()
 {
-    std::unique_lock l(m_modlock);
+    clearForgeinKey();
 
-    reset_shared_nolock();
-    if (crypto_kx_keypair(m_pk.data(), m_sk.data()) != 0)
-    {
-        reset_nolock();
-        return false;
-    }
+    if (crypto_box_keypair(m_pk.data(), m_sk.data()) != 0) {
+        clear();
 
-    m_state = State::GeneratedKeys;
-    return true;
-}
-
-bool ThorQ::Crypto::Encryption::getPublicKey(std::span<std::uint8_t, Encryption::Encryption::PublicKeyLen> publicKeyOut) const
-{
-    std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
-    if (m_state != State::GeneratedKeys)
-    {
-        return false;
-    }
-
-    std::copy(m_pk.begin(), m_pk.end(), publicKeyOut.begin());
-
-    return true;
-}
-
-bool ThorQ::Crypto::Encryption::agreeAsServer(const std::span<const std::uint8_t, Encryption::Encryption::PublicKeyLen> foreignKey)
-{
-    std::unique_lock l(m_modlock);
-    if (m_state != State::GeneratedKeys)
-    {
-        return false;
-    }
-
-    if (crypto_kx_server_session_keys(m_rx.data(), m_tx.data(), m_pk.data(), m_sk.data(), foreignKey.data()) != 0)
-    {
-        reset_shared_nolock();
-        return false;
-    }
-
-    m_state = State::Ready;
-    return true;
-}
-
-bool ThorQ::Crypto::Encryption::agreeAsClient(const std::span<const std::uint8_t, Encryption::Encryption::PublicKeyLen> foreignKey)
-{
-    std::unique_lock l(m_modlock);
-    if (m_state != State::GeneratedKeys)
-    {
-        return false;
-    }
-
-    if (crypto_kx_client_session_keys(m_rx.data(), m_tx.data(), m_pk.data(), m_sk.data(), foreignKey.data()) != 0)
-    {
-        reset_shared_nolock();
-        return false;
-    }
-
-    m_state = State::Ready;
-    return true;
-}
-
-bool ThorQ::Crypto::Encryption::encrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, std::span<std::uint8_t, Encryption::MacLen> mac, std::span<std::uint8_t, Encryption::Encryption::NonceLen> nonce) const
-{
-    std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
-    if (!ready() ||
-        dataIn.empty() ||
-        dataIn.size() != dataOut.size())
-    {
-        return false;
-    }
-
-    randombytes_buf(nonce.data(), nonce.size());
-
-    if (crypto_secretbox_detached(dataOut.data(), mac.data(), dataIn.data(), dataIn.size(), nonce.data(), m_tx.data()) != 0)
-    {
         return false;
     }
 
     return true;
 }
 
-bool ThorQ::Crypto::Encryption::decrypt(std::span<std::uint8_t> dataOut, const std::span<const std::uint8_t> dataIn, const std::span<const std::uint8_t, Encryption::MacLen> mac, const std::span<const std::uint8_t, Encryption::Encryption::NonceLen> nonce) const
+bool ThorQ::Crypto::Encryption::setForeignKey(const std::uint8_t* publicKey, std::size_t keySize)
 {
-    std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
-    if (!ready() ||
-        dataIn.empty() ||
-        dataIn.size() != dataOut.size())
-    {
+    if (keySize != Encryption::PublicKeyLen) {
         return false;
     }
 
-    if (crypto_secretbox_open_detached(dataOut.data(), dataIn.data(), mac.data(), dataIn.size(), nonce.data(), m_rx.data()) != 0)
-    {
-        return false;
-    }
+    memcpy(m_fk.data(), publicKey, Encryption::PublicKeyLen);
 
     return true;
 }
 
-void ThorQ::Crypto::Encryption::reset_nolock()
+bool ThorQ::Crypto::Encryption::encrypt(const std::uint8_t* inData, std::size_t inSize, std::uint8_t* outData, std::size_t outSize) const
 {
-    std::memset(m_pk.data(), 0, m_pk.size());
-    std::memset(m_sk.data(), 0, m_sk.size());
-    reset_shared_nolock();
-    m_state = State::Uninitialized;
+    std::size_t contentSize = inSize;
+    std::size_t encryptedSize = outSize;
+
+    if (contentSize + Encryption::DataOverhead != encryptedSize) {
+        return false;
+    }
+
+    std::uint8_t* macPtr = outData + contentSize;
+    std::uint8_t* noncePtr = macPtr + Encryption::MacLen;
+
+    randombytes_buf(noncePtr, Encryption::NonceLen);
+
+    return crypto_box_detached(outData, macPtr, inData, inSize, noncePtr, m_fk.data(), m_sk.data()) == 0;
 }
 
-void ThorQ::Crypto::Encryption::reset_shared_nolock()
+bool ThorQ::Crypto::Encryption::decrypt(const std::uint8_t* inData, std::size_t inSize, std::uint8_t* outData, std::size_t outSize) const
 {
-    std::memset(m_rx.data(), 0, m_rx.size());
-    std::memset(m_tx.data(), 0, m_tx.size());
+    std::size_t contentSize = outSize;
+    std::size_t encryptedSize = inSize;
+
+    if (contentSize + Encryption::DataOverhead != encryptedSize) {
+        return false;
+    }
+
+    const std::uint8_t* macPtr = inData + contentSize;
+    const std::uint8_t* noncePtr = macPtr + Encryption::MacLen;
+
+    return crypto_box_open_detached(outData, inData, macPtr, contentSize, noncePtr, m_fk.data(), m_sk.data()) == 0;
 }

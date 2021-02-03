@@ -1,37 +1,18 @@
-#include <sodium.h>
-#include <utils.h>
+#include <cryptography/encryption.h>
 
 #include <fmt/core.h>
 
-#include <fstream>
-#include <iostream>
-#include <array>
-
-int main(int argc, char** argv)
+int main()
 {
-    THORQ_UNUSED(argc)
-    THORQ_UNUSED(argv)
+    ThorQ::Crypto::Encryption signer;
 
-    std::array<std::uint8_t, crypto_kx_PUBLICKEYBYTES> pk;
-    std::array<std::uint8_t, crypto_kx_SECRETKEYBYTES> sk;
-
-    if (crypto_kx_keypair(pk.data(), sk.data()) != 0) {
+    if (!signer.generateKeyPair()) {
         fmt::print(stderr, "Failed to generate keypair\n");
-        return EXIT_FAILURE;
     }
 
-    std::fstream pkout("generated.pk", std::ios::out), skout("generated.sk", std::ios::out);
-
-    if (!pkout.is_open() || !skout.is_open()) {
-        fmt::print(stderr, "Failed to open files!\n");
-        return EXIT_FAILURE;
+    if (!signer.trySaveToFile("generated.pk", true) || !signer.trySaveToFile("generated.pksk", false)) {
+        fmt::print(stderr, "Failed to save files\n");
     }
-
-    pkout.write((char*)pk.data(), pk.size());
-    skout.write((char*)pk.data(), pk.size());
-
-    pkout.close();
-    skout.close();
 
     fmt::print("Done\n");
     return EXIT_SUCCESS;

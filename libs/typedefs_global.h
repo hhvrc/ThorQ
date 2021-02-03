@@ -2,16 +2,12 @@
 #define TYPEDEFS_GLOBAL_H
 
 namespace ThorQ {
-namespace Networking {
-class Client;
-class Server;
-class Connection;
-class ConnectionHandlerInterface;
-namespace Tcp { class Client; class Server; class Connection; }
-namespace Udp { class Client; class Server; class Connection; }
+namespace Encoding {
 struct MessageHeader;
-struct Message;
-struct IncomingMessage;
+}
+namespace Networking {
+class TcpConnection;
+class UdpConnection;
 } // Networking
 namespace Crypto {
 class Signer;

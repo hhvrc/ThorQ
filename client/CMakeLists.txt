@@ -42,6 +42,8 @@ message("Found Qt ${Qt5Core_VERSION}")
 # --- Build ---
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/user.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/image.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/account.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.cpp
@@ -54,7 +56,7 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/collar/serial.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/apiclient.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apiconnectionhandler.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/apiclient_connection.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrdevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovraction.cpp
@@ -64,6 +66,8 @@ set(${project}_SOURCES
 )
 set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/user.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/image.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/account.h
     ${CMAKE_CURRENT_SOURCE_DIR}/procmon.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.h
@@ -77,7 +81,7 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/collar/serial.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/apiclient.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/apiconnectionhandler.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/apiclient_connection.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrdevice.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovraction.h

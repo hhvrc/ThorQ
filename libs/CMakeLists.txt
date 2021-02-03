@@ -72,23 +72,22 @@ add_subdirectory(concurrentqueue)
 
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/uuid.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/encoding.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/networking/client.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/networking/server.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/networking/abstractconnection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/tcpconnection.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/udpconnection.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/networking/connectionhandler.cpp
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/random.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/signer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/encryption.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/passwordhash.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/hashing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/version.cpp
+
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/detect_vmware.cpp
+
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid_${BUILD_OSL}.cpp
 )
 set(${project}_HEADERS
@@ -96,24 +95,21 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/encoding.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/networking/message.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/networking/client.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/networking/server.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/networking/abstractconnection.h
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/tcpconnection.h
     ${CMAKE_CURRENT_SOURCE_DIR}/networking/udpconnection.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/networking/connectionhandler.h
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/random.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/signer.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/encryption.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/passwordhash.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/hashing.h
     ${CMAKE_CURRENT_SOURCE_DIR}/version.h
+
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/detect_vmware.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/asio_common.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/schemas_common.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/enums.h
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_global.h

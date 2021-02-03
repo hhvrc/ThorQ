@@ -49,7 +49,7 @@ std::vector<std::uint8_t> ThorQ::SystemID::systemid_generate()
 
     memcpy(sys_id.data(), machineName.data(), machineName.size());
 
-	if (!computed)
+    if (!computed)
 	{
         memset(sysHid, 0, sizeof(SysHID));
 

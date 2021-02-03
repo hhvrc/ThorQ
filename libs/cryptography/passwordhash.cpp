@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <array>
+#include <cstring>
 #include <cstdint>
 
 inline bool HashPassword(const char* password, std::size_t passwordLen, std::uint8_t* seed, const std::uint8_t* salt) {

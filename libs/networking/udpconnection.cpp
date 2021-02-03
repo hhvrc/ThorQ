@@ -1,186 +1,91 @@
 #include "udpconnection.h"
 
-#include "hashing.h"
-#include "utils.h"
-
 #include "fmt/core.h"
-/*
-ThorQ::Networking::Udp::Connection::Connection(asio::io_context& asio, asio::ip::udp::socket socket)
-    : ThorQ::Networking::Connection(asio)
-    , l_socket()
+
+ThorQ::Networking::UdpConnection::UdpConnection(asio::io_context& asio, asio::ip::udp::socket socket)
+    : m_asio(asio)
     , m_socket(std::move(socket))
+    , m_status(ConnectionStatus::Disconnected)
+    , m_totalSentData(0)
+    , m_totalSentPackets(0)
+    , m_totalReceivedData(0)
+    , m_totalReceivedPackets(0)
 {
-
+    fmt::print("[UDP-CONNECTION] Constructed\n");
 }
 
-ThorQ::Networking::Udp::Connection::~Connection()
+ThorQ::Networking::UdpConnection::~UdpConnection()
 {
-    disconnect();
+    fmt::print("[UDP-CONNECTION] Destructed\n");
+}
+/*
+void ThorQ::Networking::UdpConnection::connect(const asio::ip::udp::resolver::results_type& endpoints)
+{
+    fmt::print("[UDP-CONNECTION] Connect\n");
+
+    asio::async_connect(m_socket, endpoints, std::bind(&UdpConnection::connectCompletionHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2));
 }
 
-void ThorQ::Networking::Udp::Connection::connect(const asio::ip::udp::resolver::results_type& endpoints)
+void ThorQ::Networking::UdpConnection::disconnect()
 {
-    asio::async_connect(m_socket, endpoints,
-                        [this](std::error_code ec, asio::ip::udp::endpoint endpoint)
-    {
-        THORQ_UNUSED(endpoint)
-        if (!ec)
-        {
-            readHeader();
-        }
-        else
-        {
-            // TODO: ERROR "ec"
-        }
-    });
+    fmt::print("[UDP-CONNECTION] Disconnect\n");
+
+    onDisconnect();
+    asioClose();
 }
 
-void ThorQ::Networking::Udp::Connection::disconnect()
+void ThorQ::Networking::UdpConnection::messageSend(std::shared_ptr<std::vector<std::uint8_t>> message)
 {
-    m_connectionHandler->onDisconnect();
-    asio::post(m_asio, [this](){ asioClose(); });
+    fmt::print("[UDP-CONNECTION] messageSend\n");
+
+    auto buffer = asio::buffer(message->data(), message->size());
+    asio::async_write(m_socket, buffer, std::bind(&UdpConnection::writeMessageCompletionHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2, std::move(message)));
 }
 
-bool ThorQ::Networking::Udp::Connection::isOpen() const
+void ThorQ::Networking::UdpConnection::writeDone()
 {
-    std::scoped_lock l(const_cast<std::mutex&>(l_socket));
-    return m_socket.is_open();
+    fmt::print("[UDP-CONNECTION] WriteDone\n");
 }
 
-void ThorQ::Networking::Udp::Connection::send(std::shared_ptr<std::vector<uint8_t>> data)
+void ThorQ::Networking::UdpConnection::readHeader()
 {
-    ThorQ::Networking::Message msg;
+    fmt::print("[UDP-CONNECTION] ReadHeader\n");
 
-    msg.header = std::make_shared<ThorQ::Networking::MessageHeader>(data->size(), ThorQ::Hashing::Crc32(*data));
-    msg.body = std::move(data);
+    auto message = std::make_shared<std::vector<std::uint8_t>>();
+    message->reserve(ThorQ::Encoding::TypicalMessageSize);
+    message->resize(ThorQ::Encoding::HeaderSize);
 
-    asio::post(m_asio, [this, msg](){ writeHeader(std::move(msg)); });
+    auto buffer = asio::buffer(message->data(), message->size());
+    asio::async_read(m_socket, buffer, std::bind(&UdpConnection::writeMessageCompletionHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2, std::move(message)));
 }
 
-void ThorQ::Networking::Udp::Connection::writeHeader(ThorQ::Networking::Message msg)
+void ThorQ::Networking::UdpConnection::readBody(std::shared_ptr<std::vector<std::uint8_t>> message)
 {
-    asio::async_write(m_socket, asio::buffer(msg.header.get(), sizeof(ThorQ::Networking::MessageHeader)),
-                      [this, msg](std::error_code ec, std::size_t length)
-    {
-        if (!ec)
-        {
-            m_totalSentData += length;
-            if (msg.header->size > 0)
-            {
-                writeBody(std::move(msg));
-            }
-            else
-            {
-                m_totalSentPackets++;
-                writeEnd();
-            }
-        }
-        else
-        {
-            // TODO: ERROR "ec"
-            asioClose();
-        }
-    });
+    auto buffer = asio::buffer(message->data(), message->size());
+    asio::async_read(m_socket, buffer, std::bind(&UdpConnection::writeMessageCompletionHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2, std::move(message)));
 }
 
-void ThorQ::Networking::Udp::Connection::writeBody(ThorQ::Networking::Message msg)
+void ThorQ::Networking::UdpConnection::readDone(std::shared_ptr<std::vector<std::uint8_t>> message)
 {
-    asio::async_write(m_socket, asio::buffer(msg.body->data(), msg.body->size()),
-                      [this, msg](std::error_code ec, std::size_t length)
-    {
-        if (!ec)
-        {
-            m_totalSentData += length;
-            m_totalSentPackets++;
-            writeEnd();
-        }
-        else
-        {
-            // TODO: ERROR "ec"
-            asioClose();
-        }
-    });
-}
-
-void ThorQ::Networking::Udp::Connection::writeEnd()
-{
-    ThorQ::Networking::Message msg;
-    if (m_messageQueue.try_dequeue(m_messageQueueToken, msg))
-    {
-        writeHeader(std::move(msg));
-    }
-}
-
-void ThorQ::Networking::Udp::Connection::readHeader()
-{
-    IncomingMessage msg;
-    msg.header = std::make_shared<ThorQ::Networking::MessageHeader>();
-
-    asio::async_read(m_socket, asio::buffer(msg.header.get(), sizeof(ThorQ::Networking::MessageHeader)),
-                     [this, msg](std::error_code ec, std::size_t length) mutable
-    {
-        if (!ec)
-        {
-            if (m_connectionHandler->onHeader(msg.header))
-            {
-                m_totalReceivedData += length;
-                if (msg.header->size > 0)
-                {
-                    msg.body = std::make_shared<std::vector<std::uint8_t>>(msg.header->size);
-
-                    readBody(std::move(msg));
-                }
-                else
-                {
-                    m_totalReceivedPackets++;
-                    // There is nothing more to do here
-                }
-            }
-            else
-            {
-                fmt::print("[CLIENT] Message rejected!\n");
-                readHeader();
-            }
-        }
-        else
-        {
-            // TODO: ERROR "ec"
-            asioClose();
-        }
-    });
-}
-
-void ThorQ::Networking::Udp::Connection::readBody(ThorQ::Networking::IncomingMessage msg)
-{
-    asio::async_read(m_socket, asio::buffer(msg.body->data(), msg.body->size()),
-                     [this, msg](std::error_code ec, std::size_t length)
-    {
-        if (!ec)
-        {
-            m_totalReceivedData += length;
-            m_totalReceivedPackets++;
-            readEnd(std::move(msg));
-        }
-        else
-        {
-            // TODO: ERROR "ec"
-            asioClose();
-        }
-    });
-}
-
-void ThorQ::Networking::Udp::Connection::readEnd(ThorQ::Networking::IncomingMessage msg)
-{
-    m_connectionHandler->onMessage(msg.body);
+    onMessage(std::move(message));
     readHeader();
 }
 
-void ThorQ::Networking::Udp::Connection::asioClose()
+void ThorQ::Networking::UdpConnection::asioClose()
 {
-    std::scoped_lock l(l_socket);
-    if (m_socket.is_open())
-    {
+    try {
         m_socket.close();
+    } catch (...) {}
+}
+
+void ThorQ::Networking::UdpConnection::handleErrorCode(const std::error_code &ec)
+{
+    if (ec.value() == 2) {
+        fmt::print("[UDP-CONNECTION] Remote closed connection\n");
     }
+    else {
+        fmt::print(stderr, "[UDP-CONNECTION] Error reading header: {} ({})\n", ec.message(), ec.value());
+    }
+    disconnect();
 }
 */

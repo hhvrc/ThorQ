@@ -2,14 +2,20 @@
 
 #include <QObject>
 
-ThorQ::User::User(ThorQ::ClientConnection* client)
-    : QObject((QObject*)client)
+ThorQ::User::User(QUuid userID, QObject* parent)
+    : QObject(parent)
+    , m_id(userID)
     , m_name()
 {
 
 }
 
-const QString &ThorQ::User::name() const
+QUuid ThorQ::User::id() const
+{
+    return m_id;
+}
+
+QString ThorQ::User::username() const
 {
     return m_name;
 }
@@ -34,6 +40,15 @@ bool ThorQ::User::isRequestingSession() const
     return m_isRequestingSession;
 }
 
+void ThorQ::User::setName(QString name)
+{
+    if (m_name != name)
+    {
+        m_name = name;
+        emit usernameChanged(name);
+    }
+}
+
 void ThorQ::User::sessionRequest()
 {
 
@@ -47,10 +62,6 @@ void ThorQ::User::sessionDeny()
 
 }
 
-void ThorQ::User::setName(const QString& name)
-{
-
-}
 void ThorQ::User::setIsInSession(bool isInSession)
 {
 

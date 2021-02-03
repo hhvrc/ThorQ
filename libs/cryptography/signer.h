@@ -30,14 +30,14 @@ public:
     Signer();
     ~Signer();
 
+    bool trySaveToFile(const char* path, bool onlyPublicKey) const;
+    bool tryLoadFromFile(const char* path);
+
     /**
      * @brief Clear all instance data
      * @return
      */
-    void reset();
-
-    bool trySaveToFile(const char* path, bool onlyPublicKey) const;
-    bool tryLoadFromFile(const char* path);
+    void clear();
 
     /**
      * @brief Clear shared secret, and generate a new key pair
@@ -46,33 +46,35 @@ public:
     bool generateKeyPair();
 
     /**
-     * @brief Get the public key
-     * @param publicKeyOut Span to write publicKey to
-     * @retval Returns if public key was successfully retrieved
+     * @brief Getter for the public key
+     * @return Returns a copy of the public key
      */
-    bool getPublicKey(std::span<std::uint8_t, Signer::PublicKeyLen> publicKeyOut) const;
-    bool setPublicKey(const std::span<const std::uint8_t, Signer::PublicKeyLen> publicKeyIn);
+    inline std::array<std::uint8_t, Signer::PublicKeyLen> publicKey() const { return m_pk; }
+    bool setPublicKey(const std::uint8_t* publicKey, std::size_t keySize);
+    inline bool setPublicKey(const std::span<const std::uint8_t, Signer::PublicKeyLen> publicKey) { return setPublicKey(publicKey.data(), publicKey.size()); }
 
     /*
      *
      */
-    bool sign(const std::span<const std::uint8_t> data, std::span<std::uint8_t, Signer::SignatureLen> signatureOut) const;
+    bool sign(const std::uint8_t* data, std::size_t dataSize, std::uint8_t* signatureOut, std::size_t signatureSize) const;
+    inline bool sign(std::span<const std::uint8_t> data, std::uint8_t* signatureOut, std::size_t signatureSize) const { return sign(data.data(), data.size(), signatureOut, signatureSize); }
+    inline bool sign(const std::uint8_t* data, std::size_t dataSize, std::span<std::uint8_t> signatureOut) const { return sign(data, dataSize, signatureOut.data(), signatureOut.size()); }
+    inline bool sign(std::span<const std::uint8_t> data, std::span<std::uint8_t> signatureOut) const { return sign(data.data(), data.size(), signatureOut.data(), signatureOut.size()); }
 
-    bool verify(const std::span<const std::uint8_t> data, const std::span<const std::uint8_t, Signer::SignatureLen> signatureIn) const;
+    bool verify(const std::uint8_t* data, std::size_t dataSize, const std::uint8_t* signature, std::size_t signatureSize) const;
+    inline bool verify(std::span<const std::uint8_t> data, const std::uint8_t* signatureOut, std::size_t signatureSize) const { return verify(data.data(), data.size(), signatureOut, signatureSize); }
+    inline bool verify(const std::uint8_t* data, std::size_t dataSize, std::span<const std::uint8_t> signatureOut) const { return verify(data, dataSize, signatureOut.data(), signatureOut.size()); }
+    inline bool verify(std::span<const std::uint8_t> data, std::span<const std::uint8_t> signatureOut) const { return verify(data.data(), data.size(), signatureOut.data(), signatureOut.size()); }
 private:
-    void reset_nolock();
+    std::array<std::uint8_t, Signer::PublicKeyLen>  m_pk;
+    std::array<std::uint8_t, Signer::SecretKeyLen>  m_sk;
 
     enum class State : std::uint8_t
     {
         Uninitialized,
         OnlyPublicKey,
         BothKeys
-    };
-
-    std::atomic<State> m_state;
-    std::shared_mutex  m_modlock;
-    std::array<std::uint8_t, Signer::PublicKeyLen>  m_pk;
-    std::array<std::uint8_t, Signer::SecretKeyLen>  m_sk;
+    } m_state;
 };
 }
 }

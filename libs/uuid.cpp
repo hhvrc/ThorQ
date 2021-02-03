@@ -34,18 +34,18 @@ const ThorQ::Uuid ThorQ::Uuid::Empty()
 }
 
 ThorQ::Uuid::Uuid() noexcept
+    : m_data{0}
 {
-    memset(m_data.data(), 0, 16);
 }
 
 ThorQ::Uuid::Uuid(const ThorQ::Uuid& other) noexcept
+    : m_data(other.m_data)
 {
-    std::copy(other.m_data.begin(), other.m_data.end(), m_data.begin());
 }
 
 ThorQ::Uuid::Uuid(std::array<uint8_t, 16> data) noexcept
+    : m_data(data)
 {
-    std::copy(m_data.begin(), m_data.end(), data.begin());
 }
 
 std::array<std::uint8_t, 16> empty{0};
@@ -77,9 +77,7 @@ std::string ThorQ::Uuid::toString() const
 
 std::array<uint8_t, 16> ThorQ::Uuid::toBytes() const
 {
-    std::array<uint8_t, 16> ret;
-    std::copy(m_data.begin(), m_data.end(), ret.begin());
-    return ret;
+    return m_data;
 }
 
 bool ThorQ::Uuid::operator==(const ThorQ::Uuid& rhs) const noexcept

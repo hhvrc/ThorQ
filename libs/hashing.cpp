@@ -56,15 +56,16 @@ void initialize_crc32()
     init_done = true;
 }
 
-std::uint32_t ThorQ::Hashing::Crc32(const std::span<const std::uint8_t> data)
+std::uint32_t ThorQ::Hashing::Crc32(const std::uint8_t* data, std::size_t size)
 {
     std::uint32_t crc = 0xFFFFFFFF;
 
     if (!init_done) { initialize_crc32(); }
 
-    for (auto& byte : data)
+
+    for (const std::uint8_t* end = data + size; data != end; data++)
     {
-        crc = (crc >> 8) ^ crcTable[(crc & 0xFF) ^ byte];
+        crc = (crc >> 8) ^ crcTable[(crc & 0xFF) ^ *data];
     }
 
     return ~crc;

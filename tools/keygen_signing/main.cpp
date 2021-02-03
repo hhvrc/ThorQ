@@ -1,13 +1,9 @@
 #include <cryptography/signer.h>
-#include <utils.h>
 
 #include <fmt/core.h>
 
-int main(int argc, char** argv)
+int main()
 {
-    THORQ_UNUSED(argc)
-    THORQ_UNUSED(argv)
-
     ThorQ::Crypto::Signer signer;
 
     if (!signer.generateKeyPair()) {

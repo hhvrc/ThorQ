@@ -41,14 +41,14 @@ public:
     bool removeRequestIncoming(std::shared_ptr<ThorQ::Account> source);
     bool containsRequestIncoming(std::shared_ptr<ThorQ::Account> source) const;
 
-    static void requestSession(std::shared_ptr<ThorQ::ApiConnectionHandler> source, std::shared_ptr<ThorQ::Account> target);
+    static void requestSession(std::shared_ptr<ThorQ::ApiServerConnection> source, std::shared_ptr<ThorQ::Account> target);
     static bool requestAccept(std::shared_ptr<ThorQ::Account> sender, std::shared_ptr<ThorQ::Account> target);
     static bool requestDeny(std::shared_ptr<ThorQ::Account> sender, std::shared_ptr<ThorQ::Account> target);
 
     bool isOnline() const;
-    bool addInstance(std::shared_ptr<ThorQ::ApiConnectionHandler> instance);
-    bool removeInstance(std::shared_ptr<ThorQ::ApiConnectionHandler> instance);
-    bool containsInstance(std::shared_ptr<ThorQ::ApiConnectionHandler> instance) const;
+    bool addInstance(std::shared_ptr<ThorQ::ApiServerConnection> instance);
+    bool removeInstance(std::shared_ptr<ThorQ::ApiServerConnection> instance);
+    bool containsInstance(std::shared_ptr<ThorQ::ApiServerConnection> instance) const;
     void removeAllInstances();
 
     void setIsInSteamVR(bool hasCollar);
@@ -79,7 +79,7 @@ private:
     std::set<std::shared_ptr<ThorQ::Group>> m_sessions;
 
     std::shared_mutex l_instances;
-    std::set<std::shared_ptr<ThorQ::ApiConnectionHandler>> m_instances;
+    std::set<std::shared_ptr<ThorQ::ApiServerConnection>> m_instances;
 
     std::shared_mutex l_relationships;
     std::set<std::shared_ptr<ThorQ::Relationship>> m_relationships;

@@ -27,13 +27,13 @@
 // mac's is fine.
 std::uint16_t hashMacAddress(std::uint8_t* mac)
 {
-	std::uint16_t hash = 0;
+    std::uint16_t hash = 0;
 
-	for (int i = 0; i < 6; i++)
-	{
-		hash += ( mac[i] << (( i & 1 ) * 8 ));
-	}
-	return hash;
+    for (int i = 0; i < 6; i++)
+    {
+        hash += ( mac[i] << (( i & 1 ) * 8 ));
+    }
+    return hash;
 }
 
 void ThorQ::SystemID::Internal::getMacHash(std::uint16_t& mac1, std::uint16_t& mac2)
@@ -41,7 +41,7 @@ void ThorQ::SystemID::Internal::getMacHash(std::uint16_t& mac1, std::uint16_t& m
 	mac1 = 0;
 	mac2 = 0;
 
-	int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP );
+    int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP );
 	if (sock < 0) return;
 
 	// enumerate all IP addresses of the system
@@ -68,9 +68,9 @@ void ThorQ::SystemID::Internal::getMacHash(std::uint16_t& mac1, std::uint16_t& m
 			if ( !foundMac1 )
 			{
 				foundMac1 = true;
-				mac1 = hashMacAddress( (std::uint8_t*)&(ifr->ifr_addr.sa_data));
+                mac1 = hashMacAddress( (std::uint8_t*)&(ifr->ifr_addr.sa_data));
 			} else {
-				mac2 = hashMacAddress( (std::uint8_t*)&(ifr->ifr_addr.sa_data));
+                mac2 = hashMacAddress( (std::uint8_t*)&(ifr->ifr_addr.sa_data));
 				break;
 			}
 		}
@@ -105,26 +105,26 @@ std::uint16_t ThorQ::SystemID::Internal::getVolumeHash()
 
 static inline void getCpuid( std::uint32_t* p, std::uint32_t ax )
 {
-	__asm __volatile(
-				"movl %%ebx, %%esi\n\t"
-				"cpuid\n\t"
-				"xchgl %%ebx, %%esi"
-				: "=a" (p[0])
-			, "=S" (p[1])
-			, "=c" (p[2])
-			, "=d" (p[3])
-		: "0" (ax)
-		);
+    __asm __volatile(
+                "movl %%ebx, %%esi\n\t"
+                "cpuid\n\t"
+                "xchgl %%ebx, %%esi"
+                : "=a" (p[0])
+            , "=S" (p[1])
+            , "=c" (p[2])
+            , "=d" (p[3])
+        : "0" (ax)
+        );
 }
 
 std::uint16_t ThorQ::SystemID::Internal::getCpuHash()
 {
-	std::uint32_t cpuinfo[4]{0};
-	getCpuid(cpuinfo, 0);
+    std::uint32_t cpuinfo[4]{0};
+    getCpuid(cpuinfo, 0);
 
 	std::uint16_t hash = 0;
-	for (int i = 0; i < 4; i++)
-		hash += (cpuinfo[i] & 0xFFFF) + (cpuinfo[i] >> 16);
+    for (int i = 0; i < 4; i++)
+        hash += (cpuinfo[i] & 0xFFFF) + (cpuinfo[i] >> 16);
 
 	return hash;
 }
@@ -133,8 +133,8 @@ std::string ThorQ::SystemID::Internal::getMachineName()
 {
 	static struct utsname u;
 
-	if (uname(&u) < 0)
-		return "unknown";
+    if (uname(&u) < 0)
+        return "unknown";
 
 	return u.nodename;
 }

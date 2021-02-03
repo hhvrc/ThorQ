@@ -1,40 +1,49 @@
-#include <cryptography/random.h>
 #include <cryptography/signer.h>
 #include <cryptography/encryption.h>
 #include <cryptography/passwordhash.h>
-#include <utils.h>
 
 #include <fmt/core.h>
 
-#include <array>
 #include <vector>
 #include <cstring>
-#include <memory>
+#include <cstdint>
 
 bool testEncryption(std::size_t testDataSize, std::size_t iterations)
 {
     ThorQ::Crypto::Encryption client;
     ThorQ::Crypto::Encryption server;
 
+    if (!client.generateKeyPair()) {
+        fmt::print("Encryption keygen failed!\n");
+        return false;
+    }
+    if (!client.trySaveToFile("keys.pksk", false)) {
+        fmt::print("Encryption trySaveToFile failed!\n");
+        return false;
+    }
+    if (!server.tryLoadFromFile("keys.pksk")) {
+        fmt::print("Encryption tryLoadFromFile failed!\n");
+        return false;
+    }
+    if (server.publicKey() != client.publicKey()) {
+        fmt::print("Encryption loaded file invalid!\n");
+        return false;
+    }
+
     std::vector<std::uint8_t> org, enc, dec;
     org.resize(testDataSize);
-    enc.resize(testDataSize);
+    enc.resize(testDataSize + ThorQ::Crypto::Encryption::DataOverhead);
     dec.resize(testDataSize);
-
-    std::array<std::uint8_t, ThorQ::Crypto::Encryption::MacLen> mac;
-    std::array<std::uint8_t, ThorQ::Crypto::Encryption::NonceLen> nonce;
-    std::array<std::uint8_t, ThorQ::Crypto::Encryption::PublicKeyLen> clientKey, serverKey;
 
     for (std::size_t i = 0; i < iterations; i++)
     {
         // Reset all data
-        client.reset();
-        server.reset();
+        client.clear();
+        server.clear();
+
         memset(org.data(), 0, org.size());
         memset(enc.data(), 0, enc.size());
         memset(dec.data(), 0, dec.size());
-        memset(mac.data(), 0, mac.size());
-        memset(nonce.data(), 0, nonce.size());
 
         // Generate keys
         if (!client.generateKeyPair() || !server.generateKeyPair())
@@ -43,28 +52,22 @@ bool testEncryption(std::size_t testDataSize, std::size_t iterations)
             return false;
         }
 
-        // Get the public keys
-        if (!client.getPublicKey(clientKey) || !server.getPublicKey(serverKey))
-        {
-            fmt::print("Encryption getkey failed!\n");
-            return false;
-        }
+        auto clientPk = client.publicKey();
+        auto serverPk = server.publicKey();
 
         // Exchange the public keys
-        if (!client.agreeAsClient(serverKey) || !server.agreeAsServer(clientKey))
+        if (!client.setForeignKey(serverPk.data(), serverPk.size()) ||
+            !server.setForeignKey(clientPk.data(), clientPk.size()))
         {
             fmt::print("Encryption agree failed!\n");
             return false;
         }
 
         // Randomize input data
-        ThorQ::Crypto::RandomizeBytes(org);
-
-        // Randomize nonce
-        ThorQ::Crypto::RandomizeBytes(nonce);
+        randombytes_buf(org.data(), org.size());
 
         // Encrypt the data
-        if (!client.encrypt(enc, org, mac, nonce))
+        if (!client.encrypt(org.data(), org.size(), enc.data(), enc.size()))
         {
             fmt::print("Encryption encrypt failed!\n");
             return false;
@@ -78,7 +81,7 @@ bool testEncryption(std::size_t testDataSize, std::size_t iterations)
         }
 
         // Decrypt the encrpyted data using the other crypto object
-        if (!server.decrypt(dec, enc, mac, nonce))
+        if (!server.decrypt(enc.data(), enc.size(), dec.data(), dec.size()))
         {
             fmt::print("Encryption decrypt failed!\n");
             return false;
@@ -120,7 +123,7 @@ bool testSigning()
         return false;
     }
 
-    signer.reset();
+    signer.clear();
 
     // Test loading only a single key
     if (!signer.tryLoadFromFile("test.pk"))
@@ -129,7 +132,7 @@ bool testSigning()
         return false;
     }
 
-    signer.reset();
+    signer.clear();
 
     // Load the keys
     if (!signer.tryLoadFromFile("test.pksk"))
@@ -138,8 +141,8 @@ bool testSigning()
         return false;
     }
 
-    std::array<std::uint8_t, 2048> testData;
-    ThorQ::Crypto::RandomizeBytes(testData);
+    std::uint8_t testData[2048];
+    randombytes_buf(testData, sizeof(testData));
 
     std::array<std::uint8_t, ThorQ::Crypto::Signer::SignatureLen> signature;
 
@@ -177,11 +180,8 @@ bool testPasswordHashing()
     return true;
 }
 
-int main(int argc, char** argv)
+int main()
 {
-    THORQ_UNUSED(argc)
-    THORQ_UNUSED(argv)
-
     if (!testEncryption(2048, 128)) {
         return EXIT_FAILURE;
     }

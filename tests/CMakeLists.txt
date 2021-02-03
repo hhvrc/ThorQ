@@ -9,4 +9,6 @@ project(
 
 message("Configuring ${project}...")
 
+add_subdirectory(uuid)
+add_subdirectory(systemid)
 add_subdirectory(cryptography)

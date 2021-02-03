@@ -18,7 +18,7 @@ add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cxxopts)
 
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/apiserver.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/apiconnectionhandler.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/apiserver_connection.cpp
     #${CMAKE_CURRENT_SOURCE_DIR}/imagecache.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/account.cpp
@@ -26,10 +26,9 @@ set(${project}_SOURCES
 )
 set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/apiserver.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/apiconnectionhandler.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/apiserver_connection.h
     #${CMAKE_CURRENT_SOURCE_DIR}/imagecache.h
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
     ${CMAKE_CURRENT_SOURCE_DIR}/config.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/account.h

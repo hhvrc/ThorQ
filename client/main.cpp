@@ -5,6 +5,7 @@
 #include <QInputDialog>
 #include <QRegExp>
 #include <QDebug>
+#include <QDir>
 #include <QTranslator>
 #include <QMessageBox>
 #include <QVBoxLayout>
@@ -23,14 +24,16 @@ Q_DECLARE_METATYPE(THORQ_STATE_LOGIN)
 #define COMTEST 1
 
 #include <constants.h>
-#include <cryptography/encryption.h>
 #include <encoding.h>
+
+#include <filesystem>
 
 std::uint16_t i = 0;
 int main(int argc, char** argv)
 {
     // TODO: customize GUI
     // TODO: enable support for SteamVR
+    QCoreApplication::addLibraryPath(QDir::currentPath().append("/libs/"));
 
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QCoreApplication::setApplicationName(THORQ_APPLICATION_NAME);
@@ -82,10 +85,10 @@ int main(int argc, char** argv)
 #if COMTEST
     LoginWidget loginWidget;
     MainWidget mainWidget;
-    ThorQ::ApiClient apiClient;
+    ThorQ::ApiClient* apiClient = new ThorQ::ApiClient(&app);
 
-    apiClient.connect(THORQ_SERVER_HOSTNAME, THORQ_SERVER_PORT);
-/*
+    apiClient->netConnect("localhost", 12345);
+
     QMessageBox errorBox(&loginWidget);
     errorBox.setIcon(QMessageBox::Critical);
     errorBox.setWindowTitle("error");
@@ -93,7 +96,7 @@ int main(int argc, char** argv)
     QMessageBox warningBox(&loginWidget);
     warningBox.setIcon(QMessageBox::Warning);
     errorBox.setWindowTitle("warning");
-
+/*
     QObject::connect(cli, &ThorQ::Networking::Client::rttChanged, &mainWidget, &MainWidget::setConnectionPing);
     QObject::connect(cli, &ThorQ::Networking::Client::LoginStateChanged, &mainWidget, &MainWidget::setLoginState);
     QObject::connect(cli, &ThorQ::Networking::Client::SessionStateChanged, &mainWidget, &MainWidget::setSessionState);
@@ -134,7 +137,6 @@ int main(int argc, char** argv)
     int retval = app.exec();
 
 #if COMTEST
-    apiClient.disconnect();
 #else
     ThorQ::VR::Shutdown();
 #endif

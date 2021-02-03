@@ -17,7 +17,6 @@
 #include <lsql/connection.h>
 
 #include <constants.h>
-#include <networking/server.h>
 
 #include "apiserver.h"
 

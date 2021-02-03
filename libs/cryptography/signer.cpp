@@ -1,68 +1,16 @@
 #include "signer.h"
 
-#include "cryptography/random.h"
+#include "utils.h"
 
 #include <cassert>
 #include <filesystem>
 #include <iostream>
 #include <fstream>
-
-inline bool tryWriteAll(const std::filesystem::path& path, const std::vector<std::uint8_t>& data)
-{
-    if (std::filesystem::exists(path) && !std::filesystem::remove(path)) {
-        return false;
-    }
-
-    try {
-        std::fstream writer(path, std::ios::out | std::ios::binary);
-
-        if (!writer.is_open()) {
-            return false;
-        }
-
-        writer.seekg(0, std::ios::beg);
-
-        writer.write((char*)data.data(), data.size());
-
-        writer.close();
-    }
-    catch (...) {
-        return false;
-    }
-
-    return true;
-}
-inline bool tryReadAll(const std::filesystem::path& path, std::vector<std::uint8_t>& data, std::size_t sizeMax = SIZE_MAX)
-{
-    try {
-        std::fstream reader(path, std::ios::in | std::ios::binary);
-
-        if (!reader.is_open()) {
-            return false;
-        }
-
-        reader.seekg(0, std::ios::end);
-        std::size_t size = reader.tellg();
-        reader.seekg(0, std::ios::beg);
-
-        if (size > sizeMax) {
-            return false;
-        }
-
-        data.resize(size);
-        reader.read((char*)data.data(), data.size());
-
-        reader.close();
-    }
-    catch (...) {
-        return false;
-    }
-
-    return true;
-}
+#include <cstring>
+#include <vector>
 
 constexpr std::size_t MinFileSize = ThorQ::Crypto::Signer::PublicKeyLen + ThorQ::Crypto::Signer::SignatureLen;
-constexpr std::size_t MaxFileSize = ThorQ::Crypto::Signer::PublicKeyLen + ThorQ::Crypto::Signer::SecretKeyLen + ThorQ::Crypto::Signer::SignatureLen;
+constexpr std::size_t MaxFileSize = MinFileSize + ThorQ::Crypto::Signer::SignatureLen;
 
 const std::array<std::uint8_t, ThorQ::Crypto::Signer::PublicKeyLen> ThorQ::Crypto::Signer::RootSigner()
 {
@@ -77,35 +25,24 @@ const std::array<std::uint8_t, ThorQ::Crypto::Signer::PublicKeyLen> ThorQ::Crypt
 }
 
 ThorQ::Crypto::Signer::Signer()
-    : m_state()
-    , m_modlock()
-    , m_pk{0}
+    : m_pk{0}
     , m_sk{0}
+    , m_state(State::Uninitialized)
 {
-    assert(sodium_init() >= 0);
+    if (sodium_init() < 0) throw "Failed to initialize libsodium";
 }
 
 ThorQ::Crypto::Signer::~Signer()
 {
     // Zero out memory to not leave a footprint in RAM
-    reset();
+    clear();
 }
 
-void ThorQ::Crypto::Signer::reset()
+bool ThorQ::Crypto::Signer::trySaveToFile(const char* path, bool onlyPublicKey) const
 {
-    std::unique_lock l(m_modlock);
-    reset_nolock();
-}
-
-bool ThorQ::Crypto::Signer::trySaveToFile(const char* cpath, bool onlyPublicKey) const
-{
-    std::filesystem::path path(cpath);
-
     // Buffer to write to
     std::vector<std::uint8_t> data;
     data.reserve(MaxFileSize);
-
-    std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
 
     // Insert public key
     data.insert(data.begin(), m_pk.begin(), m_pk.end());
@@ -122,27 +59,16 @@ bool ThorQ::Crypto::Signer::trySaveToFile(const char* cpath, bool onlyPublicKey)
     std::uint8_t* signaturePtr = keysPtr + keysSize;
 
     // Create signature of the keypair thats being stored
-    if (crypto_sign_ed25519_detached(signaturePtr, nullptr, keysPtr, keysSize, m_sk.data()) != 0) {
+    if (crypto_sign_detached(signaturePtr, nullptr, keysPtr, keysSize, m_sk.data()) != 0) {
         return false;
     }
 
     // Write to file
-    if (!tryWriteAll(path, data)) {
-        return false;
-    }
-
-    return true;
+    return tryWriteAll(path, data);
 }
 
-bool ThorQ::Crypto::Signer::tryLoadFromFile(const char* cpath)
+bool ThorQ::Crypto::Signer::tryLoadFromFile(const char* path)
 {
-    std::filesystem::path path(cpath);
-
-    // Dont try to read something that isnt a regular file
-    if (!std::filesystem::is_regular_file(path)) {
-        return false;
-    }
-
     // Buffer to write to
     std::vector<std::uint8_t> data;
     data.reserve(MaxFileSize);
@@ -167,7 +93,6 @@ bool ThorQ::Crypto::Signer::tryLoadFromFile(const char* cpath)
     }
 
     // Write the data to this
-    std::unique_lock l(m_modlock);
     memcpy(m_pk.data(), data.data(), Signer::PublicKeyLen);
 
     if (keysSize == Signer::PublicKeyLen) {
@@ -181,9 +106,15 @@ bool ThorQ::Crypto::Signer::tryLoadFromFile(const char* cpath)
     return true;
 }
 
+void ThorQ::Crypto::Signer::clear()
+{
+    memset(m_pk.data(), 0, ThorQ::Crypto::Signer::PublicKeyLen);
+    memset(m_sk.data(), 0, ThorQ::Crypto::Signer::SecretKeyLen);
+    m_state = State::Uninitialized;
+}
+
 bool ThorQ::Crypto::Signer::generateKeyPair()
 {
-    std::unique_lock l(m_modlock);
     if (crypto_sign_keypair(m_pk.data(), m_sk.data()) != 0) {
         return false;
     }
@@ -191,44 +122,32 @@ bool ThorQ::Crypto::Signer::generateKeyPair()
     return true;
 }
 
-bool ThorQ::Crypto::Signer::getPublicKey(std::span<std::uint8_t, ThorQ::Crypto::Signer::PublicKeyLen> publicKeyOut) const
+bool ThorQ::Crypto::Signer::setPublicKey(const std::uint8_t* publicKey, std::size_t keySize)
 {
-    std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
-    if (m_state != State::Uninitialized) {
-        std::copy(m_pk.begin(), m_pk.end(), publicKeyOut.begin());
-        return true;
+    if (keySize != Signer::SignatureLen) {
+        return false;
     }
-    return false;
-}
 
-bool ThorQ::Crypto::Signer::setPublicKey(const std::span<const uint8_t, ThorQ::Crypto::Signer::PublicKeyLen> publicKeyIn)
-{
-    std::shared_lock l(const_cast<std::shared_mutex&>(m_modlock));
-    reset_nolock();
-    std::copy(publicKeyIn.begin(), publicKeyIn.end(), m_pk.begin());
+    clear();
+    memcpy(m_pk.data(), publicKey, keySize);
     m_state = State::OnlyPublicKey;
-    return false;
-}
-
-bool ThorQ::Crypto::Signer::sign(const std::span<const std::uint8_t> data, std::span<std::uint8_t, ThorQ::Crypto::Signer::SignatureLen> signatureOut) const
-{
-    if (crypto_sign_detached(signatureOut.data(), nullptr, data.data(), data.size(), m_sk.data()) != 0) {
-        return false;
-    }
     return true;
 }
 
-bool ThorQ::Crypto::Signer::verify(const std::span<const std::uint8_t> data, const std::span<const std::uint8_t, ThorQ::Crypto::Signer::SignatureLen> signatureIn) const
+bool ThorQ::Crypto::Signer::sign(const std::uint8_t* data, std::size_t dataSize, std::uint8_t* signature, std::size_t signatureSize) const
 {
-    if (crypto_sign_verify_detached(signatureIn.data(), data.data(), data.size(), m_pk.data()) != 0) {
+    if (signatureSize != Signer::SignatureLen) {
         return false;
     }
-    return true;
+
+    return crypto_sign_detached(signature, nullptr, data, dataSize, m_sk.data()) == 0;
 }
 
-void ThorQ::Crypto::Signer::reset_nolock()
+bool ThorQ::Crypto::Signer::verify(const std::uint8_t* data, std::size_t dataSize, const std::uint8_t* signature, std::size_t signatureSize) const
 {
-    memset(m_pk.data(), 0, ThorQ::Crypto::Signer::PublicKeyLen);
-    memset(m_sk.data(), 0, ThorQ::Crypto::Signer::SecretKeyLen);
-    m_state = State::Uninitialized;
+    if (signatureSize != Signer::SignatureLen) {
+        return false;
+    }
+
+    return crypto_sign_verify_detached(signature, data, dataSize, m_pk.data()) == 0;
 }
