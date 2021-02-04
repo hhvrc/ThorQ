@@ -25,11 +25,11 @@ jobs:
           git clone https://github.com/google/flatbuffers.git flatbuffers
           cd flatbuffers
           cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release .
-          cmake --build . --target install --config Release
+          cmake --build . --target install --parallel --config Release
           cd ..
       - name: cmake
         run: |
           cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_MODULE_PATH=C:/Program Files/FlatBuffers/lib/cmake/flatbuffers/ .
       - name: build
         run: |
-          msbuild ThorQ.sln /p:Configuration=Release /p:Platform=x64
+          cmake --build . --target BUILD_ALL --parallel --config Release
