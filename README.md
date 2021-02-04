@@ -1,5 +1,8 @@
 # ThorQ
 
+![Ubuntu](https://github.com/hhvrc/ThorQ/workflows/Ubuntu/badge.svg)
+![Windows](https://github.com/hhvrc/ThorQ/workflows/Windows/badge.svg)
+
 Server and Client to control a shock-collar remotely from anywhere in the world.
 
 ##### Why?

@@ -34,7 +34,7 @@ add_subdirectory(flatbuffers)
 # Restore flags
 set(CMAKE_CXX_FLAGS ${PREV_FLAGS})
 
-find_program (FLATC_EXEC flatc)
+find_program (FLATC_EXEC NAMES flatc)
 
 if(${FLATC_EXEC} STREQUAL "FLATC_EXEC-NOTFOUND")
     message(FATAL_ERROR "Could not find flatbuffers compiler, please make sure it exists in path!")

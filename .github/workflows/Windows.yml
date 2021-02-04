@@ -1,0 +1,35 @@
+name: Windows
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: git clone
+        uses: actions/checkout@v2
+        with: 
+          submodules: true
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v2
+        with:
+          install-deps: 'true'
+          modules: 'qtcore qtgui qtopengl qtwidgets qtserialport qtconcurrent qtnetwork'
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.0.2
+      - name: Install flatbuffers compiler
+        run: |
+          git clone https://github.com/google/flatbuffers.git flatbuffers
+          cd flatbuffers
+          cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release .
+          cmake --build . --target install --config Release
+          cd ..
+      - name: cmake
+        run: |
+          cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release .
+      - name: build
+        run: |
+          msbuild ThorQ.sln /p:Configuration=Release /p:Platform=x64
