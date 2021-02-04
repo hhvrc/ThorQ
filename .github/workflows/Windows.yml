@@ -26,7 +26,7 @@ jobs:
           cd flatbuffers
           cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release .
           cmake --build . --target install --config Release
-          set PATH=%PATH%;%CD%
+          set PATH=%PATH%;%cd%
           cd ..
       - name: cmake
         run: |
