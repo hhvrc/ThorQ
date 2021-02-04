@@ -21,7 +21,7 @@ jobs:
       - name: Install apt packages
         run: |
           sudo apt update
-          sudo apt install cmake build-essential gcc-10 g++-10 libstdc++-10-dev libstdc++-10-doc
+          sudo apt install cmake build-essential libsodium-dev gcc-10 g++-10 libstdc++-10-dev libstdc++-10-doc libc6 libc6-dev
       - name: Install flatbuffers compiler
         run: |
           git clone https://github.com/google/flatbuffers.git flatbuffers
