@@ -22,11 +22,10 @@ jobs:
         uses: microsoft/setup-msbuild@v1.0.2
       - name: Install flatbuffers compiler
         run: |
-          git clone https://github.com/google/flatbuffers.git flatbuffers
-          cd flatbuffers
-          cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release .
-          cmake --build . --target install --parallel --config Release
-          cd ..
+          git clone --depth=1 --recurse-submodules https://github.com/google/flatbuffers.git flatbuffers-src
+          cmake -S flatbuffers-src -B flatbuffers-build -G "Visual Studio 16 2019" -A x64
+          cmake --build flatbuffers-build --config Release --parallel
+          cmake --install flatbuffers-build --config --config Release
       - name: cmake
         run: |
           cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_MODULE_PATH=C:/Program Files/FlatBuffers/lib/cmake/flatbuffers/ .
