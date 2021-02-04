@@ -17,7 +17,7 @@ ThorQ::ApiClient::ApiClient(QObject *parent)
     , m_pollTimer(new QTimer(this))
     , m_asio((int)std::thread::hardware_concurrency())
     , m_threads()
-    , m_status(ProcessStatus::Stopped)
+    , m_processStatus(ProcessStatus::Stopped)
     , m_connection(nullptr)
     , m_incomingMessages()
     , m_incomingMessagesToken(m_incomingMessages)
@@ -41,9 +41,10 @@ ThorQ::ApiClient::~ApiClient()
 
 bool ThorQ::ApiClient::netConnect(QString host, quint16 port)
 {
-    auto expected = ProcessStatus::Stopped;
-    if (m_status.compare_exchange_strong(expected, ProcessStatus::Starting, std::memory_order::relaxed, std::memory_order::acquire))
+    ProcessStatus expected = processStatus();
+    if (expected == ProcessStatus::Stopped)
     {
+        setProcessStatus(ProcessStatus::Starting);
         std::string hostStdString = host.toStdString();
 
         try
@@ -71,7 +72,7 @@ bool ThorQ::ApiClient::netConnect(QString host, quint16 port)
 
         m_pollTimer->start();
 
-        m_status = ProcessStatus::Running;
+        setProcessStatus(ProcessStatus::Running);
         return true;
     }
 
@@ -80,9 +81,9 @@ bool ThorQ::ApiClient::netConnect(QString host, quint16 port)
 
 void ThorQ::ApiClient::netDisconnect()
 {
-    auto expected = ProcessStatus::Running;
-    if (m_status.compare_exchange_strong(expected, ProcessStatus::Stopping, std::memory_order::relaxed, std::memory_order::acquire))
+    if (processStatus() == ProcessStatus::Running)
     {
+        setProcessStatus(ProcessStatus::Stopping);
         m_pollTimer->stop();
 
         m_asio.stop();
@@ -94,10 +95,11 @@ void ThorQ::ApiClient::netDisconnect()
                 it->join();
             }
         }
+
         m_threads.clear();
         m_connection = nullptr;
 
-        m_status = ProcessStatus::Running;
+        setProcessStatus(ProcessStatus::Stopped);
     }
 }
 
@@ -109,16 +111,52 @@ void ThorQ::ApiClient::pollQueue()
         return;
     }
 
-    if (connection->status() == ConnectionStatus::Disconnected) {
-        emit netDisconnected();
-        m_connection = nullptr;
-        return;
-    }
-
     std::shared_ptr<std::vector<std::uint8_t>> message;
     while (m_incomingMessages.try_dequeue(m_incomingMessagesToken, message)) {
         parseMessage(message);
     }
+
+    ConnectionStatus status = connection->status();
+    if (setConnectionStatus(status)) {
+        switch (status) {
+        case ConnectionStatus::Error:
+            emit errorOccured(
+                        QString::fromStdString(
+                            m_connection->latestErrorCode().message()));
+            break;
+        case ConnectionStatus::Disconnected:
+            emit netDisconnected();
+            m_connection = nullptr;
+            return;
+        case ConnectionStatus::Connected:
+            emit netConnected();
+            break;
+        case ConnectionStatus::Connecting:
+        case ConnectionStatus::Disconnecting:
+        default: // UHMMMM
+            break;
+        }
+    }
+}
+
+bool ThorQ::ApiClient::setProcessStatus(ProcessStatus status)
+{
+    if (m_processStatus != status) {
+        m_processStatus = status;
+        emit processStatusChanged(status);
+        return true;
+    }
+    return false;
+}
+
+bool ThorQ::ApiClient::setConnectionStatus(ConnectionStatus status)
+{
+    if (m_connectionStatus != status) {
+        m_connectionStatus = status;
+        emit connectionStatusChanged(status);
+        return true;
+    }
+    return false;
 }
 
 void ThorQ::ApiClient::parseMessage(std::shared_ptr<std::vector<std::uint8_t>> message)

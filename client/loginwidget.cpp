@@ -6,13 +6,25 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QGraphicsDropShadowEffect>
+#include <QCoreApplication>
+
+struct UiState {
+    const char* text;
+    const char* styleSheet;
+    bool hasPingIndicator;
+};
+
+UiState uiConnectionStatusList[]
+{
+    { "● Error",                    "font-size: 16px; color: #FF0000", false }, // ConnectionStatus::Error
+    { "● Offline",                  "font-size: 16px; color: #FF0000", false }, // ConnectionStatus::Disconnected
+    { "● Connecting..."   ,         "font-size: 16px; color: #FFA500", false }, // ConnectionStatus::Connecting
+    { "● Connected\n%1 ms",         "font-size: 16px; color: #00FF00", true  }, // ConnectionStatus::Connected
+    { "● Disconnecting...",         "font-size: 16px; color: #FF0000", false }, // ConnectionStatus::Disconnecting
+};
 
 const char* uiStatusList[][2]
 {
-    { "● Offline",                  "font-size: 16px; color: #FF0000" }, // THORQ_STATE_CONNECTION_DISCONNECTED
-    { "● Disconnecting...",         "font-size: 16px; color: #FF0000" }, // THORQ_STATE_CONNECTION_DISCONNECTING
-    { "● Connecting..."   ,         "font-size: 16px; color: #FFA500" }, // THORQ_STATE_CONNECTION_CONNECTING
-    { "● Connected\n%1 ms",         "font-size: 16px; color: #00FF00" }, // THORQ_STATE_CONNECTION_CONNECTED
 
     { "● Requesting...\n%1 ms",     "font-size: 16px; color: #FFA500" }, // THORQ_STATE_CRYPTO_REQUESTED
     { "● Encrypting...\n%1 ms",     "font-size: 16px; color: #FFA500" }, // THORQ_STATE_CRYPTO_ESTABLISHING
@@ -27,9 +39,22 @@ const char* uiStatusList[][2]
     { "● Logged in\n%1 ms",         "font-size: 16px; color: #00FF00" }, // THORQ_STATE_LOGIN_LOGGEDIN
 };
 
+inline void setLabelText(QLabel* label, const UiState& state, unsigned int ping = 0)
+{
+    QString str = QCoreApplication::tr(state.text);
+
+    label->setStyleSheet(state.styleSheet);
+    if (state.hasPingIndicator) {
+        label->setText(str.arg(ping));
+    }
+    else {
+        label->setText(str);
+    }
+}
+
 LoginWidget::LoginWidget(QWidget* parent)
 	: QWidget(parent)
-    , m_state(0)
+    , m_connectionStatus(ConnectionStatus::Error)
     , m_ping(0)
     , m_title(new QLabel(this))
     , m_onlineStatus(new QLabel(this))
@@ -43,8 +68,7 @@ LoginWidget::LoginWidget(QWidget* parent)
     m_title->setText("ThorQ");
     m_title->setStyleSheet("font-size: 72px; color: #FFFFFF");
 
-    m_onlineStatus->setText(tr(uiStatusList[0][0]));
-    m_onlineStatus->setStyleSheet("font-size: 16px; color: #FF0000");
+    setLabelText(m_onlineStatus, uiConnectionStatusList[0]);
 
 	m_headerLayout->addWidget(m_title);
     m_headerLayout->addWidget(m_onlineStatus);
@@ -73,40 +97,47 @@ LoginWidget::~LoginWidget()
 	delete m_headerLayout;
 }
 
-void LoginWidget::setConnectionState(THORQ_STATE_CONNECTION state)
+void LoginWidget::setConnectionStatus(ConnectionStatus status)
 {
-    if (m_state != state)
+    if (m_connectionStatus != status)
 	{
-        m_state = state;
+        m_connectionStatus = status;
+        setLabelText(m_onlineStatus, uiConnectionStatusList[(int)status], m_ping);
         updateUiState();
     }
 }
 
 void LoginWidget::setCryptoState(THORQ_STATE_CRYPTO state)
 {
-    if (m_state != state)
+    /*
+    if (m_connectionStatus != state)
     {
-        m_state = state;
+        m_connectionStatus = state;
         updateUiState();
     }
+    */
 }
 
 void LoginWidget::setHwidState(THORQ_STATE_HWID state)
 {
-    if (m_state != state)
+    /*
+    if (m_connectionStatus != state)
     {
-        m_state = state;
+        m_connectionStatus = state;
         updateUiState();
     }
+    */
 }
 
 void LoginWidget::setLoginState(THORQ_STATE_LOGIN state)
 {
-    if (m_state != state)
+    /*
+    if (m_connectionStatus != state)
     {
-        m_state = state;
+        m_connectionStatus = state;
         updateUiState();
     }
+    */
 }
 
 void LoginWidget::setConnectionPing(uint ping)
@@ -120,18 +151,8 @@ void LoginWidget::setConnectionPing(uint ping)
 
 void LoginWidget::updateUiState()
 {
-    m_onlineStatus->setStyleSheet(uiStatusList[m_state][1]);
-
-    if (m_state < THORQ_STATE_CONNECTION_CONNECTED)
-    {
-        m_onlineStatus->setText(tr(uiStatusList[m_state][0]));
-    }
-    else
-    {
-        m_onlineStatus->setText(tr(uiStatusList[m_state][0]).arg(m_ping));
-    }
-
-    if (m_state == THORQ_STATE_LOGIN_LOGGEDOUT)
+    /*
+    if (m_connectionStatus == THORQ_STATE_LOGIN_LOGGEDOUT)
     {
         m_textInput->setText("");
         m_textInput->show();
@@ -148,7 +169,7 @@ void LoginWidget::updateUiState()
         adjustSize();
     }
 
-	if (m_state < THORQ_STATE_LOGIN_LOGGEDIN)
+    if (m_connectionStatus < THORQ_STATE_LOGIN_LOGGEDIN)
 	{
 		show();
 	}
@@ -156,12 +177,13 @@ void LoginWidget::updateUiState()
 	{
 		hide();
 	}
+    */
 }
 
 void LoginWidget::updateUiPing()
 {
-    if (m_state >= THORQ_STATE_CONNECTION_CONNECTED)
+    if (m_connectionStatus == ConnectionStatus::Connected)
     {
-        m_onlineStatus->setText(tr(uiStatusList[m_state][0]).arg(m_ping));
+        //m_onlineStatus->setText(tr(uiStatusList[m_connectionStatus][0]).arg(m_ping));
     }
 }

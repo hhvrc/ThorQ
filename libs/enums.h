@@ -14,23 +14,6 @@ enum class THORQ_APP : std::uint8_t
     _MAX
 };
 
-enum class ProcessStatus
-{
-    Error,
-    Stopped,
-    Starting,
-    Running,
-    Stopping
-};
-enum class ConnectionStatus
-{
-    Error,
-    Disconnected,
-    Connecting,
-    Connected,
-    Disconnecting
-};
-
 /// Id of a device or service that client has
 enum THORQ_USER_ACTIVITY_FLAG : std::uint8_t
 {
@@ -62,24 +45,27 @@ enum class THORQ_DISCONNECT_REASON : std::uint32_t
     _MAX
 };
 
-////////////////////////////////////////////////////
-/// STATE MACHINES
-////////////////////////////////////////////////////
-
-/// State machine for connection
-enum THORQ_STATE_CONNECTION
+enum class ConnectionStatus
 {
-	THORQ_STATE_CONNECTION_DISCONNECTED,  ///< Host is disconnected
-	THORQ_STATE_CONNECTION_DISCONNECTING, ///< Host has requested that the server disconnects it gracefully
-	THORQ_STATE_CONNECTION_CONNECTING,    ///< Host is connecting
-	THORQ_STATE_CONNECTION_CONNECTED,     ///< Host is connected
+    Error,
+    Disconnected,
+    Connecting,
+    Connected,
+    Disconnecting
+};
+enum class ProcessStatus
+{
+    Stopped,
+    Starting,
+    Running,
+    Stopping
 };
 
 /// @enum THORQ_STATE_CRYPTO
 /// State machine for crypto
 enum THORQ_STATE_CRYPTO
 {
-	THORQ_STATE_CRYPTO_NONE = THORQ_STATE_CONNECTION_CONNECTED, ///< The cryptographic link with the other host has not been established yet
+    THORQ_STATE_CRYPTO_NONE, //= THORQ_STATE_CONNECTION_CONNECTED, ///< The cryptographic link with the other host has not been established yet
 	THORQ_STATE_CRYPTO_REQUESTED,                               ///< A request has been sent to the other host, requesting to begin a handshake
 	THORQ_STATE_CRYPTO_ESTABLISHING,                            ///< Hosts are now attempting to establish a shared secret
 	THORQ_STATE_CRYPTO_VERIFYING,                               ///< Hosts are not trying to verify that they successfully agreed on a shared secret

@@ -74,6 +74,11 @@ void ThorQ::ApiServerConnection::setSystemID(std::shared_ptr<std::vector<uint8_t
     m_systemID = systemID;
 }
 
+void ThorQ::ApiServerConnection::onError(std::error_code ec)
+{
+    fmt::print(stderr, "[CONNECTION] Error: {}\n", ec.message());
+}
+
 void ThorQ::ApiServerConnection::onConnect(std::vector<std::uint8_t> address, std::uint16_t port)
 {
     fmt::print("[CONNECTION] Connected\n");
