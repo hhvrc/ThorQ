@@ -3,20 +3,22 @@ cmake_minimum_required(VERSION 3.5)
 set(project ThorQLib)
 project(
         ${project}
-	DESCRIPTION "Files/Libraries that is used by both the server and the client"
-	LANGUAGES CXX
+        DESCRIPTION "Files/Libraries that is used by both the server and the client"
+        LANGUAGES CXX
 )
 
 message("Configuring ${project}...")
 
 # ---------- fmt ----------
-
 add_subdirectory(fmt)
+# -------------------------
 
+# ------- libsodium -------
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSODIUM_STATIC")
+set(SODIUM_LINK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/${BUILD_OS}${VPTR_BITS}-${BUILD_TYPE})
 # -------------------------
 
 # ------ flatbuffers ------
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFLATBUFFERS_USE_STD_SPAN") # C++20 :D
 
 # Save flags
@@ -48,7 +50,7 @@ foreach(SCHEMA ${${project}_SCHEMAS})
     set(FLATC_OUTPUT_FILE "${FLATC_OUTPUT_DIR}/${SCHEMA_NAME}_generated.h")
     add_custom_command(
         OUTPUT ${FLATC_OUTPUT_FILE}
-	COMMAND ${FLATC_EXEC}
+        COMMAND ${FLATC_EXEC}
         ARGS --cpp
         ARGS --force-empty
         ARGS --gen-mutable
@@ -65,9 +67,7 @@ endforeach()
 # -------------------------
 
 # ---- concurrentqueue ----
-
 add_subdirectory(concurrentqueue)
-
 # -------------------------
 
 set(${project}_SOURCES
@@ -117,9 +117,10 @@ set(${project}_HEADERS
     ${${project}_SCHEMAS}
 )
 
-set(GLOB_LINK_DIRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/${BUILD_OSL}
+message("${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/${BUILD_OSL}-x${VPTR_BITS}")
 
+set(GLOB_LINK_DIRS
+    ${SODIUM_LINK_DIR}
     CACHE PATH "List of library directories for link libraries"
     )
 
