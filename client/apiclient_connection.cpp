@@ -46,9 +46,9 @@ void ThorQ::ApiClientConnection::onDisconnect()
 
 bool ThorQ::ApiClientConnection::onHeader(const ThorQ::Encoding::MessageHeader* header)
 {
-    fmt::print("[CONNECTION] Header\n");
+    fmt::print("[CONNECTION] Header {}\n", ntohl(header->bodySize));
 
-    return header->bodySize >= ThorQ::Encoding::MinimumMessageSize && header->bodySize <= ThorQ::Encoding::MaximumMessageSize;
+    return ThorQ::Encoding::isHeaderValid(header);
 }
 
 void ThorQ::ApiClientConnection::onMessage(std::shared_ptr<std::vector<std::uint8_t>> message)

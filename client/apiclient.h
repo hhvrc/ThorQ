@@ -36,12 +36,14 @@ signals:
 
     void errorOccured(QString error);
 private slots:
-    void pollQueue();
+    void pollEvents();
 private:
     bool setProcessStatus(ProcessStatus status);
     bool setConnectionStatus(ConnectionStatus status);
 
-    void parseMessage(std::shared_ptr<std::vector<std::uint8_t>> message);
+    void onConnect();
+    void onDisconnect();
+    void onMessage(std::shared_ptr<std::vector<std::uint8_t>> message);
 
     void onCryptoEstablished();
 

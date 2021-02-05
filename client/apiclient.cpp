@@ -18,6 +18,7 @@ ThorQ::ApiClient::ApiClient(QObject *parent)
     , m_asio((int)std::thread::hardware_concurrency())
     , m_threads()
     , m_processStatus(ProcessStatus::Stopped)
+    , m_connectionStatus(ConnectionStatus::Disconnected)
     , m_connection(nullptr)
     , m_incomingMessages()
     , m_incomingMessagesToken(m_incomingMessages)
@@ -27,6 +28,7 @@ ThorQ::ApiClient::ApiClient(QObject *parent)
     , m_crypto()
     , m_buffer(THORQ_PAYLOAD_LEN_MAX)
 {
+    QObject::connect(m_pollTimer, &QTimer::timeout, this, &ApiClient::pollEvents);
     m_pollTimer->setInterval(0);
     m_pollTimer->setSingleShot(false);
 
@@ -103,7 +105,7 @@ void ThorQ::ApiClient::netDisconnect()
     }
 }
 
-void ThorQ::ApiClient::pollQueue()
+void ThorQ::ApiClient::pollEvents()
 {
     auto connection = m_connection;
 
@@ -113,7 +115,7 @@ void ThorQ::ApiClient::pollQueue()
 
     std::shared_ptr<std::vector<std::uint8_t>> message;
     while (m_incomingMessages.try_dequeue(m_incomingMessagesToken, message)) {
-        parseMessage(message);
+        onMessage(message);
     }
 
     ConnectionStatus status = connection->status();
@@ -125,10 +127,12 @@ void ThorQ::ApiClient::pollQueue()
                             m_connection->latestErrorCode().message()));
             break;
         case ConnectionStatus::Disconnected:
+            onDisconnect();
             emit netDisconnected();
             m_connection = nullptr;
             return;
         case ConnectionStatus::Connected:
+            onConnect();
             emit netConnected();
             break;
         case ConnectionStatus::Connecting:
@@ -159,7 +163,17 @@ bool ThorQ::ApiClient::setConnectionStatus(ConnectionStatus status)
     return false;
 }
 
-void ThorQ::ApiClient::parseMessage(std::shared_ptr<std::vector<std::uint8_t>> message)
+void ThorQ::ApiClient::onConnect()
+{
+    establishCrypto();
+}
+
+void ThorQ::ApiClient::onDisconnect()
+{
+
+}
+
+void ThorQ::ApiClient::onMessage(std::shared_ptr<std::vector<std::uint8_t>> message)
 {
     fmt::print("[CLIENT] Message\n");
 

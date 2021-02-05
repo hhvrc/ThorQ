@@ -64,7 +64,7 @@ std::error_code ThorQ::Networking::TcpConnection::latestErrorCode() const
 
 void ThorQ::Networking::TcpConnection::messageSend(std::shared_ptr<std::vector<std::uint8_t>> message)
 {
-    fmt::print("[TCP-CONNECTION] messageSend\n");
+    fmt::print("[TCP-CONNECTION] messageSend {}\n", message->size());
 
     auto buffer = asio::buffer(message->data(), message->size());
     asio::async_write(m_socket, buffer, std::bind(&TcpConnection::writeMessageCompletionHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2, std::move(message)));
@@ -95,7 +95,7 @@ void ThorQ::Networking::TcpConnection::readHeader()
 
 void ThorQ::Networking::TcpConnection::readBody(std::shared_ptr<std::vector<std::uint8_t>> message)
 {
-    auto buffer = asio::buffer(message->data(), message->size());
+    auto buffer = asio::buffer(message->data() + ThorQ::Encoding::HeaderSize, message->size() - ThorQ::Encoding::HeaderSize);
     asio::async_read(m_socket, buffer, std::bind(&TcpConnection::readBodyCompletionHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2, std::move(message)));
 }
 
@@ -192,18 +192,21 @@ void ThorQ::Networking::TcpConnection::readHeaderCompletionHandler(const std::er
 
     m_totalReceivedData += length;
 
-    auto header = reinterpret_cast<ThorQ::Encoding::MessageHeader*>(message->data());
+    ThorQ::Encoding::MessageHeader* header = reinterpret_cast<ThorQ::Encoding::MessageHeader*>(message->data());
 
     if (onHeader(header))
     {
-        if (header->bodySize > 0)
-        {
-            message->resize(ThorQ::Encoding::HeaderSize + header->bodySize);
+        std::uint32_t bodySize = ntohl(header->bodySize);
 
+        if (bodySize > 0)
+        {
+            fmt::print("[TCP-CONNECTION] Reading body\n");
+            message->resize(ThorQ::Encoding::HeaderSize + bodySize);
             readBody(std::move(message));
         }
         else
         {
+            fmt::print("[TCP-CONNECTION] Empty header\n");
             m_totalReceivedPackets++;
             // There is nothing more to do here
         }

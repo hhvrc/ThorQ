@@ -97,6 +97,8 @@ int main(int argc, char** argv)
     errorBox.setWindowTitle("warning");
 
     QObject::connect(apiClient, &ThorQ::ApiClient::connectionStatusChanged, &loginWidget, &LoginWidget::setConnectionStatus);
+    QObject::connect(apiClient, &ThorQ::ApiClient::errorOccured, &errorBox, &QMessageBox::setText);
+    QObject::connect(apiClient, &ThorQ::ApiClient::errorOccured, &errorBox, &QMessageBox::show);
 /*
     QObject::connect(cli, &ThorQ::Networking::Client::rttChanged, &mainWidget, &MainWidget::setConnectionPing);
     QObject::connect(cli, &ThorQ::Networking::Client::LoginStateChanged, &mainWidget, &MainWidget::setLoginState);
