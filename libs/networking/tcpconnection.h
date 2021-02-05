@@ -7,6 +7,7 @@
 
 #include "asio_common.h"
 
+#include <shared_mutex>
 #include <vector>
 #include <memory>
 #include <atomic>
@@ -30,6 +31,8 @@ public:
 
     inline ConnectionStatus status() const { return m_status.load(std::memory_order::relaxed); }
 
+    std::error_code latestErrorCode() const;
+
     inline std::uint64_t totalDataSent() const { return m_totalSentData.load(std::memory_order::relaxed); }
     inline std::uint64_t totalPacketsSent() const { return m_totalSentPackets.load(std::memory_order::relaxed); }
     inline std::uint64_t totalDataReceived() const { return m_totalReceivedData.load(std::memory_order::relaxed); }
@@ -37,11 +40,17 @@ public:
 
     void messageSend(std::shared_ptr<std::vector<std::uint8_t>> message);
 protected:
+    virtual void onError(std::error_code ec) = 0;
     virtual void onConnect(std::vector<std::uint8_t> address, std::uint16_t port) = 0;
     virtual void onDisconnect() = 0;
     virtual bool onHeader(const ThorQ::Encoding::MessageHeader* header) = 0;
     virtual void onMessage(std::shared_ptr<std::vector<std::uint8_t>> message) = 0;
 private:
+    inline void setStatus(ConnectionStatus status) { m_status.store(status, std::memory_order_relaxed); }
+    inline bool setStatusIf(ConnectionStatus& expected, ConnectionStatus newStatus) { return m_status.compare_exchange_strong(expected, newStatus, std::memory_order::relaxed, std::memory_order::acquire); }
+
+    void setErrorCode(const std::error_code& ec);
+
     void writeDone();
 
     void readHeader();
@@ -62,6 +71,10 @@ private:
     asio::ip::tcp::socket m_socket;
 
     std::atomic<ConnectionStatus> m_status;
+
+    std::shared_mutex l_errorCode;
+    std::error_code m_errorCode;
+
     std::atomic_uint64_t m_totalSentData;
     std::atomic_uint64_t m_totalSentPackets;
     std::atomic_uint64_t m_totalReceivedData;

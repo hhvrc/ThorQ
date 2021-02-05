@@ -29,6 +29,11 @@ ThorQ::ApiClientConnection::~ApiClientConnection()
     fmt::print("[CONNECTION] Destroyed\n");
 }
 
+void ThorQ::ApiClientConnection::onError(std::error_code ec)
+{
+    fmt::print(stderr, "[CONNECTION] Error: {}\n", ec.message());
+}
+
 void ThorQ::ApiClientConnection::onConnect(std::vector<std::uint8_t> address, std::uint16_t port)
 {
     fmt::print("[CONNECTION] Connected\n");
@@ -41,9 +46,9 @@ void ThorQ::ApiClientConnection::onDisconnect()
 
 bool ThorQ::ApiClientConnection::onHeader(const ThorQ::Encoding::MessageHeader* header)
 {
-    fmt::print("[CONNECTION] Header\n");
+    fmt::print("[CONNECTION] Header {}\n", ntohl(header->bodySize));
 
-    return header->bodySize >= ThorQ::Encoding::MinimumMessageSize && header->bodySize <= ThorQ::Encoding::MaximumMessageSize;
+    return ThorQ::Encoding::isHeaderValid(header);
 }
 
 void ThorQ::ApiClientConnection::onMessage(std::shared_ptr<std::vector<std::uint8_t>> message)
@@ -52,6 +57,6 @@ void ThorQ::ApiClientConnection::onMessage(std::shared_ptr<std::vector<std::uint
 
     while (!m_incomingMessages.enqueue(message)) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        fmt::print("[CONNECTION] Failed to queue message, retrying...\n");
+        fmt::print(stderr, "[CONNECTION] Failed to queue message, retrying...\n");
     }
 }

@@ -32,6 +32,7 @@ public:
     ~ApiClientConnection();
 private:
     // Event handlers
+    void onError(std::error_code ec) override;
     void onConnect(std::vector<std::uint8_t> address, std::uint16_t port) override;
     void onDisconnect() override;
     bool onHeader(const ThorQ::Encoding::MessageHeader* header) override;

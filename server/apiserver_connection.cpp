@@ -74,6 +74,11 @@ void ThorQ::ApiServerConnection::setSystemID(std::shared_ptr<std::vector<uint8_t
     m_systemID = systemID;
 }
 
+void ThorQ::ApiServerConnection::onError(std::error_code ec)
+{
+    fmt::print(stderr, "[CONNECTION] Error: {}\n", ec.message());
+}
+
 void ThorQ::ApiServerConnection::onConnect(std::vector<std::uint8_t> address, std::uint16_t port)
 {
     fmt::print("[CONNECTION] Connected\n");
@@ -86,13 +91,9 @@ void ThorQ::ApiServerConnection::onDisconnect()
 
 bool ThorQ::ApiServerConnection::onHeader(const ThorQ::Encoding::MessageHeader* header)
 {
-    fmt::print("[CONNECTION] Header {}\n", header->bodySize);
-    if (header->bodySize > ThorQ::Encoding::MaximumMessageSize - ThorQ::Encoding::HeaderSize ||
-        header->bodySize < ThorQ::Encoding::MinimumMessageSize - ThorQ::Encoding::HeaderSize)
-    {
-        return false;
-    }
-    return true;
+    fmt::print("[CONNECTION] Header {}\n", ntohl(header->bodySize));
+
+    return ThorQ::Encoding::isHeaderValid(header);
 }
 
 void ThorQ::ApiServerConnection::onMessage(std::shared_ptr<std::vector<std::uint8_t>> message)
@@ -333,6 +334,7 @@ void ThorQ::ApiServerConnection::handleMessageCrypto(const void* body, flatbuffe
             auto myPk = m_crypto.publicKey();
 
             ThorQ::Crypto::Signer signer;
+            signer.generateKeyPair();
 
             // TODO: load this at server startup
             if (!signer.tryLoadFromFile("server.pksk")) {

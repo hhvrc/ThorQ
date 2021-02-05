@@ -40,31 +40,37 @@ enum PREENCRYPTION_FLAG : std::uint16_t
     RESERVED_16 = 1 << 15
 };
 
-bool isCorrupted(const ThorQ::Encoding::MessageHeader& header, const std::uint8_t* data, std::uint32_t size) {
-    return header.checkSum == ThorQ::Hashing::Crc32(data, size);
+bool isCorrupted(const ThorQ::Encoding::MessageHeader* header, const std::uint8_t* data, std::uint32_t size) {
+    return ntohl(header->checkSum) != ThorQ::Hashing::Crc32(data, size);
 }
-constexpr bool isEncrypted(const ThorQ::Encoding::MessageHeader& header) {
-    return (header.flags & PREENCRYPTION_FLAG::ENCRYPTED) != 0;
+bool isEncrypted(const ThorQ::Encoding::MessageHeader* header) {
+    return (ntohs(header->flags) & PREENCRYPTION_FLAG::ENCRYPTED) != 0;
 }
 constexpr std::uint32_t PacketOverhead(bool encrypted) {
     return sizeof(ThorQ::Encoding::MessageHeader) + (encrypted ? ThorQ::Crypto::Encryption::DataOverhead : 0);
 }
+bool ThorQ::Encoding::isHeaderValid(const ThorQ::Encoding::MessageHeader* header) {
+    std::uint32_t bodySize = ntohl(header->bodySize);
+
+    return bodySize >= ThorQ::Encoding::MinimumMessageSize - ThorQ::Encoding::HeaderSize &&
+           bodySize <= ThorQ::Encoding::MaximumMessageSize - ThorQ::Encoding::HeaderSize;
+}
 bool ThorQ::Encoding::isMessageValid(const std::uint8_t* data, std::uint32_t size) {
-    if (size < ThorQ::Encoding::MinimumMessageSize || size > ThorQ::Encoding::MaximumMessageSize) {
+    if (size <= ThorQ::Encoding::MinimumMessageSize || size >= ThorQ::Encoding::MaximumMessageSize) {
         return false;
     }
 
-    std::uint32_t bodySize = size - sizeof(MessageHeader);
-    const std::uint8_t* bodyPtr = data + sizeof(MessageHeader);
+    std::uint32_t bodySize = size - ThorQ::Encoding::HeaderSize;
+    const std::uint8_t* bodyPtr = data + ThorQ::Encoding::HeaderSize;
     const MessageHeader* headerPtr = reinterpret_cast<const MessageHeader*>(data);
 
-    if (isCorrupted(*headerPtr, bodyPtr, bodySize)) {
+    if (isCorrupted(headerPtr, bodyPtr, bodySize)) {
         return false;
     }
 
-    std::uint32_t dataSize = bodySize - PacketOverhead(isEncrypted(*headerPtr));
+    std::uint32_t payloadSize = size - PacketOverhead(isEncrypted(headerPtr));
 
-    return dataSize < THORQ_PAYLOAD_LEN_MIN || dataSize > THORQ_PAYLOAD_LEN_MAX;
+    return payloadSize >= THORQ_PAYLOAD_LEN_MIN && payloadSize <= THORQ_PAYLOAD_LEN_MAX;
 }
 std::uint32_t ThorQ::Encoding::calculateMessageSize(std::uint32_t dataSize, bool encrypt) {
     return dataSize + PacketOverhead(encrypt);
@@ -74,11 +80,11 @@ std::uint32_t ThorQ::Encoding::calculateDataSize(const std::uint8_t* data, std::
         return 0;
     }
 
-    return size - PacketOverhead(isEncrypted(*reinterpret_cast<const MessageHeader*>(data)));
+    return size - PacketOverhead(isEncrypted(reinterpret_cast<const MessageHeader*>(data)));
 }
 
 bool ThorQ::Encoding::messageEncode(const std::uint8_t* dataIn, std::uint32_t sizeIn, std::uint8_t* dataOut, std::uint32_t sizeOut) {
-    std::size_t requiredSize = sizeIn + PacketOverhead(true);
+    std::size_t requiredSize = sizeIn + PacketOverhead(false);
 
     // Check output bounds
     if (sizeOut != requiredSize) {
@@ -98,9 +104,9 @@ bool ThorQ::Encoding::messageEncode(const std::uint8_t* dataIn, std::uint32_t si
     MessageHeader& header = *reinterpret_cast<MessageHeader*>(dataOut);
 
     // Set header properties
-    header.bodySize     = htonl(bodySize);
+    header.bodySize = htonl(bodySize);
     header.checkSum = htonl(ThorQ::Hashing::Crc32(bodyPtr, bodySize));
-    header.flags    = htonl(PREENCRYPTION_FLAG::NONE);
+    header.flags    = htons(PREENCRYPTION_FLAG::NONE);
 
     return true;
 }
@@ -126,31 +132,36 @@ bool ThorQ::Encoding::messageEncode(const std::uint8_t* dataIn, std::uint32_t si
     MessageHeader& header = *reinterpret_cast<MessageHeader*>(dataOut);
 
     // Set header properties
-    header.bodySize     = htonl(bodySize);
+    header.bodySize = htonl(bodySize);
     header.checkSum = htonl(ThorQ::Hashing::Crc32(bodyPtr, bodySize));
-    header.flags    = htonl(PREENCRYPTION_FLAG::ENCRYPTED);
+    header.flags    = htons(PREENCRYPTION_FLAG::ENCRYPTED);
 
     return true;
 }
 
 bool ThorQ::Encoding::messageDecode(const std::uint8_t* dataIn, std::uint32_t sizeIn, std::uint8_t* dataOut, std::uint32_t sizeOut, const ThorQ::Crypto::Encryption& encrypter) {
     // Check header bounds
-    if (sizeIn > sizeof(MessageHeader)) {
+    if (sizeIn <= sizeof(MessageHeader)) {
         return false;
     }
 
     // Get header
-    const MessageHeader& header = *reinterpret_cast<const MessageHeader*>(dataIn);
+    const MessageHeader* header = reinterpret_cast<const MessageHeader*>(dataIn);
 
     // Check output bounds
-    if (sizeOut == sizeIn - PacketOverhead(isEncrypted(header))) {
+    if (sizeOut != sizeIn - PacketOverhead(isEncrypted(header))) {
         return false;
     }
 
     // Body bounds
-    const std::uint8_t* bodyPtr  = dataIn + sizeof(MessageHeader);
-    const std::uint32_t bodySize = sizeIn - sizeof(MessageHeader);
+    const std::uint8_t* payloadPtr  = dataIn + sizeof(MessageHeader);
+    const std::uint32_t payloadSize = sizeIn - sizeof(MessageHeader);
+
+    if (!isEncrypted(header)) {
+        memcpy(dataOut, payloadPtr, payloadSize);
+        return true;
+    }
 
     // Decrypt data
-    return encrypter.decrypt(bodyPtr, bodySize, dataOut, sizeOut);
+    return encrypter.decrypt(payloadPtr, payloadSize, dataOut, sizeOut);
 }

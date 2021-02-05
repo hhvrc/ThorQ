@@ -22,17 +22,28 @@ public:
     ApiClient(QObject* parent = nullptr);
     ~ApiClient();
 
+    ProcessStatus processStatus() const { return m_processStatus; }
+    ConnectionStatus connectionStatus() const { return m_connectionStatus; }
+
     bool netConnect(QString host, quint16 port);
     void netDisconnect();
 signals:
     void netConnected();
     void netDisconnected();
 
+    void processStatusChanged(ProcessStatus status);
+    void connectionStatusChanged(ConnectionStatus status);
+
     void errorOccured(QString error);
 private slots:
-    void pollQueue();
+    void pollEvents();
 private:
-    void parseMessage(std::shared_ptr<std::vector<std::uint8_t>> message);
+    bool setProcessStatus(ProcessStatus status);
+    bool setConnectionStatus(ConnectionStatus status);
+
+    void onConnect();
+    void onDisconnect();
+    void onMessage(std::shared_ptr<std::vector<std::uint8_t>> message);
 
     void onCryptoEstablished();
 
@@ -56,8 +67,9 @@ private:
 
     asio::io_context m_asio;
     std::vector<std::thread> m_threads;
-    std::atomic<ProcessStatus> m_status;
-    std::atomic<ProcessStatus> m_prevStatus;
+
+    ProcessStatus m_processStatus;
+    ConnectionStatus m_connectionStatus;
 
     std::shared_ptr<ThorQ::ApiClientConnection> m_connection;
 

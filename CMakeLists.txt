@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.5)
 
 set(project ThorQ)
 project(
-	${project}
-	DESCRIPTION "Software to control 3rd party collars"
+        ${project}
+        DESCRIPTION "Software to control 3rd party collars"
 )
 
 option(VERBOSE "Verbose compiler output" OFF)
@@ -21,11 +21,11 @@ endif()
 math(EXPR VPTR_BITS "${CMAKE_SIZEOF_VOID_P}*8") # Convert 4/8 -> 32/64
 
 if(UNIX AND NOT APPLE)
-	set(BUILD_OS "linux")
-	set(BUILD_OSL "linux")
+        set(BUILD_OS "linux")
+        set(BUILD_OSL "linux")
 elseif(WIN32)
-	set(BUILD_OS "win")
-	set(BUILD_OSL "windows")
+        set(BUILD_OS "win")
+        set(BUILD_OSL "windows")
 endif()
 
 string(TOLOWER ${CMAKE_CXX_COMPILER_ID} BUILD_COMPILER)
@@ -56,6 +56,7 @@ endif()
 add_definitions(-DBUILDER_STATIC_DEFINE)
 if(NOT ${CMAKE_BUILD_TYPE} MATCHES "Release")
     add_definitions(-DDEBUG)
+    set(BUILD_TYPE "dbg")
 
     if(MSVC)
         # Remove all previously declared flags before adding new ones
@@ -67,6 +68,8 @@ if(NOT ${CMAKE_BUILD_TYPE} MATCHES "Release")
         # Verboseeeee
         string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -pedantic -Wformat=2 -Wsign-conversion -Wundef -Wredundant-decls -Wwrite-strings -Wpointer-arith -Wcast-qual -Wmissing-include-dirs -Wcast-align -Wctor-dtor-privacy -Wdisabled-optimization -Winvalid-pch -Woverloaded-virtual -Wconversion -Wswitch-enum -Wno-ctor-dtor-privacy -Wno-format-nonliteral -Wnoexcept -Wno-dangling-else -Wno-unused-local-typedefs -Wdouble-promotion -Wtrampolines -Wzero-as-null-pointer-constant -Wuseless-cast -Wvector-operation-performance -Wsized-deallocation -Wshadow -Wshift-overflow=2 -Wnull-dereference -Wduplicated-cond")
     endif()
+else()
+    set(BUILD_TYPE "rel")
 endif()
 
 # Optimization and compiler specific fixes
@@ -80,9 +83,9 @@ if(MSVC)
     string(APPEND CMAKE_CXX_FLAGS " -DNOMINMAX -wo9025 -wo5054")
 
     if(${CMAKE_BUILD_TYPE} MATCHES "Release")
-	string(APPEND CMAKE_CXX_FLAGS " -MT -DEBUG:NONE -O2")
+        string(APPEND CMAKE_CXX_FLAGS " -MT -DEBUG:NONE -O2")
     else()
-	string(APPEND CMAKE_CXX_FLAGS " -MTd -DEBUG:FULL -Od")
+        string(APPEND CMAKE_CXX_FLAGS " -MTd -DEBUG:FULL -Od")
     endif()
 else()
     # 64-bit, and threading
@@ -94,7 +97,7 @@ else()
             string(APPEND CMAKE_CXX_FLAGS " -s")
         endif()
     else()
-	string(APPEND CMAKE_CXX_FLAGS " -O0 -g3")
+        string(APPEND CMAKE_CXX_FLAGS " -O0 -g3")
     endif()
 endif()
 # --------------------------

@@ -16,7 +16,8 @@
 #include "apiclient.h"
 #include "vr/openvroverlaycontroller.h"
 
-Q_DECLARE_METATYPE(THORQ_STATE_CONNECTION)
+Q_DECLARE_METATYPE(ConnectionStatus)
+Q_DECLARE_METATYPE(ProcessStatus)
 Q_DECLARE_METATYPE(THORQ_STATE_CRYPTO)
 Q_DECLARE_METATYPE(THORQ_STATE_HWID)
 Q_DECLARE_METATYPE(THORQ_STATE_LOGIN)
@@ -87,8 +88,6 @@ int main(int argc, char** argv)
     MainWidget mainWidget;
     ThorQ::ApiClient* apiClient = new ThorQ::ApiClient(&app);
 
-    apiClient->netConnect("localhost", 12345);
-
     QMessageBox errorBox(&loginWidget);
     errorBox.setIcon(QMessageBox::Critical);
     errorBox.setWindowTitle("error");
@@ -96,6 +95,10 @@ int main(int argc, char** argv)
     QMessageBox warningBox(&loginWidget);
     warningBox.setIcon(QMessageBox::Warning);
     errorBox.setWindowTitle("warning");
+
+    QObject::connect(apiClient, &ThorQ::ApiClient::connectionStatusChanged, &loginWidget, &LoginWidget::setConnectionStatus);
+    QObject::connect(apiClient, &ThorQ::ApiClient::errorOccured, &errorBox, &QMessageBox::setText);
+    QObject::connect(apiClient, &ThorQ::ApiClient::errorOccured, &errorBox, &QMessageBox::show);
 /*
     QObject::connect(cli, &ThorQ::Networking::Client::rttChanged, &mainWidget, &MainWidget::setConnectionPing);
     QObject::connect(cli, &ThorQ::Networking::Client::LoginStateChanged, &mainWidget, &MainWidget::setLoginState);
@@ -119,9 +122,10 @@ int main(int argc, char** argv)
     QObject::connect(cli, &Client::userUpdate, &mainWidget, &MainWidget::updateUser);
     QObject::connect(cli, &Client::UserOffline, &mainWidget, &MainWidget::removeUser);
     QObject::connect(&mainWidget, &MainWidget::logoutButtonClicked, cli, &Client::Logout);
-
-    loginWidget.show();
 */
+    loginWidget.show();
+    apiClient->netConnect("localhost", 12345);
+
 #else
     QPixmap pix(":/uwu.png");
     QLabel lab;
