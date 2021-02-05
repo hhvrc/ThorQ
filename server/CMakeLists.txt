@@ -21,6 +21,8 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/apiserver_connection.cpp
     #${CMAKE_CURRENT_SOURCE_DIR}/imagecache.cpp
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/singletons.cpp
+
     ${CMAKE_CURRENT_SOURCE_DIR}/account.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/group.cpp
 )
@@ -30,6 +32,7 @@ set(${project}_HEADERS
     #${CMAKE_CURRENT_SOURCE_DIR}/imagecache.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/config.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/singletons.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/account.h
     ${CMAKE_CURRENT_SOURCE_DIR}/group.h
