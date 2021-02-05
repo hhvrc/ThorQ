@@ -28,6 +28,7 @@ jobs:
           cmake --install flatbuffers-build --config --config Release
       - name: cmake
         run: |
+          set PATH=%PATH%;C:/Program Files/FlatBuffers/bin/;C:/Program Files/FlatBuffers/lib/cmake/flatbuffers/
           cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_MODULE_PATH=C:/Program Files/FlatBuffers/lib/cmake/flatbuffers/ .
       - name: build
         run: |
