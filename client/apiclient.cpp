@@ -19,6 +19,7 @@ ThorQ::ApiClient::ApiClient(QObject *parent)
     , m_threads()
     , m_processStatus(ProcessStatus::Stopped)
     , m_connectionStatus(ConnectionStatus::Disconnected)
+    , m_cryptoLinkStatus(CryptoLinkStatus::None)
     , m_connection(nullptr)
     , m_incomingMessages()
     , m_incomingMessagesToken(m_incomingMessages)
@@ -122,18 +123,13 @@ void ThorQ::ApiClient::pollEvents()
     if (setConnectionStatus(status)) {
         switch (status) {
         case ConnectionStatus::Error:
-            emit errorOccured(
-                        QString::fromStdString(
-                            m_connection->latestErrorCode().message()));
+            onError(m_connection->latestErrorCode());
             break;
         case ConnectionStatus::Disconnected:
             onDisconnect();
-            emit netDisconnected();
-            m_connection = nullptr;
-            return;
+            break;
         case ConnectionStatus::Connected:
             onConnect();
-            emit netConnected();
             break;
         case ConnectionStatus::Connecting:
         case ConnectionStatus::Disconnecting:
@@ -163,14 +159,32 @@ bool ThorQ::ApiClient::setConnectionStatus(ConnectionStatus status)
     return false;
 }
 
+bool ThorQ::ApiClient::setCryptoLinkStatus(CryptoLinkStatus status)
+{
+    if (m_cryptoLinkStatus != status) {
+        m_cryptoLinkStatus = status;
+        emit cryptoLinkStatusChanged(status);
+        return true;
+    }
+    return false;
+}
+
+void ThorQ::ApiClient::onError(const std::error_code& ec)
+{
+    setConnectionStatus(ConnectionStatus::Error);
+    emit errorOccured(QString::fromStdString(ec.message()));
+}
+
 void ThorQ::ApiClient::onConnect()
 {
     establishCrypto();
+    emit netConnected();
 }
 
 void ThorQ::ApiClient::onDisconnect()
 {
-
+    emit netDisconnected();
+    m_connection = nullptr;
 }
 
 void ThorQ::ApiClient::onMessage(std::shared_ptr<std::vector<std::uint8_t>> message)
@@ -238,11 +252,6 @@ void ThorQ::ApiClient::onMessage(std::shared_ptr<std::vector<std::uint8_t>> mess
     }
 }
 
-void ThorQ::ApiClient::onCryptoEstablished()
-{
-    fmt::print("[CONNECTION] Crypto established!\n");
-}
-
 void ThorQ::ApiClient::establishCrypto()
 {
     fmt::print("[MSG] Crypto\n");
@@ -256,12 +265,20 @@ void ThorQ::ApiClient::establishCrypto()
 
     flatbuffers::FlatBufferBuilder fbsBuilder;
     auto fbsPublicKey = fbsBuilder.CreateVector(myPk.data(), myPk.size());
-    auto fbsCryptoCli = ThorQ::Serialization::Crypto::CreateEstablishCryptoClient(fbsBuilder, fbsPublicKey).Union();
-    auto fbsRequest   = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::Body_establish_crypto_client, fbsCryptoCli).Union();
-    auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsRequest);
+    auto fbsCryptoEst = ThorQ::Serialization::Crypto::CreateEstablishCryptoClient(fbsBuilder, fbsPublicKey).Union();
+    auto fbsCryptoMsg = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::Body_establish_crypto_client, fbsCryptoEst).Union();
+    auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsCryptoMsg);
     fbsBuilder.Finish(fbsMessage);
 
-    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
+    if (encodeAndSend(fbsBuilder.GetBufferSpan(), false)) {
+        setCryptoLinkStatus(CryptoLinkStatus::Establishing);
+    }
+}
+
+void ThorQ::ApiClient::onCryptoEstablished()
+{
+    setCryptoLinkStatus(CryptoLinkStatus::Active);
+    fmt::print("[CONNECTION] Crypto established!\n");
 }
 
 void ThorQ::ApiClient::handleMessageAccount(const void *body, flatbuffers::Verifier fbsVerifier)
@@ -302,15 +319,22 @@ void ThorQ::ApiClient::handleMessageCrypto(const void* body, flatbuffers::Verifi
             fbsServerSignature->size() != ThorQ::Crypto::Signer::SignatureLen)
         {
             fmt::print(stderr, "[CRYPTO] Got key of invalid size!\n");
+            setCryptoLinkStatus(CryptoLinkStatus::None);
+            disconnect();
             return;
         }
 
         ThorQ::Crypto::Signer serverVerifier;
-        serverVerifier.setPublicKey(ThorQ::Crypto::Signer::RootSigner()); // TODO: Load from file
+        serverVerifier.setPublicKey(ThorQ::Crypto::Signer::RootSigner());
 
-        if (!serverVerifier.verify(fbsServerPublicKey->data(), fbsServerPublicKey->size(), fbsServerSignature->data(), fbsServerSignature->size()))
+        std::array<std::uint8_t, ThorQ::Crypto::Signer::PublicKeyLen * 2> combinedPublicKeys;
+        memcpy(combinedPublicKeys.data(), m_crypto.publicKey().data(), ThorQ::Crypto::Encryption::PublicKeyLen);
+        memcpy(combinedPublicKeys.data() + ThorQ::Crypto::Encryption::PublicKeyLen, fbsServerPublicKey->data(), ThorQ::Crypto::Encryption::PublicKeyLen);
+
+        if (!serverVerifier.verify(combinedPublicKeys, fbsServerSignature->data(), fbsServerSignature->size()))
         {
             fmt::print(stderr, "[CRYPTO] Failed to verify server key validity!\n");
+            setCryptoLinkStatus(CryptoLinkStatus::None);
             disconnect();
             return;
         }
@@ -318,7 +342,9 @@ void ThorQ::ApiClient::handleMessageCrypto(const void* body, flatbuffers::Verifi
         // Set foreign key
         if (!m_crypto.setForeignKey(fbsServerPublicKey->data(), fbsServerPublicKey->size()))
         {
-            fmt::print(stderr, "[CRYPTO] Failed to generate keypair!\n");
+            fmt::print(stderr, "[CRYPTO] Failed to set foreignkey!\n");
+            setCryptoLinkStatus(CryptoLinkStatus::None);
+            disconnect();
             return;
         }
 
@@ -457,7 +483,7 @@ void ThorQ::ApiClient::handleMessageP2P(const void *body, flatbuffers::Verifier 
     }
 }
 
-void ThorQ::ApiClient::encodeAndSend(const flatbuffers::span<std::uint8_t>& buffer, bool encrypt)
+bool ThorQ::ApiClient::encodeAndSend(const flatbuffers::span<std::uint8_t>& buffer, bool encrypt)
 {
     auto message = std::make_shared<std::vector<std::uint8_t>>();
     message->resize(ThorQ::Encoding::calculateMessageSize(buffer.size(), encrypt));
@@ -465,17 +491,23 @@ void ThorQ::ApiClient::encodeAndSend(const flatbuffers::span<std::uint8_t>& buff
     if (encrypt) {
         if (!ThorQ::Encoding::messageEncode(buffer.data(), buffer.size(), message->data(), message->size(), m_crypto)) {
             fmt::print(stderr, "Failed to encrypt message\n");
-            return;
+            return false;
         }
     }
     else {
         if (!ThorQ::Encoding::messageEncode(buffer.data(), buffer.size(), message->data(), message->size())) {
             fmt::print(stderr, "Failed to encode message\n");
-            return;
+            return false;
         }
     }
 
-    if (m_connection != nullptr) {
-        m_connection->messageSend(message);
+    auto connection = m_connection;
+
+    if (connection == nullptr) {
+        return false;
     }
+
+    connection->messageSend(message);
+
+    return true;
 }

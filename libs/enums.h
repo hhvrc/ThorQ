@@ -60,23 +60,17 @@ enum class ProcessStatus
     Running,
     Stopping
 };
-
-/// @enum THORQ_STATE_CRYPTO
-/// State machine for crypto
-enum THORQ_STATE_CRYPTO
+enum class CryptoLinkStatus
 {
-    THORQ_STATE_CRYPTO_NONE, //= THORQ_STATE_CONNECTION_CONNECTED, ///< The cryptographic link with the other host has not been established yet
-	THORQ_STATE_CRYPTO_REQUESTED,                               ///< A request has been sent to the other host, requesting to begin a handshake
-	THORQ_STATE_CRYPTO_ESTABLISHING,                            ///< Hosts are now attempting to establish a shared secret
-	THORQ_STATE_CRYPTO_VERIFYING,                               ///< Hosts are not trying to verify that they successfully agreed on a shared secret
-	THORQ_STATE_CRYPTO_ACTIVE,                                  ///< Hosts have a shared secret and can send encrypted data between themselves
+    None,
+    Establishing,
+    Active
 };
-
 /// @enum THORQ_STATE_HWID
 /// State machine for client hwid authentication
 enum THORQ_STATE_HWID
 {
-    THORQ_STATE_HWID_NONE = THORQ_STATE_CRYPTO_ACTIVE,          ///< Client has not been authenticated yet
+    THORQ_STATE_HWID_NONE,// = THORQ_STATE_CRYPTO_ACTIVE,          ///< Client has not been authenticated yet
     THORQ_STATE_HWID_REQUESTING,                                ///< Server has requested hardwareID from client / Client has sent SystemID to server and is awaiting a response
     THORQ_STATE_HWID_OK,                                        ///< Server authenticated client, client can now access the api
 };

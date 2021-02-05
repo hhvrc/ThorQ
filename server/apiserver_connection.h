@@ -57,6 +57,7 @@ private:
     std::vector<std::uint8_t> m_buffer;
 
     ThorQ::Crypto::Encryption m_crypto;
+    std::atomic<CryptoLinkStatus> m_cryptoState;
 
     std::shared_mutex l_account;
     std::shared_ptr<ThorQ::Account> m_account;
@@ -64,7 +65,6 @@ private:
     std::shared_mutex l_systemID;
     std::shared_ptr<std::vector<std::uint8_t>> m_systemID;
 
-    std::atomic<THORQ_STATE_CRYPTO> m_cryptoState;
     std::atomic<THORQ_STATE_HWID>   m_hwidState;
 };
 }

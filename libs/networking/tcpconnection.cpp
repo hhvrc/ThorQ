@@ -101,8 +101,11 @@ void ThorQ::Networking::TcpConnection::readBody(std::shared_ptr<std::vector<std:
 
 void ThorQ::Networking::TcpConnection::readDone(std::shared_ptr<std::vector<std::uint8_t>> message)
 {
-    onMessage(std::move(message));
+    // Start next async read
     readHeader();
+
+    // Process message
+    onMessage(std::move(message));
 }
 
 void ThorQ::Networking::TcpConnection::asioClose()

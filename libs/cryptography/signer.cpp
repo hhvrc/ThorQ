@@ -17,10 +17,10 @@ const std::array<std::uint8_t, ThorQ::Crypto::Signer::PublicKeyLen> ThorQ::Crypt
     // This is the root public key to verify key changes commited by the server
     // >>>>>>>>>>> DO NOT REMOVE OR MODIFY <<<<<<<<<<<
     return std::array<std::uint8_t, ThorQ::Crypto::Signer::PublicKeyLen> {
-        0x55, 0x95, 0xA2, 0x25, 0x61, 0xCA, 0x29, 0xC8,
-        0xF9, 0x19, 0x28, 0x7F, 0x22, 0x1C, 0xC4, 0x86,
-        0x4F, 0x90, 0xBB, 0x1F, 0xAC, 0xDA, 0x00, 0x8A,
-        0xFB, 0xDA, 0x31, 0xB0, 0x38, 0xC4, 0x8E, 0x51
+        0xF0, 0x8D, 0xAD, 0x40, 0xA0, 0xAD, 0x7A, 0xAF,
+        0x26, 0xF1, 0x38, 0xCB, 0x16, 0x13, 0x4F, 0x22,
+        0xF1, 0x05, 0xD2, 0x3D, 0xD4, 0x64, 0xEC, 0x6C,
+        0xF2, 0x33, 0xDA, 0x3B, 0x86, 0x83, 0x07, 0x90
     };
 }
 
@@ -48,7 +48,7 @@ bool ThorQ::Crypto::Signer::trySaveToFile(const char* path, bool onlyPublicKey) 
     data.insert(data.begin(), m_pk.begin(), m_pk.end());
 
     // Insert secret key
-    if (!onlyPublicKey) {
+    if (!onlyPublicKey && m_state == State::BothKeys) {
         data.insert(data.end(), m_sk.begin(), m_sk.end());
     }
 
@@ -124,7 +124,7 @@ bool ThorQ::Crypto::Signer::generateKeyPair()
 
 bool ThorQ::Crypto::Signer::setPublicKey(const std::uint8_t* publicKey, std::size_t keySize)
 {
-    if (keySize != Signer::SignatureLen) {
+    if (keySize != Signer::PublicKeyLen) {
         return false;
     }
 

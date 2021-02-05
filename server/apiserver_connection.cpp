@@ -20,11 +20,11 @@ ThorQ::ApiServerConnection::ApiServerConnection(asio::io_context& asio, asio::ip
     : ThorQ::Networking::TcpConnection(asio, std::move(socket))
     , m_buffer(THORQ_PAYLOAD_LEN_TYP)
     , m_crypto()
+    , m_cryptoState(CryptoLinkStatus::None)
     , l_account()
     , m_account(nullptr)
     , l_systemID()
     , m_systemID(nullptr)
-    , m_cryptoState(THORQ_STATE_CRYPTO::THORQ_STATE_CRYPTO_NONE)
     , m_hwidState(THORQ_STATE_HWID::THORQ_STATE_HWID_NONE)
 {
 }
@@ -33,11 +33,11 @@ ThorQ::ApiServerConnection::ApiServerConnection(ThorQ::ApiServerConnection&& oth
     : ThorQ::Networking::TcpConnection(std::move(other))
     , m_buffer(std::move(other.m_buffer))
     , m_crypto(std::move(other.m_crypto))
+    , m_cryptoState(other.m_cryptoState.load(std::memory_order::relaxed))
     , l_account()
     , m_account(std::move(other.m_account))
     , l_systemID()
     , m_systemID(std::move(other.m_systemID))
-    , m_cryptoState(other.m_cryptoState.load(std::memory_order::relaxed))
     , m_hwidState(other.m_hwidState.load(std::memory_order::relaxed))
 {
 
@@ -317,41 +317,41 @@ void ThorQ::ApiServerConnection::handleMessageCrypto(const void* body, flatbuffe
     {
         fmt::print("[CRYPTO] Establish encyption\n");
 
-        auto fbsPublicKey = fbsCrypto->body_as_establish_crypto_client()->public_key();
-
-        if (fbsPublicKey->size() != ThorQ::Crypto::Encryption::PublicKeyLen) {
-            fmt::print("[CRYPTO] Got key with invalid length!\n");
-            return;
-        }
+        auto fbsClientPublicKey = fbsCrypto->body_as_establish_crypto_client()->public_key();
 
         if (!m_crypto.generateKeyPair()) {
-            fmt::print("[CRYPTO] Failed to generate keypair!\n");
+            fmt::print(stderr, "[CRYPTO] Failed to generate keypair!\n");
             return;
         }
 
-        if (m_crypto.setForeignKey(fbsPublicKey->data(), ThorQ::Crypto::Encryption::PublicKeyLen))
+        if (m_crypto.setForeignKey(fbsClientPublicKey->data(), fbsClientPublicKey->size()))
         {
-            auto myPk = m_crypto.publicKey();
+            auto serverPublickey = m_crypto.publicKey();
 
             ThorQ::Crypto::Signer signer;
             signer.generateKeyPair();
 
             // TODO: load this at server startup
-            if (!signer.tryLoadFromFile("server.pksk")) {
-                fmt::print("[CRYPTO] Failed to load signer keypair!\n");
+            if (!signer.tryLoadFromFile("root_signing.pksk")) {
+                fmt::print(stderr, "[CRYPTO] Failed to load signer keypair!\n");
                 return;
             }
 
-            std::array<std::uint8_t, ThorQ::Crypto::Signer::SignatureLen> signature;
+            // PUBLIC_CLIENT_KEY + PUBLIC_SERVER_KEY
+            std::array<std::uint8_t, ThorQ::Crypto::Signer::PublicKeyLen * 2> combinedPublicKeys;
+            memcpy(combinedPublicKeys.data(), fbsClientPublicKey->data(), ThorQ::Crypto::Encryption::PublicKeyLen);
+            memcpy(combinedPublicKeys.data() + ThorQ::Crypto::Encryption::PublicKeyLen, serverPublickey.data(), ThorQ::Crypto::Encryption::PublicKeyLen);
 
-            if (!signer.sign(myPk, signature)) {
-                fmt::print("[CRYPTO] Failed to sign encryption public key!\n");
+            // SIGNATURE(PUBLIC_CLIENT_KEY + PUBLIC_SERVER_KEY)
+            std::array<std::uint8_t, ThorQ::Crypto::Signer::SignatureLen> signature;
+            if (!signer.sign(combinedPublicKeys, signature)) {
+                fmt::print(stderr, "[CRYPTO] Failed to sign encryption public key!\n");
                 return;
             }
 
             // Build flatbuffer
             flatbuffers::FlatBufferBuilder fbsBuilder;
-            auto fbsPublicKey = fbsBuilder.CreateVector(myPk.data(), myPk.size());
+            auto fbsPublicKey = fbsBuilder.CreateVector(serverPublickey.data(), serverPublickey.size());
             auto fbsSignature = fbsBuilder.CreateVector(signature.data(), signature.size());
             auto fbsCryptServ = ThorQ::Serialization::Crypto::CreateEstablishCryptoServer(fbsBuilder, fbsPublicKey, fbsSignature).Union();
             auto fbsEstablish = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::Body_establish_crypto_server, fbsCryptServ).Union();
@@ -362,13 +362,13 @@ void ThorQ::ApiServerConnection::handleMessageCrypto(const void* body, flatbuffe
         }
         else
         {
-            fmt::print(stderr, "Failed to create shared secret\n");
+            fmt::print(stderr, "[CRYPTO] Got key with invalid length!\n");
             disconnect(); // TODO: In the future should find a way to send reason for disconnet to server as well
         }
         break;
     }
     default:
-        fmt::print("[CRYPTO] Invalid message!\n");
+        fmt::print(stderr, "[CRYPTO] Invalid message!\n");
         disconnect();
         return;
     }

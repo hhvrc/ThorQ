@@ -107,7 +107,7 @@ void LoginWidget::setConnectionStatus(ConnectionStatus status)
     }
 }
 
-void LoginWidget::setCryptoState(THORQ_STATE_CRYPTO state)
+void LoginWidget::setCryptoState(CryptoLinkStatus state)
 {
     /*
     if (m_connectionStatus != state)

@@ -100,42 +100,40 @@ bool testEncryption(std::size_t testDataSize, std::size_t iterations)
 
 bool testSigning()
 {
-    ThorQ::Crypto::Signer signer;
+    ThorQ::Crypto::Signer origSigner;
 
     // Generate keys
-    if (!signer.generateKeyPair())
+    if (!origSigner.generateKeyPair())
     {
         fmt::print("Signing keygen failed!\n");
         return false;
     }
 
     // Test saving only the public key
-    if (!signer.trySaveToFile("test.pk", true))
+    if (!origSigner.trySaveToFile("test.pk", true))
     {
         fmt::print("Signing savekey failed!\n");
         return false;
     }
 
-    // Save the keys
-    if (!signer.trySaveToFile("test.pksk", false))
+    // Save both public and secret key
+    if (!origSigner.trySaveToFile("test.pksk", false))
     {
         fmt::print("Signing savekey(s) failed!\n");
         return false;
     }
 
-    signer.clear();
-
-    // Test loading only a single key
-    if (!signer.tryLoadFromFile("test.pk"))
+    // Test loading only the public key
+    ThorQ::Crypto::Signer pkSigner;
+    if (!pkSigner.tryLoadFromFile("test.pk"))
     {
         fmt::print("Signing loadkey failed!\n");
         return false;
     }
 
-    signer.clear();
-
-    // Load the keys
-    if (!signer.tryLoadFromFile("test.pksk"))
+    // Load both public and secret key
+    ThorQ::Crypto::Signer pkskSigner;
+    if (!pkskSigner.tryLoadFromFile("test.pksk"))
     {
         fmt::print("Signing loadkey(s) failed!\n");
         return false;
@@ -146,15 +144,21 @@ bool testSigning()
 
     std::array<std::uint8_t, ThorQ::Crypto::Signer::SignatureLen> signature;
 
-    if (!signer.sign(testData, signature))
+    if (!origSigner.sign(testData, signature))
     {
         fmt::print("Signing data failed!\n");
         return false;
     }
 
-    if (!signer.verify(testData, signature))
+    if (!pkskSigner.verify(testData, signature))
     {
-        fmt::print("Signing data failed!\n");
+        fmt::print("Verifying data failed!\n");
+        return false;
+    }
+
+    if (!pkSigner.verify(testData, signature))
+    {
+        fmt::print("Verifying data failed!\n");
         return false;
     }
 
