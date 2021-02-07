@@ -24,7 +24,6 @@ public:
 
     ProcessStatus processStatus() const { return m_processStatus; }
     ConnectionStatus connectionStatus() const { return m_connectionStatus; }
-    CryptoLinkStatus cryptoLinkStatus() const { return m_cryptoLinkStatus; }
 
     bool netConnect(QString host, quint16 port);
     void netDisconnect();
@@ -34,7 +33,6 @@ signals:
 
     void processStatusChanged(ProcessStatus status);
     void connectionStatusChanged(ConnectionStatus status);
-    void cryptoLinkStatusChanged(CryptoLinkStatus status);
 
     void errorOccured(QString error);
 private slots:
@@ -42,7 +40,6 @@ private slots:
 private:
     bool setProcessStatus(ProcessStatus status);
     bool setConnectionStatus(ConnectionStatus status);
-    bool setCryptoLinkStatus(CryptoLinkStatus status);
 
     void onError(const std::error_code& ec);
     void onConnect();
@@ -74,7 +71,6 @@ private:
 
     ProcessStatus m_processStatus;
     ConnectionStatus m_connectionStatus;
-    CryptoLinkStatus m_cryptoLinkStatus;
 
     std::shared_ptr<ThorQ::ApiClientConnection> m_connection;
 

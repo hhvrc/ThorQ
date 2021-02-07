@@ -28,6 +28,7 @@ constexpr std::uint32_t MaximumMessageSize = HeaderSize + THORQ_PAYLOAD_LEN_MAX 
 
 bool isHeaderValid(const MessageHeader* header);
 bool isMessageValid(const std::uint8_t* data, std::uint32_t size);
+bool isMessageEncrypted(const std::uint8_t* data, std::uint32_t size);
 std::uint32_t calculateMessageSize(std::uint32_t size, bool encrypt);
 std::uint32_t calculateDataSize(const std::uint8_t* data, std::uint32_t size);
 

@@ -19,7 +19,6 @@ ThorQ::ApiClient::ApiClient(QObject *parent)
     , m_threads()
     , m_processStatus(ProcessStatus::Stopped)
     , m_connectionStatus(ConnectionStatus::Disconnected)
-    , m_cryptoLinkStatus(CryptoLinkStatus::None)
     , m_connection(nullptr)
     , m_incomingMessages()
     , m_incomingMessagesToken(m_incomingMessages)
@@ -159,16 +158,6 @@ bool ThorQ::ApiClient::setConnectionStatus(ConnectionStatus status)
     return false;
 }
 
-bool ThorQ::ApiClient::setCryptoLinkStatus(CryptoLinkStatus status)
-{
-    if (m_cryptoLinkStatus != status) {
-        m_cryptoLinkStatus = status;
-        emit cryptoLinkStatusChanged(status);
-        return true;
-    }
-    return false;
-}
-
 void ThorQ::ApiClient::onError(const std::error_code& ec)
 {
     setConnectionStatus(ConnectionStatus::Error);
@@ -195,7 +184,7 @@ void ThorQ::ApiClient::onMessage(std::shared_ptr<std::vector<std::uint8_t>> mess
     if (!ThorQ::Encoding::messageDecode(message->data(), message->size(), m_buffer.data(), m_buffer.size(), m_crypto))
     {
         fmt::print(stderr, "Cannot unpack/decrypt packet\n");
-        disconnect();
+        m_connection->disconnect();
         return;
     }
 
@@ -205,7 +194,7 @@ void ThorQ::ApiClient::onMessage(std::shared_ptr<std::vector<std::uint8_t>> mess
     if (!fbsMessage->Verify(fbsVerifier))
     {
         fmt::print(stderr, "Invalid flatbuffer message\n");
-        disconnect();
+        m_connection->disconnect();
         return;
     }
 
@@ -248,6 +237,7 @@ void ThorQ::ApiClient::onMessage(std::shared_ptr<std::vector<std::uint8_t>> mess
         break;
     default:
         fmt::print("[MSG] Invalid\n");
+        m_connection->disconnect();
         return;
     }
 }
@@ -265,169 +255,180 @@ void ThorQ::ApiClient::establishCrypto()
 
     flatbuffers::FlatBufferBuilder fbsBuilder;
     auto fbsPublicKey = fbsBuilder.CreateVector(myPk.data(), myPk.size());
-    auto fbsCryptoEst = ThorQ::Serialization::Crypto::CreateEstablishCryptoClient(fbsBuilder, fbsPublicKey).Union();
-    auto fbsCryptoMsg = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::Body_establish_crypto_client, fbsCryptoEst).Union();
-    auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsCryptoMsg);
+    auto fbsCrypto    = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, fbsPublicKey).Union();
+    auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsCrypto);
     fbsBuilder.Finish(fbsMessage);
 
-    if (encodeAndSend(fbsBuilder.GetBufferSpan(), false)) {
-        setCryptoLinkStatus(CryptoLinkStatus::Establishing);
-    }
+    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
 }
 
 void ThorQ::ApiClient::onCryptoEstablished()
 {
-    setCryptoLinkStatus(CryptoLinkStatus::Active);
     fmt::print("[CONNECTION] Crypto established!\n");
+
+    std::vector<std::uint8_t> systemID = ThorQ::SystemID::systemid_generate();
+    fmt::print("Sending SystemID: {}\n", ThorQ::SystemID::systemid_to_string(systemID));
+
+    flatbuffers::FlatBufferBuilder fbsBuilder;
+    auto fbsSystemID = ThorQ::Serialization::SystemId::CreateMessage(fbsBuilder, ThorQ::Serialization::SystemId::Command_Submit, fbsBuilder.CreateVector(systemID.data(), systemID.size())).Union();
+    auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_system_id, fbsSystemID);
+    fbsBuilder.Finish(fbsMessage);
+
+    encodeAndSend(fbsBuilder.GetBufferSpan(), true);
 }
 
 void ThorQ::ApiClient::handleMessageAccount(const void *body, flatbuffers::Verifier fbsVerifier)
 {
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Account::Message*>(body);
+
+    if (!fbsCrypto->Verify(fbsVerifier)) {
+        onCryptoEstablished();
+        return;
+    }
+
     fmt::print("[MSG] Account\n");
 }
 
 void ThorQ::ApiClient::handleMessageAnnouncement(const void *body, flatbuffers::Verifier fbsVerifier)
 {
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Announcement::Message*>(body);
+
+    if (!fbsCrypto->Verify(fbsVerifier)) {
+        onCryptoEstablished();
+        return;
+    }
+
     fmt::print("[MSG] Announcement\n");
 }
 
 void ThorQ::ApiClient::handleMessageDevice(const void *body, flatbuffers::Verifier fbsVerifier)
 {
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Device::Message*>(body);
+
+    if (!fbsCrypto->Verify(fbsVerifier)) {
+        onCryptoEstablished();
+        return;
+    }
+
     fmt::print("[MSG] Device\n");
 }
 
 void ThorQ::ApiClient::handleMessageCrypto(const void* body, flatbuffers::Verifier fbsVerifier)
 {
-    fmt::print("[MSG] Crypto\n");
-
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Crypto::Message*>(body);
 
     if (!fbsCrypto->Verify(fbsVerifier)) {
-        return;
-    }
-
-    switch (fbsCrypto->body_type()) {
-    case ThorQ::Serialization::Crypto::Body_establish_crypto_server:
-    {
-        fmt::print("[CRYPTO] Establish!\n");
-
-        auto fbsEstablishServer = fbsCrypto->body_as_establish_crypto_server();
-        auto fbsServerPublicKey = fbsEstablishServer->public_key();
-        auto fbsServerSignature = fbsEstablishServer->signature();
-
-        if (fbsServerPublicKey->size() != ThorQ::Crypto::Encryption::PublicKeyLen ||
-            fbsServerSignature->size() != ThorQ::Crypto::Signer::SignatureLen)
-        {
-            fmt::print(stderr, "[CRYPTO] Got key of invalid size!\n");
-            setCryptoLinkStatus(CryptoLinkStatus::None);
-            disconnect();
-            return;
-        }
-
-        ThorQ::Crypto::Signer serverVerifier;
-        serverVerifier.setPublicKey(ThorQ::Crypto::Signer::RootSigner());
-
-        std::array<std::uint8_t, ThorQ::Crypto::Signer::PublicKeyLen * 2> combinedPublicKeys;
-        memcpy(combinedPublicKeys.data(), m_crypto.publicKey().data(), ThorQ::Crypto::Encryption::PublicKeyLen);
-        memcpy(combinedPublicKeys.data() + ThorQ::Crypto::Encryption::PublicKeyLen, fbsServerPublicKey->data(), ThorQ::Crypto::Encryption::PublicKeyLen);
-
-        if (!serverVerifier.verify(combinedPublicKeys, fbsServerSignature->data(), fbsServerSignature->size()))
-        {
-            fmt::print(stderr, "[CRYPTO] Failed to verify server key validity!\n");
-            setCryptoLinkStatus(CryptoLinkStatus::None);
-            disconnect();
-            return;
-        }
-
-        // Set foreign key
-        if (!m_crypto.setForeignKey(fbsServerPublicKey->data(), fbsServerPublicKey->size()))
-        {
-            fmt::print(stderr, "[CRYPTO] Failed to set foreignkey!\n");
-            setCryptoLinkStatus(CryptoLinkStatus::None);
-            disconnect();
-            return;
-        }
-
         onCryptoEstablished();
-        break;
-    }
-    case ThorQ::Serialization::Crypto::Body_update_server_sign_key:
-    {
-        fmt::print("[CRYPTO] Update server signing key\n");
-
-        break;
-    }
-    case ThorQ::Serialization::Crypto::Body_update_server_encrypt_key:
-    {
-        fmt::print("[CRYPTO] Update server encryption key\n");
-
-        auto fbsUpdateEncryptPk = fbsCrypto->body_as_establish_crypto_server();
-        auto fbsServerPublicKey = fbsUpdateEncryptPk->public_key();
-        auto fbsServerSignature = fbsUpdateEncryptPk->signature();
-
-        if (fbsServerPublicKey->size() != ThorQ::Crypto::Encryption::PublicKeyLen ||
-            fbsServerSignature->size() != ThorQ::Crypto::Signer::SignatureLen)
-        {
-            fmt::print(stderr, "[CRYPTO] Got key of invalid size!\n");
-            return;
-        }
-
-        ThorQ::Crypto::Signer serverVerifier;
-        serverVerifier.setPublicKey(ThorQ::Crypto::Signer::RootSigner());
-
-        if (!serverVerifier.verify(fbsServerPublicKey->data(), fbsServerPublicKey->size(), fbsServerSignature->data(), fbsServerSignature->size()))
-        {
-            fmt::print(stderr, "[CRYPTO] Failed to verify server key validity!\n");
-            disconnect();
-            return;
-        }
-
-        fmt::print("[CRYPTO] Updating server decryption key\n");
-
-        // Build flatbuffer
-        /*
-        flatbuffers::FlatBufferBuilder fbsBuilder;
-        auto fbsVerify  = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::MessageType_Verify, fbsBuilder.CreateVector(fbsCrypto->data()->data(), fbsCrypto->data()->size())).Union();
-        auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsVerify);
-        fbsBuilder.Finish(fbsMessage);
-
-        encodeAndSend(fbsBuilder.GetBufferSpan(), true);
-        */
-        break;
-    }
-    default:
-        fmt::print("[CRYPTO] \?\?\?!\n\n");
         return;
     }
+
+    fmt::print("[MSG] Crypto\n");
+
+    auto fbsServerPublicKey = fbsCrypto->public_key();
+    auto fbsServerSignature = fbsCrypto->signature();
+
+    if (fbsServerPublicKey->size() != ThorQ::Crypto::Encryption::PublicKeyLen ||
+        fbsServerSignature->size() != ThorQ::Crypto::Signer::SignatureLen)
+    {
+        fmt::print(stderr, "[CRYPTO] Got key of invalid size!\n");
+        m_connection->disconnect();
+        return;
+    }
+
+    ThorQ::Crypto::Signer serverVerifier;
+    serverVerifier.setPublicKey(ThorQ::Crypto::Signer::RootSigner());
+
+    std::array<std::uint8_t, ThorQ::Crypto::Signer::PublicKeyLen * 2> combinedPublicKeys;
+    memcpy(combinedPublicKeys.data(), m_crypto.publicKey().data(), ThorQ::Crypto::Encryption::PublicKeyLen);
+    memcpy(combinedPublicKeys.data() + ThorQ::Crypto::Encryption::PublicKeyLen, fbsServerPublicKey->data(), ThorQ::Crypto::Encryption::PublicKeyLen);
+
+    if (!serverVerifier.verify(combinedPublicKeys, fbsServerSignature->data(), fbsServerSignature->size()))
+    {
+        fmt::print(stderr, "[CRYPTO] Failed to verify server key validity!\n");
+        m_connection->disconnect();
+        return;
+    }
+
+    // Set foreign key
+    if (!m_crypto.setForeignKey(fbsServerPublicKey->data(), fbsServerPublicKey->size()))
+    {
+        fmt::print(stderr, "[CRYPTO] Failed to set foreignkey!\n");
+        m_connection->disconnect();
+        return;
+    }
+
+    onCryptoEstablished();
 }
 
 void ThorQ::ApiClient::handleMessageFile(const void *body, flatbuffers::Verifier fbsVerifier)
 {
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::File::Message*>(body);
+
+    if (!fbsCrypto->Verify(fbsVerifier)) {
+        onCryptoEstablished();
+        return;
+    }
+
     fmt::print("[MSG] File\n");
 }
 
 void ThorQ::ApiClient::handleMessageFriendRequest(const void *body, flatbuffers::Verifier fbsVerifier)
 {
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::FriendRequest::Message*>(body);
+
+    if (!fbsCrypto->Verify(fbsVerifier)) {
+        onCryptoEstablished();
+        return;
+    }
+
     fmt::print("[MSG] Friend request\n");
 }
 
 void ThorQ::ApiClient::handleMessageGroup(const void *body, flatbuffers::Verifier fbsVerifier)
 {
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Group::Message*>(body);
+
+    if (!fbsCrypto->Verify(fbsVerifier)) {
+        onCryptoEstablished();
+        return;
+    }
+
     fmt::print("[MSG] Group\n");
 }
 
 void ThorQ::ApiClient::handleMessageModeration(const void *body, flatbuffers::Verifier fbsVerifier)
 {
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Moderation::Message*>(body);
+
+    if (!fbsCrypto->Verify(fbsVerifier)) {
+        onCryptoEstablished();
+        return;
+    }
+
     fmt::print("[MSG] Moderation\n");
 }
 
 void ThorQ::ApiClient::handleMessageSystemID(const void *body, flatbuffers::Verifier fbsVerifier)
 {
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::SystemId::Message*>(body);
+
+    if (!fbsCrypto->Verify(fbsVerifier)) {
+        onCryptoEstablished();
+        return;
+    }
+
     fmt::print("[MSG] Systemid\n");
 }
 
 void ThorQ::ApiClient::handleMessageUser(const void *body, flatbuffers::Verifier fbsVerifier)
 {
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::User::Message*>(body);
+
+    if (!fbsCrypto->Verify(fbsVerifier)) {
+        onCryptoEstablished();
+        return;
+    }
+
     fmt::print("[MSG] User\n");
 }
 
@@ -452,6 +453,7 @@ void ThorQ::ApiClient::handleMessageVersion(const void *body, flatbuffers::Verif
             fmt::print("[VERSION] Server version matched\n");
         } else {
             fmt::print("[VERSION] Server version mismatched\n");
+            m_connection->disconnect();
         }
         break;
     case THORQ_APP::CLIENT:
@@ -459,6 +461,7 @@ void ThorQ::ApiClient::handleMessageVersion(const void *body, flatbuffers::Verif
             fmt::print("[VERSION] Client version matched\n");
         } else {
             fmt::print("[VERSION] Client version mismatched\n");
+            m_connection->disconnect();
         }
         break;
     case THORQ_APP::LINK:
@@ -466,10 +469,12 @@ void ThorQ::ApiClient::handleMessageVersion(const void *body, flatbuffers::Verif
             fmt::print("[VERSION] Link version matched\n");
         } else {
             fmt::print("[VERSION] Link version mismatched\n");
+            m_connection->disconnect();
         }
         break;
     default:
         fmt::print("[VERSION] invalid\n");
+        m_connection->disconnect();
         return;
     }
 }

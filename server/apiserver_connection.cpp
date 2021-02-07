@@ -20,12 +20,10 @@ ThorQ::ApiServerConnection::ApiServerConnection(asio::io_context& asio, asio::ip
     : ThorQ::Networking::TcpConnection(asio, std::move(socket))
     , m_buffer(THORQ_PAYLOAD_LEN_TYP)
     , m_crypto()
-    , m_cryptoState(CryptoLinkStatus::None)
     , l_account()
     , m_account(nullptr)
     , l_systemID()
     , m_systemID(nullptr)
-    , m_hwidState(THORQ_STATE_HWID::THORQ_STATE_HWID_NONE)
 {
 }
 
@@ -33,12 +31,10 @@ ThorQ::ApiServerConnection::ApiServerConnection(ThorQ::ApiServerConnection&& oth
     : ThorQ::Networking::TcpConnection(std::move(other))
     , m_buffer(std::move(other.m_buffer))
     , m_crypto(std::move(other.m_crypto))
-    , m_cryptoState(other.m_cryptoState.load(std::memory_order::relaxed))
     , l_account()
     , m_account(std::move(other.m_account))
     , l_systemID()
     , m_systemID(std::move(other.m_systemID))
-    , m_hwidState(other.m_hwidState.load(std::memory_order::relaxed))
 {
 
 }
@@ -82,6 +78,30 @@ void ThorQ::ApiServerConnection::onError(std::error_code ec)
 void ThorQ::ApiServerConnection::onConnect(std::vector<std::uint8_t> address, std::uint16_t port)
 {
     fmt::print("[CONNECTION] Connected\n");
+
+    flatbuffers::FlatBufferBuilder fbsBuilder;
+    flatbuffers::Offset<ThorQ::Serialization::Version> fbsVersion;
+    flatbuffers::Offset<ThorQ::Serialization::Message> fbsMessage;
+
+    // Link version
+    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::LINK, THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH);
+    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
+    fbsBuilder.Finish(fbsMessage);
+    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
+
+    // Client version
+    fbsBuilder.Clear();
+    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::CLIENT, THORQ_VERSION_CLIENT_MAJOR, THORQ_VERSION_CLIENT_MINOR, THORQ_VERSION_CLIENT_PATCH);
+    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
+    fbsBuilder.Finish(fbsMessage);
+    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
+
+    // Server version
+    fbsBuilder.Clear();
+    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::SERVER, THORQ_VERSION_SERVER_MAJOR, THORQ_VERSION_SERVER_MINOR, THORQ_VERSION_SERVER_PATCH);
+    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
+    fbsBuilder.Finish(fbsMessage);
+    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
 }
 
 void ThorQ::ApiServerConnection::onDisconnect()
@@ -171,29 +191,6 @@ void ThorQ::ApiServerConnection::onMessage(std::shared_ptr<std::vector<std::uint
 
 void ThorQ::ApiServerConnection::onCryptoEstablished()
 {
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-    flatbuffers::Offset<ThorQ::Serialization::Version> fbsVersion;
-    flatbuffers::Offset<ThorQ::Serialization::Message> fbsMessage;
-
-    // Link version
-    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::LINK, THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH);
-    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
-    fbsBuilder.Finish(fbsMessage);
-    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
-
-    // Client version
-    fbsBuilder.Clear();
-    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::CLIENT, THORQ_VERSION_CLIENT_MAJOR, THORQ_VERSION_CLIENT_MINOR, THORQ_VERSION_CLIENT_PATCH);
-    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
-    fbsBuilder.Finish(fbsMessage);
-    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
-
-    // Server version
-    fbsBuilder.Clear();
-    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::SERVER, THORQ_VERSION_SERVER_MAJOR, THORQ_VERSION_SERVER_MINOR, THORQ_VERSION_SERVER_PATCH);
-    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
-    fbsBuilder.Finish(fbsMessage);
-    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
 }
 
 void ThorQ::ApiServerConnection::handleMessageAccount(const void* body, flatbuffers::Verifier fbsVerifier)
@@ -312,65 +309,54 @@ void ThorQ::ApiServerConnection::handleMessageCrypto(const void* body, flatbuffe
 
     fmt::print("[MSG] Crypto\n");
 
-    switch (fbsCrypto->body_type()) {
-    case ThorQ::Serialization::Crypto::Body_establish_crypto_client:
+    auto fbsClientPublicKey = fbsCrypto->public_key();
+
+    if (!m_crypto.generateKeyPair()) {
+        fmt::print(stderr, "[CRYPTO] Failed to generate keypair!\n");
+        return;
+    }
+
+    if (m_crypto.setForeignKey(fbsClientPublicKey->data(), fbsClientPublicKey->size()))
     {
-        fmt::print("[CRYPTO] Establish encyption\n");
+        auto serverPublickey = m_crypto.publicKey();
 
-        auto fbsClientPublicKey = fbsCrypto->body_as_establish_crypto_client()->public_key();
+        ThorQ::Crypto::Signer signer;
+        signer.generateKeyPair();
 
-        if (!m_crypto.generateKeyPair()) {
-            fmt::print(stderr, "[CRYPTO] Failed to generate keypair!\n");
+        // TODO: load this at server startup
+        if (!signer.tryLoadFromFile("root_signing.pksk")) {
+            fmt::print(stderr, "[CRYPTO] Failed to load signer keypair!\n");
             return;
         }
 
-        if (m_crypto.setForeignKey(fbsClientPublicKey->data(), fbsClientPublicKey->size()))
-        {
-            auto serverPublickey = m_crypto.publicKey();
+        // PUBLIC_CLIENT_KEY + PUBLIC_SERVER_KEY
+        std::array<std::uint8_t, ThorQ::Crypto::Signer::PublicKeyLen * 2> combinedPublicKeys;
+        memcpy(combinedPublicKeys.data(), fbsClientPublicKey->data(), ThorQ::Crypto::Encryption::PublicKeyLen);
+        memcpy(combinedPublicKeys.data() + ThorQ::Crypto::Encryption::PublicKeyLen, serverPublickey.data(), ThorQ::Crypto::Encryption::PublicKeyLen);
 
-            ThorQ::Crypto::Signer signer;
-            signer.generateKeyPair();
-
-            // TODO: load this at server startup
-            if (!signer.tryLoadFromFile("root_signing.pksk")) {
-                fmt::print(stderr, "[CRYPTO] Failed to load signer keypair!\n");
-                return;
-            }
-
-            // PUBLIC_CLIENT_KEY + PUBLIC_SERVER_KEY
-            std::array<std::uint8_t, ThorQ::Crypto::Signer::PublicKeyLen * 2> combinedPublicKeys;
-            memcpy(combinedPublicKeys.data(), fbsClientPublicKey->data(), ThorQ::Crypto::Encryption::PublicKeyLen);
-            memcpy(combinedPublicKeys.data() + ThorQ::Crypto::Encryption::PublicKeyLen, serverPublickey.data(), ThorQ::Crypto::Encryption::PublicKeyLen);
-
-            // SIGNATURE(PUBLIC_CLIENT_KEY + PUBLIC_SERVER_KEY)
-            std::array<std::uint8_t, ThorQ::Crypto::Signer::SignatureLen> signature;
-            if (!signer.sign(combinedPublicKeys, signature)) {
-                fmt::print(stderr, "[CRYPTO] Failed to sign encryption public key!\n");
-                return;
-            }
-
-            // Build flatbuffer
-            flatbuffers::FlatBufferBuilder fbsBuilder;
-            auto fbsPublicKey = fbsBuilder.CreateVector(serverPublickey.data(), serverPublickey.size());
-            auto fbsSignature = fbsBuilder.CreateVector(signature.data(), signature.size());
-            auto fbsCryptServ = ThorQ::Serialization::Crypto::CreateEstablishCryptoServer(fbsBuilder, fbsPublicKey, fbsSignature).Union();
-            auto fbsEstablish = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, ThorQ::Serialization::Crypto::Body_establish_crypto_server, fbsCryptServ).Union();
-            auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsEstablish);
-            fbsBuilder.Finish(fbsMessage);
-
-            encodeAndSend(fbsBuilder.GetBufferSpan(), false);
+        // SIGNATURE(PUBLIC_CLIENT_KEY + PUBLIC_SERVER_KEY)
+        std::array<std::uint8_t, ThorQ::Crypto::Signer::SignatureLen> signature;
+        if (!signer.sign(combinedPublicKeys, signature)) {
+            fmt::print(stderr, "[CRYPTO] Failed to sign encryption public key!\n");
+            return;
         }
-        else
-        {
-            fmt::print(stderr, "[CRYPTO] Got key with invalid length!\n");
-            disconnect(); // TODO: In the future should find a way to send reason for disconnet to server as well
+
+        // Build flatbuffer
+        flatbuffers::FlatBufferBuilder fbsBuilder;
+        auto fbsPublicKey = fbsBuilder.CreateVector(serverPublickey.data(), serverPublickey.size());
+        auto fbsSignature = fbsBuilder.CreateVector(signature.data(), signature.size());
+        auto fbsCrypto    = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, fbsPublicKey, fbsSignature).Union();
+        auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsCrypto);
+        fbsBuilder.Finish(fbsMessage);
+
+        if (encodeAndSend(fbsBuilder.GetBufferSpan(), false)) {
+            onCryptoEstablished();
         }
-        break;
     }
-    default:
-        fmt::print(stderr, "[CRYPTO] Invalid message!\n");
-        disconnect();
-        return;
+    else
+    {
+        fmt::print(stderr, "[CRYPTO] Got key with invalid length!\n");
+        disconnect(); // TODO: In the future should find a way to send reason for disconnet to server as well
     }
 }
 
@@ -611,7 +597,7 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body, flatbuf
         return;
     }
 
-    fmt::print("[MSG] Systemid\n");
+    fmt::print("[MSG] SystemID\n");
 
     if (fbsSystemID->cmd() != ThorQ::Serialization::SystemId::Command_Submit)
     {
@@ -631,7 +617,7 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body, flatbuf
 
     std::string systemID = ThorQ::SystemID::systemid_to_string(systemid);
 
-    fmt::print("SystemID: %s\n", systemID);
+    fmt::print("SystemID: {}\n", systemID);
 
     LSql::Connection dbConnection("database.db", LSql::Connection::READWRITE);
 
@@ -641,19 +627,26 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body, flatbuf
     }
 
     LSql::Query dbQuery = dbConnection.query("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?1);"
-                                                  "SELECT banned_at FROM system_ids WHERE system_id = ?1;");
+                                             "SELECT banned_at FROM system_ids WHERE system_id = ?1;");
     dbQuery.bind(1, systemID);
 
-    if (!dbQuery.step() || dbQuery.columnCount() == 0)
+    if (!dbQuery.step())
     {
+        fmt::print(stderr, "Failed to execute SQLite query!\n");
         return;
     }
 
-    bool isBanned = (dbQuery.column(0).type() == LSql::Type::Null);
+    if (dbQuery.columnCount() == 0)
+    {
+        fmt::print(stderr, "SQLite query returned invalid amount of rows ({})\n", dbQuery.columnCount());
+        return;
+    }
+
+    bool isBanned = (dbQuery.column(0).type() != LSql::Type::Null);
 
     if (isBanned)
     {
-        // TODO: THORQ_DISCONNECT_REASON::BANNED
+        fmt::print("Connection is banned!\n");
         disconnect();
         return;
     }
@@ -724,7 +717,7 @@ void ThorQ::ApiServerConnection::handleMessageP2P(const void* body, flatbuffers:
     fmt::print("[MSG] P2P\n");
 }
 
-void ThorQ::ApiServerConnection::encodeAndSend(flatbuffers::span<std::uint8_t> buffer, bool encrypt)
+bool ThorQ::ApiServerConnection::encodeAndSend(flatbuffers::span<std::uint8_t> buffer, bool encrypt)
 {
     auto message = std::make_shared<std::vector<std::uint8_t>>();
     message->resize(ThorQ::Encoding::calculateMessageSize(buffer.size(), encrypt));
@@ -732,13 +725,13 @@ void ThorQ::ApiServerConnection::encodeAndSend(flatbuffers::span<std::uint8_t> b
     if (encrypt) {
         if (!ThorQ::Encoding::messageEncode(buffer.data(), buffer.size(), message->data(), message->size(), m_crypto)) {
             fmt::print(stderr, "Failed to encrypt message\n");
-            return;
+            return false;
         }
     }
     else {
         if (!ThorQ::Encoding::messageEncode(buffer.data(), buffer.size(), message->data(), message->size())) {
             fmt::print(stderr, "Failed to encode message\n");
-            return;
+            return false;
         }
     }
 

@@ -60,37 +60,5 @@ enum class ProcessStatus
     Running,
     Stopping
 };
-enum class CryptoLinkStatus
-{
-    None,
-    Establishing,
-    Active
-};
-/// @enum THORQ_STATE_HWID
-/// State machine for client hwid authentication
-enum THORQ_STATE_HWID
-{
-    THORQ_STATE_HWID_NONE,// = THORQ_STATE_CRYPTO_ACTIVE,          ///< Client has not been authenticated yet
-    THORQ_STATE_HWID_REQUESTING,                                ///< Server has requested hardwareID from client / Client has sent SystemID to server and is awaiting a response
-    THORQ_STATE_HWID_OK,                                        ///< Server authenticated client, client can now access the api
-};
-
-/// State machine for login
-enum THORQ_STATE_LOGIN
-{
-    THORQ_STATE_LOGIN_LOGGEDOUT = THORQ_STATE_HWID_OK,          ///< Client is logged out
-	THORQ_STATE_LOGIN_LOGGINGOUT,                               ///< Client has requested the server to log it out gracefully
-	THORQ_STATE_LOGIN_LOGGINGIN,                                ///< Client has requested to log in with a username, and waiting for the server to accept
-	THORQ_STATE_LOGIN_LOGGEDIN,                                 ///< Client is logged in with a username, and is discoverable by other online users
-};
-
-/// State machine for session
-enum THORQ_STATE_SESSION
-{
-    THORQ_STATE_SESSION_NONE = THORQ_STATE_LOGIN_LOGGEDIN, ///< Host is not currently in a session
-    THORQ_STATE_SESSION_LEAVING,                           ///< Host is leaving a session
-    THORQ_STATE_SESSION_JOINING,                           ///< The session has been accepted and the host is waiting for the server to start it
-    THORQ_STATE_SESSION_ACTIVE,                            ///< Both partners are currently in a session
-};
 
 #endif // ENUMS_H

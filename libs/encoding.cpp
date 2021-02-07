@@ -165,3 +165,11 @@ bool ThorQ::Encoding::messageDecode(const std::uint8_t* dataIn, std::uint32_t si
     // Decrypt data
     return encrypter.decrypt(payloadPtr, payloadSize, dataOut, sizeOut);
 }
+
+bool ThorQ::Encoding::isMessageEncrypted(const uint8_t *data, uint32_t size)
+{
+    if (size <= sizeof(MessageHeader)) {
+        return false;
+    }
+    return isEncrypted(reinterpret_cast<const MessageHeader*>(data));
+}

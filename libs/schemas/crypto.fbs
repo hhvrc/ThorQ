@@ -1,32 +1,6 @@
 namespace ThorQ.Serialization.Crypto;
 
-table EstablishCryptoClient {
-  public_key : [ ubyte ];
-}
-
-table EstablishCryptoServer {
-  public_key : [ ubyte ];
-  signature : [ ubyte ];
-}
-
-table UpdateServerSignKey {
-  new_key : [ ubyte ];
-  signature : [ ubyte ];
-}
-
-table UpdateServerEncryptKey {
-  new_key : [ ubyte ];
-  signature : [ ubyte ];
-}
-
-/// Yada, yada...
-union Body {
-  establish_crypto_client : Crypto.EstablishCryptoClient,
-  establish_crypto_server : Crypto.EstablishCryptoServer,
-  update_server_sign_key : Crypto.UpdateServerSignKey,
-  update_server_encrypt_key : Crypto.UpdateServerEncryptKey
-}
-
 table Message {
-  body : Crypto.Body;
+  public_key : [ ubyte ];
+  signature : [ ubyte ];
 }

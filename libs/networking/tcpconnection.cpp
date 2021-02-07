@@ -35,8 +35,25 @@ void ThorQ::Networking::TcpConnection::accept()
 {
     fmt::print("[TCP-CONNECTION] Accept\n");
     ConnectionStatus expected = ConnectionStatus::Disconnected;
-    if (setStatusIf(expected, ConnectionStatus::Connecting))
+    if (setStatusIf(expected, ConnectionStatus::Connected))
     {
+        setStatus(ConnectionStatus::Connected);
+
+        std::vector<std::uint8_t> address;
+        address.reserve(16);
+
+        auto endpoint = m_socket.remote_endpoint();
+
+        if (endpoint.address().is_v4()) {
+            auto asioAddr = endpoint.address().to_v4().to_bytes();
+            address.insert(address.begin(), asioAddr.begin(), asioAddr.end());
+        }
+        else {
+            auto asioAddr = endpoint.address().to_v6().to_bytes();
+            address.insert(address.begin(), asioAddr.begin(), asioAddr.end());
+        }
+
+        onConnect(address, endpoint.port());
         readHeader();
     }
 }
@@ -117,18 +134,31 @@ void ThorQ::Networking::TcpConnection::asioClose()
 
 void ThorQ::Networking::TcpConnection::handleErrorCode(const std::error_code& ec)
 {
-    if (ec.value() == 2) {
-        fmt::print("[TCP-CONNECTION] Remote closed connection\n");
-        setStatus(ConnectionStatus::Disconnected);
-        onDisconnect();
-        asioClose();
+    if (ec == std::errc::already_connected || ec == std::errc::connection_already_in_progress) {
+        return; // This is not rly an error to care about
     }
-    else {
+    else if (ec == std::errc::connection_aborted) {
+        // Do nothing, just disconnect without any fuzz
+    }
+    else if (ec == std::errc::timed_out) {
+        fmt::print("[TCP-CONNECTION] Timeout!\n");
+        onDisconnect();
+    }
+    else if (ec == std::errc::connection_reset) {
+        fmt::print("[TCP-CONNECTION] Remote closed connection\n");
+        onDisconnect();
+    }
+    else { // Includes std::errc::connection_refused
+        fmt::print("[TCP-CONNECTION] Error: {} ({})\n", ec.message(), ec.value());
         setErrorCode(ec);
         setStatus(ConnectionStatus::Error);
         onError(std::move(ec));
         asioClose();
+        return;
     }
+
+    setStatus(ConnectionStatus::Disconnected);
+    asioClose();
 }
 
 void ThorQ::Networking::TcpConnection::connectCompletionHandler(const std::error_code& ec, const asio::ip::tcp::endpoint& endpoint)

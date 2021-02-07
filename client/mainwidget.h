@@ -27,8 +27,6 @@ signals:
 	void logoutButtonClicked();
 	void usernameEntered(const QString& username);
 public slots:
-	void setLoginState(THORQ_STATE_LOGIN state);
-	void setSessionState(THORQ_STATE_SESSION state);
 	void setConnectionPing(uint ping);
 
     void updateUser(const QString& username, std::uint8_t state);

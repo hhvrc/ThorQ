@@ -25,17 +25,13 @@ signals:
 	void usernameEntered(const QString& username);
 public slots:
     void setConnectionStatus(ConnectionStatus status);
-    void setCryptoState(CryptoLinkStatus state);
-    void setHwidState(THORQ_STATE_HWID state);
 
-    void setLoginState(THORQ_STATE_LOGIN state);
 	void setConnectionPing(uint ping);
 private slots:
     void updateUiState();
 	void updateUiPing();
 private:
     ConnectionStatus m_connectionStatus;
-    CryptoLinkStatus m_cryptoLinkStatus;
     unsigned int m_ping;
 
 	QLabel* m_title;

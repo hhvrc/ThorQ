@@ -20,22 +20,6 @@ MainWidget::MainWidget(QWidget *parent)
 	setLayout(m_vlayout);
 }
 
-void MainWidget::setLoginState(THORQ_STATE_LOGIN newState)
-{
-	if (newState < THORQ_STATE_LOGIN_LOGGEDIN)
-    {
-        clearUsers();
-		hide();
-	}
-	else
-	{
-		show();
-	}
-}
-void MainWidget::setSessionState(THORQ_STATE_SESSION newState)
-{
-}
-
 void MainWidget::setConnectionPing(uint ping)
 {
 	if (m_ping != ping)

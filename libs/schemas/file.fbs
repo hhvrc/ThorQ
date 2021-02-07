@@ -5,6 +5,7 @@ namespace ThorQ.Serialization.File;
 enum FileType : ubyte {
   Image
 }
+
 table Message {
   uuid : Uuid;
   type : FileType;

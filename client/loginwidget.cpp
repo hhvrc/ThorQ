@@ -107,39 +107,6 @@ void LoginWidget::setConnectionStatus(ConnectionStatus status)
     }
 }
 
-void LoginWidget::setCryptoState(CryptoLinkStatus state)
-{
-    /*
-    if (m_connectionStatus != state)
-    {
-        m_connectionStatus = state;
-        updateUiState();
-    }
-    */
-}
-
-void LoginWidget::setHwidState(THORQ_STATE_HWID state)
-{
-    /*
-    if (m_connectionStatus != state)
-    {
-        m_connectionStatus = state;
-        updateUiState();
-    }
-    */
-}
-
-void LoginWidget::setLoginState(THORQ_STATE_LOGIN state)
-{
-    /*
-    if (m_connectionStatus != state)
-    {
-        m_connectionStatus = state;
-        updateUiState();
-    }
-    */
-}
-
 void LoginWidget::setConnectionPing(uint ping)
 {
 	if (m_ping != ping)

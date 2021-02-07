@@ -52,20 +52,19 @@ private:
     void handleMessageVersion(const void *body, flatbuffers::Verifier fbsVerifier);
     void handleMessageP2P(const void* body, flatbuffers::Verifier fbsVerifier);
 
-    void encodeAndSend(flatbuffers::span<std::uint8_t> buffer, bool encrypt);
+    bool encodeAndSend(flatbuffers::span<std::uint8_t> buffer, bool encrypt);
 
     std::vector<std::uint8_t> m_buffer;
 
     ThorQ::Crypto::Encryption m_crypto;
-    std::atomic<CryptoLinkStatus> m_cryptoState;
 
+    std::atomic_bool m_hasAccountID;
     std::shared_mutex l_account;
     std::shared_ptr<ThorQ::Account> m_account;
 
+    std::atomic_bool m_hasSystemID;
     std::shared_mutex l_systemID;
     std::shared_ptr<std::vector<std::uint8_t>> m_systemID;
-
-    std::atomic<THORQ_STATE_HWID>   m_hwidState;
 };
 }
 
