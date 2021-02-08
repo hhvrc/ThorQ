@@ -626,23 +626,31 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body, flatbuf
         return;
     }
 
-    LSql::Query dbQuery = dbConnection.query("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?1);"
-                                             "SELECT banned_at FROM system_ids WHERE system_id = ?1;");
-    dbQuery.bind(1, systemID);
+    LSql::Query dbInsertSystemId = dbConnection.query("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?1);");
+    dbInsertSystemId.bind(1, systemID);
 
-    if (!dbQuery.step())
+    if (!dbInsertSystemId.step())
     {
         fmt::print(stderr, "Failed to execute SQLite query!\n");
         return;
     }
 
-    if (dbQuery.columnCount() == 0)
+    LSql::Query dbCheckSystemIdBanned = dbConnection.query("SELECT banned_at FROM system_ids WHERE system_id = ?1;");
+    dbCheckSystemIdBanned.bind(1, systemID);
+
+    if (!dbCheckSystemIdBanned.step())
     {
-        fmt::print(stderr, "SQLite query returned invalid amount of rows ({})\n", dbQuery.columnCount());
+        fmt::print(stderr, "Failed to execute SQLite query!\n");
         return;
     }
 
-    bool isBanned = (dbQuery.column(0).type() != LSql::Type::Null);
+    if (dbCheckSystemIdBanned.columnCount() == 0)
+    {
+        fmt::print(stderr, "SQLite query returned invalid amount of rows ({})\n", dbCheckSystemIdBanned.columnCount());
+        return;
+    }
+
+    bool isBanned = (dbCheckSystemIdBanned.column(0).type() != LSql::Type::Null);
 
     if (isBanned)
     {

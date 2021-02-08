@@ -182,7 +182,9 @@ bool ThorQ::Account::setUsername(const std::string& username)
         return false;
     }
 
-    LSql::Query query = connection.query("UPDATE OR IGNORE accounts SET username = ? WHERE db_id = ? LIMIT 1;SELECT changes();");
+    LSql::Transaction transaction(connection);
+
+    LSql::Query query("UPDATE OR IGNORE accounts SET username = ? WHERE db_id = ? LIMIT 1;", connection);
 
     if (!query.isValid())
     {
@@ -208,6 +210,8 @@ bool ThorQ::Account::setUsername(const std::string& username)
         return false;
     }
 
+    LSql::Query getChanges("SELECT changes();", connection);
+
     if (query.columnCount() != 1)
     {
         fmt::print("Query didnt return any values\?\?\?\?\n");
@@ -219,6 +223,8 @@ bool ThorQ::Account::setUsername(const std::string& username)
         fmt::print("account invalid/already used\n");
         return false;
     }
+
+    transaction.commit();
 
     std::unique_lock l(l_basics);
     m_username = username;
