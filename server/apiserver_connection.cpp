@@ -609,6 +609,7 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body, flatbuf
 
     if (!ThorQ::SystemID::systemid_validate(systemid))
     {
+        fmt::print("[MSG] Got forged SystemID!\n");
         // TODO: THORQ_DISCONNECT_REASON::INVALID_HWID
         disconnect();
         return;
@@ -657,6 +658,8 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body, flatbuf
         disconnect();
         return;
     }
+
+    fmt::print("Connection is ok!\n");
 }
 
 void ThorQ::ApiServerConnection::handleMessageUser(const void* body, flatbuffers::Verifier fbsVerifier)
