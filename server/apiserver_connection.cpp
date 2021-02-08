@@ -78,30 +78,6 @@ void ThorQ::ApiServerConnection::onError(std::error_code ec)
 void ThorQ::ApiServerConnection::onConnect(std::vector<std::uint8_t> address, std::uint16_t port)
 {
     fmt::print("[CONNECTION] Connected\n");
-
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-    flatbuffers::Offset<ThorQ::Serialization::Version> fbsVersion;
-    flatbuffers::Offset<ThorQ::Serialization::Message> fbsMessage;
-
-    // Link version
-    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::LINK, THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH);
-    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
-    fbsBuilder.Finish(fbsMessage);
-    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
-
-    // Client version
-    fbsBuilder.Clear();
-    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::CLIENT, THORQ_VERSION_CLIENT_MAJOR, THORQ_VERSION_CLIENT_MINOR, THORQ_VERSION_CLIENT_PATCH);
-    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
-    fbsBuilder.Finish(fbsMessage);
-    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
-
-    // Server version
-    fbsBuilder.Clear();
-    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::SERVER, THORQ_VERSION_SERVER_MAJOR, THORQ_VERSION_SERVER_MINOR, THORQ_VERSION_SERVER_PATCH);
-    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
-    fbsBuilder.Finish(fbsMessage);
-    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
 }
 
 void ThorQ::ApiServerConnection::onDisconnect()
@@ -191,6 +167,29 @@ void ThorQ::ApiServerConnection::onMessage(std::shared_ptr<std::vector<std::uint
 
 void ThorQ::ApiServerConnection::onCryptoEstablished()
 {
+    flatbuffers::FlatBufferBuilder fbsBuilder;
+    flatbuffers::Offset<ThorQ::Serialization::Version> fbsVersion;
+    flatbuffers::Offset<ThorQ::Serialization::Message> fbsMessage;
+
+    // Link version
+    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::LINK, THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH);
+    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
+    fbsBuilder.Finish(fbsMessage);
+    encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+
+    // Client version
+    fbsBuilder.Clear();
+    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::CLIENT, THORQ_VERSION_CLIENT_MAJOR, THORQ_VERSION_CLIENT_MINOR, THORQ_VERSION_CLIENT_PATCH);
+    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
+    fbsBuilder.Finish(fbsMessage);
+    encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+
+    // Server version
+    fbsBuilder.Clear();
+    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::SERVER, THORQ_VERSION_SERVER_MAJOR, THORQ_VERSION_SERVER_MINOR, THORQ_VERSION_SERVER_PATCH);
+    fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
+    fbsBuilder.Finish(fbsMessage);
+    encodeAndSend(fbsBuilder.GetBufferSpan(), true);
 }
 
 void ThorQ::ApiServerConnection::handleMessageAccount(const void* body, flatbuffers::Verifier fbsVerifier)
