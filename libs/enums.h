@@ -49,9 +49,9 @@ enum class ConnectionStatus
 {
     Error,
     Disconnected,
+    Disconnecting,
     Connecting,
-    Connected,
-    Disconnecting
+    Connected
 };
 enum class ProcessStatus
 {

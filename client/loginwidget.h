@@ -23,24 +23,24 @@ public:
 	~LoginWidget();
 signals:
 	void usernameEntered(const QString& username);
+    void passwordEntered(const QString& username);
 public slots:
     void setConnectionStatus(ConnectionStatus status);
-
-	void setConnectionPing(uint ping);
 private slots:
     void updateUiState();
-	void updateUiPing();
 private:
     ConnectionStatus m_connectionStatus;
-    unsigned int m_ping;
 
 	QLabel* m_title;
 	QLabel* m_onlineStatus;
     QLineEdit* m_textInput;
-    QPushButton* m_acceptButton;
+    QPushButton* m_loginButton;
+    QPushButton* m_forgotButton;
+    QPushButton* m_registerButton;
 
 	QVBoxLayout* m_mainLayout;
 	QHBoxLayout* m_headerLayout;
+    QHBoxLayout* m_belowLoginLayout;
 };
 
 #endif // LOGINWIDGET_H
