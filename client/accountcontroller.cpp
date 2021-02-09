@@ -7,7 +7,7 @@
 #include <QUuid>
 #include <QDebug>
 
-ThorQ::AccountController::AccountController(QObject *parent)
+ThorQ::AccountController::AccountController(std::function<void(const std::span<std::uint8_t>&, bool)> onMessageGenerated, QObject *parent)
     : QObject(parent)
     , m_accountID()
     , m_authToken{0}
@@ -15,6 +15,7 @@ ThorQ::AccountController::AccountController(QObject *parent)
     , m_loggingIn(false)
     , m_username()
     , m_password()
+    , f_encodeAndSend(onMessageGenerated)
 {
 }
 
@@ -89,7 +90,8 @@ void ThorQ::AccountController::requestAccountId()
     auto fbsAccount  = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_get_account_id, fbsGetID).Union();
     auto fbsMessage  = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount);
     fbsBuilder.Finish(fbsMessage);
-    emit messageGenerated(QByteArray((char*)fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize()));
+
+    f_encodeAndSend(fbsBuilder.GetBufferSpan(), true);
 }
 
 void ThorQ::AccountController::requestHashingParameters()
@@ -101,7 +103,8 @@ void ThorQ::AccountController::requestHashingParameters()
     auto fbsAccount = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_get_hashing_parameters, fbsGetSeed).Union();
     auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount);
     fbsBuilder.Finish(fbsMessage);
-    emit messageGenerated(QByteArray((char*)fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize()));
+
+    f_encodeAndSend(fbsBuilder.GetBufferSpan(), true);
 }
 
 void ThorQ::AccountController::requestAuthToken()
@@ -119,7 +122,8 @@ void ThorQ::AccountController::requestAuthToken()
     auto fbsAccount = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_get_auth_token, fbsLogin).Union();
     auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount);
     fbsBuilder.Finish(fbsMessage);
-    emit messageGenerated(QByteArray((char*)fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize()));
+
+    f_encodeAndSend(fbsBuilder.GetBufferSpan(), true);
 }
 
 void ThorQ::AccountController::requestLogin()
@@ -131,7 +135,8 @@ void ThorQ::AccountController::requestLogin()
     auto fbsAccount = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_login, fbsLogin).Union();
     auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount);
     fbsBuilder.Finish(fbsMessage);
-    emit messageGenerated(QByteArray((char*)fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize()));
+
+    f_encodeAndSend(fbsBuilder.GetBufferSpan(), true);
 }
 
 void ThorQ::AccountController::requestLogout()
@@ -142,5 +147,6 @@ void ThorQ::AccountController::requestLogout()
     auto fbsAccount = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_logout).Union();
     auto fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount);
     fbsBuilder.Finish(fbsMessage);
-    emit messageGenerated(QByteArray((char*)fbsBuilder.GetBufferPointer(), fbsBuilder.GetSize()));
+
+    f_encodeAndSend(fbsBuilder.GetBufferSpan(), true);
 }

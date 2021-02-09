@@ -4,7 +4,9 @@
 #include <sodium.h>
 
 #include <span>
+#include <array>
 #include <string>
+#include <cstring>
 #include <cstdint>
 
 namespace ThorQ {
@@ -16,11 +18,12 @@ constexpr std::size_t HashLength = crypto_box_SEEDBYTES;
 static_assert (Hashing::SaltLength == 16, "PasswordHashing salt length changed");
 static_assert (Hashing::HashLength == 32, "PasswordHashing hash length changed");
 
+typedef std::array<std::uint8_t, Hashing::HashLength> CalculatedHash;
 struct HashingParameters {
     std::array<std::uint8_t, Hashing::SaltLength> salt;
-    std::size_t ops_limit;
-    std::size_t mem_limit;
-    int algorithm;
+    std::int64_t ops_limit;
+    std::int64_t mem_limit;
+    std::int32_t algorithm;
 
     enum class Performance {
         Interactive,
@@ -49,6 +52,16 @@ struct HashingParameters {
             algorithm = crypto_pwhash_ALG_DEFAULT;
             break;
         }
+    }
+
+    inline bool operator == (const HashingParameters& other) const {
+        return (memcmp(salt.data(), other.salt.data(), Hashing::HashLength) == 0) &&
+               (ops_limit == other.ops_limit) &&
+               (mem_limit == other.mem_limit) &&
+               (algorithm == other.algorithm);
+    }
+    inline bool operator != (const HashingParameters& other) const {
+        return !(*this == other);
     }
 };
 

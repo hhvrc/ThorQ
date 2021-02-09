@@ -21,10 +21,7 @@ class AccountController : public QObject
 {
     Q_OBJECT
 public:
-    AccountController(QObject *parent = nullptr);
-
-signals:
-    void messageGenerated(const QByteArray& buffer);
+    AccountController(std::function<void(const std::span<std::uint8_t>&, bool)> encodeAndSend, QObject* parent = nullptr);
 public slots:
     void ParseMessage(const void* message);
     void setUsername(const QString& username);
@@ -45,6 +42,8 @@ private:
     bool m_loggingIn;
     std::string m_username;
     std::string m_password;
+
+    std::function<void(const std::span<std::uint8_t>&, bool)> f_encodeAndSend;
 };
 }
 

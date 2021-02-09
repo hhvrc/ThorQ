@@ -46,9 +46,16 @@ bool InitializeDB(const char* path) noexcept
         && con.execute("CREATE TABLE IF NOT EXISTS images("
                 "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 "uuid TEXT NOT NULL UNIQUE,"
-                "path TEXT NOT NULL,"
                 "uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                ")")
+                ")") // Image path will be images/{uuid_str}.png
+
+        && con.execute("CREATE TABLE IF NOT EXISTS account_placeholders("
+                "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "uuid TEXT NOT NULL UNIQUE,"
+                "username TEXT NOT NULL UNIQUE,"
+                "password_salt BLOB NOT NULL,"
+                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                ")") // Accounts that have been requested/queued for creation (this is here to fool any attacker and to provide a consistant password salt for any given account)
 
         && con.execute("CREATE TABLE IF NOT EXISTS accounts("
                 "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
@@ -56,7 +63,11 @@ bool InitializeDB(const char* path) noexcept
                 "username TEXT NOT NULL UNIQUE,"
                 "image INTEGER NOT NULL REFERENCES images,"
                 "email_address TEXT NOT NULL,"
-                "password_hash TEXT NOT NULL,"
+                "password_hash BLOB NOT NULL,"
+                "password_salt BLOB NOT NULL,"
+                "password_ops_limit INTEGER NOT NULL,"
+                "password_mem_limit INTEGER NOT NULL,"
+                "password_algorithm INTEGER NOT NULL,"
                 "authority INTEGER NOT NULL DEFAULT 0,"
                 "last_login DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                 "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
@@ -148,6 +159,7 @@ int main(int argc, char** argv)
     // Initialize database
     if (!InitializeDB("database.db"))
     {
+        fmt::print("Failed to initialize database\n");
         return EXIT_FAILURE;
     }
 

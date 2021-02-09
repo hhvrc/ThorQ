@@ -199,19 +199,32 @@ void ThorQ::ApiServerConnection::handleMessageAccount(const void* body)
 
     fmt::print("[MSG] Account\n");
 
+    LSql::Connection dbConnection("database.db", LSql::Connection::READWRITE);
+    if (!dbConnection.isOpen()) {
+        return;
+    }
+
     switch (fbsAccount->body_type())
     {
     case ThorQ::Serialization::Account::Body_get_account_id:
+    {
+        auto fbsUsername = reinterpret_cast<const ThorQ::Serialization::Account::GetAccountId*>(fbsAccount->body())->username();
+        auto username = std::string(fbsUsername->data(), fbsUsername->size());
+        auto account = ThorQ::Account::GetAccount(username);
+
+        if (account == nullptr) {
+            account = ThorQ::Account::NewAccount(username);
+        }
+
+        if (account != nullptr) {
+            flatbuffers::FlatBufferBuilder fbsBuilder;
+            auto fbsAccountID = ThorQ::Serialization::Uuid(account->id().toBytes());
+        }
         break;
-    case ThorQ::Serialization::Account::Body_account_id:
-        break;
+    }
     case ThorQ::Serialization::Account::Body_get_hashing_parameters:
         break;
-    case ThorQ::Serialization::Account::Body_hashing_parameters:
-        break;
     case ThorQ::Serialization::Account::Body_get_auth_token:
-        break;
-    case ThorQ::Serialization::Account::Body_auth_token:
         break;
     case ThorQ::Serialization::Account::Body_login:
         break;
@@ -593,8 +606,8 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body)
         return;
     }
 
-    LSql::Query dbInsertSystemId = dbConnection.query("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?1);");
-    dbInsertSystemId.bind(1, systemID);
+    LSql::Query dbInsertSystemId = dbConnection.query("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?);");
+    dbInsertSystemId.bindString(1, systemID);
 
     if (!dbInsertSystemId.step())
     {
@@ -602,8 +615,8 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body)
         return;
     }
 
-    LSql::Query dbCheckSystemIdBanned = dbConnection.query("SELECT banned_at FROM system_ids WHERE system_id = ?1;");
-    dbCheckSystemIdBanned.bind(1, systemID);
+    LSql::Query dbCheckSystemIdBanned = dbConnection.query("SELECT banned_at FROM system_ids WHERE system_id = ?;");
+    dbCheckSystemIdBanned.bindString(1, systemID);
 
     if (!dbCheckSystemIdBanned.step())
     {

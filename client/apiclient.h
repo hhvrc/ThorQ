@@ -67,7 +67,7 @@ private:
     void handleMessageVersion(const void *body);
     void handleMessageP2P(const void* body);
 
-    bool encodeAndSend(const flatbuffers::span<std::uint8_t>& buffer, bool encrypt);
+    bool encodeAndSend(const std::span<std::uint8_t>& buffer, bool encrypt);
 
     QTimer* m_pollTimer;
 

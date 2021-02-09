@@ -1,34 +1,42 @@
 #ifndef ACCOUNT_H
 #define ACCOUNT_H
 
-#include <atomic>
-#include <memory>
-#include <shared_mutex>
-#include <unordered_set>
-#include <set>
-#include <vector>
+
+#include "typedefs_server.h"
+
+#include <uuid.h>
+#include <enums.h>
+#include <cryptography/hashing.h>
 
 #include <flatbuffers/flatbuffers.h>
 
-#include <enums.h>
-
-#include "typedefs_server.h"
+#include <atomic>
+#include <shared_mutex>
+#include <unordered_set>
+#include <vector>
+#include <set>
+#include <memory>
 
 namespace ThorQ {
 class Account
 {
-    Account(std::int64_t dbId, const std::string& username, const std::string& passwordHash);
+    Account(std::int64_t dbId, ThorQ::Uuid id, const std::string& username);
 public:
     static std::shared_ptr<ThorQ::Account> GetAccount(const std::string& username);
-    static std::shared_ptr<ThorQ::Account> NewAccount(const std::string& username, const std::string& passwordHash);
+    inline static std::shared_ptr<ThorQ::Account> GetAccount(const flatbuffers::String& username) { return GetAccount(std::string(username.data(), username.size())); }
+    static std::shared_ptr<ThorQ::Account> NewAccount(const std::string& username);
+    inline static std::shared_ptr<ThorQ::Account> NewAccount(const flatbuffers::String& username) { return NewAccount(std::string(username.data(), username.size())); }
 public:
-    std::int64_t databaseId() const;
+    ThorQ::Uuid id() const { return m_id; }
+    std::int64_t dbId() const { return m_dbId; }
 
     std::string username() const;
     bool setUsername(const std::string& username);
 
-    std::string passwordHash() const;
-    bool setPasswordHash(const std::string& passwordHash);
+    ThorQ::Crypto::Hashing::CalculatedHash passwordHash() const;
+    bool setPasswordHash(ThorQ::Crypto::Hashing::CalculatedHash hash);
+    ThorQ::Crypto::Hashing::HashingParameters passwordHashParameters() const;
+    bool setPasswordHash(ThorQ::Crypto::Hashing::HashingParameters params);
 
     std::shared_ptr<ThorQ::Account> master() const;
     bool isExclusive() const;
@@ -59,11 +67,13 @@ public:
 
     void ban();
 private:
+    const ThorQ::Uuid m_id;
     const std::int64_t m_dbId;
 
     std::shared_mutex l_basics;
     std::string m_username;
-    std::string m_passwordHash;
+    ThorQ::Crypto::Hashing::CalculatedHash m_passwordHash;
+    ThorQ::Crypto::Hashing::HashingParameters m_passwordHashParameters;
 
     std::uint16_t m_activityState; // enum: thorq_user_activity_flag
 

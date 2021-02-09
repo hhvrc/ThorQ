@@ -28,7 +28,7 @@ ThorQ::ApiClient::ApiClient(QObject *parent)
     , m_signer()
     , m_crypto()
     , m_buffer(THORQ_PAYLOAD_LEN_MAX)
-    , m_accountController(new ThorQ::AccountController(this))
+    , m_accountController(new ThorQ::AccountController(std::bind(&ThorQ::ApiClient::encodeAndSend, this, std::placeholders::_1, std::placeholders::_2), this))
 {
     QObject::connect(m_pollTimer, &QTimer::timeout, this, &ApiClient::pollEvents);
     m_pollTimer->setInterval(0);
@@ -438,7 +438,7 @@ void ThorQ::ApiClient::handleMessageP2P(const void* body)
     auto fbsP2P = reinterpret_cast<const ThorQ::Serialization::Peer2Peer::Message*>(body);
 }
 
-bool ThorQ::ApiClient::encodeAndSend(const flatbuffers::span<std::uint8_t>& buffer, bool encrypt)
+bool ThorQ::ApiClient::encodeAndSend(const std::span<std::uint8_t>& buffer, bool encrypt)
 {
     auto message = std::make_shared<std::vector<std::uint8_t>>();
     message->resize(ThorQ::Encoding::calculateMessageSize(buffer.size(), encrypt));

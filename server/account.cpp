@@ -19,12 +19,25 @@
 std::shared_mutex g_accounts_lock;
 std::unordered_map<std::string, std::shared_ptr<ThorQ::Account>> g_accounts;
 
-ThorQ::Account::Account(std::int64_t dbId, const std::string& username, const std::string& passwordHash)
-    : m_dbId(dbId)
+ThorQ::Account::Account(std::int64_t dbId, ThorQ::Uuid id, const std::string& username)
+    : m_id(id)
+    , m_dbId(dbId)
+    , l_basics()
     , m_username(username)
-    , m_passwordHash(passwordHash)
+    , m_passwordHash()
+    , m_passwordHashParameters()
+    , m_activityState(0)
+    , l_master()
+    , m_master()
+    , m_exclusive()
+    , l_requests()
+    , m_requests_incoming()
+    , m_requests_outgoing()
+    , l_sessions()
     , m_sessions()
+    , l_instances()
     , m_instances()
+    , l_relationships()
     , m_relationships()
 {
 }
@@ -35,60 +48,56 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& us
         std::shared_lock l(g_accounts_lock);
         auto it = g_accounts.find(username);
 
-        if (it != g_accounts.end())
-        {
+        if (it != g_accounts.end()) {
             return it->second;
         }
     }
 
-    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
+    LSql::Connection connection("database.db", LSql::Connection::READONLY);
 
-    if (!connection.isOpen())
-    {
+    if (!connection.isOpen()) {
         fmt::print(stderr, "SQL error: {}\n", connection.lastError());
         return nullptr;
     }
 
-    LSql::Query query = connection.query("SELECT db_id, password_hash, authority FROM accounts WHERE username = ?");
+    // TODO remove "NOT NULL" on all other fields
+    LSql::Query query = connection.query("SELECT db_id, uuid FROM accounts WHERE username = ?");
 
-    if (!query.bind(1, username))
-    {
+    if (!query.bindString(1, username)) {
         fmt::print(stderr, "SQL error: {}\n", connection.lastError());
         return nullptr;
     }
 
-    if (!query.step())
-    {
+    if (!query.step()) {
         fmt::print(stderr, "SQL error: {}\n", connection.lastError());
         return nullptr;
     }
 
-    if (query.columnCount() != 3)
-    {
+    if (query.columnCount() != 2) {
         fmt::print(stderr, "SQL error: {}\n", connection.lastError());
         return nullptr;
     }
 
     // Get database ID
-    LSql::Column col = query.column(0);
-    if (query.getType(0) != LSql::Type::Integer ||
-        query.getType(1) != LSql::Type::Text    ||
-        query.getType(2) != LSql::Type::Integer)
-    {
+    LSql::Column dbIdCol = query.column(0);
+    LSql::Column uuidCol = query.column(1);
+    if (dbIdCol.type() != LSql::Type::Integer || uuidCol.type() != LSql::Type::Text) {
         return nullptr;
     }
 
-    // Get authority
-    int authority = col.getInt();
-    if (false)//authority < THORQ_ACCOUNT_AUTHORITY_NONE || authority > THORQ_ACCOUNT_AUTHORITY_FOUNDER)
-    {
+    ThorQ::Uuid accountId;
+    if (!ThorQ::Uuid::TryParse(uuidCol.getText(), accountId)) {
         return nullptr;
     }
 
-    return std::shared_ptr<ThorQ::Account>(new ThorQ::Account(query.column(0).getInt64(), /*(THORQ_ACCOUNT_AUTHORITY)authority, */username, query.column(1).getText()));
+    auto account = std::shared_ptr<ThorQ::Account>(new ThorQ::Account(dbIdCol.getInt64(), accountId, username));
+
+    // TODO fill in the rest
+
+    return account;
 }
 
-std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& username, const std::string& passwordHash)
+std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& username)
 {
     {
         std::shared_lock l(g_accounts_lock);
@@ -116,17 +125,18 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 		return nullptr;
     }
 
-    LSql::Query query = connection.query("INSERT OR IGNORE INTO accounts(username, password_hash) VALUES (?, ?);");
+    LSql::Query query = connection.query("INSERT OR IGNORE INTO accounts(uuid, username) VALUES (?, ?);");
 
-    if (!query.bind(1, username))
+    ThorQ::Uuid id = ThorQ::Uuid::NewUuid();
+    if (!query.bindString(1, id.toString()))
     {
         fmt::print(stderr, "SQL Failed to bind username: {}\n", connection.lastError());
         return nullptr;
     }
 
-    if (!query.bind(2, passwordHash))
+    if (!query.bindString(2, username))
     {
-        fmt::print(stderr, "SQL Failed to bind passwordHash: {}\n", connection.lastError());
+        fmt::print(stderr, "SQL Failed to bind username: {}\n", connection.lastError());
         return nullptr;
     }
 
@@ -136,13 +146,14 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
         return nullptr;
     }
 
-    std::int64_t i = connection.lastInsertedRowId();
+    std::int64_t dbId = connection.lastInsertedRowId();
 
-    if (i == 0)
+    /*
+    if (dbId == 0)
     {
         fmt::print(stderr, "username [{}] not available\n", username);
         return nullptr;
-    }
+    }*/
 
     if (!transaction.commit())
 	{
@@ -150,12 +161,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 		return nullptr;
 	}
 
-    return std::shared_ptr<ThorQ::Account>(new ThorQ::Account(i, /*THORQ_ACCOUNT_AUTHORITY_NONE, */username, passwordHash));
-}
-
-int64_t ThorQ::Account::databaseId() const
-{
-    return m_dbId;
+    return std::shared_ptr<ThorQ::Account>(new ThorQ::Account(dbId, id, username));
 }
 
 std::string ThorQ::Account::username() const
@@ -170,7 +176,7 @@ bool ThorQ::Account::setUsername(const std::string& username)
         return true;
     }
 
-    if ( m_dbId <= 0)
+    if (m_dbId <= 0)
     {
         return false;
     }
@@ -192,13 +198,13 @@ bool ThorQ::Account::setUsername(const std::string& username)
         return false;
     }
 
-    if (!query.bind(1, username))
+    if (!query.bindString(1, username))
     {
         fmt::print("Failed to bind username: {}\n", connection.lastError());
         return false;
     }
 
-    if (!query.bind(2, m_dbId))
+    if (!query.bindInt64(2, m_dbId))
     {
         fmt::print("Failed to bind dbID: {}\n", connection.lastError());
         return false;
@@ -212,13 +218,13 @@ bool ThorQ::Account::setUsername(const std::string& username)
 
     LSql::Query getChanges("SELECT changes();", connection);
 
-    if (query.columnCount() != 1)
+    if (getChanges.columnCount() != 1)
     {
         fmt::print("Query didnt return any values\?\?\?\?\n");
         return false;
     }
 
-    if (query.column(1).getInt() == 0)
+    if (getChanges.column(1).getInt() == 0)
     {
         fmt::print("account invalid/already used\n");
         return false;
@@ -231,18 +237,19 @@ bool ThorQ::Account::setUsername(const std::string& username)
     return true;
 }
 
-std::string ThorQ::Account::passwordHash() const
+ThorQ::Crypto::Hashing::CalculatedHash ThorQ::Account::passwordHash() const
 {
     return m_passwordHash;
 }
-bool ThorQ::Account::setPasswordHash(const std::string& passwordHash)
+
+bool ThorQ::Account::setPasswordHash(ThorQ::Crypto::Hashing::CalculatedHash hash)
 {
-    if (m_passwordHash == passwordHash)
+    if (m_passwordHash == hash)
     {
         return true;
     }
 
-    if ( m_dbId <= 0)
+    if (m_dbId <= 0)
     {
         return false;
     }
@@ -254,7 +261,9 @@ bool ThorQ::Account::setPasswordHash(const std::string& passwordHash)
         return false;
     }
 
-    LSql::Query query = connection.query("UPDATE OR IGNORE accounts SET password_hash = ? WHERE db_id = ? LIMIT 1;SELECT changes();");
+    LSql::Transaction transaction(connection);
+
+    LSql::Query query("UPDATE OR IGNORE accounts SET password_hash = ? WHERE db_id = ? LIMIT 1;", connection);
 
     if (!query.isValid())
     {
@@ -262,13 +271,13 @@ bool ThorQ::Account::setPasswordHash(const std::string& passwordHash)
         return false;
     }
 
-    if (!query.bind(1, passwordHash))
+    if (!query.bindBlob(1, hash))
     {
         fmt::print("Failed to bind username: {}\n", connection.lastError());
         return false;
     }
 
-    if (!query.bind(2, m_dbId))
+    if (!query.bindInt64(2, m_dbId))
     {
         fmt::print("Failed to bind dbID: {}\n", connection.lastError());
         return false;
@@ -280,20 +289,113 @@ bool ThorQ::Account::setPasswordHash(const std::string& passwordHash)
         return false;
     }
 
-    if (query.columnCount() != 1)
+    LSql::Query getChanges("SELECT changes();", connection);
+
+    if (getChanges.columnCount() != 1)
     {
         fmt::print("Query didnt return any values\?\?\?\?\n");
         return false;
     }
 
-    if (query.column(1).getInt() == 0)
+    if (getChanges.column(1).getInt64() == 0)
     {
         fmt::print("account invalid/already used\n");
         return false;
     }
 
     std::unique_lock l(l_basics);
-    m_passwordHash = passwordHash;
+    m_passwordHash = hash;
+    return true;
+}
+
+ThorQ::Crypto::Hashing::HashingParameters ThorQ::Account::passwordHashParameters() const
+{
+    return m_passwordHashParameters;
+}
+
+bool ThorQ::Account::setPasswordHash(ThorQ::Crypto::Hashing::HashingParameters params)
+{
+    if (m_passwordHashParameters == params)
+    {
+        return true;
+    }
+
+    if (m_dbId <= 0)
+    {
+        return false;
+    }
+
+    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
+
+    if (!connection.isOpen())
+    {
+        return false;
+    }
+
+    LSql::Transaction transaction(connection);
+
+    LSql::Query query("UPDATE OR IGNORE accounts SET password_salt = ?, password_ops_limit = ?, password_mem_limit = ?, password_algorithm = ? WHERE db_id = ? LIMIT 1;", connection);
+
+    if (!query.isValid())
+    {
+        fmt::print("Failed to create query: {}\n", connection.lastError());
+        return false;
+    }
+
+    if (!query.bindBlob(1, params.salt))
+    {
+        fmt::print("Failed to bind hashingparams.salt: {}\n", connection.lastError());
+        return false;
+    }
+
+    if (!query.bindInt64(2, params.ops_limit))
+    {
+        fmt::print("Failed to bind hashingparams.ops_limit: {}\n", connection.lastError());
+        return false;
+    }
+
+    if (!query.bindInt64(3, params.mem_limit))
+    {
+        fmt::print("Failed to bind hashingparams.mem_limit: {}\n", connection.lastError());
+        return false;
+    }
+
+    if (!query.bindInt64(4, params.algorithm))
+    {
+        fmt::print("Failed to bind hashingparams.algorithm: {}\n", connection.lastError());
+        return false;
+    }
+
+    if (!query.bindInt64(5, m_dbId))
+    {
+        fmt::print("Failed to bind dbID: {}\n", connection.lastError());
+        return false;
+    }
+
+    if (!query.step())
+    {
+        fmt::print("Failed to execute username query: {}\n", connection.lastError());
+        return false;
+    }
+
+    LSql::Query getChanges("SELECT changes();", connection);
+
+    if (getChanges.columnCount() != 1)
+    {
+        fmt::print("Query didnt return any values\?\?\?\?\n");
+        return false;
+    }
+
+    if (getChanges.column(1).getInt64() == 0)
+    {
+        fmt::print("account invalid/already used\n");
+        return false;
+    }
+
+    transaction.commit();
+
+    std::unique_lock l(l_basics);
+    m_passwordHashParameters = params;
     return true;
 }
 

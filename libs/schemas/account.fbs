@@ -9,8 +9,8 @@ struct AuthToken {
 }
 struct HashingParameters {
   salt : [ ubyte : 16 ];
-  ops_limit : ulong;
-  mem_limit : ulong;
+  ops_limit : long;
+  mem_limit : long;
   algorithm : int;
 }
 struct HashCalculated {
