@@ -292,7 +292,6 @@ void ThorQ::ApiClient::handleMessageAccount(const void *body, flatbuffers::Verif
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Account::Message*>(body);
 
     if (!fbsCrypto->Verify(fbsVerifier)) {
-        onCryptoEstablished();
         return;
     }
 
@@ -304,7 +303,6 @@ void ThorQ::ApiClient::handleMessageAnnouncement(const void *body, flatbuffers::
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Announcement::Message*>(body);
 
     if (!fbsCrypto->Verify(fbsVerifier)) {
-        onCryptoEstablished();
         return;
     }
 
@@ -316,7 +314,6 @@ void ThorQ::ApiClient::handleMessageDevice(const void *body, flatbuffers::Verifi
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Device::Message*>(body);
 
     if (!fbsCrypto->Verify(fbsVerifier)) {
-        onCryptoEstablished();
         return;
     }
 
@@ -328,7 +325,6 @@ void ThorQ::ApiClient::handleMessageCrypto(const void* body, flatbuffers::Verifi
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Crypto::Message*>(body);
 
     if (!fbsCrypto->Verify(fbsVerifier)) {
-        onCryptoEstablished();
         return;
     }
 
@@ -375,7 +371,6 @@ void ThorQ::ApiClient::handleMessageFile(const void *body, flatbuffers::Verifier
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::File::Message*>(body);
 
     if (!fbsCrypto->Verify(fbsVerifier)) {
-        onCryptoEstablished();
         return;
     }
 
@@ -387,7 +382,6 @@ void ThorQ::ApiClient::handleMessageFriendRequest(const void *body, flatbuffers:
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::FriendRequest::Message*>(body);
 
     if (!fbsCrypto->Verify(fbsVerifier)) {
-        onCryptoEstablished();
         return;
     }
 
@@ -399,7 +393,6 @@ void ThorQ::ApiClient::handleMessageGroup(const void *body, flatbuffers::Verifie
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Group::Message*>(body);
 
     if (!fbsCrypto->Verify(fbsVerifier)) {
-        onCryptoEstablished();
         return;
     }
 
@@ -411,7 +404,6 @@ void ThorQ::ApiClient::handleMessageModeration(const void *body, flatbuffers::Ve
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Moderation::Message*>(body);
 
     if (!fbsCrypto->Verify(fbsVerifier)) {
-        onCryptoEstablished();
         return;
     }
 
@@ -423,7 +415,6 @@ void ThorQ::ApiClient::handleMessageSystemID(const void *body, flatbuffers::Veri
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::SystemId::Message*>(body);
 
     if (!fbsCrypto->Verify(fbsVerifier)) {
-        onCryptoEstablished();
         return;
     }
 
@@ -435,7 +426,6 @@ void ThorQ::ApiClient::handleMessageUser(const void *body, flatbuffers::Verifier
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::User::Message*>(body);
 
     if (!fbsCrypto->Verify(fbsVerifier)) {
-        onCryptoEstablished();
         return;
     }
 
