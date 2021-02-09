@@ -3,6 +3,8 @@
 
 #include <enums.h>
 
+#include <flatbuffers/flatbuffers.h>
+
 #include <QMetaType>
 
 #include <cstdint>

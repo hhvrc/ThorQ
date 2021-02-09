@@ -80,7 +80,6 @@ set(${project}_SOURCES
 
     ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/signer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/encryption.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/passwordhash.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/hashing.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/version.cpp
@@ -100,7 +99,7 @@ set(${project}_HEADERS
 
     ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/signer.h
     ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/encryption.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/passwordhash.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/cryptography/hashing.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/hashing.h
     ${CMAKE_CURRENT_SOURCE_DIR}/version.h

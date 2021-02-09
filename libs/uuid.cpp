@@ -43,9 +43,14 @@ ThorQ::Uuid::Uuid(const ThorQ::Uuid& other) noexcept
 {
 }
 
-ThorQ::Uuid::Uuid(std::array<uint8_t, 16> data) noexcept
+ThorQ::Uuid::Uuid(std::array<std::uint8_t, 16> data) noexcept
     : m_data(data)
 {
+}
+
+ThorQ::Uuid::Uuid(std::span<const std::uint8_t, 16> data) noexcept
+{
+    memcpy(m_data.data(), data.data(), 16);
 }
 
 std::array<std::uint8_t, 16> empty{0};
@@ -75,7 +80,7 @@ std::string ThorQ::Uuid::toString() const
     return str;
 }
 
-std::array<uint8_t, 16> ThorQ::Uuid::toBytes() const
+std::array<std::uint8_t, 16> ThorQ::Uuid::toBytes() const
 {
     return m_data;
 }

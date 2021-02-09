@@ -1,6 +1,7 @@
 #ifndef UUID_H
 #define UUID_H
 
+#include <span>
 #include <array>
 #include <string>
 
@@ -16,6 +17,7 @@ public:
     Uuid() noexcept;
     Uuid(const ThorQ::Uuid& other) noexcept;
     Uuid(std::array<std::uint8_t, 16> data) noexcept;
+    Uuid(std::span<const std::uint8_t, 16> data) noexcept;
 
     bool isEmpty() const noexcept;
 

@@ -7,24 +7,34 @@ namespace ThorQ.Serialization.Account;
 struct AuthToken {
   token : [ ubyte : 64 ];
 }
-struct PasswordSeed {
-  seed : [ ubyte : 32 ];
+struct HashingParameters {
+  salt : [ ubyte : 16 ];
+  ops_limit : ulong;
+  mem_limit : ulong;
+  algorithm : int;
+}
+struct HashCalculated {
+  hash : [ ubyte : 32 ];
+}
+struct HashNew {
+  hash : [ ubyte : 32 ];
+  params : Account.HashingParameters;
 }
 
 table GetAccountId {
   username : string;
 }
 
-table GetPasswordSeed {
+table GetHashingParameters {
   account_id : Uuid;
 }
 
 table GetAuthToken {
   user_id : Uuid;
-  password_hash : string;
+  password_hash : Account.HashCalculated;
 }
 
-struct Login {
+table Login {
   user_id : Uuid;
   auth_token : Account.AuthToken;
 }
@@ -32,7 +42,7 @@ struct Login {
 table Register {
   user_id : Uuid;
   email : string;
-  password_hash : string;
+  password_hash : Account.HashNew;
 }
 
 table Recover {
@@ -40,7 +50,7 @@ table Recover {
 }
 
 table Delete {
-  password_hash : string;
+  password_hash : Account.HashCalculated;
 }
 
 table Logout {
@@ -49,25 +59,16 @@ table Logout {
 
 table SetUsername {
   username : string;
-  password_hash : string;
+  password_hash : Account.HashCalculated;
 }
 
-/// Sent from client to server to ask server to generate a new password seed for a new password
-table GeneratePasswordSeed {
-  password_hash : string;
-}
-/// Sent from server to client when seed has been generated
-table PasswordSeedGenerated {
-  password_seed : Account.PasswordSeed;
-}
-/// Sent from client to server after hash has been generated with seed
 table SetPassword {
-  new_password_hash : string;
+  new_password_hash : Account.HashNew;
 }
 
 table SetEmail {
   email : string;
-  password_hash : string;
+  password_hash : Account.HashCalculated;
 }
 
 table SetImage {
@@ -79,8 +80,8 @@ union Body {
   get_account_id : Account.GetAccountId,
   account_id : Uuid,
 
-  get_password_seed : Account.GetPasswordSeed,
-  password_seed : Account.PasswordSeed,
+  get_hashing_parameters : Account.GetHashingParameters,
+  hashing_parameters : Account.HashingParameters,
 
   get_auth_token : Account.GetAuthToken,
   auth_token : Account.AuthToken,
@@ -91,8 +92,6 @@ union Body {
   delete : Account.Delete,
   logout : Account.Logout,
 
-  generate_seed : Account.GeneratePasswordSeed,
-  seed_generated : Account.PasswordSeedGenerated,
   set_username : Account.SetUsername,
   set_password : Account.SetPassword,
   set_email : Account.SetEmail,

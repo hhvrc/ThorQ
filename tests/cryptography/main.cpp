@@ -1,6 +1,6 @@
 #include <cryptography/signer.h>
 #include <cryptography/encryption.h>
-#include <cryptography/passwordhash.h>
+#include <cryptography/hashing.h>
 
 #include <fmt/core.h>
 
@@ -169,15 +169,27 @@ bool testPasswordHashing()
 {
     std::string password = "Very secure password";
 
-    std::array<std::uint8_t, ThorQ::Crypto::PasswordHash::HashLength> key;
+    ThorQ::Crypto::Hashing::HashingParameters parameters;
+    std::array<std::uint8_t, ThorQ::Crypto::Hashing::HashLength> hash;
 
-    if (!ThorQ::Crypto::PasswordHash::Generate(password.c_str(), password.length(), key)) {
+    parameters.randomizeSeed();
+    parameters.setPerformance(ThorQ::Crypto::Hashing::HashingParameters::Performance::Interactive);
+    if (!ThorQ::Crypto::Hashing::Generate(password, parameters, hash)) {
         fmt::print("PasswordHashing generate failed!\n");
         return false;
     }
 
-    if (!ThorQ::Crypto::PasswordHash::Verify(password.c_str(), password.length(), key)) {
-        fmt::print("PasswordHashing verify failed!\n");
+    parameters.randomizeSeed();
+    parameters.setPerformance(ThorQ::Crypto::Hashing::HashingParameters::Performance::Moderate);
+    if (!ThorQ::Crypto::Hashing::Generate(password, parameters, hash)) {
+        fmt::print("PasswordHashing generate failed!\n");
+        return false;
+    }
+
+    parameters.randomizeSeed();
+    parameters.setPerformance(ThorQ::Crypto::Hashing::HashingParameters::Performance::Sensitive);
+    if (!ThorQ::Crypto::Hashing::Generate(password, parameters, hash)) {
+        fmt::print("PasswordHashing generate failed!\n");
         return false;
     }
 

@@ -205,9 +205,9 @@ void ThorQ::ApiServerConnection::handleMessageAccount(const void* body)
         break;
     case ThorQ::Serialization::Account::Body_account_id:
         break;
-    case ThorQ::Serialization::Account::Body_get_password_seed:
+    case ThorQ::Serialization::Account::Body_get_hashing_parameters:
         break;
-    case ThorQ::Serialization::Account::Body_password_seed:
+    case ThorQ::Serialization::Account::Body_hashing_parameters:
         break;
     case ThorQ::Serialization::Account::Body_get_auth_token:
         break;
@@ -222,10 +222,6 @@ void ThorQ::ApiServerConnection::handleMessageAccount(const void* body)
     case ThorQ::Serialization::Account::Body_delete_:
         break;
     case ThorQ::Serialization::Account::Body_logout:
-        break;
-    case ThorQ::Serialization::Account::Body_generate_seed:
-        break;
-    case ThorQ::Serialization::Account::Body_seed_generated:
         break;
     case ThorQ::Serialization::Account::Body_set_username:
         break;

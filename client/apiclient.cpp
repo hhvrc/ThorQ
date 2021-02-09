@@ -289,9 +289,7 @@ void ThorQ::ApiClient::onCryptoEstablished()
 
 void ThorQ::ApiClient::handleMessageAccount(const void* body)
 {
-    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Account::Message*>(message);
-
-    fmt::print("[MSG] Account\n");
+    m_accountController->ParseMessage(body);
 }
 
 void ThorQ::ApiClient::handleMessageAnnouncement(const void* body)
