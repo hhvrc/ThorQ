@@ -54,18 +54,18 @@ private:
     void establishCrypto();
     void onCryptoEstablished();
 
-    void handleMessageAccount(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageAnnouncement(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageDevice(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageCrypto(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageFile(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageFriendRequest(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageGroup(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageModeration(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageSystemID(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageUser(const void* body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageVersion(const void *body, flatbuffers::Verifier fbsVerifier);
-    void handleMessageP2P(const void* body, flatbuffers::Verifier fbsVerifier);
+    void handleMessageAccount(const void* body);
+    void handleMessageAnnouncement(const void* body);
+    void handleMessageDevice(const void* body);
+    void handleMessageCrypto(const void* body);
+    void handleMessageFile(const void* body);
+    void handleMessageFriendRequest(const void* body);
+    void handleMessageGroup(const void* body);
+    void handleMessageModeration(const void* body);
+    void handleMessageSystemID(const void* body);
+    void handleMessageUser(const void* body);
+    void handleMessageVersion(const void *body);
+    void handleMessageP2P(const void* body);
 
     bool encodeAndSend(const flatbuffers::span<std::uint8_t>& buffer, bool encrypt);
 

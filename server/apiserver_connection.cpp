@@ -123,40 +123,40 @@ void ThorQ::ApiServerConnection::onMessage(std::shared_ptr<std::vector<std::uint
 
     switch (fbsMessage->body_type()) {
     case ThorQ::Serialization::Body_account:
-        handleMessageAccount(fbsMessage->body(), fbsVerifier);
+        handleMessageAccount(fbsMessage->body());
         break;
     case ThorQ::Serialization::Body_announcement:
-        handleMessageAnnouncement(fbsMessage->body(), fbsVerifier);
+        handleMessageAnnouncement(fbsMessage->body());
         break;
     case ThorQ::Serialization::Body_device:
-        handleMessageDevice(fbsMessage->body(), fbsVerifier);
+        handleMessageDevice(fbsMessage->body());
         break;
     case ThorQ::Serialization::Body_crypto:
-        handleMessageCrypto(fbsMessage->body(), fbsVerifier);
+        handleMessageCrypto(fbsMessage->body());
         break;
     case ThorQ::Serialization::Body_file:
-        handleMessageFile(fbsMessage->body(), fbsVerifier);
+        handleMessageFile(fbsMessage->body());
         break;
     case ThorQ::Serialization::Body_friend_request:
-        handleMessageFriendRequest(fbsMessage->body(), fbsVerifier);
+        handleMessageFriendRequest(fbsMessage->body());
         break;
     case ThorQ::Serialization::Body_group:
-        handleMessageGroup(fbsMessage->body(), fbsVerifier);
+        handleMessageGroup(fbsMessage->body());
         break;
     case ThorQ::Serialization::Body_moderation:
-        handleMessageModeration(fbsMessage->body(), fbsVerifier);
+        handleMessageModeration(fbsMessage->body());
         break;
     case ThorQ::Serialization::Body_system_id:
-        handleMessageSystemID(fbsMessage->body(), fbsVerifier);
+        handleMessageSystemID(fbsMessage->body());
         break;
     case ThorQ::Serialization::Body_user:
-        handleMessageUser(fbsMessage->body(), fbsVerifier);
+        handleMessageUser(fbsMessage->body());
         break;
     case ThorQ::Serialization::Body_version:
-        handleMessageVersion(fbsMessage->body(), fbsVerifier);
+        handleMessageVersion(fbsMessage->body());
         break;
     case ThorQ::Serialization::Body_p2p:
-        handleMessageP2P(fbsMessage->body(), fbsVerifier);
+        handleMessageP2P(fbsMessage->body());
         break;
     default:
         fmt::print("[MSG] Invalid\n");
@@ -193,13 +193,9 @@ void ThorQ::ApiServerConnection::onCryptoEstablished()
 */
 }
 
-void ThorQ::ApiServerConnection::handleMessageAccount(const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiServerConnection::handleMessageAccount(const void* body)
 {
     auto fbsAccount = reinterpret_cast<const ThorQ::Serialization::Account::Message*>(body);
-
-    if (!fbsAccount->Verify(fbsVerifier)) {
-        return;
-    }
 
     fmt::print("[MSG] Account\n");
 
@@ -277,24 +273,16 @@ void ThorQ::ApiServerConnection::handleMessageAccount(const void* body, flatbuff
     }*/
 }
 
-void ThorQ::ApiServerConnection::handleMessageAnnouncement(const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiServerConnection::handleMessageAnnouncement(const void* body)
 {
     auto fbsAnnouncement = reinterpret_cast<const ThorQ::Serialization::Announcement::Message*>(body);
-
-    if (!fbsAnnouncement->Verify(fbsVerifier)) {
-        return;
-    }
 
     fmt::print("[MSG] Announcement\n");
 }
 
-void ThorQ::ApiServerConnection::handleMessageDevice(const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiServerConnection::handleMessageDevice(const void* body)
 {
     auto fbsDevice = reinterpret_cast<const ThorQ::Serialization::Device::Message*>(body);
-
-    if (!fbsDevice->Verify(fbsVerifier)) {
-        return;
-    }
 
     fmt::print("[MSG] Device\n");
 
@@ -305,13 +293,9 @@ void ThorQ::ApiServerConnection::handleMessageDevice(const void* body, flatbuffe
     */
 }
 
-void ThorQ::ApiServerConnection::handleMessageCrypto(const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiServerConnection::handleMessageCrypto(const void* body)
 {
     auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Crypto::Message*>(body);
-
-    if (!fbsCrypto->Verify(fbsVerifier)) {
-        return;
-    }
 
     fmt::print("[MSG] Crypto\n");
 
@@ -366,24 +350,16 @@ void ThorQ::ApiServerConnection::handleMessageCrypto(const void* body, flatbuffe
     }
 }
 
-void ThorQ::ApiServerConnection::handleMessageFile(const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiServerConnection::handleMessageFile(const void* body)
 {
     auto fbsFile = reinterpret_cast<const ThorQ::Serialization::File::Message*>(body);
-
-    if (!fbsFile->Verify(fbsVerifier)) {
-        return;
-    }
 
     fmt::print("[MSG] File\n");
 }
 
-void ThorQ::ApiServerConnection::handleMessageFriendRequest(const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiServerConnection::handleMessageFriendRequest(const void* body)
 {
     auto fbsFriendRequest = reinterpret_cast<const ThorQ::Serialization::FriendRequest::Message*>(body);
-
-    if (!fbsFriendRequest->Verify(fbsVerifier)) {
-        return;
-    }
 
     fmt::print("[MSG] Friend request\n");
 
@@ -556,13 +532,9 @@ void ThorQ::ApiServerConnection::handleMessageFriendRequest(const void* body, fl
     */
 }
 
-void ThorQ::ApiServerConnection::handleMessageGroup(const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiServerConnection::handleMessageGroup(const void* body)
 {
     auto fbsGroup = reinterpret_cast<const ThorQ::Serialization::Group::Message*>(body);
-
-    if (!fbsGroup->Verify(fbsVerifier)) {
-        return;
-    }
 
     fmt::print("[MSG] Group\n");
 
@@ -584,24 +556,16 @@ void ThorQ::ApiServerConnection::handleMessageGroup(const void* body, flatbuffer
     */
 }
 
-void ThorQ::ApiServerConnection::handleMessageModeration(const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiServerConnection::handleMessageModeration(const void* body)
 {
     auto fbsModeration = reinterpret_cast<const ThorQ::Serialization::Moderation::Message*>(body);
-
-    if (!fbsModeration->Verify(fbsVerifier)) {
-        return;
-    }
 
     fmt::print("[MSG] Moderation\n");
 }
 
-void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body)
 {
     auto fbsSystemID = reinterpret_cast<const ThorQ::Serialization::SystemId::Message*>(body);
-
-    if (!fbsSystemID->Verify(fbsVerifier)) {
-        return;
-    }
 
     fmt::print("[MSG] SystemID\n");
 
@@ -669,24 +633,16 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body, flatbuf
     fmt::print("Connection is ok!\n");
 }
 
-void ThorQ::ApiServerConnection::handleMessageUser(const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiServerConnection::handleMessageUser(const void* body)
 {
     auto fbsUser = reinterpret_cast<const ThorQ::Serialization::User::Message*>(body);
-
-    if (!fbsUser->Verify(fbsVerifier)) {
-        return;
-    }
 
     fmt::print("[MSG] User\n");
 }
 
-void ThorQ::ApiServerConnection::handleMessageVersion(const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiServerConnection::handleMessageVersion(const void* body)
 {
     auto fbsVersion = reinterpret_cast<const ThorQ::Serialization::Version*>(body);
-
-    if (!fbsVersion->Verify(fbsVerifier)) {
-        return;
-    }
 
     fmt::print("[MSG] version\n");
 
@@ -723,13 +679,9 @@ void ThorQ::ApiServerConnection::handleMessageVersion(const void* body, flatbuff
     }
 }
 
-void ThorQ::ApiServerConnection::handleMessageP2P(const void* body, flatbuffers::Verifier fbsVerifier)
+void ThorQ::ApiServerConnection::handleMessageP2P(const void* body)
 {
     auto fbsP2P = reinterpret_cast<const ThorQ::Serialization::Peer2Peer::Message*>(body);
-
-    if (!fbsP2P->Verify(fbsVerifier)) {
-        return;
-    }
 
     fmt::print("[MSG] P2P\n");
 }
@@ -753,4 +705,6 @@ bool ThorQ::ApiServerConnection::encodeAndSend(flatbuffers::span<std::uint8_t> b
     }
 
     messageSend(message);
+
+    return true;
 }
