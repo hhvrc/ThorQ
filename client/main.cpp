@@ -1,3 +1,14 @@
+#include "declerations_qt.h"
+#include "stylesheets.h"
+#include "loginwidget.h"
+#include "mainwidget.h"
+#include "collar/serial.h"
+#include "apiclient.h"
+#include "vr/openvroverlaycontroller.h"
+
+#include <constants.h>
+#include <encoding.h>
+
 #include <QApplication>
 #include <QCoreApplication>
 #include <QLabel>
@@ -10,21 +21,9 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 
-#include "loginwidget.h"
-#include "mainwidget.h"
-#include "collar/serial.h"
-#include "apiclient.h"
-#include "vr/openvroverlaycontroller.h"
-
-Q_DECLARE_METATYPE(ConnectionStatus)
-Q_DECLARE_METATYPE(ProcessStatus)
+#include <filesystem>
 
 #define COMTEST 1
-
-#include <constants.h>
-#include <encoding.h>
-
-#include <filesystem>
 
 std::uint16_t i = 0;
 int main(int argc, char** argv)
@@ -61,29 +60,15 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 #endif
-    QString stylesheet;
-
-    const char* fileName;
-    if (QFile::exists("stylesheet.css"))
-    { fileName = "stylesheet.css"; }
-    else
-    { fileName = ":/stylesheet.css"; }
-
-    QFile file(fileName);
-    if (file.open(QFile::ReadOnly | QFile::Text))
-    {
-        QTextStream stream(&file);
-        stylesheet = stream.readAll();
-    }
-
-    app.setStyleSheet(stylesheet);
+    app.setStyleSheet(ThorQ::StyleSheets::tryGetStylesheet("main"));
     app.setDesktopFileName(THORQ_APPLICATION_NAME);
     app.setWindowIcon(QIcon(":/shockGrey.ico"));
     //app.setQuitOnLastWindowClosed(false);
 #if COMTEST
-    LoginWidget loginWidget;
-    MainWidget mainWidget;
+
     ThorQ::ApiClient* apiClient = new ThorQ::ApiClient(&app);
+    ThorQ::LoginWidget loginWidget(apiClient->accountController());
+    MainWidget mainWidget;
 
     QMessageBox errorBox(&loginWidget);
     errorBox.setIcon(QMessageBox::Critical);
@@ -93,7 +78,7 @@ int main(int argc, char** argv)
     warningBox.setIcon(QMessageBox::Warning);
     errorBox.setWindowTitle("warning");
 
-    QObject::connect(apiClient, &ThorQ::ApiClient::connectionStatusChanged, &loginWidget, &LoginWidget::setConnectionStatus);
+    QObject::connect(apiClient, &ThorQ::ApiClient::connectionStatusChanged, &loginWidget, &ThorQ::LoginWidget::setConnectionStatus);
     QObject::connect(apiClient, &ThorQ::ApiClient::errorOccured, &errorBox, &QMessageBox::setText);
     QObject::connect(apiClient, &ThorQ::ApiClient::errorOccured, &errorBox, &QMessageBox::show);
 /*

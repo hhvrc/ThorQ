@@ -9,12 +9,15 @@
 #include <concurrentqueue.h>
 #include <enums.h>
 
+#include <flatbuffers/flatbuffers.h>
+
 #include <QObject>
 #include <QTimer>
 
 #include <thread>
 
 namespace ThorQ {
+class AccountController;
 class ApiClient : public QObject
 {
     Q_OBJECT
@@ -27,6 +30,8 @@ public:
 
     bool netConnect(QString host, quint16 port);
     void netDisconnect();
+
+    ThorQ::AccountController* accountController() const { return m_accountController; };
 signals:
     void netConnected();
     void netDisconnected();
@@ -82,6 +87,9 @@ private:
     ThorQ::Crypto::Signer m_signer;
     ThorQ::Crypto::Encryption m_crypto;
     std::vector<std::uint8_t> m_buffer;
+
+    ThorQ::AccountController* m_accountController;
+
 };
 }
 

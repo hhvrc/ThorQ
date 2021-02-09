@@ -170,7 +170,7 @@ void ThorQ::ApiServerConnection::onCryptoEstablished()
     flatbuffers::FlatBufferBuilder fbsBuilder;
     flatbuffers::Offset<ThorQ::Serialization::Version> fbsVersion;
     flatbuffers::Offset<ThorQ::Serialization::Message> fbsMessage;
-
+/*
     // Link version
     fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::LINK, THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH);
     fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
@@ -190,6 +190,7 @@ void ThorQ::ApiServerConnection::onCryptoEstablished()
     fbsMessage = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union());
     fbsBuilder.Finish(fbsMessage);
     encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+*/
 }
 
 void ThorQ::ApiServerConnection::handleMessageAccount(const void* body, flatbuffers::Verifier fbsVerifier)
@@ -204,11 +205,17 @@ void ThorQ::ApiServerConnection::handleMessageAccount(const void* body, flatbuff
 
     switch (fbsAccount->body_type())
     {
-    case ThorQ::Serialization::Account::Body_get_account:
+    case ThorQ::Serialization::Account::Body_get_account_id:
         break;
-    case ThorQ::Serialization::Account::Body_account:
+    case ThorQ::Serialization::Account::Body_account_id:
+        break;
+    case ThorQ::Serialization::Account::Body_get_password_seed:
+        break;
+    case ThorQ::Serialization::Account::Body_password_seed:
         break;
     case ThorQ::Serialization::Account::Body_get_auth_token:
+        break;
+    case ThorQ::Serialization::Account::Body_auth_token:
         break;
     case ThorQ::Serialization::Account::Body_login:
         break;

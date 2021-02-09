@@ -1,5 +1,6 @@
 #include "apiclient.h"
 
+#include "accountcontroller.h"
 #include "apiclient_connection.h"
 
 #include <systemid.h>
@@ -27,6 +28,7 @@ ThorQ::ApiClient::ApiClient(QObject *parent)
     , m_signer()
     , m_crypto()
     , m_buffer(THORQ_PAYLOAD_LEN_MAX)
+    , m_accountController(new ThorQ::AccountController(this))
 {
     QObject::connect(m_pollTimer, &QTimer::timeout, this, &ApiClient::pollEvents);
     m_pollTimer->setInterval(0);

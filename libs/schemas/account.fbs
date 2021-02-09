@@ -11,13 +11,12 @@ struct PasswordSeed {
   seed : [ ubyte : 32 ];
 }
 
-table GetAccount {
+table GetAccountId {
   username : string;
 }
 
-table Account {
-  user_id : Uuid;
-  password_seed : Account.PasswordSeed;
+table GetPasswordSeed {
+  account_id : Uuid;
 }
 
 table GetAuthToken {
@@ -77,14 +76,21 @@ table SetImage {
 
 /// Yada, yada...
 union Body {
-  get_account : Account.GetAccount,
-  account : Account.Account,
+  get_account_id : Account.GetAccountId,
+  account_id : Uuid,
+
+  get_password_seed : Account.GetPasswordSeed,
+  password_seed : Account.PasswordSeed,
+
   get_auth_token : Account.GetAuthToken,
+  auth_token : Account.AuthToken,
+
   login : Account.Login,
   register : Account.Register,
   recover : Account.Recover,
   delete : Account.Delete,
   logout : Account.Logout,
+
   generate_seed : Account.GeneratePasswordSeed,
   seed_generated : Account.PasswordSeedGenerated,
   set_username : Account.SetUsername,

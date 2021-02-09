@@ -53,6 +53,11 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.cpp
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/accountcontroller.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/stylesheets.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/namedlineedit.cpp
+
     ${CMAKE_CURRENT_SOURCE_DIR}/collar/serial.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/apiclient.cpp
@@ -77,6 +82,11 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.h
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/accountcontroller.h
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/stylesheets.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/namedlineedit.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/collar/serial.h
 

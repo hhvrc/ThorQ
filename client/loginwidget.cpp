@@ -1,7 +1,13 @@
 #include "loginwidget.h"
 
+#include "accountcontroller.h"
+#include "namedlineedit.h"
+
+#include <constants.h>
+
 #include <QDebug>
 #include <QLabel>
+#include <QStyle>
 #include <QLineEdit>
 #include <QPushButton>
 #include <QVBoxLayout>
@@ -37,18 +43,20 @@ UiStatus uiStatusList[]
     { "● Logging in...",     "font-size: 16px; color: #FFA500" }, // THORQ_STATE_LOGIN_LOGGINGIN
 };
 
-LoginWidget::LoginWidget(QWidget* parent)
+ThorQ::LoginWidget::LoginWidget(ThorQ::AccountController* accountController, QWidget* parent)
 	: QWidget(parent)
     , m_connectionStatus(ConnectionStatus::Error)
     , m_title(new QLabel(this))
     , m_onlineStatus(new QLabel(this))
-    , m_textInput(new QLineEdit(this))
+    , m_usernameInput(new NamedLineEdit(this))
+    , m_passwordInput(new NamedLineEdit(this))
     , m_loginButton(new QPushButton(this))
     , m_forgotButton(new QPushButton(this))
     , m_registerButton(new QPushButton(this))
     , m_mainLayout(new QVBoxLayout(this))
     , m_headerLayout(new QHBoxLayout())
     , m_belowLoginLayout(new QHBoxLayout())
+    , m_accountController(accountController)
 {
     setWindowTitle(tr("ThorQ Login"));
 
@@ -58,39 +66,62 @@ LoginWidget::LoginWidget(QWidget* parent)
     m_onlineStatus->setText(uiConnectionStatusList[(int)ConnectionStatus::Disconnected].text);
     m_onlineStatus->setStyleSheet(uiConnectionStatusList[(int)ConnectionStatus::Disconnected].style);
 
+    m_usernameInput->setName(tr("USERNAME"));
+    m_usernameInput->setEchoMode(QLineEdit::EchoMode::Normal);
+    m_passwordInput->setName(tr("PASSWORD"));
+    m_passwordInput->setEchoMode(QLineEdit::EchoMode::Password);
+
+    m_loginButton->setText(tr("Login"));
+    m_registerButton->setText(tr("Register"));
+    m_forgotButton->setText(tr("Forgot"));
+
+    m_headerLayout->setContentsMargins(0, 0, 0, 0);
 	m_headerLayout->addWidget(m_title);
     m_headerLayout->addWidget(m_onlineStatus);
 
-	m_mainLayout->addLayout(m_headerLayout);
-    m_mainLayout->addWidget(m_textInput);
+    m_mainLayout->setContentsMargins(12, 12, 12, 12);
+    m_mainLayout->addLayout(m_headerLayout);
+    m_mainLayout->addWidget(m_usernameInput);
+    m_mainLayout->addWidget(m_passwordInput);
     m_mainLayout->addWidget(m_loginButton);
     m_mainLayout->addLayout(m_belowLoginLayout);
 
+    m_belowLoginLayout->setContentsMargins(0, 0, 0, 0);
     m_belowLoginLayout->addWidget(m_registerButton);
     m_belowLoginLayout->addWidget(m_forgotButton);
 
 	setLayout(m_mainLayout);
 
-	setFixedSize(m_mainLayout->geometry().size());
-	setWindowFlags(Qt::MSWindowsFixedSizeDialogHint);
+    setFixedSize(m_mainLayout->geometry().size());
+    setWindowFlags(Qt::MSWindowsFixedSizeDialogHint);
 
-    QObject::connect(m_loginButton, &QPushButton::clicked, [this]()
-    {
-        if (m_textInput->text().isEmpty())
-            return;
+    QObject::connect(m_loginButton, &QPushButton::clicked, [this]() {
+        if (m_accountController != nullptr) {
+            auto username = m_usernameInput->text();
+            auto password = m_passwordInput->text();
 
-        emit usernameEntered(m_textInput->text());
+            if (username.size() < THORQ_USERNAME_LEN_MIN || username.size() > THORQ_USERNAME_LEN_MAX ||
+                password.size() < THORQ_PASSWORD_LEN_MIN || password.size() > THORQ_PASSWORD_LEN_MAX) {
+                return;
+            }
+
+            m_passwordInput->setText("");
+
+            m_accountController->setUsername(username);
+            m_accountController->setPassword(password);
+            m_accountController->login();
+        }
     });
 
     updateUiState();
 }
 
-LoginWidget::~LoginWidget()
+ThorQ::LoginWidget::~LoginWidget()
 {
 	delete m_headerLayout;
 }
 
-void LoginWidget::setConnectionStatus(ConnectionStatus status)
+void ThorQ::LoginWidget::setConnectionStatus(ConnectionStatus status)
 {
     if (m_connectionStatus != status)
     {
@@ -101,27 +132,25 @@ void LoginWidget::setConnectionStatus(ConnectionStatus status)
     }
 }
 
-void LoginWidget::updateUiState()
+void ThorQ::LoginWidget::updateUiState()
 {
     if (m_connectionStatus == ConnectionStatus::Connected)
     {
-        m_textInput->setText("");
-        m_textInput->show();
+        m_usernameInput->show();
 
-        m_loginButton->setText(tr("Login"));
+        m_passwordInput->setText("");
+        m_passwordInput->show();
+
         m_loginButton->show();
-
-        m_registerButton->setText(tr("Register"));
         m_registerButton->show();
-
-        m_forgotButton->setText(tr("Forgot"));
         m_forgotButton->show();
 
         adjustSize();
     }
     else
     {
-        m_textInput->hide();
+        m_usernameInput->hide();
+        m_passwordInput->hide();
         m_loginButton->hide();
         m_registerButton->hide();
         m_forgotButton->hide();

@@ -2,7 +2,8 @@
     <qresource prefix="/">
         <file>uwu.png</file>
         <file>shockGrey.ico</file>
-        <file>stylesheet.css</file>
+        <file>stylesheets/main.css</file>
+        <file>stylesheets/namedlineedit.css</file>
         <file>vr/action_manifest/manifest.json</file>
         <file>vr/action_manifest/bindings/controller_holographic.json</file>
         <file>vr/action_manifest/bindings/controller_hp_motion.json</file>

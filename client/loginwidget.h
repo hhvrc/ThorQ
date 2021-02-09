@@ -10,20 +10,19 @@ class QHBoxLayout;
 class QLabel;
 class QLineEdit;
 class QPushButton;
+class NamedLineEdit;
+class ClickableLabel;
 
-/**
- * @brief The LoginWidget class
- */
+namespace ThorQ {
+class SecureString;
+class AccountController;
 class LoginWidget : public QWidget
 {
-	Q_OBJECT
-	Q_DISABLE_COPY(LoginWidget)
+    Q_OBJECT
+    Q_DISABLE_COPY(LoginWidget)
 public:
-	LoginWidget(QWidget* parent = nullptr);
-	~LoginWidget();
-signals:
-	void usernameEntered(const QString& username);
-    void passwordEntered(const QString& username);
+    LoginWidget(ThorQ::AccountController* accountController, QWidget* parent = nullptr);
+    ~LoginWidget();
 public slots:
     void setConnectionStatus(ConnectionStatus status);
 private slots:
@@ -31,16 +30,20 @@ private slots:
 private:
     ConnectionStatus m_connectionStatus;
 
-	QLabel* m_title;
-	QLabel* m_onlineStatus;
-    QLineEdit* m_textInput;
+    QLabel* m_title;
+    QLabel* m_onlineStatus;
+    NamedLineEdit* m_usernameInput;
+    NamedLineEdit* m_passwordInput;
     QPushButton* m_loginButton;
     QPushButton* m_forgotButton;
     QPushButton* m_registerButton;
 
-	QVBoxLayout* m_mainLayout;
-	QHBoxLayout* m_headerLayout;
+    QVBoxLayout* m_mainLayout;
+    QHBoxLayout* m_headerLayout;
     QHBoxLayout* m_belowLoginLayout;
+
+    ThorQ::AccountController* m_accountController;
 };
+}
 
 #endif // LOGINWIDGET_H

@@ -1,0 +1,44 @@
+NamedLineEdit {
+    font-family: 'Calibri';
+
+    margin: 0px, 0px, 0px, 0px;
+    padding: 0px, 0px, 0px, 0px;
+}
+
+QLabel {
+    height: 16px;
+
+    color: rgba(255, 255, 255, 1);
+    background: transparent;
+
+    margin: 0px, 0px, 0px, 0px;
+    padding: 0px, 0px, 0px, 0px;
+
+    border-width: 0px;
+    /*
+    border-radius: 3px;
+    border-style: solid;
+    border-color: rgba(142, 146, 151, 1);
+    */
+
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QLineEdit {
+    height: 36px;
+
+    color: rgb(0, 0, 0);
+    background: rgba(232, 240, 254, 1);
+
+    margin: 0px, 0px, 0px, 0px;
+    padding: 0px, 0px, 0px, 0px;
+
+    border-width: 1px;
+    border-radius: 5px;
+    border-style: solid;
+    border-color: rgba(0, 0, 0, 0.31);
+
+    font-size: 16px;
+    font-weight: normal;
+}
