@@ -23,9 +23,9 @@ class Account
     Account(std::int64_t dbId, ThorQ::Uuid id, const std::string& username);
 public:
     static std::shared_ptr<ThorQ::Account> GetAccount(const std::string& username);
-    inline static std::shared_ptr<ThorQ::Account> GetAccount(const flatbuffers::String& username) { return GetAccount(std::string(username.data(), username.size())); }
+    inline static std::shared_ptr<ThorQ::Account> GetAccount(const flatbuffers::String* username) { return GetAccount(std::string(username->data(), username->size())); }
     static std::shared_ptr<ThorQ::Account> NewAccount(const std::string& username);
-    inline static std::shared_ptr<ThorQ::Account> NewAccount(const flatbuffers::String& username) { return NewAccount(std::string(username.data(), username.size())); }
+    inline static std::shared_ptr<ThorQ::Account> NewAccount(const flatbuffers::String* username) { return NewAccount(std::string(username->data(), username->size())); }
 public:
     ThorQ::Uuid id() const { return m_id; }
     std::int64_t dbId() const { return m_dbId; }

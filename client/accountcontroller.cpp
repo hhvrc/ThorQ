@@ -31,6 +31,8 @@ void ThorQ::AccountController::ParseMessage(const void* message)
     {
         auto fbsAccountId = reinterpret_cast<const ThorQ::Serialization::Uuid*>(message);
         m_accountID = ThorQ::Uuid(std::span<const std::uint8_t, 16>(fbsAccountId->data()->data(), 16));
+
+        fmt::print("[ACCOUNT] Got systemID: {}\n", m_accountID.toString());
         if (m_loggingIn) {
 
         }

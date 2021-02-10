@@ -201,26 +201,27 @@ void ThorQ::ApiServerConnection::handleMessageAccount(const void* body)
 
     fmt::print("[MSG] Account\n");
 
-    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
-    if (dbConnection != nullptr) {
-        return;
-    }
-
     switch (fbsAccount->body_type())
     {
     case ThorQ::Serialization::Account::Body_get_account_id:
     {
         auto fbsUsername = reinterpret_cast<const ThorQ::Serialization::Account::GetAccountId*>(fbsAccount->body())->username();
-        auto username = std::string(fbsUsername->data(), fbsUsername->size());
-        auto account = ThorQ::Account::GetAccount(username);
+
+        auto account = ThorQ::Account::GetAccount(fbsUsername);
 
         if (account == nullptr) {
-            account = ThorQ::Account::NewAccount(username);
+            account = ThorQ::Account::NewAccount(fbsUsername);
         }
 
         if (account != nullptr) {
             flatbuffers::FlatBufferBuilder fbsBuilder;
-            auto fbsAccountID = ThorQ::Serialization::Uuid(account->id().toBytes());
+            auto uuidBytes    = account->id();
+            fmt::print("Sending: {}\n", uuidBytes.toString());
+            auto fbsAccountID = fbsBuilder.CreateStruct(ThorQ::Serialization::Uuid(uuidBytes.toBytes())).Union();
+            auto fbsAccount   = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_account_id, fbsAccountID).Union();
+            auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount);
+            fbsBuilder.Finish(fbsMessage);
+            encodeAndSend(fbsBuilder.GetBufferSpan(), true);
         }
         break;
     }
@@ -607,6 +608,8 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body)
     {
         return;
     }
+
+    dbConnection->setBusyTimeout(5000);
 
     auto dbInsertSystemId = dbConnection->makeQuery("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?);"sv);
     dbInsertSystemId.bindText(1, systemID);

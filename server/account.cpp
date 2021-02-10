@@ -62,21 +62,23 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& us
         return nullptr;
     }
 
+    dbConnection->setBusyTimeout(5000);
+
     // TODO remove "NOT NULL" on all other fields
     SQLite::Query query = dbConnection->makeQuery("SELECT db_id, uuid FROM accounts WHERE username = ?"sv);
 
     if (!query.bindText(1, username)) {
-        fmt::print(stderr, "SQL error: {}\n", dbConnection->lastError());
+        fmt::print(stderr, "Failed to bind username: {}\n", dbConnection->lastError());
         return nullptr;
     }
 
     if (!query.step()) {
-        fmt::print(stderr, "SQL error: {}\n", dbConnection->lastError());
+        fmt::print(stderr, "SQL Failed to execute account query: {}\n", dbConnection->lastError());
         return nullptr;
     }
 
     if (query.columnCount() != 2) {
-        fmt::print(stderr, "SQL error: {}\n", dbConnection->lastError());
+        fmt::print(stderr, "SQL Returned {}, expected 2:\n", query.columnCount(), dbConnection->lastError());
         return nullptr;
     }
 
@@ -114,12 +116,14 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
         }
     }
 
-    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READONLY);
+    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
 
     if (dbConnection == nullptr) {
         fmt::print(stderr, "Failed to open database\n");
         return nullptr;
     }
+
+    dbConnection->setBusyTimeout(5000);
 
     auto transaction = dbConnection->beginDeferredTransaction();
 
@@ -129,7 +133,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 		return nullptr;
     }
 
-    SQLite::Query query = dbConnection->makeQuery("INSERT OR IGNORE INTO accounts(uuid, username) VALUES (?, ?)"sv);
+    SQLite::Query query = dbConnection->makeQuery("INSERT OR IGNORE INTO account_placeholders(uuid, username, password_salt) VALUES (?, ?, ?)"sv);
 
     ThorQ::Uuid id = ThorQ::Uuid::NewUuid();
     if (!query.bindText(1, id.toString()))
@@ -141,6 +145,15 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
     if (!query.bindText(2, username))
     {
         fmt::print(stderr, "SQL Failed to bind username: {}\n", dbConnection->lastError());
+        return nullptr;
+    }
+
+    std::array<std::uint8_t, ThorQ::Crypto::Hashing::SaltLength> salt;
+    randombytes_buf(salt.data(), salt.size());
+
+    if (!query.bindBlob(3, salt))
+    {
+        fmt::print(stderr, "SQL Failed to bind salt: {}\n", dbConnection->lastError());
         return nullptr;
     }
 
@@ -165,6 +178,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 		return nullptr;
 	}
 
+    fmt::print(stderr, "Done: {}\n", id.toString());
     return std::shared_ptr<ThorQ::Account>(new ThorQ::Account(dbId, id, username));
 }
 
@@ -191,6 +205,8 @@ bool ThorQ::Account::setUsername(const std::string& username)
         fmt::print(stderr, "Failed to open database\n");
         return false;
     }
+
+    dbConnection->setBusyTimeout(5000);
 
     auto transaction = dbConnection->beginDeferredTransaction();
 
@@ -271,6 +287,8 @@ bool ThorQ::Account::setPasswordHash(ThorQ::Crypto::Hashing::CalculatedHash hash
         return false;
     }
 
+    dbConnection->setBusyTimeout(5000);
+
     auto transaction = dbConnection->beginDeferredTransaction();
 
     if (!transaction.isOpen())
@@ -349,6 +367,8 @@ bool ThorQ::Account::setPasswordHash(ThorQ::Crypto::Hashing::HashingParameters p
         fmt::print(stderr, "Failed to open database\n");
         return false;
     }
+
+    dbConnection->setBusyTimeout(5000);
 
     auto transaction = dbConnection->beginDeferredTransaction();
 

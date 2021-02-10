@@ -201,7 +201,7 @@ void ThorQ::ApiClient::onMessage(std::shared_ptr<std::vector<std::uint8_t>> mess
     }
 
     // Do NOT accept any un-encrypted messages, they could be from a attacker
-    if (!ThorQ::Encoding::isMessageEncrypted(m_buffer.data(), m_buffer.size())) {
+    if (!ThorQ::Encoding::isMessageEncrypted(message->data(), message->size())) {
         if (fbsMessage->body_type() != ThorQ::Serialization::Body_crypto) {
             m_connection->disconnect();
             return;
