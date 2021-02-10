@@ -26,38 +26,39 @@ std::atomic_bool runServer = true;
 
 bool InitializeDB(const char* path) noexcept
 {
-    LSql::Connection con(path, LSql::Connection::CREATE | LSql::Connection::READWRITE);
+    auto con = SQLite::Connection::OpenConnection(path, SQLite::Connection::CREATE | SQLite::Connection::READWRITE);
 
-    return con.execute("CREATE TABLE IF NOT EXISTS system_ids("
+    using namespace std::literals;
+    return con->execute("CREATE TABLE IF NOT EXISTS system_ids("
                 "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 "system_id TEXT NOT NULL UNIQUE,"
                 "banned_at DATETIME,"
                 "registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                ")") // Unique SystemID of a cmoputer
+                ")"sv) // Unique SystemID of a cmoputer
 
-        && con.execute("CREATE TABLE IF NOT EXISTS auth_tokens("
+        && con->execute("CREATE TABLE IF NOT EXISTS auth_tokens("
                 "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 "auth_token TEXT NOT NULL UNIQUE,"
                 "system_id INTEGER NOT NULL,"
                 "account_id INTEGER NOT NULL,"
                 "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                ")") // Authentication Token generated at login
+                ")"sv) // Authentication Token generated at login
 
-        && con.execute("CREATE TABLE IF NOT EXISTS images("
+        && con->execute("CREATE TABLE IF NOT EXISTS images("
                 "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 "uuid TEXT NOT NULL UNIQUE,"
                 "uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                ")") // Image path will be images/{uuid_str}.png
+                ")"sv) // Image path will be images/{uuid_str}.png
 
-        && con.execute("CREATE TABLE IF NOT EXISTS account_placeholders("
+        && con->execute("CREATE TABLE IF NOT EXISTS account_placeholders("
                 "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 "uuid TEXT NOT NULL UNIQUE,"
                 "username TEXT NOT NULL UNIQUE,"
                 "password_salt BLOB NOT NULL,"
                 "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                ")") // Accounts that have been requested/queued for creation (this is here to fool any attacker and to provide a consistant password salt for any given account)
+                ")"sv) // Accounts that have been requested/queued for creation (this is here to fool any attacker and to provide a consistant password salt for any given account)
 
-        && con.execute("CREATE TABLE IF NOT EXISTS accounts("
+        && con->execute("CREATE TABLE IF NOT EXISTS accounts("
                 "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 "uuid TEXT NOT NULL UNIQUE,"
                 "username TEXT NOT NULL UNIQUE,"
@@ -73,9 +74,9 @@ bool InitializeDB(const char* path) noexcept
                 "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                 "updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                 "deleted_at DATETIME"
-                ")")
+                ")"sv)
 
-        && con.execute("CREATE TABLE IF NOT EXISTS relationships("
+        && con->execute("CREATE TABLE IF NOT EXISTS relationships("
                 "source INTEGER NOT NULL REFERENCES accounts,"
                 "target INTEGER NOT NULL REFERENCES accounts,"
                 "nickname TEXT,"
@@ -86,13 +87,13 @@ bool InitializeDB(const char* path) noexcept
                 "notify_online BOOLEAN NOT NULL,"
                 "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                 "PRIMARY KEY (source, target)"
-                ") WITHOUT ROWID")
+                ") WITHOUT ROWID"sv)
 
-        && con.execute("CREATE TABLE IF NOT EXISTS systemid_account_map("
+        && con->execute("CREATE TABLE IF NOT EXISTS systemid_account_map("
                 "systemid_id INTEGER NOT NULL,"
                 "account_id INTEGER NOT NULL,"
                 "established_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                ")");
+                ")"sv);
 }
 void exit_handler(int s)
 {
@@ -162,6 +163,7 @@ int main(int argc, char** argv)
         fmt::print("Failed to initialize database\n");
         return EXIT_FAILURE;
     }
+    fmt::print("Initialized database\n");
 
     // Create server
     std::shared_ptr<ThorQ::ApiServer> apiServer;

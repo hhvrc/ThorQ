@@ -4,8 +4,6 @@
 #include "constants.h"
 #include "enums.h"
 
-#include <sodium.h>
-
 #include <algorithm>
 #include <cstring>
 #include <cstdlib>

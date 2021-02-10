@@ -3,6 +3,7 @@
 
 #include <systemid.h>
 
+#define SODIUM_STATIC
 #include <sodium.h>
 
 #include <array>

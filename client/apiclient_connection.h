@@ -10,8 +10,6 @@
 #include <typedefs_global.h>
 #include <constants.h>
 
-#include <sodium.h>
-
 #include <span>
 #include <array>
 #include <vector>

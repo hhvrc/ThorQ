@@ -11,7 +11,7 @@ class Uuid
     friend std::hash<ThorQ::Uuid>;
 public:
     static ThorQ::Uuid NewUuid();
-    static bool TryParse(const std::string& str, ThorQ::Uuid& guidOut);
+    static bool TryParse(const char* string, ThorQ::Uuid& uuidOut);
     static const ThorQ::Uuid Empty();
 
     Uuid() noexcept;

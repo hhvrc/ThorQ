@@ -14,7 +14,6 @@ add_subdirectory(fmt)
 # -------------------------
 
 # ------- libsodium -------
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DSODIUM_STATIC")
 set(SODIUM_LINK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/${BUILD_OS}${VPTR_BITS}-${BUILD_TYPE})
 # -------------------------
 

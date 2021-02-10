@@ -19,12 +19,12 @@ ThorQ::Uuid ThorQ::Uuid::NewUuid()
     return id;
 }
 
-bool ThorQ::Uuid::TryParse(const std::string& str, ThorQ::Uuid& guidOut)
+bool ThorQ::Uuid::TryParse(const char* string, ThorQ::Uuid& guidOut)
 {
 #if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
-    return UuidFromStringA((std::uint8_t*)str.data(), (GUID*)guidOut.m_data.data()) == RPC_S_OK;
+    return UuidFromStringA((std::uint8_t*)string, (GUID*)guidOut.m_data.data()) == RPC_S_OK;
 #elif __linux__
-    return uuid_parse(str.data(), guidOut.m_data.data()) == 0;
+    return uuid_parse(string, guidOut.m_data.data()) == 0;
 #endif
 }
 

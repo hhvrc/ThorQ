@@ -16,6 +16,8 @@
 
 #include "apiserver_connection.h"
 
+using namespace std::literals;
+
 std::shared_mutex g_accounts_lock;
 std::unordered_map<std::string, std::shared_ptr<ThorQ::Account>> g_accounts;
 
@@ -53,44 +55,46 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& us
         }
     }
 
-    LSql::Connection connection("database.db", LSql::Connection::READONLY);
+    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READONLY);
 
-    if (!connection.isOpen()) {
-        fmt::print(stderr, "SQL error: {}\n", connection.lastError());
+    if (dbConnection == nullptr) {
+        fmt::print(stderr, "Failed to open database\n");
         return nullptr;
     }
 
     // TODO remove "NOT NULL" on all other fields
-    LSql::Query query = connection.query("SELECT db_id, uuid FROM accounts WHERE username = ?");
+    SQLite::Query query = dbConnection->makeQuery("SELECT db_id, uuid FROM accounts WHERE username = ?"sv);
 
-    if (!query.bindString(1, username)) {
-        fmt::print(stderr, "SQL error: {}\n", connection.lastError());
+    if (!query.bindText(1, username)) {
+        fmt::print(stderr, "SQL error: {}\n", dbConnection->lastError());
         return nullptr;
     }
 
     if (!query.step()) {
-        fmt::print(stderr, "SQL error: {}\n", connection.lastError());
+        fmt::print(stderr, "SQL error: {}\n", dbConnection->lastError());
         return nullptr;
     }
 
     if (query.columnCount() != 2) {
-        fmt::print(stderr, "SQL error: {}\n", connection.lastError());
+        fmt::print(stderr, "SQL error: {}\n", dbConnection->lastError());
         return nullptr;
     }
 
     // Get database ID
-    LSql::Column dbIdCol = query.column(0);
-    LSql::Column uuidCol = query.column(1);
-    if (dbIdCol.type() != LSql::Type::Integer || uuidCol.type() != LSql::Type::Text) {
+    SQLite::Column dbIdCol = query.column(0);
+    SQLite::Column uuidCol = query.column(1);
+    if (dbIdCol.type() != SQLite::Type::Integer || uuidCol.type() != SQLite::Type::Text) {
         return nullptr;
     }
+
+    std::int64_t dbId = dbIdCol.getInt64();
 
     ThorQ::Uuid accountId;
-    if (!ThorQ::Uuid::TryParse(uuidCol.getText(), accountId)) {
+    if (!ThorQ::Uuid::TryParse(dbIdCol.getDataText(), accountId)) {
         return nullptr;
     }
 
-    auto account = std::shared_ptr<ThorQ::Account>(new ThorQ::Account(dbIdCol.getInt64(), accountId, username));
+    auto account = std::shared_ptr<ThorQ::Account>(new ThorQ::Account(dbId, accountId, username));
 
     // TODO fill in the rest
 
@@ -110,43 +114,43 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
         }
     }
 
-    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
+    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READONLY);
 
-    if (!connection.isOpen())
-    {
+    if (dbConnection == nullptr) {
+        fmt::print(stderr, "Failed to open database\n");
         return nullptr;
     }
 
-    LSql::Transaction transaction = connection.transaction();
+    auto transaction = dbConnection->beginDeferredTransaction();
 
     if (!transaction.isOpen())
 	{
-        fmt::print(stderr, "SQL Failed to start transaction: {}\n", connection.lastError());
+        fmt::print(stderr, "SQL Failed to start transaction: {}\n", dbConnection->lastError());
 		return nullptr;
     }
 
-    LSql::Query query = connection.query("INSERT OR IGNORE INTO accounts(uuid, username) VALUES (?, ?);");
+    SQLite::Query query = dbConnection->makeQuery("INSERT OR IGNORE INTO accounts(uuid, username) VALUES (?, ?)"sv);
 
     ThorQ::Uuid id = ThorQ::Uuid::NewUuid();
-    if (!query.bindString(1, id.toString()))
+    if (!query.bindText(1, id.toString()))
     {
-        fmt::print(stderr, "SQL Failed to bind username: {}\n", connection.lastError());
+        fmt::print(stderr, "SQL Failed to bind username: {}\n", dbConnection->lastError());
         return nullptr;
     }
 
-    if (!query.bindString(2, username))
+    if (!query.bindText(2, username))
     {
-        fmt::print(stderr, "SQL Failed to bind username: {}\n", connection.lastError());
+        fmt::print(stderr, "SQL Failed to bind username: {}\n", dbConnection->lastError());
         return nullptr;
     }
 
     if (!query.step())
     {
-        fmt::print(stderr, "SQL Failed to execute account query: {}\n", connection.lastError());
+        fmt::print(stderr, "SQL Failed to execute account query: {}\n", dbConnection->lastError());
         return nullptr;
     }
 
-    std::int64_t dbId = connection.lastInsertedRowId();
+    std::int64_t dbId = dbConnection->lastInsertedRowId();
 
     /*
     if (dbId == 0)
@@ -157,7 +161,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 
     if (!transaction.commit())
 	{
-        fmt::print(stderr, "SQL Failed to commit account: {}\n", connection.lastError());
+        fmt::print(stderr, "SQL Failed to commit account: {}\n", dbConnection->lastError());
 		return nullptr;
 	}
 
@@ -181,42 +185,48 @@ bool ThorQ::Account::setUsername(const std::string& username)
         return false;
     }
 
-    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
+    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
 
-    if (!connection.isOpen())
-    {
+    if (dbConnection == nullptr) {
+        fmt::print(stderr, "Failed to open database\n");
         return false;
     }
 
-    LSql::Transaction transaction(connection);
+    auto transaction = dbConnection->beginDeferredTransaction();
 
-    LSql::Query query("UPDATE OR IGNORE accounts SET username = ? WHERE db_id = ? LIMIT 1;", connection);
+    if (!transaction.isOpen())
+    {
+        fmt::print(stderr, "SQL Failed to start transaction: {}\n", dbConnection->lastError());
+        return false;
+    }
+
+    SQLite::Query query = dbConnection->makeQuery("UPDATE OR IGNORE accounts SET username = ? WHERE db_id = ? LIMIT 1"sv);
 
     if (!query.isValid())
     {
-        fmt::print("Failed to create query: {}\n", connection.lastError());
+        fmt::print("Failed to create query: {}\n", dbConnection->lastError());
         return false;
     }
 
-    if (!query.bindString(1, username))
+    if (!query.bindText(1, username))
     {
-        fmt::print("Failed to bind username: {}\n", connection.lastError());
+        fmt::print("Failed to bind username: {}\n", dbConnection->lastError());
         return false;
     }
 
     if (!query.bindInt64(2, m_dbId))
     {
-        fmt::print("Failed to bind dbID: {}\n", connection.lastError());
+        fmt::print("Failed to bind dbID: {}\n", dbConnection->lastError());
         return false;
     }
 
     if (!query.step())
     {
-        fmt::print("Failed to execute username query: {}\n", connection.lastError());
+        fmt::print("Failed to execute username query: {}\n", dbConnection->lastError());
         return false;
     }
 
-    LSql::Query getChanges("SELECT changes();", connection);
+    auto getChanges = dbConnection->makeQuery("SELECT changes();"sv);
 
     if (getChanges.columnCount() != 1)
     {
@@ -224,7 +234,7 @@ bool ThorQ::Account::setUsername(const std::string& username)
         return false;
     }
 
-    if (getChanges.column(1).getInt() == 0)
+    if (getChanges.column(1).getInt64() == 0)
     {
         fmt::print("account invalid/already used\n");
         return false;
@@ -254,42 +264,48 @@ bool ThorQ::Account::setPasswordHash(ThorQ::Crypto::Hashing::CalculatedHash hash
         return false;
     }
 
-    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
+    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
 
-    if (!connection.isOpen())
-    {
+    if (dbConnection == nullptr) {
+        fmt::print(stderr, "Failed to open database\n");
         return false;
     }
 
-    LSql::Transaction transaction(connection);
+    auto transaction = dbConnection->beginDeferredTransaction();
 
-    LSql::Query query("UPDATE OR IGNORE accounts SET password_hash = ? WHERE db_id = ? LIMIT 1;", connection);
+    if (!transaction.isOpen())
+    {
+        fmt::print(stderr, "SQL Failed to start transaction: {}\n", dbConnection->lastError());
+        return false;
+    }
+
+    auto query = dbConnection->makeQuery("UPDATE OR IGNORE accounts SET password_hash = ? WHERE db_id = ? LIMIT 1"sv);
 
     if (!query.isValid())
     {
-        fmt::print("Failed to create query: {}\n", connection.lastError());
+        fmt::print("Failed to create query: {}\n", dbConnection->lastError());
         return false;
     }
 
     if (!query.bindBlob(1, hash))
     {
-        fmt::print("Failed to bind username: {}\n", connection.lastError());
+        fmt::print("Failed to bind username: {}\n", dbConnection->lastError());
         return false;
     }
 
     if (!query.bindInt64(2, m_dbId))
     {
-        fmt::print("Failed to bind dbID: {}\n", connection.lastError());
+        fmt::print("Failed to bind dbID: {}\n", dbConnection->lastError());
         return false;
     }
 
     if (!query.step())
     {
-        fmt::print("Failed to execute username query: {}\n", connection.lastError());
+        fmt::print("Failed to execute username query: {}\n", dbConnection->lastError());
         return false;
     }
 
-    LSql::Query getChanges("SELECT changes();", connection);
+    auto getChanges = dbConnection->makeQuery("SELECT changes();"sv);
 
     if (getChanges.columnCount() != 1)
     {
@@ -302,6 +318,8 @@ bool ThorQ::Account::setPasswordHash(ThorQ::Crypto::Hashing::CalculatedHash hash
         fmt::print("account invalid/already used\n");
         return false;
     }
+
+    transaction.commit();
 
     std::unique_lock l(l_basics);
     m_passwordHash = hash;
@@ -325,60 +343,66 @@ bool ThorQ::Account::setPasswordHash(ThorQ::Crypto::Hashing::HashingParameters p
         return false;
     }
 
-    LSql::Connection connection("database.db", LSql::Connection::READWRITE);
+    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
 
-    if (!connection.isOpen())
-    {
+    if (dbConnection == nullptr) {
+        fmt::print(stderr, "Failed to open database\n");
         return false;
     }
 
-    LSql::Transaction transaction(connection);
+    auto transaction = dbConnection->beginDeferredTransaction();
 
-    LSql::Query query("UPDATE OR IGNORE accounts SET password_salt = ?, password_ops_limit = ?, password_mem_limit = ?, password_algorithm = ? WHERE db_id = ? LIMIT 1;", connection);
+    if (!transaction.isOpen())
+    {
+        fmt::print(stderr, "SQL Failed to start transaction: {}\n", dbConnection->lastError());
+        return false;
+    }
+
+    auto query = dbConnection->makeQuery("UPDATE OR IGNORE accounts SET password_salt = ?, password_ops_limit = ?, password_mem_limit = ?, password_algorithm = ? WHERE db_id = ? LIMIT 1"sv);
 
     if (!query.isValid())
     {
-        fmt::print("Failed to create query: {}\n", connection.lastError());
+        fmt::print("Failed to create query: {}\n", dbConnection->lastError());
         return false;
     }
 
     if (!query.bindBlob(1, params.salt))
     {
-        fmt::print("Failed to bind hashingparams.salt: {}\n", connection.lastError());
+        fmt::print("Failed to bind hashingparams.salt: {}\n", dbConnection->lastError());
         return false;
     }
 
     if (!query.bindInt64(2, params.ops_limit))
     {
-        fmt::print("Failed to bind hashingparams.ops_limit: {}\n", connection.lastError());
+        fmt::print("Failed to bind hashingparams.ops_limit: {}\n", dbConnection->lastError());
         return false;
     }
 
     if (!query.bindInt64(3, params.mem_limit))
     {
-        fmt::print("Failed to bind hashingparams.mem_limit: {}\n", connection.lastError());
+        fmt::print("Failed to bind hashingparams.mem_limit: {}\n", dbConnection->lastError());
         return false;
     }
 
     if (!query.bindInt64(4, params.algorithm))
     {
-        fmt::print("Failed to bind hashingparams.algorithm: {}\n", connection.lastError());
+        fmt::print("Failed to bind hashingparams.algorithm: {}\n", dbConnection->lastError());
         return false;
     }
 
     if (!query.bindInt64(5, m_dbId))
     {
-        fmt::print("Failed to bind dbID: {}\n", connection.lastError());
+        fmt::print("Failed to bind dbID: {}\n", dbConnection->lastError());
         return false;
     }
 
     if (!query.step())
     {
-        fmt::print("Failed to execute username query: {}\n", connection.lastError());
+        fmt::print("Failed to execute username query: {}\n", dbConnection->lastError());
         return false;
     }
 
-    LSql::Query getChanges("SELECT changes();", connection);
+    auto getChanges = dbConnection->makeQuery("SELECT changes()"sv);
 
     if (getChanges.columnCount() != 1)
     {

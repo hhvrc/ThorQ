@@ -17,7 +17,7 @@ int main()
     }
 
     ThorQ::Uuid fromString;
-    ThorQ::Uuid::TryParse(uuid.toString(), fromString);
+    ThorQ::Uuid::TryParse(uuid.toString().c_str(), fromString);
     if (uuid != fromString) {
         fmt::print("FromString failed!\n");
         return EXIT_FAILURE;

@@ -1,6 +1,7 @@
 #ifndef CRYPTO_H
 #define CRYPTO_H
 
+#define SODIUM_STATIC
 #include <sodium.h>
 
 #include <span>

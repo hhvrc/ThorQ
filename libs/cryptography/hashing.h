@@ -1,6 +1,7 @@
 #ifndef PASSWORDHASHING_H
 #define PASSWORDHASHING_H
 
+#define SODIUM_STATIC
 #include <sodium.h>
 
 #include <span>

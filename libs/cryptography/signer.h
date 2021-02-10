@@ -1,6 +1,7 @@
 #ifndef SIGNING_H
 #define SIGNING_H
 
+#define SODIUM_STATIC
 #include <sodium.h>
 
 #include <filesystem>

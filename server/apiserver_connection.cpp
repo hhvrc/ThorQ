@@ -16,6 +16,8 @@
 #include <lsql/query.h>
 #include <fmt/core.h>
 
+using namespace std::literals;
+
 ThorQ::ApiServerConnection::ApiServerConnection(asio::io_context& asio, asio::ip::tcp::socket socket)
     : ThorQ::Networking::TcpConnection(asio, std::move(socket))
     , m_buffer(THORQ_PAYLOAD_LEN_TYP)
@@ -199,8 +201,8 @@ void ThorQ::ApiServerConnection::handleMessageAccount(const void* body)
 
     fmt::print("[MSG] Account\n");
 
-    LSql::Connection dbConnection("database.db", LSql::Connection::READWRITE);
-    if (!dbConnection.isOpen()) {
+    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
+    if (dbConnection != nullptr) {
         return;
     }
 
@@ -599,15 +601,15 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body)
 
     fmt::print("SystemID: {}\n", systemID);
 
-    LSql::Connection dbConnection("database.db", LSql::Connection::READWRITE);
+    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
 
-    if (!dbConnection.isOpen())
+    if (dbConnection == nullptr)
     {
         return;
     }
 
-    LSql::Query dbInsertSystemId = dbConnection.query("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?);");
-    dbInsertSystemId.bindString(1, systemID);
+    auto dbInsertSystemId = dbConnection->makeQuery("INSERT OR IGNORE INTO system_ids(system_id) VALUES (?);"sv);
+    dbInsertSystemId.bindText(1, systemID);
 
     if (!dbInsertSystemId.step())
     {
@@ -615,8 +617,8 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body)
         return;
     }
 
-    LSql::Query dbCheckSystemIdBanned = dbConnection.query("SELECT banned_at FROM system_ids WHERE system_id = ?;");
-    dbCheckSystemIdBanned.bindString(1, systemID);
+    auto dbCheckSystemIdBanned = dbConnection->makeQuery("SELECT banned_at FROM system_ids WHERE system_id = ?;"sv);
+    dbCheckSystemIdBanned.bindText(1, systemID);
 
     if (!dbCheckSystemIdBanned.step())
     {
@@ -630,7 +632,7 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body)
         return;
     }
 
-    bool isBanned = (dbCheckSystemIdBanned.column(0).type() != LSql::Type::Null);
+    bool isBanned = (dbCheckSystemIdBanned.column(0).type() != SQLite::Type::Null);
 
     if (isBanned)
     {
