@@ -38,8 +38,8 @@ constexpr std::uint32_t THORQ_PAYLOAD_LEN_MIN = 1;          ///< Minimum payload
  * Minimum: 10 + 1   (11)
  * Maximum: 10 + 255 (265)
  */
-constexpr std::size_t THORQ_AUTH_SYSTEMID_LEN_MIN = 11; ///< Minimum SystemID length
-constexpr std::size_t THORQ_AUTH_SYSTEMID_LEN_MAX = 265; ///< Maximum SystemID length
+constexpr std::size_t THORQ_AUTH_SYSTEMID_LEN_MIN = 11; ///< Minimum SystemID length (String is 26)
+constexpr std::size_t THORQ_AUTH_SYSTEMID_LEN_MAX = 265; ///< Maximum SystemID length (String is 280)
 
 /* Users cannot have usernames less than 2 characters, thats retarded
  * Limit usernames at 32 characters, because having more is... retarded
