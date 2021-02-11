@@ -17,7 +17,7 @@ $ sudo apt install cmake build-essential libsodium-dev gcc-10 g++-10 libstdc++-1
 $ git clone https://github.com/google/flatbuffers.git flatbuffers
 $ cd flatbuffers
 $ cmake -DCMAKE_BUILD_TYPE=Release .
-$ sudo cmake --build . --target install --config Release
+$ sudo cmake --build . --target install --config Release --parallel $((`nproc`+1))
 $ cd ..
 $ git clone https://github.com/hhvrc/ThorQ.git
 $ cd ThorQ
