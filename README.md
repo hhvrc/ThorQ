@@ -13,7 +13,7 @@ Server and Client to control a shock-collar remotely from anywhere in the world.
 Install Qt5 - https://www.qt.io/download
 ### Linux
 ```console
-$ sudo apt install -y cmake build-essential libsodium-dev gcc-10 g++-10 libstdc++-10-dev libstdc++-10-doc libc6 libc6-dev mesa-common-dev libglu1-mesa-dev
+$ sudo apt install -y cmake build-essential uuid-dev libsodium-dev gcc-10 g++-10 libstdc++-10-dev libstdc++-10-doc libc6 libc6-dev mesa-common-dev libglu1-mesa-dev
 $ git clone https://github.com/google/flatbuffers.git flatbuffers
 $ cd flatbuffers
 $ cmake -DCMAKE_BUILD_TYPE=Release .
