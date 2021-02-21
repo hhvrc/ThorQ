@@ -5,15 +5,21 @@
 #include <QUuid>
 #include <QString>
 
+#include <uuid.h>
+
 namespace ThorQ {
 class User : public QObject
 {
     Q_OBJECT
     Q_DISABLE_COPY(User)
 public:
-    User(QUuid userID, QObject* parent = nullptr);
+    User(ThorQ::Uuid userID, QObject* parent = nullptr);
 
-    QUuid id() const;
+    ThorQ::Uuid id() const { return m_id; }
+
+    QString username() const;
+
+    QString nickname() const;
 
     enum class Presence : std::uint8_t {
         Offline,
@@ -23,25 +29,25 @@ public:
     Q_ENUM(Presence)
     Presence presence() const;
 
-    QString username() const;
-
     bool isInSession() const;
     bool isInSteamVR() const;
     bool hasCollarConnected() const;
     bool isRequestingSession() const;
 signals:
-    void usernameChanged(QString name);
+    void usernameChanged(const QString&);
+    void nicknameChanged(const QString&);
 
     void sessionRequested();
     void sessionStarted();
     void sessionStopped();
 
-    void inSessionChanged(bool isInSession);
-    void inSteamVRChanged(bool isInSteamVR);
-    void hasCollarConnectedChanged(bool hasCollarConnected);
-    void isRequestingSessionChanged(bool isRequestingSession);
+    void inSessionChanged(bool);
+    void inSteamVRChanged(bool);
+    void hasCollarConnectedChanged(bool);
+    void isRequestingSessionChanged(bool);
 public slots:
-    void setName(QString name);
+    void setUsername(const QString& username);
+    void setNickname(const QString& nickname);
 
     void sessionRequest();
     void sessionAccept();
@@ -53,8 +59,10 @@ protected slots:
     void setHasCollarConnected(bool hasCollarConnected);
     void setIsRequestingSession(bool isRequestingSession);
 private:
-    const QUuid m_id;
-    QString m_name;
+    const ThorQ::Uuid m_id;
+    QString m_username;
+    QString m_nickname;
+    Presence m_presence;
     bool m_isInSession;
     bool m_isInSteamVR;
     bool m_hasCollarConnected;

@@ -16,6 +16,7 @@
 ThorQ::ApiClient::ApiClient(QObject *parent)
     : QObject(parent)
     , m_pollTimer(new QTimer(this))
+    , m_settings(this)
     , m_asio((int)std::thread::hardware_concurrency())
     , m_threads()
     , m_processStatus(ProcessStatus::Stopped)
@@ -23,8 +24,6 @@ ThorQ::ApiClient::ApiClient(QObject *parent)
     , m_connection(nullptr)
     , m_incomingMessages()
     , m_incomingMessagesToken(m_incomingMessages)
-    , m_outgoingMessages()
-    , m_outgoingMessagesToken(m_outgoingMessages)
     , m_signer()
     , m_crypto()
     , m_buffer(THORQ_PAYLOAD_LEN_MAX)
@@ -43,31 +42,32 @@ ThorQ::ApiClient::~ApiClient()
     fmt::print("[CLIENT] Destroyed\n");
 }
 
-bool ThorQ::ApiClient::netConnect(QString host, quint16 port)
+void ThorQ::ApiClient::netConnect()
 {
     ProcessStatus expected = processStatus();
     if (expected == ProcessStatus::Stopped)
     {
         setProcessStatus(ProcessStatus::Starting);
-        std::string hostStdString = host.toStdString();
+        auto hostname = m_settings.value("server/hostname").toString().toStdString();
+        auto port = m_settings.value("server/port").toUInt();
 
         try
         {
-            m_connection = std::make_shared<ThorQ::ApiClientConnection>(m_asio, asio::ip::tcp::socket(m_asio), m_incomingMessages, m_outgoingMessages);
+            m_connection = std::make_shared<ThorQ::ApiClientConnection>(m_asio, asio::ip::tcp::socket(m_asio), m_incomingMessages);
 
             asio::ip::tcp::resolver resolver(m_asio);
-            auto endpoints = resolver.resolve(hostStdString, std::to_string(port));
+            auto endpoints = resolver.resolve(hostname, std::to_string(port));
 
             m_connection->connect(endpoints);
         }
         catch (std::exception& ex)
         {
             m_connection = nullptr;
-            fmt::print(stderr, "[CLIENT] Failed to connect: {}\n", ex.what());
-            return false;
+            emit errorOccured("Failed to connect: " + QString::fromStdString(ex.what()));
+            emit netDisconnected();
+            return;
         }
 
-        fmt::print("[CLIENT] Connecting to {}[{}]...\n", hostStdString, port);
         std::uint32_t nproc = std::thread::hardware_concurrency();
         for (std::uint32_t i = 0; i < nproc; i++)
         {
@@ -77,10 +77,7 @@ bool ThorQ::ApiClient::netConnect(QString host, quint16 port)
         m_pollTimer->start();
 
         setProcessStatus(ProcessStatus::Running);
-        return true;
     }
-
-    return expected == ProcessStatus::Starting || expected == ProcessStatus::Running;
 }
 
 void ThorQ::ApiClient::netDisconnect()
@@ -190,27 +187,92 @@ void ThorQ::ApiClient::onMessage(std::shared_ptr<std::vector<std::uint8_t>> mess
         return;
     }
 
-    auto fbsMessage = flatbuffers::GetRoot<ThorQ::Serialization::Message>(m_buffer.data());
+    auto fbsMessageBuffer = flatbuffers::GetRoot<ThorQ::Serialization::MessageBuffer>(m_buffer.data());
     auto fbsVerifier = flatbuffers::Verifier(m_buffer.data(), m_buffer.size());
 
-    if (!fbsMessage->Verify(fbsVerifier))
+    if (!fbsMessageBuffer->Verify(fbsVerifier))
     {
         fmt::print(stderr, "Invalid flatbuffer message\n");
         m_connection->disconnect();
         return;
     }
 
-    // Do NOT accept any un-encrypted messages, they could be from a attacker
-    if (!ThorQ::Encoding::isMessageEncrypted(message->data(), message->size())) {
-        if (fbsMessage->body_type() != ThorQ::Serialization::Body_crypto) {
-            m_connection->disconnect();
-            return;
-        }
+    if (fbsMessageBuffer->body() == nullptr) {
+        disconnect();
+        return;
+    }
+
+    for (const auto& fbsMessage : *fbsMessageBuffer->body()) {
+        handleMessage(fbsMessage);
+    }
+}
+
+void ThorQ::ApiClient::establishCrypto()
+{
+    fmt::print("[MSG] Crypto\n");
+
+    if (!m_crypto.generateKeyPair()) {
+        fmt::print(stderr, "[CRYPTO] Failed to generate keypair!\n");
+        m_connection->disconnect();
+        return;
+    }
+
+    auto myPk = m_crypto.publicKey();
+
+    flatbuffers::FlatBufferBuilder fbsBuilder;
+    auto fbsPublicKey = fbsBuilder.CreateVector(myPk.data(), myPk.size());
+    auto fbsCrypto    = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, fbsPublicKey).Union();
+
+    std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
+    messages.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsCrypto));
+    fbsBuilder.Finish(ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &messages));
+    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
+}
+
+void ThorQ::ApiClient::onCryptoEstablished()
+{
+    fmt::print("[CONNECTION] Crypto established!\n");
+
+    std::vector<std::uint8_t> systemID = ThorQ::SystemID::systemid_generate();
+    fmt::print("Sending SystemID: {}\n", ThorQ::SystemID::systemid_to_string(systemID));
+
+    flatbuffers::FlatBufferBuilder fbsBuilder;
+    flatbuffers::Offset<ThorQ::Serialization::Version> fbsVersion;
+    std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> fbsMessageVector;
+
+    // Link version
+    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::LINK, THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH);
+    fbsMessageVector.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union()));
+
+    // Client version
+    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::CLIENT, THORQ_VERSION_CLIENT_MAJOR, THORQ_VERSION_CLIENT_MINOR, THORQ_VERSION_CLIENT_PATCH);
+    fbsMessageVector.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union()));
+
+    // Server version
+    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::SERVER, THORQ_VERSION_SERVER_MAJOR, THORQ_VERSION_SERVER_MINOR, THORQ_VERSION_SERVER_PATCH);
+    fbsMessageVector.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union()));
+
+    // Hardware ID
+    auto fbsSystemID = ThorQ::Serialization::SystemId::CreateMessage(fbsBuilder, ThorQ::Serialization::SystemId::Command_Submit, fbsBuilder.CreateVector(systemID.data(), systemID.size())).Union();
+    fbsMessageVector.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_system_id, fbsSystemID));
+
+    auto fbsMessageBuffer = ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &fbsMessageVector);
+
+    fbsBuilder.Finish(fbsMessageBuffer);
+    encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+}
+
+void ThorQ::ApiClient::handleMessage(const void* body)
+{
+    auto fbsMessage = reinterpret_cast<const ThorQ::Serialization::Message*>(body);
+    if (fbsMessage == nullptr) {
+        disconnect();
+        return;
     }
 
     switch (fbsMessage->body_type()) {
     case ThorQ::Serialization::Body_account:
-        handleMessageAccount(fbsMessage->body());
+        m_accountController->ParseMessage(fbsMessage->body());
         break;
     case ThorQ::Serialization::Body_announcement:
         handleMessageAnnouncement(fbsMessage->body());
@@ -250,46 +312,6 @@ void ThorQ::ApiClient::onMessage(std::shared_ptr<std::vector<std::uint8_t>> mess
         m_connection->disconnect();
         return;
     }
-}
-
-void ThorQ::ApiClient::establishCrypto()
-{
-    fmt::print("[MSG] Crypto\n");
-
-    if (!m_crypto.generateKeyPair()) {
-        fmt::print(stderr, "[CRYPTO] Failed to generate keypair!\n");
-        return;
-    }
-
-    auto myPk = m_crypto.publicKey();
-
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-    auto fbsPublicKey = fbsBuilder.CreateVector(myPk.data(), myPk.size());
-    auto fbsCrypto    = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, fbsPublicKey).Union();
-    auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsCrypto);
-    fbsBuilder.Finish(fbsMessage);
-
-    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
-}
-
-void ThorQ::ApiClient::onCryptoEstablished()
-{
-    fmt::print("[CONNECTION] Crypto established!\n");
-
-    std::vector<std::uint8_t> systemID = ThorQ::SystemID::systemid_generate();
-    fmt::print("Sending SystemID: {}\n", ThorQ::SystemID::systemid_to_string(systemID));
-
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-    auto fbsSystemID = ThorQ::Serialization::SystemId::CreateMessage(fbsBuilder, ThorQ::Serialization::SystemId::Command_Submit, fbsBuilder.CreateVector(systemID.data(), systemID.size())).Union();
-    auto fbsMessage   = ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_system_id, fbsSystemID);
-    fbsBuilder.Finish(fbsMessage);
-
-    encodeAndSend(fbsBuilder.GetBufferSpan(), true);
-}
-
-void ThorQ::ApiClient::handleMessageAccount(const void* body)
-{
-    m_accountController->ParseMessage(body);
 }
 
 void ThorQ::ApiClient::handleMessageAnnouncement(const void* body)
@@ -438,7 +460,7 @@ void ThorQ::ApiClient::handleMessageP2P(const void* body)
     auto fbsP2P = reinterpret_cast<const ThorQ::Serialization::Peer2Peer::Message*>(body);
 }
 
-bool ThorQ::ApiClient::encodeAndSend(const std::span<std::uint8_t>& buffer, bool encrypt)
+void ThorQ::ApiClient::encodeAndSend(const std::span<std::uint8_t>& buffer, bool encrypt)
 {
     auto message = std::make_shared<std::vector<std::uint8_t>>();
     message->resize(ThorQ::Encoding::calculateMessageSize(buffer.size(), encrypt));
@@ -446,23 +468,20 @@ bool ThorQ::ApiClient::encodeAndSend(const std::span<std::uint8_t>& buffer, bool
     if (encrypt) {
         if (!ThorQ::Encoding::messageEncode(buffer.data(), buffer.size(), message->data(), message->size(), m_crypto)) {
             fmt::print(stderr, "Failed to encrypt message\n");
-            return false;
+            m_connection->disconnect();
+            return;
         }
     }
     else {
         if (!ThorQ::Encoding::messageEncode(buffer.data(), buffer.size(), message->data(), message->size())) {
             fmt::print(stderr, "Failed to encode message\n");
-            return false;
+            m_connection->disconnect();
+            return;
         }
     }
 
     auto connection = m_connection;
-
-    if (connection == nullptr) {
-        return false;
+    if (connection != nullptr) {
+        connection->messageSend(message);
     }
-
-    connection->messageSend(message);
-
-    return true;
 }

@@ -42,8 +42,7 @@ message("Found Qt ${Qt5Core_VERSION}")
 # --- Build ---
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/user.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/image.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/account.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/image.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.cpp
@@ -54,6 +53,7 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/accountcontroller.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/announcementcontroller.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/stylesheets.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/namedlineedit.cpp
@@ -72,7 +72,6 @@ set(${project}_SOURCES
 set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/user.h
     ${CMAKE_CURRENT_SOURCE_DIR}/image.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/account.h
     ${CMAKE_CURRENT_SOURCE_DIR}/procmon.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.h
@@ -84,6 +83,7 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/accountcontroller.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/announcementcontroller.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/stylesheets.h
     ${CMAKE_CURRENT_SOURCE_DIR}/namedlineedit.h

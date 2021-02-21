@@ -12,13 +12,10 @@
 #include <mutex>
 
 ThorQ::ApiClientConnection::ApiClientConnection(asio::io_context& asio, asio::ip::tcp::socket socket,
-                                          moodycamel::ConcurrentQueue<std::shared_ptr<std::vector<std::uint8_t>>>& incomingQueue,
-                                          moodycamel::ConcurrentQueue<std::shared_ptr<std::vector<std::uint8_t>>>& outgoingQueue)
+                                          moodycamel::ConcurrentQueue<std::shared_ptr<std::vector<std::uint8_t>>>& incomingQueue)
     : ThorQ::Networking::TcpConnection(asio, std::move(socket))
     , m_incomingMessages(incomingQueue)
     , m_incomingMessagesToken(m_incomingMessages)
-    , m_outgoingMessages(outgoingQueue)
-    , m_outgoingMessagesToken(m_outgoingMessages)
 {
     fmt::print("[CONNECTION] Constructed\n");
 }

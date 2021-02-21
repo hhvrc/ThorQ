@@ -39,6 +39,15 @@ int main(int argc, char** argv)
     QCoreApplication::setOrganizationDomain(THORQ_ORGANIZATION_DOMAIN);
 
     QApplication app(argc, argv);
+
+    // Test the presence and variant of settings
+    QSettings settings;
+    if (!settings.contains("server/hostname") ||
+        !settings.contains("server/port")) {
+        settings.setValue("server/hostname", THORQ_SERVER_HOSTNAME);
+        settings.setValue("server/port", THORQ_SERVER_PORT);
+    }
+
 #if COMTEST
 #else
     if (!ThorQ::VR::Initialize()) {
@@ -67,47 +76,19 @@ int main(int argc, char** argv)
 #if COMTEST
 
     ThorQ::ApiClient* apiClient = new ThorQ::ApiClient(&app);
+    QTimer* reconnectTimer = new QTimer(&app);
+    reconnectTimer->setInterval(5000);
+    reconnectTimer->setSingleShot(true);
+    QObject::connect(reconnectTimer, &QTimer::timeout, apiClient, &ThorQ::ApiClient::netConnect);
+    QObject::connect(apiClient, &ThorQ::ApiClient::netDisconnected, [reconnectTimer](){ reconnectTimer->start(); });
+
     ThorQ::LoginWidget loginWidget(apiClient->accountController());
     MainWidget mainWidget;
 
-    QMessageBox errorBox(&loginWidget);
-    errorBox.setIcon(QMessageBox::Critical);
-    errorBox.setWindowTitle("error");
-
-    QMessageBox warningBox(&loginWidget);
-    warningBox.setIcon(QMessageBox::Warning);
-    errorBox.setWindowTitle("warning");
-
     QObject::connect(apiClient, &ThorQ::ApiClient::connectionStatusChanged, &loginWidget, &ThorQ::LoginWidget::setConnectionStatus);
-    QObject::connect(apiClient, &ThorQ::ApiClient::errorOccured, &errorBox, &QMessageBox::setText);
-    QObject::connect(apiClient, &ThorQ::ApiClient::errorOccured, &errorBox, &QMessageBox::show);
-/*
-    QObject::connect(cli, &ThorQ::Networking::Client::rttChanged, &mainWidget, &MainWidget::setConnectionPing);
-    QObject::connect(cli, &ThorQ::Networking::Client::LoginStateChanged, &mainWidget, &MainWidget::setLoginState);
-    QObject::connect(cli, &ThorQ::Networking::Client::SessionStateChanged, &mainWidget, &MainWidget::setSessionState);
 
-    QObject::connect(cli, &ThorQ::Networking::Client::RttChanged, &loginWidget, &LoginWidget::setConnectionPing);
-    QObject::connect(cli, &ThorQ::Networking::Client::ConnectionStateChanged, &loginWidget, &LoginWidget::setConnectionState);
-    QObject::connect(cli, &ThorQ::Networking::Client::CryptoStateChanged, &loginWidget, &LoginWidget::setCryptoState);
-    QObject::connect(cli, &ThorQ::Networking::Client::AuthStateChanged, &loginWidget, &LoginWidget::setHwidState);
-    QObject::connect(cli, &ThorQ::Networking::Client::LoginStateChanged, &loginWidget, &LoginWidget::setLoginState);
-
-    QObject::connect(cli, &ThorQ::Networking::Client::Error, &errorBox, &QMessageBox::setText);
-    QObject::connect(cli, &ThorQ::Networking::Client::Error, &errorBox, &QWidget::show);
-    //QObject::connect(cli, &Client::Error, [&](){ app.setQuitOnLastWindowClosed(true); loginWidget.hide(); mainWidget.hide(); warningBox.hide(); });
-
-    QObject::connect(cli, &Client::Warning, &warningBox, &QMessageBox::setText);
-    QObject::connect(cli, &Client::Warning, &warningBox, &QWidget::show);
-
-    QObject::connect(&loginWidget, &LoginWidget::usernameEntered, cli, &Client::Login);
-
-    QObject::connect(cli, &Client::userUpdate, &mainWidget, &MainWidget::updateUser);
-    QObject::connect(cli, &Client::UserOffline, &mainWidget, &MainWidget::removeUser);
-    QObject::connect(&mainWidget, &MainWidget::logoutButtonClicked, cli, &Client::Logout);
-*/
+    apiClient->netConnect();
     loginWidget.show();
-    apiClient->netConnect("localhost", 12345);
-
 #else
     QPixmap pix(":/uwu.png");
     QLabel lab;

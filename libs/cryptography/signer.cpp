@@ -10,7 +10,7 @@
 #include <vector>
 
 constexpr std::size_t MinFileSize = ThorQ::Crypto::Signer::PublicKeyLen + ThorQ::Crypto::Signer::SignatureLen;
-constexpr std::size_t MaxFileSize = MinFileSize + ThorQ::Crypto::Signer::SignatureLen;
+constexpr std::size_t MaxFileSize = ThorQ::Crypto::Signer::PublicKeyLen + ThorQ::Crypto::Signer::SecretKeyLen + ThorQ::Crypto::Signer::SignatureLen;
 
 const std::array<std::uint8_t, ThorQ::Crypto::Signer::PublicKeyLen> ThorQ::Crypto::Signer::RootSigner()
 {

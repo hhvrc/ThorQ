@@ -2,22 +2,22 @@
 
 #include <QObject>
 
-ThorQ::User::User(QUuid userID, QObject* parent)
+ThorQ::User::User(ThorQ::Uuid userID, QObject* parent)
     : QObject(parent)
     , m_id(userID)
-    , m_name()
+    , m_username()
+    , m_nickname()
+    , m_presence(Presence::Offline)
+    , m_isInSession(false)
+    , m_isInSteamVR(false)
+    , m_hasCollarConnected(false)
+    , m_isRequestingSession(false)
 {
-
-}
-
-QUuid ThorQ::User::id() const
-{
-    return m_id;
 }
 
 QString ThorQ::User::username() const
 {
-    return m_name;
+    return m_username;
 }
 
 bool ThorQ::User::isInSession() const
@@ -40,12 +40,21 @@ bool ThorQ::User::isRequestingSession() const
     return m_isRequestingSession;
 }
 
-void ThorQ::User::setName(QString name)
+void ThorQ::User::setUsername(const QString& username)
 {
-    if (m_name != name)
+    if (m_username != username)
     {
-        m_name = name;
-        emit usernameChanged(name);
+        m_username = username;
+        emit usernameChanged(username);
+    }
+}
+
+void ThorQ::User::setNickname(const QString& nickname)
+{
+    if (m_username != nickname)
+    {
+        m_username = nickname;
+        emit usernameChanged(nickname);
     }
 }
 

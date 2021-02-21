@@ -33,7 +33,7 @@ table Message {
 }
 
 table MessageBuffer {
-  messages : [ Serialization.Message ];
+  body : [ Serialization.Message ];
 }
 
 root_type Message;

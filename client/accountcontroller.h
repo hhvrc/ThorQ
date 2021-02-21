@@ -1,20 +1,20 @@
 #ifndef ACCOUNTCONTROLLER_H
 #define ACCOUNTCONTROLLER_H
 
+#include "user.h"
+
 #include <uuid.h>
-#include <schemas_common.h>
 #include <cryptography/hashing.h>
 
-#include <flatbuffers/flatbuffers.h>
-
 #include <QUuid>
-#include <QByteArray>
 #include <QString>
 #include <QObject>
-#include <QSharedPointer>
 
+#include <functional>
+#include <span>
 #include <array>
 #include <string>
+#include <cstdint>
 
 namespace ThorQ {
 class AccountController : public QObject
@@ -22,26 +22,26 @@ class AccountController : public QObject
     Q_OBJECT
 public:
     AccountController(std::function<void(const std::span<std::uint8_t>&, bool)> encodeAndSend, QObject* parent = nullptr);
+
+    QString email();
 public slots:
     void ParseMessage(const void* message);
-    void setUsername(const QString& username);
-    void setPassword(const QString& password);
-    void login();
+    void login(const QString& username, const QString& password);
     void logout();
 private:
-    void requestAccountId();
+    void requestAccountId(const QString& username);
     void requestHashingParameters();
-    void requestAuthToken();
-    void requestLogin();
+    void requestLogin(bool getAuthToken);
     void requestLogout();
 
-    ThorQ::Uuid m_accountID;
-    std::array<std::uint8_t, 64> m_authToken;
-    ThorQ::Crypto::Hashing::HashingParameters m_hashingParameters;
+    ThorQ::User* m_activeUser;
 
-    bool m_loggingIn;
-    std::string m_username;
-    std::string m_password;
+    QString m_email;
+    QString m_temporaryPassword;
+
+    std::array<std::uint8_t, 64> m_authToken;
+
+    ThorQ::Crypto::Hashing::HashingParameters m_hashingParameters;
 
     std::function<void(const std::span<std::uint8_t>&, bool)> f_encodeAndSend;
 };

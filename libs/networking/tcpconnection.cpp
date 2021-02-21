@@ -11,7 +11,6 @@ ThorQ::Networking::TcpConnection::TcpConnection(asio::io_context& asio, asio::ip
     , m_totalReceivedData(0)
     , m_totalReceivedPackets(0)
 {
-    fmt::print("[TCP-CONNECTION] Constructed\n");
 }
 
 ThorQ::Networking::TcpConnection::TcpConnection(ThorQ::Networking::TcpConnection&& other)
@@ -28,12 +27,10 @@ ThorQ::Networking::TcpConnection::TcpConnection(ThorQ::Networking::TcpConnection
 
 ThorQ::Networking::TcpConnection::~TcpConnection()
 {
-    fmt::print("[TCP-CONNECTION] Destructed\n");
 }
 
 void ThorQ::Networking::TcpConnection::accept()
 {
-    fmt::print("[TCP-CONNECTION] Accept\n");
     ConnectionStatus expected = ConnectionStatus::Disconnected;
     if (setStatusIf(expected, ConnectionStatus::Connected))
     {
@@ -81,8 +78,6 @@ std::error_code ThorQ::Networking::TcpConnection::latestErrorCode() const
 
 void ThorQ::Networking::TcpConnection::messageSend(std::shared_ptr<std::vector<std::uint8_t>> message)
 {
-    fmt::print("[TCP-CONNECTION] messageSend {}\n", message->size());
-
     auto buffer = asio::buffer(message->data(), message->size());
     asio::async_write(m_socket, buffer, std::bind(&TcpConnection::writeMessageCompletionHandler, shared_from_this(), std::placeholders::_1, std::placeholders::_2, std::move(message)));
 }
@@ -95,13 +90,10 @@ void ThorQ::Networking::TcpConnection::setErrorCode(const std::error_code& ec)
 
 void ThorQ::Networking::TcpConnection::writeDone()
 {
-    fmt::print("[TCP-CONNECTION] WriteDone\n");
 }
 
 void ThorQ::Networking::TcpConnection::readHeader()
 {
-    fmt::print("[TCP-CONNECTION] ReadHeader\n");
-
     auto message = std::make_shared<std::vector<std::uint8_t>>();
     message->reserve(ThorQ::Encoding::TypicalMessageSize);
     message->resize(ThorQ::Encoding::HeaderSize);
@@ -134,22 +126,27 @@ void ThorQ::Networking::TcpConnection::asioClose()
 
 void ThorQ::Networking::TcpConnection::handleErrorCode(const std::error_code& ec)
 {
-    if (ec == std::errc::already_connected || ec == std::errc::connection_already_in_progress) {
-        return; // This is not rly an error to care about
+    fmt::print("[TCP-CONNECTION] Error: {} ({})\n", ec.message(), ec.value());
+
+    if (ec == asio::error::already_connected || // This is not rly any error to care about
+        ec == asio::error::already_started ||
+        ec == asio::error::already_open) {
+        fmt::print("[TCP-CONNECTION] Already!\n");
+        return;
     }
-    else if (ec == std::errc::connection_aborted) {
-        // Do nothing, just disconnect without any fuzz
+    else if (ec == asio::error::connection_refused) {
+        fmt::print("[TCP-CONNECTION] Remote activley refused the connection!\n");
+        // Connection failed, server is probably not running/the host address is not the server
     }
-    else if (ec == std::errc::timed_out) {
+    else if (ec == asio::error::timed_out) {
         fmt::print("[TCP-CONNECTION] Timeout!\n");
         onDisconnect();
     }
-    else if (ec == std::errc::connection_reset) {
-        fmt::print("[TCP-CONNECTION] Remote closed connection\n");
+    else if (ec == asio::error::connection_reset || ec == asio::error::connection_aborted) {
+        fmt::print("[TCP-CONNECTION] Connection was forcibly closed!\n");
         onDisconnect();
     }
-    else { // Includes std::errc::connection_refused
-        fmt::print("[TCP-CONNECTION] Error: {} ({})\n", ec.message(), ec.value());
+    else {
         setErrorCode(ec);
         setStatus(ConnectionStatus::Error);
         onError(std::move(ec));
@@ -233,7 +230,6 @@ void ThorQ::Networking::TcpConnection::readHeaderCompletionHandler(const std::er
 
         if (bodySize > 0)
         {
-            fmt::print("[TCP-CONNECTION] Reading body\n");
             message->resize(ThorQ::Encoding::HeaderSize + bodySize);
             readBody(std::move(message));
         }

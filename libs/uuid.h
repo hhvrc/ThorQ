@@ -1,6 +1,10 @@
 #ifndef UUID_H
 #define UUID_H
 
+#ifdef QT_VERSION
+#include <QUuid>
+#endif
+
 #include <span>
 #include <array>
 #include <string>
@@ -15,6 +19,12 @@ public:
     static const ThorQ::Uuid Empty();
 
     Uuid() noexcept;
+#ifdef QT_VERSION
+    Uuid(const QUuid& other) {
+        auto rfc4122 = other.toRfc4122();
+        memcpy(m_data.data(), rfc4122.data(), 16);
+    }
+#endif
     Uuid(const ThorQ::Uuid& other) noexcept;
     Uuid(std::array<std::uint8_t, 16> data) noexcept;
     Uuid(std::span<const std::uint8_t, 16> data) noexcept;
@@ -23,6 +33,11 @@ public:
 
     std::string toString() const;
     std::array<std::uint8_t, 16> toBytes() const;
+#ifdef QT_VERSION
+    QUuid toQUuid() const {
+        return QUuid(*(GUID*)m_data.data());
+    }
+#endif
 
     bool operator==(const ThorQ::Uuid& rhs) const noexcept;
     bool operator!=(const ThorQ::Uuid& rhs) const noexcept;

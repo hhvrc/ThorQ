@@ -1,7 +1,6 @@
 #ifndef ACCOUNT_H
 #define ACCOUNT_H
 
-
 #include "typedefs_server.h"
 
 #include <uuid.h>
@@ -10,22 +9,22 @@
 
 #include <flatbuffers/flatbuffers.h>
 
-#include <atomic>
-#include <shared_mutex>
 #include <unordered_set>
+#include <memory>
+#include <shared_mutex>
 #include <vector>
 #include <set>
-#include <memory>
+#include <string>
+#include <cstring>
 
 namespace ThorQ {
 class Account
 {
-    Account(std::int64_t dbId, ThorQ::Uuid id, const std::string& username);
+    Account(std::int64_t dbId, ThorQ::Uuid id, const std::string& username, const ThorQ::Crypto::Hashing::HashingParameters& passwordHashingParameters);
 public:
+    static std::shared_ptr<ThorQ::Account> GetAccount(const ThorQ::Uuid& uuid);
     static std::shared_ptr<ThorQ::Account> GetAccount(const std::string& username);
-    inline static std::shared_ptr<ThorQ::Account> GetAccount(const flatbuffers::String* username) { return GetAccount(std::string(username->data(), username->size())); }
     static std::shared_ptr<ThorQ::Account> NewAccount(const std::string& username);
-    inline static std::shared_ptr<ThorQ::Account> NewAccount(const flatbuffers::String* username) { return NewAccount(std::string(username->data(), username->size())); }
 public:
     ThorQ::Uuid id() const { return m_id; }
     std::int64_t dbId() const { return m_dbId; }
@@ -33,10 +32,16 @@ public:
     std::string username() const;
     bool setUsername(const std::string& username);
 
+    ThorQ::Uuid imageId() const;
+    bool setImageId(const ThorQ::Uuid& username);
+
+    bool isClaimed() const;
+    bool tryClaim(const std::string& emailAddress, const ThorQ::Crypto::Hashing::CalculatedHash& passwordHash, const ThorQ::Crypto::Hashing::HashingParameters& passwordHashParams);
+
     ThorQ::Crypto::Hashing::CalculatedHash passwordHash() const;
     bool setPasswordHash(ThorQ::Crypto::Hashing::CalculatedHash hash);
     ThorQ::Crypto::Hashing::HashingParameters passwordHashParameters() const;
-    bool setPasswordHash(ThorQ::Crypto::Hashing::HashingParameters params);
+    bool setPasswordHashParameters(ThorQ::Crypto::Hashing::HashingParameters params);
 
     std::shared_ptr<ThorQ::Account> master() const;
     bool isExclusive() const;
@@ -72,6 +77,8 @@ private:
 
     std::shared_mutex l_basics;
     std::string m_username;
+    ThorQ::Uuid m_imageId;
+    std::string m_emailAddress;
     ThorQ::Crypto::Hashing::CalculatedHash m_passwordHash;
     ThorQ::Crypto::Hashing::HashingParameters m_passwordHashParameters;
 
@@ -82,17 +89,17 @@ private:
     std::atomic_bool m_exclusive;             // This person is exclusive to their master
 
     std::shared_mutex l_requests;
-    std::set<std::shared_ptr<ThorQ::Account>> m_requests_incoming;
-    std::set<std::shared_ptr<ThorQ::Account>> m_requests_outgoing;
+    std::unordered_set<std::shared_ptr<ThorQ::Account>> m_requests_incoming;
+    std::unordered_set<std::shared_ptr<ThorQ::Account>> m_requests_outgoing;
 
     std::shared_mutex l_sessions;
-    std::set<std::shared_ptr<ThorQ::Group>> m_sessions;
+    std::unordered_set<std::shared_ptr<ThorQ::Group>> m_sessions;
 
     std::shared_mutex l_instances;
-    std::set<std::shared_ptr<ThorQ::ApiServerConnection>> m_instances;
+    std::unordered_set<std::shared_ptr<ThorQ::ApiServerConnection>> m_instances;
 
     std::shared_mutex l_relationships;
-    std::set<std::shared_ptr<ThorQ::Relationship>> m_relationships;
+    std::unordered_set<std::shared_ptr<ThorQ::Relationship>> m_relationships;
 };
 }
 

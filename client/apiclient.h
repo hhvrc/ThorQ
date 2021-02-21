@@ -13,6 +13,7 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QSettings>
 
 #include <thread>
 
@@ -28,9 +29,6 @@ public:
     ProcessStatus processStatus() const { return m_processStatus; }
     ConnectionStatus connectionStatus() const { return m_connectionStatus; }
 
-    bool netConnect(QString host, quint16 port);
-    void netDisconnect();
-
     ThorQ::AccountController* accountController() const { return m_accountController; };
 signals:
     void netConnected();
@@ -40,6 +38,9 @@ signals:
     void connectionStatusChanged(ConnectionStatus status);
 
     void errorOccured(QString error);
+public slots:
+    void netConnect();
+    void netDisconnect();
 private slots:
     void pollEvents();
 private:
@@ -54,7 +55,7 @@ private:
     void establishCrypto();
     void onCryptoEstablished();
 
-    void handleMessageAccount(const void* body);
+    void handleMessage(const void* body);
     void handleMessageAnnouncement(const void* body);
     void handleMessageDevice(const void* body);
     void handleMessageCrypto(const void* body);
@@ -67,9 +68,10 @@ private:
     void handleMessageVersion(const void *body);
     void handleMessageP2P(const void* body);
 
-    bool encodeAndSend(const std::span<std::uint8_t>& buffer, bool encrypt);
+    void encodeAndSend(const std::span<std::uint8_t>& buffer, bool encrypt);
 
     QTimer* m_pollTimer;
+    QSettings m_settings;
 
     asio::io_context m_asio;
     std::vector<std::thread> m_threads;
@@ -81,15 +83,12 @@ private:
 
     moodycamel::ConcurrentQueue<std::shared_ptr<std::vector<std::uint8_t>>> m_incomingMessages;
     moodycamel::ConsumerToken m_incomingMessagesToken;
-    moodycamel::ConcurrentQueue<std::shared_ptr<std::vector<std::uint8_t>>> m_outgoingMessages;
-    moodycamel::ProducerToken m_outgoingMessagesToken;
 
     ThorQ::Crypto::Signer m_signer;
     ThorQ::Crypto::Encryption m_crypto;
     std::vector<std::uint8_t> m_buffer;
 
     ThorQ::AccountController* m_accountController;
-
 };
 }
 

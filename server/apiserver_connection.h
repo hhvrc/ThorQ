@@ -39,7 +39,14 @@ private:
 
     void onCryptoEstablished();
 
+    void handleMessage(const void* body);
+
     void handleMessageAccount(const void* body);
+    void handleMessageAccount_GetAccountId(const void* body);
+    void handleMessageAccount_GetHashingParameters(const void* body);
+    void handleMessageAccount_LoginRequest(const void* body);
+    void handleMessageAccount_RegistrationRequest(const void* body);
+
     void handleMessageAnnouncement(const void* body);
     void handleMessageDevice(const void* body);
     void handleMessageCrypto(const void* body);

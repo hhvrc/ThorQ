@@ -67,7 +67,7 @@ struct HashingParameters {
 };
 
 [[nodiscard]] inline bool Generate(const char* password, std::size_t passwordLen, const Hashing::HashingParameters& parameters, std::uint8_t* hashOut) {
-    return crypto_pwhash(hashOut, Hashing::HashLength, password, passwordLen, parameters.salt.data(), parameters.ops_limit, parameters.mem_limit, parameters.algorithm);
+    return crypto_pwhash(hashOut, Hashing::HashLength, password, passwordLen, parameters.salt.data(), parameters.ops_limit, parameters.mem_limit, parameters.algorithm) == 0;
 }
 [[nodiscard]] inline bool Generate(const std::string& password, const Hashing::HashingParameters& parameters, std::uint8_t* hashOut) {
     return Hashing::Generate(password.data(), password.size(), parameters, hashOut);

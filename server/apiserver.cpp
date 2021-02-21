@@ -17,14 +17,11 @@ ThorQ::ApiServer::ApiServer(std::uint16_t port)
     , l_connections()
     , m_connections()
 {
-    fmt::print("[SERVER] Created\n");
 }
 
 ThorQ::ApiServer::~ApiServer()
 {
     stop();
-
-    fmt::print("[SERVER] Destroyed\n");
 }
 
 bool ThorQ::ApiServer::start(unsigned int nproc)
@@ -173,8 +170,6 @@ void ThorQ::ApiServer::acceptCompletionHandler(const std::error_code &ec, asio::
                 std::unique_lock l(l_connections);
                 m_connections.push_back(std::move(connection));
             }
-
-            fmt::print("[SERVER] Connection approved\n");
         }
         else
         {

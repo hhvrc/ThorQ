@@ -19,15 +19,16 @@
 using namespace std::literals;
 
 std::shared_mutex g_accounts_lock;
-std::unordered_map<std::string, std::shared_ptr<ThorQ::Account>> g_accounts;
+std::unordered_map<ThorQ::Uuid, std::shared_ptr<ThorQ::Account>> g_accounts_by_uuid;
+std::unordered_map<std::string, std::shared_ptr<ThorQ::Account>> g_accounts_by_username;
 
-ThorQ::Account::Account(std::int64_t dbId, ThorQ::Uuid id, const std::string& username)
+ThorQ::Account::Account(std::int64_t dbId, ThorQ::Uuid id, const std::string& username, const ThorQ::Crypto::Hashing::HashingParameters& passwordHashingParameters)
     : m_id(id)
     , m_dbId(dbId)
     , l_basics()
     , m_username(username)
-    , m_passwordHash()
-    , m_passwordHashParameters()
+    , m_passwordHash{0}
+    , m_passwordHashParameters(passwordHashingParameters)
     , m_activityState(0)
     , l_master()
     , m_master()
@@ -44,13 +45,13 @@ ThorQ::Account::Account(std::int64_t dbId, ThorQ::Uuid id, const std::string& us
 {
 }
 
-std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& username)
+std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const ThorQ::Uuid& uuid)
 {
     {
         std::shared_lock l(g_accounts_lock);
-        auto it = g_accounts.find(username);
+        auto it = g_accounts_by_uuid.find(uuid);
 
-        if (it != g_accounts.end()) {
+        if (it != g_accounts_by_uuid.end()) {
             return it->second;
         }
     }
@@ -64,42 +65,173 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& us
 
     dbConnection->setBusyTimeout(5000);
 
-    // TODO remove "NOT NULL" on all other fields
-    SQLite::Query query = dbConnection->makeQuery("SELECT db_id, uuid FROM accounts WHERE username = ?"sv);
+    SQLite::Query query = dbConnection->makeQuery(
+                "SELECT "
+                    "accounts.account_id,"
+                    "accounts.username,"
+                    "passwords.salt,"
+                    "passwords.ops_limit,"
+                    "passwords.mem_limit,"
+                    "passwords.algorithm,"
+                    "images.uuid,"
+                    "passwords.hash,"
+                    "accounts.email_address "
+                "FROM accounts "
+                "INNER JOIN passwords ON passwords.password_id = accounts.password_id "
+                "INNER JOIN images ON images.image_id = accounts.image_id "
+                "WHERE accounts.uuid = ?"sv);
 
-    if (!query.bindText(1, username)) {
-        fmt::print(stderr, "Failed to bind username: {}\n", dbConnection->lastError());
+    if (!query.bindText(1, uuid.toString()) ||
+        !query.step()) {
+        fmt::print(stderr, "SQL Failed to execute get account query: {}\n", dbConnection->lastError());
         return nullptr;
     }
 
-    if (!query.step()) {
-        fmt::print(stderr, "SQL Failed to execute account query: {}\n", dbConnection->lastError());
+    if (query.columnCount() == 0) {
+        fmt::print("SQL account query returned no results\n");
         return nullptr;
     }
 
-    if (query.columnCount() != 2) {
-        fmt::print(stderr, "SQL Returned {}, expected 2:\n", query.columnCount(), dbConnection->lastError());
+    auto dbId = query.column(0).getInt64();
+    auto username = query.column(1).getDataText();
+
+    ThorQ::Crypto::Hashing::HashingParameters params;
+
+    auto passwordSaltCol = query.column(2);
+    if (passwordSaltCol.type() != SQLite::Type::Blob || passwordSaltCol.getDataSize() != ThorQ::Crypto::Hashing::SaltLength) {
+        fmt::print(stderr, "SQL account query returned invalid passwordsalt type ({}:{})\n", passwordSaltCol.type(), passwordSaltCol.getDataSize());
+        return nullptr;
+    }
+    memcpy(params.salt.data(), passwordSaltCol.getDataBlob(), ThorQ::Crypto::Hashing::SaltLength);
+
+    params.ops_limit = query.column(3).getInt32();
+    params.mem_limit = query.column(4).getInt32();
+    params.algorithm = query.column(5).getInt32();
+
+    auto account = std::shared_ptr<ThorQ::Account>(new ThorQ::Account(dbId, uuid, username, params));
+
+    if (!ThorQ::Uuid::TryParse(query.column(6).getDataText(), account->m_imageId)) {
+        fmt::print(stderr, "Failed to parse account imageid: {}\n", query.column(6).getDataText());
         return nullptr;
     }
 
-    // Get database ID
-    SQLite::Column dbIdCol = query.column(0);
-    SQLite::Column uuidCol = query.column(1);
-    if (dbIdCol.type() != SQLite::Type::Integer || uuidCol.type() != SQLite::Type::Text) {
+    auto passwordHashCol = query.column(7);
+    if (passwordHashCol.type() == SQLite::Type::Blob) {
+        if (passwordHashCol.getDataSize() != ThorQ::Crypto::Hashing::HashLength) {
+            fmt::print(stderr, "SQL account query returned invalid passwordhash size\n");
+            return nullptr;
+        }
+        memcpy(account->m_passwordHash.data(), passwordHashCol.getDataBlob(), ThorQ::Crypto::Hashing::HashLength);
+    }
+
+    auto emailAddrCol = query.column(8);
+    if (emailAddrCol.type() == SQLite::Type::Text) {
+        account->m_emailAddress = emailAddrCol.getDataText();
+    }
+
+    std::scoped_lock l(g_accounts_lock);
+    g_accounts_by_uuid.insert({uuid, account});
+    g_accounts_by_username.insert({username, account});
+    return account;
+}
+
+std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& username)
+{
+    {
+        std::shared_lock l(g_accounts_lock);
+        auto it = g_accounts_by_username.find(username);
+
+        if (it != g_accounts_by_username.end()) {
+            return it->second;
+        }
+    }
+
+    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READONLY);
+
+    if (dbConnection == nullptr) {
+        fmt::print(stderr, "Failed to open database\n");
         return nullptr;
     }
 
-    std::int64_t dbId = dbIdCol.getInt64();
+    dbConnection->setBusyTimeout(5000);
 
-    ThorQ::Uuid accountId;
-    if (!ThorQ::Uuid::TryParse(dbIdCol.getDataText(), accountId)) {
+    SQLite::Query query = dbConnection->makeQuery(
+                "SELECT "
+                    "accounts.account_id,"
+                    "accounts.uuid,"
+                    "passwords.salt,"
+                    "passwords.ops_limit,"
+                    "passwords.mem_limit,"
+                    "passwords.algorithm,"
+                    "images.uuid,"
+                    "passwords.hash,"
+                    "accounts.email_address "
+                "FROM accounts "
+                "INNER JOIN passwords ON passwords.password_id = accounts.password_id "
+                "INNER JOIN images ON images.image_id = accounts.image_id "
+                "WHERE accounts.username = ?"sv);
+
+    if (!query.bindText(1, username) ||
+        !query.step()) {
+        fmt::print(stderr, "SQL Failed to execute get account query: {}\n", dbConnection->lastError());
         return nullptr;
     }
 
-    auto account = std::shared_ptr<ThorQ::Account>(new ThorQ::Account(dbId, accountId, username));
+    if (query.columnCount() == 0) {
+        fmt::print("SQL account query returned no results\n");
+        return nullptr;
+    }
 
-    // TODO fill in the rest
+    auto dbId = query.column(0).getInt64();
 
+    auto uuidCol = query.column(1);
+    if (uuidCol.type() != SQLite::Type::Text) {
+        fmt::print(stderr, "SQL account query returned invalid uuid type ({})\n", uuidCol.type());
+        return nullptr;
+    }
+    ThorQ::Uuid uuid;
+    if (!ThorQ::Uuid::TryParse(uuidCol.getDataText(), uuid)) {
+        fmt::print("Uuid from sql is unparsable ({})\n", uuidCol.getDataText());
+        return nullptr;
+    }
+
+    ThorQ::Crypto::Hashing::HashingParameters params;
+
+    auto passwordSaltCol = query.column(2);
+    if (passwordSaltCol.type() != SQLite::Type::Blob || passwordSaltCol.getDataSize() != ThorQ::Crypto::Hashing::SaltLength) {
+        fmt::print(stderr, "SQL account query returned invalid passwordsalt type ({}:{})\n", passwordSaltCol.type(), passwordSaltCol.getDataSize());
+        return nullptr;
+    }
+    memcpy(params.salt.data(), passwordSaltCol.getDataBlob(), ThorQ::Crypto::Hashing::SaltLength);
+
+    params.ops_limit = query.column(3).getInt32();
+    params.mem_limit = query.column(4).getInt32();
+    params.algorithm = query.column(5).getInt32();
+
+    auto account = std::shared_ptr<ThorQ::Account>(new ThorQ::Account(dbId, uuid, username, params));
+
+    if (!ThorQ::Uuid::TryParse(query.column(6).getDataText(), account->m_imageId)) {
+        fmt::print(stderr, "Failed to parse account imageid\n");
+        return nullptr;
+    }
+
+    auto passwordHashCol = query.column(7);
+    if (passwordHashCol.type() == SQLite::Type::Blob) {
+        if (passwordHashCol.getDataSize() != ThorQ::Crypto::Hashing::HashLength) {
+            fmt::print(stderr, "SQL account query returned invalid passwordhash size\n");
+            return nullptr;
+        }
+        memcpy(account->m_passwordHash.data(), passwordHashCol.getDataBlob(), ThorQ::Crypto::Hashing::HashLength);
+    }
+
+    auto emailAddrCol = query.column(8);
+    if (emailAddrCol.type() == SQLite::Type::Text) {
+        account->m_emailAddress = emailAddrCol.getDataText();
+    }
+
+    std::scoped_lock l(g_accounts_lock);
+    g_accounts_by_uuid.insert({uuid, account});
+    g_accounts_by_username.insert({username, account});
     return account;
 }
 
@@ -107,9 +239,9 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 {
     {
         std::shared_lock l(g_accounts_lock);
-        auto it = g_accounts.find(username);
+        auto it = g_accounts_by_username.find(username);
 
-        if (it != g_accounts.end())
+        if (it != g_accounts_by_username.end())
         {
             fmt::print("Account already exists: {}\n", username);
             return nullptr;
@@ -127,50 +259,45 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 
     auto transaction = dbConnection->beginDeferredTransaction();
 
-    if (!transaction.isOpen())
-	{
+    if (!transaction.isOpen()) {
         fmt::print(stderr, "SQL Failed to start transaction: {}\n", dbConnection->lastError());
 		return nullptr;
     }
 
-    SQLite::Query query = dbConnection->makeQuery("INSERT OR IGNORE INTO account_placeholders(uuid, username, password_salt) VALUES (?, ?, ?)"sv);
+    SQLite::Query passwordQuery = dbConnection->makeQuery("INSERT INTO passwords(salt, ops_limit, mem_limit, algorithm) VALUES (?, ?, ?, ?)"sv);
 
-    ThorQ::Uuid id = ThorQ::Uuid::NewUuid();
-    if (!query.bindText(1, id.toString()))
-    {
-        fmt::print(stderr, "SQL Failed to bind username: {}\n", dbConnection->lastError());
+    ThorQ::Crypto::Hashing::HashingParameters params;
+    params.setPerformance(ThorQ::Crypto::Hashing::HashingParameters::Performance::Sensitive);
+    randombytes_buf(params.salt.data(), params.salt.size());
+
+    if (!passwordQuery.bindBlob(1, params.salt) ||
+        !passwordQuery.bindInt64(2, params.ops_limit) ||
+        !passwordQuery.bindInt64(3, params.mem_limit) ||
+        !passwordQuery.bindInt32(4, params.algorithm) ||
+        !passwordQuery.step()) {
+        fmt::print(stderr, "SQL Failed to execute set password hash query: {}\n", dbConnection->lastError());
         return nullptr;
     }
+    std::int64_t passwordId = dbConnection->lastInsertedRowId();
 
-    if (!query.bindText(2, username))
-    {
-        fmt::print(stderr, "SQL Failed to bind username: {}\n", dbConnection->lastError());
-        return nullptr;
-    }
+    SQLite::Query accountQuery = dbConnection->makeQuery("INSERT INTO accounts(uuid, username, password_id, image_id) VALUES (?, ?, ?, 1)"sv);
 
-    std::array<std::uint8_t, ThorQ::Crypto::Hashing::SaltLength> salt;
-    randombytes_buf(salt.data(), salt.size());
-
-    if (!query.bindBlob(3, salt))
-    {
-        fmt::print(stderr, "SQL Failed to bind salt: {}\n", dbConnection->lastError());
-        return nullptr;
-    }
-
-    if (!query.step())
-    {
+    ThorQ::Uuid uuid = ThorQ::Uuid::NewUuid();
+    if (!accountQuery.bindText(1, uuid.toString()) ||
+        !accountQuery.bindText(2, username) ||
+        !accountQuery.bindInt64(3, passwordId) ||
+        !accountQuery.step()) {
         fmt::print(stderr, "SQL Failed to execute account query: {}\n", dbConnection->lastError());
         return nullptr;
     }
 
     std::int64_t dbId = dbConnection->lastInsertedRowId();
 
-    /*
-    if (dbId == 0)
+    if (dbId <= 0)
     {
         fmt::print(stderr, "username [{}] not available\n", username);
         return nullptr;
-    }*/
+    }
 
     if (!transaction.commit())
 	{
@@ -178,8 +305,12 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 		return nullptr;
 	}
 
-    fmt::print(stderr, "Done: {}\n", id.toString());
-    return std::shared_ptr<ThorQ::Account>(new ThorQ::Account(dbId, id, username));
+    fmt::print(stderr, "[ACCOUNT] Created: {}\n", username);
+    auto account = std::shared_ptr<ThorQ::Account>(new ThorQ::Account(dbId, uuid, username, params));
+    std::scoped_lock l(g_accounts_lock);
+    g_accounts_by_uuid.insert({uuid, account});
+    g_accounts_by_username.insert({username, account});
+    return account;
 }
 
 std::string ThorQ::Account::username() const
@@ -216,7 +347,7 @@ bool ThorQ::Account::setUsername(const std::string& username)
         return false;
     }
 
-    SQLite::Query query = dbConnection->makeQuery("UPDATE OR IGNORE accounts SET username = ? WHERE db_id = ? LIMIT 1"sv);
+    SQLite::Query query = dbConnection->makeQuery("UPDATE OR IGNORE accounts SET username = ?, updated_at = CURRENT_TIMESTAMP WHERE db_id = ? LIMIT 1"sv);
 
     if (!query.isValid())
     {
@@ -260,6 +391,97 @@ bool ThorQ::Account::setUsername(const std::string& username)
 
     std::unique_lock l(l_basics);
     m_username = username;
+    return true;
+}
+
+bool ThorQ::Account::isClaimed() const
+{
+    std::shared_lock l(const_cast<std::shared_mutex&>(l_basics));
+    return !m_emailAddress.empty();
+}
+
+bool ThorQ::Account::tryClaim(const std::string& emailAddress, const ThorQ::Crypto::Hashing::CalculatedHash& passwordHash, const ThorQ::Crypto::Hashing::HashingParameters& passwordHashParams)
+{
+    std::unique_lock l(l_basics);
+
+    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
+
+    if (dbConnection == nullptr) {
+        fmt::print(stderr, "Failed to open database\n");
+        return false;
+    }
+
+    dbConnection->setBusyTimeout(5000);
+
+    auto transaction = dbConnection->beginDeferredTransaction();
+
+    if (!transaction.isOpen())
+    {
+        fmt::print(stderr, "SQL Failed to start transaction: {}\n", dbConnection->lastError());
+        return false;
+    }
+
+    SQLite::Query updateAccountQuery = dbConnection->makeQuery(
+                "UPDATE "
+                    "accounts "
+                "SET "
+                    "email_address = ?,"
+                    "updated_at = CURRENT_TIMESTAMP "
+                "WHERE "
+                    "account_id = ? AND email IS NULL "
+                "LIMIT 1"sv);
+
+    if (!updateAccountQuery.bindText(1, emailAddress) ||
+        !updateAccountQuery.bindInt64(2, m_dbId) ||
+        !updateAccountQuery.step()
+        ) {
+        fmt::print("SQL claim account (update account) failed: {}\n", dbConnection->lastError());
+        return false;
+    }
+
+    SQLite::Query getChangesQuery = dbConnection->makeQuery("SELECT changes()"sv);
+    if (!getChangesQuery.step() ||
+         getChangesQuery.columnCount() == 0 ||
+         getChangesQuery.column(0).getInt32() == 0
+         ) {
+        fmt::print("SQL claim account (get changes) failed: {}\n", dbConnection->lastError());
+        return false;
+    }
+
+    SQLite::Query updatePasswordQuery = dbConnection->makeQuery(
+                "UPDATE OR IGNORE "
+                    "passwords "
+                "SET "
+                    "hash = ?,"
+                    "ops_limit = ?,"
+                    "mem_limit = ?,"
+                    "algorithm = ? "
+                "WHERE "
+                    "password_id IN ("
+                        "SELECT "
+                            "password_id "
+                        "FROM "
+                            "accounts "
+                        "WHERE "
+                            "account_id = ?"
+                    ")"
+                "LIMIT 1"sv);
+
+    if (!updatePasswordQuery.bindBlob(1, passwordHash) ||
+        !updatePasswordQuery.bindInt64(2, passwordHashParams.ops_limit) ||
+        !updatePasswordQuery.bindInt64(3, passwordHashParams.mem_limit) ||
+        !updatePasswordQuery.bindInt32(4, passwordHashParams.algorithm) ||
+        !updatePasswordQuery.bindInt64(5, m_dbId) ||
+        !updatePasswordQuery.step()
+        ) {
+        fmt::print("SQL claim account (update password) failed: {}\n", dbConnection->lastError());
+        return false;
+    }
+
+    m_emailAddress = emailAddress;
+    m_passwordHash = passwordHash;
+    m_passwordHashParameters = passwordHashParams;
+
     return true;
 }
 
@@ -349,7 +571,7 @@ ThorQ::Crypto::Hashing::HashingParameters ThorQ::Account::passwordHashParameters
     return m_passwordHashParameters;
 }
 
-bool ThorQ::Account::setPasswordHash(ThorQ::Crypto::Hashing::HashingParameters params)
+bool ThorQ::Account::setPasswordHashParameters(ThorQ::Crypto::Hashing::HashingParameters params)
 {
     if (m_passwordHashParameters == params)
     {

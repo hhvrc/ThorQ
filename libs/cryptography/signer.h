@@ -77,6 +77,10 @@ private:
         BothKeys
     } m_state;
 };
+
+static_assert (Signer::SignatureLen == 64, "Signing signature length changed");
+static_assert (Signer::PublicKeyLen == 32, "Signing public_key length changed");
+static_assert (Signer::SecretKeyLen == 64, "Signing secret_key length changed");
 }
 }
 

@@ -29,51 +29,67 @@ bool InitializeDB(const char* path) noexcept
     auto con = SQLite::Connection::OpenConnection(path, SQLite::Connection::CREATE | SQLite::Connection::READWRITE);
 
     using namespace std::literals;
-    return con->execute("CREATE TABLE IF NOT EXISTS system_ids("
-                "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                "system_id TEXT NOT NULL UNIQUE,"
-                "banned_at DATETIME,"
-                "registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                ")"sv) // Unique SystemID of a cmoputer
-
-        && con->execute("CREATE TABLE IF NOT EXISTS auth_tokens("
-                "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                "auth_token TEXT NOT NULL UNIQUE,"
-                "system_id INTEGER NOT NULL,"
-                "account_id INTEGER NOT NULL,"
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                ")"sv) // Authentication Token generated at login
-
-        && con->execute("CREATE TABLE IF NOT EXISTS images("
-                "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                "uuid TEXT NOT NULL UNIQUE,"
-                "uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                ")"sv) // Image path will be images/{uuid_str}.png
-
-        && con->execute("CREATE TABLE IF NOT EXISTS account_placeholders("
-                "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                "uuid TEXT NOT NULL UNIQUE,"
-                "username TEXT NOT NULL UNIQUE,"
-                "password_salt BLOB NOT NULL,"
-                "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                ")"sv) // Accounts that have been requested/queued for creation (this is here to fool any attacker and to provide a consistant password salt for any given account)
-
-        && con->execute("CREATE TABLE IF NOT EXISTS accounts("
-                "db_id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                "uuid TEXT NOT NULL UNIQUE,"
-                "username TEXT NOT NULL UNIQUE,"
-                "image INTEGER NOT NULL REFERENCES images,"
-                "email_address TEXT NOT NULL,"
-                "password_hash BLOB NOT NULL,"
-                "password_salt BLOB NOT NULL,"
-                "password_ops_limit INTEGER NOT NULL,"
-                "password_mem_limit INTEGER NOT NULL,"
-                "password_algorithm INTEGER NOT NULL,"
-                "authority INTEGER NOT NULL DEFAULT 0,"
-                "last_login DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+    return con->execute("CREATE TABLE IF NOT EXISTS accounts("
+                "account_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "uuid VARCHAR(26) NOT NULL UNIQUE,"
+                "username VARCHAR(32) NOT NULL UNIQUE,"
+                "password_id INTEGER NOT NULL REFERENCES passwords,"
+                "email_address VARCHAR(256),"
+                "image_id INTEGER NOT NULL REFERENCES images,"
                 "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                 "updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                "banned_at DATETIME,"
                 "deleted_at DATETIME"
+                ")"sv)
+
+        && con->execute("CREATE TABLE IF NOT EXISTS passwords("
+                "password_id INTEGER PRIMARY KEY,"
+                "salt BLOB NOT NULL,"
+                "hash BLOB,"
+                "ops_limit INTEGER NOT NULL DEFAULT 4,"
+                "mem_limit INTEGER NOT NULL DEFAULT 1073741824,"
+                "algorithm INTEGER NOT NULL DEFAULT 2"
+                ")"sv)
+
+        && con->execute("CREATE TABLE IF NOT EXISTS account_systems("
+                "account_id INTEGER REFERENCES accounts,"
+                "system_id INTEGER REFERENCES systems,"
+                "auth_token VARCHAR(64)," // Authtoken for non-credentials login, optionally created at login
+                "last_login DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                "connected_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                "PRIMARY KEY(account_id, system_id)"
+                ")"sv)
+
+        && con->execute("CREATE TABLE IF NOT EXISTS systems("
+                "system_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "hardware_id VARCHAR(280) NOT NULL UNIQUE," // Unique HardwareID of a computer
+              //"application_build_id INTEGER NOT NULL REFERENCES application_builds,"
+                "registered_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                ")"sv)
+
+        && con->execute("CREATE TABLE IF NOT EXISTS system_types("
+                "application_build_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "os_name VARCHAR(20) NOT NULL,"
+                "is_mobile BOOLEAN NOT NULL"
+                ")"sv)
+
+        && con->execute("CREATE TABLE IF NOT EXISTS account_roles("
+                "account_id INTEGER REFERENCES accounts,"
+                "role_id INTEGER REFERENCES roles,"
+                "assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                "PRIMARY KEY(account_id, role_id)"
+                ")"sv)
+
+        && con->execute("CREATE TABLE IF NOT EXISTS roles("
+                "role_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "name VARCHAR(30) NOT NULL UNIQUE"
+                ")"sv)
+
+        && con->execute("CREATE TABLE IF NOT EXISTS images("
+                "image_id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                "uuid VARCHAR(26) NOT NULL UNIQUE," // Image path will be images/{uuid}.png
+                "uploaded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                "uploader_id INTEGER REFERENCES accounts"
                 ")"sv)
 
         && con->execute("CREATE TABLE IF NOT EXISTS relationships("
@@ -87,13 +103,7 @@ bool InitializeDB(const char* path) noexcept
                 "notify_online BOOLEAN NOT NULL,"
                 "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                 "PRIMARY KEY (source, target)"
-                ") WITHOUT ROWID"sv)
-
-        && con->execute("CREATE TABLE IF NOT EXISTS systemid_account_map("
-                "systemid_id INTEGER NOT NULL,"
-                "account_id INTEGER NOT NULL,"
-                "established_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP"
-                ")"sv);
+                ") WITHOUT ROWID"sv);
 }
 void exit_handler(int s)
 {

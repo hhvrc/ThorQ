@@ -106,10 +106,7 @@ ThorQ::LoginWidget::LoginWidget(ThorQ::AccountController* accountController, QWi
             }
 
             m_passwordInput->setText("");
-
-            m_accountController->setUsername(username);
-            m_accountController->setPassword(password);
-            m_accountController->login();
+            m_accountController->login(username, password);
         }
     });
 

@@ -22,8 +22,7 @@ class ApiClientConnection final : public ThorQ::Networking::TcpConnection
 {
 public:
     ApiClientConnection(asio::io_context& asio, asio::ip::tcp::socket socket,
-                     moodycamel::ConcurrentQueue<std::shared_ptr<std::vector<std::uint8_t>>>& incomingQueue,
-                     moodycamel::ConcurrentQueue<std::shared_ptr<std::vector<std::uint8_t>>>& outgoingQueue
+                     moodycamel::ConcurrentQueue<std::shared_ptr<std::vector<std::uint8_t>>>& incomingQueue
                      );
     ApiClientConnection(ApiClientConnection&&) = default;
 
@@ -38,9 +37,6 @@ private:
 
     moodycamel::ConcurrentQueue<std::shared_ptr<std::vector<std::uint8_t>>>& m_incomingMessages;
     moodycamel::ProducerToken m_incomingMessagesToken;
-
-    moodycamel::ConcurrentQueue<std::shared_ptr<std::vector<std::uint8_t>>>& m_outgoingMessages;
-    moodycamel::ConsumerToken m_outgoingMessagesToken;
 };
 }
 

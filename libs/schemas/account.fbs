@@ -29,20 +29,26 @@ table GetHashingParameters {
   account_id : Uuid;
 }
 
-table GetAuthToken {
-  user_id : Uuid;
+table LoginRequest {
+  account_id : Uuid;
   password_hash : Account.HashCalculated;
+  get_auth_token : bool;
 }
 
-table Login {
-  user_id : Uuid;
+table LoginResponse {
+  success : bool;
   auth_token : Account.AuthToken;
 }
 
-table Register {
-  user_id : Uuid;
+table RegistrationRequest {
+  username : string;
   email : string;
   password_hash : Account.HashNew;
+}
+
+table RegistrationResponse {
+  success : bool;
+  account_id : Uuid;
 }
 
 table Recover {
@@ -83,11 +89,12 @@ union Body {
   get_hashing_parameters : Account.GetHashingParameters,
   hashing_parameters : Account.HashingParameters,
 
-  get_auth_token : Account.GetAuthToken,
-  auth_token : Account.AuthToken,
+  login_request : Account.LoginRequest,
+  login_response : Account.LoginResponse,
 
-  login : Account.Login,
-  register : Account.Register,
+  registration_request : Account.RegistrationRequest,
+  registration_response : Account.RegistrationResponse,
+
   recover : Account.Recover,
   delete : Account.Delete,
   logout : Account.Logout,
