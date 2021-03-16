@@ -45,12 +45,15 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/image.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/userlistitem.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/userlistwidget.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.cpp
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/accountloginwidget.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/accountregisterwidget.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/accountrecoverwidget.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/accountcontroller.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/announcementcontroller.cpp
@@ -74,13 +77,16 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/image.h
     ${CMAKE_CURRENT_SOURCE_DIR}/procmon.h
     ${CMAKE_CURRENT_SOURCE_DIR}/mainwidget.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/loginwidget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/userlistitem.h
     ${CMAKE_CURRENT_SOURCE_DIR}/userlistwidget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_client.h
     ${CMAKE_CURRENT_SOURCE_DIR}/controlwidget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/settingswidget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/deleteexecutable.h
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/accountloginwidget.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/accountregisterwidget.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/accountrecoverwidget.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/accountcontroller.h
     ${CMAKE_CURRENT_SOURCE_DIR}/announcementcontroller.h
@@ -126,7 +132,7 @@ add_executable(${project}
     ${${project}_RESOURCES}
 )
 
-target_link_libraries(${project}
+target_link_libraries(${project} PRIVATE
     ThorQLib
     openvr_api
     ${Qt5Core_LIBRARIES}

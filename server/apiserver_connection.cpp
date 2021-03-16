@@ -126,60 +126,98 @@ void ThorQ::ApiServerConnection::onMessage(std::shared_ptr<std::vector<std::uint
         return;
     }
 
-    for (const auto& fbsMessage : *fbsMessageBuffer->body()) {
-        handleMessage(fbsMessage);
+    auto& messages = *fbsMessageBuffer->body();
+
+    HandlerContext context;
+
+    // Response will be encrypted by default
+    context.encrypt = true;
+
+    // Catch any thrown exceptions
+    try {
+
+        // Iterate trough all received requests
+        for (const auto& fbsMessage : messages) {
+
+            // Set context body, and if its nullptr, then client is bad
+            context.body = fbsMessage;
+            if (context.body == nullptr) {
+                disconnect();
+                return;
+            }
+
+            // Handle the message
+            handleMessage(context);
+        }
+    } catch (MessageHandlingException& ex) {
+        // If a message exception is thrown, send the exception message to the user
+        createErrorMessage(context, ex.what(), ex.requestId());
+    } catch (std::exception& ex) {
+        // If a general exception is thrown then do not display it to the user
+        fmt::print(stderr, "Exception while parsing messages: {}\n", ex.what());
+        createErrorMessage(context, nullptr, 0);
+    } catch (...) {
+        // I have no idea why this would be thrown, but send an error to the user
+        fmt::print(stderr, "Unknown exception while parsing messages!\n");
+        createErrorMessage(context, nullptr, 0);
     }
+
+    // Send all the queued data to the user
+    sendContextData(context);
 }
 
 void ThorQ::ApiServerConnection::onCryptoEstablished()
 {
     fmt::print("[CONNECTION] Crypto Established\n");
+    crypto_ok = true;
 }
 
-void ThorQ::ApiServerConnection::handleMessage(const void* body)
+void ThorQ::ApiServerConnection::handleMessage(HandlerContext& context)
 {
-    auto fbsMessage = reinterpret_cast<const ThorQ::Serialization::Message*>(body);
-    if (fbsMessage == nullptr) {
+    auto fbsMessage = reinterpret_cast<const ThorQ::Serialization::Message*>(context.body);
+
+    context.body = fbsMessage->body();
+    if (context.body == nullptr) {
         disconnect();
         return;
     }
 
     switch (fbsMessage->body_type()) {
     case ThorQ::Serialization::Body_account:
-        handleMessageAccount(fbsMessage->body());
+        handleMessageAccount(context);
         break;
     case ThorQ::Serialization::Body_announcement:
-        handleMessageAnnouncement(fbsMessage->body());
+        handleMessageAnnouncement(context);
         break;
     case ThorQ::Serialization::Body_device:
-        handleMessageDevice(fbsMessage->body());
+        handleMessageDevice(context);
         break;
     case ThorQ::Serialization::Body_crypto:
-        handleMessageCrypto(fbsMessage->body());
+        handleMessageCrypto(context);
         break;
     case ThorQ::Serialization::Body_file:
-        handleMessageFile(fbsMessage->body());
+        handleMessageFile(context);
         break;
     case ThorQ::Serialization::Body_friend_request:
-        handleMessageFriendRequest(fbsMessage->body());
+        handleMessageFriendRequest(context);
         break;
     case ThorQ::Serialization::Body_group:
-        handleMessageGroup(fbsMessage->body());
+        handleMessageGroup(context);
         break;
     case ThorQ::Serialization::Body_moderation:
-        handleMessageModeration(fbsMessage->body());
+        handleMessageModeration(context);
         break;
     case ThorQ::Serialization::Body_system_id:
-        handleMessageSystemID(fbsMessage->body());
+        handleMessageSystemID(context);
         break;
     case ThorQ::Serialization::Body_user:
-        handleMessageUser(fbsMessage->body());
+        handleMessageUser(context);
         break;
     case ThorQ::Serialization::Body_version:
-        handleMessageVersion(fbsMessage->body());
+        handleMessageVersion(context);
         break;
     case ThorQ::Serialization::Body_p2p:
-        handleMessageP2P(fbsMessage->body());
+        handleMessageP2P(context);
         break;
     default:
         fmt::print("[MSG] Invalid\n");
@@ -188,87 +226,88 @@ void ThorQ::ApiServerConnection::handleMessage(const void* body)
     }
 }
 
-void ThorQ::ApiServerConnection::handleMessageAccount(const void* body)
+bool ThorQ::ApiServerConnection::sendContextData(ThorQ::ApiServerConnection::HandlerContext &context)
 {
-    auto fbsAccount = reinterpret_cast<const ThorQ::Serialization::Account::Message*>(body);
-    if (fbsAccount == nullptr) {
+    auto fbsRespBuffer = ThorQ::Serialization::CreateMessageBufferDirect(context.fbsBuilder, &context.messages);
+    context.fbsBuilder.Finish(fbsRespBuffer);
+
+    bool result = encodeAndSend(context.fbsBuilder.GetBufferSpan(), context.encrypt);
+
+    context.messages.clear();
+    context.fbsBuilder.Clear();
+    context.encrypt = true;
+
+    return result;
+}
+
+void ThorQ::ApiServerConnection::createErrorMessage(ThorQ::ApiServerConnection::HandlerContext& context, const char* error, std::uint64_t requestId)
+{
+    // Removes all other data
+    context.messages.clear();
+    context.fbsBuilder.Clear();
+    context.encrypt = false;
+
+    auto fbsRespError     = ThorQ::Serialization::CreateErrorDirect(context.fbsBuilder, requestId, error).Union();
+    auto fbsRespMessage   = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_error, fbsRespError);
+    context.messages.push_back(fbsRespMessage);
+}
+
+void ThorQ::ApiServerConnection::handleMessageAccount(HandlerContext& context)
+{
+    auto fbsAccount = reinterpret_cast<const ThorQ::Serialization::Account::Message*>(context.body);
+
+    context.body = fbsAccount->body();
+    if (context.body == nullptr) {
         disconnect();
         return;
     }
 
     switch (fbsAccount->body_type()) {
     case ThorQ::Serialization::Account::Body_get_account_id:
-        handleMessageAccount_GetAccountId(fbsAccount->body());
+        handleMessageAccount_GetAccountId(context);
+        break;
+    case ThorQ::Serialization::Account::Body_get_hashing_salt:
+        handleMessageAccount_GetHashingSalt(context);
         break;
     case ThorQ::Serialization::Account::Body_get_hashing_parameters:
-        handleMessageAccount_GetHashingParameters(fbsAccount->body());
+        handleMessageAccount_GetHashingParameters(context);
         break;
     case ThorQ::Serialization::Account::Body_login_request:
-        handleMessageAccount_LoginRequest(fbsAccount->body());
+        handleMessageAccount_LoginRequest(context);
         break;
     case ThorQ::Serialization::Account::Body_registration_request:
-        handleMessageAccount_RegistrationRequest(fbsAccount->body());
+        handleMessageAccount_RegistrationRequest(context);
         break;
     case ThorQ::Serialization::Account::Body_recover:
+        handleMessageAccount_Recover(context);
         break;
     case ThorQ::Serialization::Account::Body_delete_:
+        handleMessageAccount_Delete(context);
         break;
     case ThorQ::Serialization::Account::Body_logout:
+        handleMessageAccount_Logout(context);
         break;
     case ThorQ::Serialization::Account::Body_set_username:
+        handleMessageAccount_SetUserName(context);
         break;
     case ThorQ::Serialization::Account::Body_set_password:
+        handleMessageAccount_SetPassword(context);
         break;
     case ThorQ::Serialization::Account::Body_set_email:
+        handleMessageAccount_SetEmail(context);
         break;
     case ThorQ::Serialization::Account::Body_set_image:
+        handleMessageAccount_SetImage(context);
         break;
     default:
         fmt::print("[MSG][ACCOUNT] Invalid\n");
         disconnect();
         return;
-    }/*
-    std::string username, password;
-    thorq_payload_login_get_username(message, username);
-    thorq_payload_login_get_password(message, password);
-
-    if (instance->loginState() == THORQ_STATE_LOGIN_LOGGEDOUT)
-    {
-        auto it = std::find_if(g_accounts.begin(), g_accounts.end(), [&](const std::shared_ptr<ThorQ::Account> account) -> bool
-        {
-            return account->username() == username;
-        });
-
-        if (it != g_accounts.end())
-        {
-            qDebug() << username << "logged in";
-
-            instance->setAccount(*it);
-            instance->setLoginState(THORQ_STATE_LOGIN_LOGGEDIN);
-
-            thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN, THORQ_PAYLOAD_ACK_OK);
-            instance->packetSend(response, true, true);
-        }
-        else
-        {
-            thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN, THORQ_PAYLOAD_ACK_DENIED);
-
-            instance->packetSend(response, true, true);
-        }
     }
-    else
-    {
-        thorq_payload_ack_pack(response, THORQ_PAYLOAD_ID_ACCOUNT, THORQ_PAYLOAD_ACCOUNT_LOGIN, THORQ_PAYLOAD_ACK_NO_CHANGE);
-        instance->packetSend(response, true, true);
-    }*/
 }
-void ThorQ::ApiServerConnection::handleMessageAccount_GetAccountId(const void* body)
+void ThorQ::ApiServerConnection::handleMessageAccount_GetAccountId(HandlerContext& context)
 {
-    auto fbsGetAccountId = reinterpret_cast<const ThorQ::Serialization::Account::GetAccountId*>(body);
-    if (fbsGetAccountId == nullptr || fbsGetAccountId->username() == nullptr) {
-        disconnect();
-        return;
-    }
+    auto fbsGetAccountId = reinterpret_cast<const ThorQ::Serialization::Account::GetAccountId*>(context.body);
 
     fmt::print("[ACCOUNT] GetAccountId\n");
     auto fbsUsername = fbsGetAccountId->username();
@@ -289,19 +328,46 @@ void ThorQ::ApiServerConnection::handleMessageAccount_GetAccountId(const void* b
         return;
     }
 
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-    auto fbsRespAccountID = fbsBuilder.CreateStruct(ThorQ::Serialization::Uuid(account->id().toBytes())).Union();
-    auto fbsRespAccount   = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_account_id, fbsRespAccountID).Union();
-
-    std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
-    messages.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsRespAccount));
-    fbsBuilder.Finish(ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &messages));
-    encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+    auto fbsRespAccountID = context.fbsBuilder.CreateStruct(ThorQ::Serialization::Uuid(account->id().toBytes())).Union();
+    auto fbsRespAccount   = ThorQ::Serialization::Account::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Account::Body_account_id, fbsRespAccountID).Union();
+    auto fbsRespMessage   = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_account, fbsRespAccount);
+    context.messages.push_back(fbsRespMessage);
 }
-void ThorQ::ApiServerConnection::handleMessageAccount_GetHashingParameters(const void* body)
+
+void ThorQ::ApiServerConnection::handleMessageAccount_GetHashingSalt(ThorQ::ApiServerConnection::HandlerContext& context)
 {
-    auto fbsGetHashingParameters = reinterpret_cast<const ThorQ::Serialization::Account::GetHashingParameters*>(body);
-    if (fbsGetHashingParameters == nullptr || fbsGetHashingParameters->account_id() == nullptr || fbsGetHashingParameters->account_id()->data() == nullptr) {
+    auto fbsGetHashingParameters = reinterpret_cast<const ThorQ::Serialization::Account::GetHashingSalt*>(context.body);
+    if (fbsGetHashingParameters->account_id() == nullptr || fbsGetHashingParameters->account_id()->data() == nullptr) {
+        disconnect();
+        return;
+    }
+
+    fmt::print("[ACCOUNT] GetHashingSalt\n");
+    auto fbsAccountId = fbsGetHashingParameters->account_id()->data();
+    ThorQ::Uuid accountId(std::span<const std::uint8_t, 16>(fbsAccountId->data(), fbsAccountId->size()));
+
+    auto account = ThorQ::Account::GetAccount(accountId);
+
+    ThorQ::Crypto::Hashing::Salt salt;
+
+    if (account == nullptr) {
+        // If account doesnt exist then create fake hashing salt to keep exploiter confused
+        randombytes_buf(salt.data(), ThorQ::Crypto::Hashing::SaltLength);
+    }
+    else {
+        salt = account->passwordSalt();
+    }
+
+    auto fbsRespSalt      = context.fbsBuilder.CreateStruct(ThorQ::Serialization::Account::HashingSalt(salt)).Union();
+    auto fbsRespAccount   = ThorQ::Serialization::Account::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Account::Body_hashing_salt, fbsRespSalt).Union();
+    auto fbsRespMessage   = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_account, fbsRespAccount);
+    context.messages.push_back(fbsRespMessage);
+}
+
+void ThorQ::ApiServerConnection::handleMessageAccount_GetHashingParameters(HandlerContext& context)
+{
+    auto fbsGetHashingParameters = reinterpret_cast<const ThorQ::Serialization::Account::GetHashingParameters*>(context.body);
+    if (fbsGetHashingParameters->account_id() == nullptr || fbsGetHashingParameters->account_id()->data() == nullptr) {
         disconnect();
         return;
     }
@@ -312,12 +378,12 @@ void ThorQ::ApiServerConnection::handleMessageAccount_GetHashingParameters(const
 
     auto account = ThorQ::Account::GetAccount(accountId);
 
-    ThorQ::Crypto::Hashing::HashingParameters parameters;
+    ThorQ::Crypto::Hashing::Parameters parameters;
 
     if (account == nullptr) {
         // If account doesnt exist then create fake hashing parameters to keep exploiter confused
         // Create fake hashing parameters (and make them use max performance because why tf not (Make them suffer x3))
-        parameters.setPerformance(ThorQ::Crypto::Hashing::HashingParameters::Performance::Sensitive);
+        parameters.setPerformance(ThorQ::Crypto::Hashing::Parameters::Performance::Sensitive);
     }
     else {
         parameters = account->passwordHashParameters();
@@ -325,18 +391,14 @@ void ThorQ::ApiServerConnection::handleMessageAccount_GetHashingParameters(const
 
     fmt::print("[ACCOUNT] Sending HashingParameters: {} {} {}\n", parameters.ops_limit, parameters.mem_limit, parameters.algorithm);
 
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-    auto fbsRespHashPrms  = fbsBuilder.CreateStruct(ThorQ::Serialization::Account::HashingParameters(parameters.ops_limit, parameters.mem_limit, parameters.algorithm)).Union();
-    auto fbsRespAccount   = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_hashing_parameters, fbsRespHashPrms).Union();
-
-    std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
-    messages.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsRespAccount));
-    fbsBuilder.Finish(ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &messages));
-    encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+    auto fbsRespHashPrms  = context.fbsBuilder.CreateStruct(ThorQ::Serialization::Account::HashingParameters(parameters.ops_limit, parameters.mem_limit, parameters.algorithm)).Union();
+    auto fbsRespAccount   = ThorQ::Serialization::Account::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Account::Body_hashing_parameters, fbsRespHashPrms).Union();
+    auto fbsRespMessage   = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_account, fbsRespAccount);
+    context.messages.push_back(fbsRespMessage);
 }
-void ThorQ::ApiServerConnection::handleMessageAccount_LoginRequest(const void* body)
+void ThorQ::ApiServerConnection::handleMessageAccount_LoginRequest(HandlerContext& context)
 {
-    auto fbsLoginRequest = reinterpret_cast<const ThorQ::Serialization::Account::LoginRequest*>(body);
+    auto fbsLoginRequest = reinterpret_cast<const ThorQ::Serialization::Account::LoginRequest*>(context.body);
     if (fbsLoginRequest == nullptr || fbsLoginRequest->account_id() == nullptr || fbsLoginRequest->account_id()->data() == nullptr || fbsLoginRequest->password_hash() == nullptr || fbsLoginRequest->password_hash()->hash() == nullptr) {
         disconnect();
         return;
@@ -345,87 +407,125 @@ void ThorQ::ApiServerConnection::handleMessageAccount_LoginRequest(const void* b
     fmt::print("[ACCOUNT] LoginRequest\n");
     auto fbsAccountId = fbsLoginRequest->account_id()->data();
     auto fbsPasswordHash = fbsLoginRequest->password_hash()->hash();
+
     ThorQ::Uuid accountId(std::span<const std::uint8_t, 16>(fbsAccountId->data(), fbsAccountId->size()));
+    ThorQ::Crypto::Hashing::Hash passwordHash;
+    memcpy(passwordHash.data(), fbsPasswordHash->data(), ThorQ::Crypto::Hashing::HashLength);
 
     auto account = ThorQ::Account::GetAccount(accountId);
 
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-
-    flatbuffers::Offset<void> fbsLoginResp;
-    ThorQ::Serialization::Account::AuthToken authToken;
-    if (account != nullptr && memcmp(fbsPasswordHash->data(), account->passwordHash().data(), ThorQ::Crypto::Hashing::HashLength) == 0) {
+    flatbuffers::Offset<void> fbsRespLogin;
+    ThorQ::Serialization::Uuid fbsRespAccountID;
+    ThorQ::Serialization::Account::AuthToken fbsRespAuthToken;
+    if (account != nullptr && account->checkPasswordHash(passwordHash)) {
         setAccount(account);
+
+        fbsRespAccountID = ThorQ::Serialization::Uuid(account->id().toBytes());
+
         // TODO: Create auth token
         if (fbsLoginRequest->get_auth_token()) {
-            // TODO: Get or create auth token
-            fbsLoginResp = ThorQ::Serialization::Account::CreateLoginResponse(fbsBuilder, true, &authToken).Union();
+            // TODO: Get auth token
+            fbsRespLogin = ThorQ::Serialization::Account::CreateLoginResponse(context.fbsBuilder, true, &fbsRespAccountID, &fbsRespAuthToken).Union();
         }
         else {
-            fbsLoginResp = ThorQ::Serialization::Account::CreateLoginResponse(fbsBuilder, true).Union();
+            fbsRespLogin = ThorQ::Serialization::Account::CreateLoginResponse(context.fbsBuilder, true, &fbsRespAccountID).Union();
         }
     }
     else {
         fmt::print("[ACCOUNT] Login request DENIED\n");
-        fbsLoginResp = ThorQ::Serialization::Account::CreateLoginResponse(fbsBuilder, false).Union();
+        fbsRespLogin = ThorQ::Serialization::Account::CreateLoginResponse(context.fbsBuilder, false).Union();
     }
 
-    auto fbsRespAccount = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_login_response, fbsLoginResp).Union();
-
-    std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
-    messages.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsRespAccount));
-    fbsBuilder.Finish(ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &messages));
-    encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+    auto fbsRespAccount = ThorQ::Serialization::Account::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Account::Body_login_response, fbsRespLogin).Union();
+    auto fbsRespMessage = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_account, fbsRespAccount);
+    context.messages.push_back(fbsRespMessage);
 }
-void ThorQ::ApiServerConnection::handleMessageAccount_RegistrationRequest(const void* body)
+void ThorQ::ApiServerConnection::handleMessageAccount_RegistrationRequest(HandlerContext& context)
 {
-    auto fbsRegistrationReq = reinterpret_cast<const ThorQ::Serialization::Account::RegistrationRequest*>(body);
-    if (fbsRegistrationReq == nullptr || fbsRegistrationReq->username() == nullptr || fbsRegistrationReq->email() == nullptr || fbsRegistrationReq->password_hash() == nullptr || fbsRegistrationReq->password_hash()->hash() == nullptr) {
-        disconnect();
-        return;
-    }
-
-    fmt::print("[ACCOUNT] GetAccountId\n");
-    auto fbsUsername = fbsRegistrationReq->username();
-    auto fbsEmail    = fbsRegistrationReq->email();
-
-    std::string username(fbsUsername->data(), fbsUsername->size());
-    std::string email(fbsEmail->data(), fbsEmail->size());
-
-    fmt::print("[ACCOUNT] Client requested ID for: {}\n", username);
-    auto account = ThorQ::Account::GetAccount(username);
-
-    if (account == nullptr) {
-        fmt::print("[ACCOUNT] Failed to find account, creating fake one...\n");
-        account = ThorQ::Account::NewAccount(username);
-    }
-
-    if (account == nullptr) {
-        // TODO: THORQ_DISCONNECT_REASON::SERVER_ERROR
+    auto fbsRegistrationReq = reinterpret_cast<const ThorQ::Serialization::Account::RegistrationRequest*>(context.body);
+    if (fbsRegistrationReq->account_id() == nullptr || fbsRegistrationReq->account_id()->data() == nullptr || fbsRegistrationReq->email() == nullptr || fbsRegistrationReq->password_hash() == nullptr || fbsRegistrationReq->password_hash()->hash() == nullptr) {
         disconnect();
         return;
     }
 
     fmt::print("[ACCOUNT] RegistrationRequest\n");
-}
+    auto& fbsAccountId     = *fbsRegistrationReq->account_id()->data();
+    auto& fbsEmail         = *fbsRegistrationReq->email();
+    auto& fbsPasswordHash  = *fbsRegistrationReq->password_hash()->hash();
+    auto& fbsHashingParams =  fbsRegistrationReq->password_hash()->params();
 
-void ThorQ::ApiServerConnection::handleMessageAnnouncement(const void* body)
-{
-    auto fbsAnnouncement = reinterpret_cast<const ThorQ::Serialization::Announcement::Message*>(body);
-    if (fbsAnnouncement == nullptr) {
-        disconnect();
+    ThorQ::Uuid accountID(std::span<const std::uint8_t, 16>(fbsAccountId.data(), fbsAccountId.size()));
+    std::string email(fbsEmail.data(), fbsEmail.size());
+
+    ThorQ::Crypto::Hashing::Hash passwordHash;
+    memcpy(passwordHash.data(), fbsPasswordHash.data(), ThorQ::Crypto::Hashing::HashLength);
+
+    ThorQ::Crypto::Hashing::Parameters hashingParams;
+    hashingParams.mem_limit = fbsHashingParams.mem_limit();
+    hashingParams.ops_limit = fbsHashingParams.ops_limit();
+    hashingParams.algorithm = fbsHashingParams.algorithm();
+
+    fmt::print("[ACCOUNT] Client requested account: {}\n", accountID.toString());
+    auto account = ThorQ::Account::GetAccount(accountID);
+
+    if (account == nullptr) {
+        throw MessageHandlingException("AccountID not found", 1); // TODO implement requestID's
+    }
+
+    if (!account->tryClaim(email, passwordHash, hashingParams)) {
+        fmt::print("[ACCOUNT] {} already taken!\n", account->username());
+        // TODO respond with username/email taken
         return;
     }
+
+    fmt::print("[ACCOUNT] {} claimed!\n", account->username());
+}
+
+void ThorQ::ApiServerConnection::handleMessageAccount_Recover(HandlerContext& context)
+{
+
+}
+
+void ThorQ::ApiServerConnection::handleMessageAccount_Delete(HandlerContext& context)
+{
+
+}
+
+void ThorQ::ApiServerConnection::handleMessageAccount_Logout(HandlerContext& context)
+{
+
+}
+
+void ThorQ::ApiServerConnection::handleMessageAccount_SetUserName(HandlerContext& context)
+{
+
+}
+
+void ThorQ::ApiServerConnection::handleMessageAccount_SetPassword(HandlerContext& context)
+{
+
+}
+
+void ThorQ::ApiServerConnection::handleMessageAccount_SetEmail(HandlerContext& context)
+{
+
+}
+
+void ThorQ::ApiServerConnection::handleMessageAccount_SetImage(HandlerContext& context)
+{
+
+}
+
+void ThorQ::ApiServerConnection::handleMessageAnnouncement(HandlerContext& context)
+{
+    auto fbsAnnouncement = reinterpret_cast<const ThorQ::Serialization::Announcement::Message*>(context.body);
 
     fmt::print("[MSG] Announcement\n");
 }
 
-void ThorQ::ApiServerConnection::handleMessageDevice(const void* body)
+void ThorQ::ApiServerConnection::handleMessageDevice(HandlerContext& context)
 {
-    auto fbsDevice = reinterpret_cast<const ThorQ::Serialization::Device::Message*>(body);
-    if (fbsDevice == nullptr) {
-        disconnect();
-        return;
-    }
+    auto fbsDevice = reinterpret_cast<const ThorQ::Serialization::Device::Message*>(context.body);
 
     fmt::print("[MSG] Device\n");
 
@@ -436,15 +536,9 @@ void ThorQ::ApiServerConnection::handleMessageDevice(const void* body)
     */
 }
 
-void ThorQ::ApiServerConnection::handleMessageCrypto(const void* body)
+void ThorQ::ApiServerConnection::handleMessageCrypto(HandlerContext& context)
 {
-    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Crypto::Message*>(body);
-    if (fbsCrypto == nullptr) {
-        disconnect();
-        return;
-    }
-
-    auto fbsClientPublicKey = fbsCrypto->public_key();
+    auto fbsClientPublicKey = reinterpret_cast<const ThorQ::Serialization::Crypto::Message*>(context.body)->public_key();
 
     if (!m_crypto.generateKeyPair()) {
         fmt::print(stderr, "[CRYPTO] Failed to generate keypair!\n");
@@ -477,16 +571,14 @@ void ThorQ::ApiServerConnection::handleMessageCrypto(const void* body)
         }
 
         // Build flatbuffer
-        flatbuffers::FlatBufferBuilder fbsBuilder;
-        auto fbsPublicKey = fbsBuilder.CreateVector(serverPublickey.data(), serverPublickey.size());
-        auto fbsSignature = fbsBuilder.CreateVector(signature.data(), signature.size());
-        auto fbsCrypto    = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, fbsPublicKey, fbsSignature).Union();
+        auto fbsPublicKey = context.fbsBuilder.CreateVector(serverPublickey.data(), serverPublickey.size());
+        auto fbsSignature = context.fbsBuilder.CreateVector(signature.data(), signature.size());
+        auto fbsCrypto    = ThorQ::Serialization::Crypto::CreateMessage(context.fbsBuilder, fbsPublicKey, fbsSignature).Union();
 
-        std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
-        messages.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsCrypto));
-        fbsBuilder.Finish(ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &messages));
+        context.messages.push_back(ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_crypto, fbsCrypto));
 
-        if (encodeAndSend(fbsBuilder.GetBufferSpan(), false)) {
+        context.encrypt = false;
+        if (sendContextData(context)) {
             onCryptoEstablished();
         }
     }
@@ -497,24 +589,16 @@ void ThorQ::ApiServerConnection::handleMessageCrypto(const void* body)
     }
 }
 
-void ThorQ::ApiServerConnection::handleMessageFile(const void* body)
+void ThorQ::ApiServerConnection::handleMessageFile(HandlerContext& context)
 {
-    auto fbsFile = reinterpret_cast<const ThorQ::Serialization::File::Message*>(body);
-    if (fbsFile == nullptr) {
-        disconnect();
-        return;
-    }
+    auto fbsFile = reinterpret_cast<const ThorQ::Serialization::File::Message*>(context.body);
 
     fmt::print("[MSG] File\n");
 }
 
-void ThorQ::ApiServerConnection::handleMessageFriendRequest(const void* body)
+void ThorQ::ApiServerConnection::handleMessageFriendRequest(HandlerContext& context)
 {
-    auto fbsFriendRequest = reinterpret_cast<const ThorQ::Serialization::FriendRequest::Message*>(body);
-    if (fbsFriendRequest == nullptr) {
-        disconnect();
-        return;
-    }
+    auto fbsFriendRequest = reinterpret_cast<const ThorQ::Serialization::FriendRequest::Message*>(context.body);
 
     fmt::print("[MSG] Friend request\n");
 
@@ -687,9 +771,9 @@ void ThorQ::ApiServerConnection::handleMessageFriendRequest(const void* body)
     */
 }
 
-void ThorQ::ApiServerConnection::handleMessageGroup(const void* body)
+void ThorQ::ApiServerConnection::handleMessageGroup(HandlerContext& context)
 {
-    auto fbsGroup = reinterpret_cast<const ThorQ::Serialization::Group::Message*>(body);
+    auto fbsGroup = reinterpret_cast<const ThorQ::Serialization::Group::Message*>(context.body);
 
     fmt::print("[MSG] Group\n");
 
@@ -711,16 +795,16 @@ void ThorQ::ApiServerConnection::handleMessageGroup(const void* body)
     */
 }
 
-void ThorQ::ApiServerConnection::handleMessageModeration(const void* body)
+void ThorQ::ApiServerConnection::handleMessageModeration(HandlerContext& context)
 {
-    auto fbsModeration = reinterpret_cast<const ThorQ::Serialization::Moderation::Message*>(body);
+    auto fbsModeration = reinterpret_cast<const ThorQ::Serialization::Moderation::Message*>(context.body);
 
     fmt::print("[MSG] Moderation\n");
 }
 
-void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body)
+void ThorQ::ApiServerConnection::handleMessageSystemID(HandlerContext& context)
 {
-    auto fbsSystemID = reinterpret_cast<const ThorQ::Serialization::SystemId::Message*>(body);
+    auto fbsSystemID = reinterpret_cast<const ThorQ::Serialization::SystemId::Message*>(context.body);
 
     if (fbsSystemID->cmd() != ThorQ::Serialization::SystemId::Command_Submit)
     {
@@ -800,16 +884,16 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(const void* body)
     fmt::print("Connection is ok!\n");
 }
 
-void ThorQ::ApiServerConnection::handleMessageUser(const void* body)
+void ThorQ::ApiServerConnection::handleMessageUser(HandlerContext& context)
 {
-    auto fbsUser = reinterpret_cast<const ThorQ::Serialization::User::Message*>(body);
+    auto fbsUser = reinterpret_cast<const ThorQ::Serialization::User::Message*>(context.body);
 
     fmt::print("[MSG] User\n");
 }
 
-void ThorQ::ApiServerConnection::handleMessageVersion(const void* body)
+void ThorQ::ApiServerConnection::handleMessageVersion(HandlerContext& context)
 {
-    auto fbsVersion = reinterpret_cast<const ThorQ::Serialization::Version*>(body);
+    auto fbsVersion = reinterpret_cast<const ThorQ::Serialization::Version*>(context.body);
 
     fmt::print("[MSG] version\n");
 
@@ -857,9 +941,9 @@ void ThorQ::ApiServerConnection::handleMessageVersion(const void* body)
     }
 }
 
-void ThorQ::ApiServerConnection::handleMessageP2P(const void* body)
+void ThorQ::ApiServerConnection::handleMessageP2P(HandlerContext& context)
 {
-    auto fbsP2P = reinterpret_cast<const ThorQ::Serialization::Peer2Peer::Message*>(body);
+    auto fbsP2P = reinterpret_cast<const ThorQ::Serialization::Peer2Peer::Message*>(context.body);
 
     fmt::print("[MSG] P2P\n");
 }

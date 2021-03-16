@@ -1,6 +1,8 @@
 #include "declerations_qt.h"
 #include "stylesheets.h"
-#include "loginwidget.h"
+#include "accountloginwidget.h"
+#include "accountregisterwidget.h"
+#include "accountrecoverwidget.h"
 #include "mainwidget.h"
 #include "collar/serial.h"
 #include "apiclient.h"
@@ -11,6 +13,9 @@
 
 #include <QApplication>
 #include <QCoreApplication>
+#include <QDesktopWidget>
+#include <QScreen>
+#include <QStyle>
 #include <QLabel>
 #include <QIcon>
 #include <QInputDialog>
@@ -20,6 +25,7 @@
 #include <QTranslator>
 #include <QMessageBox>
 #include <QVBoxLayout>
+#include <QPushButton>
 
 #include <filesystem>
 
@@ -82,13 +88,70 @@ int main(int argc, char** argv)
     QObject::connect(reconnectTimer, &QTimer::timeout, apiClient, &ThorQ::ApiClient::netConnect);
     QObject::connect(apiClient, &ThorQ::ApiClient::netDisconnected, [reconnectTimer](){ reconnectTimer->start(); });
 
-    ThorQ::LoginWidget loginWidget(apiClient->accountController());
-    MainWidget mainWidget;
+    QWidget mainWindow;
+    mainWindow.setWindowTitle("ThorQ");
+    mainWindow.setWindowFlags(Qt::MSWindowsFixedSizeDialogHint);
+    mainWindow.setFixedSize(350, 450);
+    mainWindow.setGeometry(
+                QStyle::alignedRect(
+                    Qt::LeftToRight,
+                    Qt::AlignCenter,
+                    mainWindow.size(),
+                    QApplication::primaryScreen()->availableGeometry()
+                )
+            );
+    QVBoxLayout* mainLayout = new QVBoxLayout(&mainWindow);
+    ThorQ::AccountLoginWidget* loginWidget = new ThorQ::AccountLoginWidget(apiClient->accountController(), &mainWindow);
+    ThorQ::AccountRegisterWidget* registerWidget = new ThorQ::AccountRegisterWidget(apiClient->accountController(), &mainWindow);
+    ThorQ::AccountRecoverWidget* recoverWidget = new ThorQ::AccountRecoverWidget(apiClient->accountController(), &mainWindow);
+    QHBoxLayout* buttonsLayout = new QHBoxLayout(&mainWindow);
+    QPushButton* registerButton = new QPushButton(&mainWindow);
+    QPushButton* recoverButton = new QPushButton(&mainWindow);
 
-    QObject::connect(apiClient, &ThorQ::ApiClient::connectionStatusChanged, &loginWidget, &ThorQ::LoginWidget::setConnectionStatus);
+    registerWidget->hide();
+    recoverWidget->hide();
+
+    registerButton->setText("REGISTER");
+    registerButton->setCursor(Qt::PointingHandCursor);
+
+    recoverButton->setText("RECOVER");
+    recoverButton->setCursor(Qt::PointingHandCursor);
+
+    mainLayout->addWidget(loginWidget);
+    mainLayout->addWidget(registerWidget);
+    mainLayout->addWidget(recoverWidget);
+
+    buttonsLayout->addWidget(registerButton);
+    buttonsLayout->addWidget(recoverButton);
+
+    mainLayout->addLayout(buttonsLayout);
+
+    mainWindow.setLayout(mainLayout);
+
+    QObject::connect(registerWidget, &ThorQ::AccountRegisterWidget::goBackButtonPressed, loginWidget, &QWidget::show);
+    QObject::connect(registerWidget, &ThorQ::AccountRegisterWidget::goBackButtonPressed, recoverButton, &QWidget::show);
+    QObject::connect(registerWidget, &ThorQ::AccountRegisterWidget::goBackButtonPressed, registerButton, &QWidget::show);
+
+    QObject::connect(recoverWidget, &ThorQ::AccountRecoverWidget::goBackButtonPressed, loginWidget, &QWidget::show);
+    QObject::connect(recoverWidget, &ThorQ::AccountRecoverWidget::goBackButtonPressed, recoverButton, &QWidget::show);
+    QObject::connect(recoverWidget, &ThorQ::AccountRecoverWidget::goBackButtonPressed, registerButton, &QWidget::show);
+
+    QObject::connect(registerButton, &QPushButton::pressed, loginWidget, &QWidget::hide);
+    QObject::connect(registerButton, &QPushButton::pressed, recoverButton, &QWidget::hide);
+    QObject::connect(registerButton, &QPushButton::pressed, registerButton, &QWidget::hide);
+    QObject::connect(registerButton, &QPushButton::pressed, registerWidget, &QWidget::show);
+
+    QObject::connect(recoverButton, &QPushButton::pressed, loginWidget, &QWidget::hide);
+    QObject::connect(recoverButton, &QPushButton::pressed, recoverButton, &QWidget::hide);
+    QObject::connect(recoverButton, &QPushButton::pressed, registerButton, &QWidget::hide);
+    QObject::connect(recoverButton, &QPushButton::pressed, recoverWidget, &QWidget::show);
+
+    ThorQ::MainWidget* mainWidget = new ThorQ::MainWidget(&mainWindow);
+
+    QObject::connect(apiClient, &ThorQ::ApiClient::connectionStatusChanged, loginWidget, &ThorQ::AccountLoginWidget::setConnectionStatus);
 
     apiClient->netConnect();
-    loginWidget.show();
+    mainWindow.show();
 #else
     QPixmap pix(":/uwu.png");
     QLabel lab;

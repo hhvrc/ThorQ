@@ -4,7 +4,10 @@
 namespace ThorQ {
 namespace Encoding {
 struct MessageHeader;
-}
+} // Encoding
+namespace Serialization {
+class Message;
+} // Serialization
 namespace Networking {
 class TcpConnection;
 class UdpConnection;

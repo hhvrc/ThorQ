@@ -169,26 +169,27 @@ bool testPasswordHashing()
 {
     std::string password = "Very secure password";
 
-    ThorQ::Crypto::Hashing::HashingParameters parameters;
-    std::array<std::uint8_t, ThorQ::Crypto::Hashing::HashLength> hash;
+    ThorQ::Crypto::Hashing::Hash hash;
+    ThorQ::Crypto::Hashing::Salt salt;
+    ThorQ::Crypto::Hashing::Parameters parameters;
 
-    parameters.randomizeSeed();
-    parameters.setPerformance(ThorQ::Crypto::Hashing::HashingParameters::Performance::Interactive);
-    if (!ThorQ::Crypto::Hashing::Generate(password, parameters, hash)) {
+    ThorQ::Crypto::Hashing::generateSalt(salt);
+    parameters.setPerformance(ThorQ::Crypto::Hashing::Parameters::Performance::Interactive);
+    if (!ThorQ::Crypto::Hashing::Generate(password, salt, parameters, hash)) {
         fmt::print("PasswordHashing generate failed!\n");
         return false;
     }
 
-    parameters.randomizeSeed();
-    parameters.setPerformance(ThorQ::Crypto::Hashing::HashingParameters::Performance::Moderate);
-    if (!ThorQ::Crypto::Hashing::Generate(password, parameters, hash)) {
+    ThorQ::Crypto::Hashing::generateSalt(salt);
+    parameters.setPerformance(ThorQ::Crypto::Hashing::Parameters::Performance::Moderate);
+    if (!ThorQ::Crypto::Hashing::Generate(password, salt, parameters, hash)) {
         fmt::print("PasswordHashing generate failed!\n");
         return false;
     }
 
-    parameters.randomizeSeed();
-    parameters.setPerformance(ThorQ::Crypto::Hashing::HashingParameters::Performance::Sensitive);
-    if (!ThorQ::Crypto::Hashing::Generate(password, parameters, hash)) {
+    ThorQ::Crypto::Hashing::generateSalt(salt);
+    parameters.setPerformance(ThorQ::Crypto::Hashing::Parameters::Performance::Sensitive);
+    if (!ThorQ::Crypto::Hashing::Generate(password, salt, parameters, hash)) {
         fmt::print("PasswordHashing generate failed!\n");
         return false;
     }

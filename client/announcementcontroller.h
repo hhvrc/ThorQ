@@ -15,7 +15,7 @@ class AnnouncementHandler : public QObject
     Q_OBJECT
 public:
     AnnouncementHandler(std::function<void(const std::span<std::uint8_t>&, bool)> encodeAndSend, QObject* parent = nullptr);
-
+    AnnouncementHandler();
 public slots:
     void ParseMessage(const void* message);
 private:

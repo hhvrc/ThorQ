@@ -28,20 +28,43 @@ public slots:
     void ParseMessage(const void* message);
     void login(const QString& username, const QString& password);
     void logout();
+    void registerAccount(const QString& username, const QString& email, const QString& password);
+    void recoverAccount(const QString& email);
 private:
-    void requestAccountId(const QString& username);
+    void handleMessageAccountId(const void* body);
+    void handleMessageHashingSalt(const void* body);
+    void handleMessageHashingParameters(const void* body);
+    void handleMessageLoginResponse(const void* body);
+    void handleMessageRegistrationResponse(const void* body);
+
+    void requestAccountId();
+    void requestHashingSalt();
     void requestHashingParameters();
     void requestLogin(bool getAuthToken);
     void requestLogout();
+    void requestRegistration();
+    void requestRecovery();
 
     ThorQ::User* m_activeUser;
 
-    QString m_email;
-    QString m_temporaryPassword;
+    enum class LastRequest {
+        None,
+        Login,
+        Logout,
+        Register,
+        Recover
+    } m_lastRequest;
+    std::string m_requestUsername;
+    std::string m_requestEmail;
+    std::string m_requestPassword;
 
     std::array<std::uint8_t, 64> m_authToken;
 
-    ThorQ::Crypto::Hashing::HashingParameters m_hashingParameters;
+    bool m_gotHashingSalt;
+    ThorQ::Crypto::Hashing::Salt m_hashingSalt;
+
+    bool m_gotHashingParameters;
+    ThorQ::Crypto::Hashing::Parameters m_hashingParameters;
 
     std::function<void(const std::span<std::uint8_t>&, bool)> f_encodeAndSend;
 };

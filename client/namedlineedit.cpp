@@ -8,11 +8,13 @@ NamedLineEdit::NamedLineEdit(QWidget* parent)
     , m_lineEdit(new QLineEdit(this))
     , m_layout(new QVBoxLayout(this))
 {
+    setStyleSheet(ThorQ::StyleSheets::tryGetStylesheet("namedlineedit"));
+
+    m_layout->setAlignment(Qt::AlignVCenter);
     m_layout->addWidget(m_label);
     m_layout->addWidget(m_lineEdit);
+    m_layout->setSpacing(0);
     setLayout(m_layout);
-
-    setStyleSheet(ThorQ::StyleSheets::tryGetStylesheet("namedlineedit"));
 
     QObject::connect(m_lineEdit, &QLineEdit::editingFinished, [this]()
     {

@@ -4,6 +4,7 @@ set(project ThorQ)
 project(
         ${project}
         DESCRIPTION "Software to control 3rd party collars"
+        LANGUAGES CXX
 )
 
 option(VERBOSE "Verbose compiler output" OFF)

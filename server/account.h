@@ -20,7 +20,7 @@
 namespace ThorQ {
 class Account
 {
-    Account(std::int64_t dbId, ThorQ::Uuid id, const std::string& username, const ThorQ::Crypto::Hashing::HashingParameters& passwordHashingParameters);
+    Account(std::int64_t dbId, std::int64_t passwordId, ThorQ::Uuid id, const std::string& username);
 public:
     static std::shared_ptr<ThorQ::Account> GetAccount(const ThorQ::Uuid& uuid);
     static std::shared_ptr<ThorQ::Account> GetAccount(const std::string& username);
@@ -36,12 +36,14 @@ public:
     bool setImageId(const ThorQ::Uuid& username);
 
     bool isClaimed() const;
-    bool tryClaim(const std::string& emailAddress, const ThorQ::Crypto::Hashing::CalculatedHash& passwordHash, const ThorQ::Crypto::Hashing::HashingParameters& passwordHashParams);
+    bool tryClaim(const std::string& emailAddress, const ThorQ::Crypto::Hashing::Hash& passwordHash, const ThorQ::Crypto::Hashing::Parameters& passwordHashingParameters);
 
-    ThorQ::Crypto::Hashing::CalculatedHash passwordHash() const;
-    bool setPasswordHash(ThorQ::Crypto::Hashing::CalculatedHash hash);
-    ThorQ::Crypto::Hashing::HashingParameters passwordHashParameters() const;
-    bool setPasswordHashParameters(ThorQ::Crypto::Hashing::HashingParameters params);
+    ThorQ::Crypto::Hashing::Salt passwordSalt() const;
+    ThorQ::Crypto::Hashing::Salt generatePasswordSalt();
+    ThorQ::Crypto::Hashing::Parameters passwordHashParameters() const;
+
+    bool checkPasswordHash(ThorQ::Crypto::Hashing::HashRef hash);
+    bool tryUpdatePassword(ThorQ::Crypto::Hashing::HashRef oldPwHash, ThorQ::Crypto::Hashing::HashRef newPwHash, ThorQ::Crypto::Hashing::Parameters newHashingParams, ThorQ::Crypto::Hashing::SaltRef expectedNewSalt);
 
     std::shared_ptr<ThorQ::Account> master() const;
     bool isExclusive() const;
@@ -74,13 +76,13 @@ public:
 private:
     const ThorQ::Uuid m_id;
     const std::int64_t m_dbId;
+    const std::int64_t m_passwordId;
 
     std::shared_mutex l_basics;
     std::string m_username;
     ThorQ::Uuid m_imageId;
     std::string m_emailAddress;
-    ThorQ::Crypto::Hashing::CalculatedHash m_passwordHash;
-    ThorQ::Crypto::Hashing::HashingParameters m_passwordHashParameters;
+    ThorQ::Crypto::Hashing::Salt m_temporaryHashingSalt;
 
     std::uint16_t m_activityState; // enum: thorq_user_activity_flag
 

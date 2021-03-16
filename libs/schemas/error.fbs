@@ -1,0 +1,6 @@
+namespace ThorQ.Serialization;
+
+table Error {
+  request_id : ulong;
+  error_message : string;
+}

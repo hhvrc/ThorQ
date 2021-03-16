@@ -1,25 +1,21 @@
-NamedLineEdit {
-    font-family: 'Calibri';
-
+/* Applies to all widgets */
+QWidget {
     margin: 0px, 0px, 0px, 0px;
     padding: 0px, 0px, 0px, 0px;
 }
 
+NamedLineEdit {
+    font-family: 'Calibri';
+}
+
 QLabel {
-    height: 16px;
+    height: 12px;
+    margin-bottom: 4px;
 
     color: rgba(255, 255, 255, 1);
     background: transparent;
 
-    margin: 0px, 0px, 0px, 0px;
-    padding: 0px, 0px, 0px, 0px;
-
     border-width: 0px;
-    /*
-    border-radius: 3px;
-    border-style: solid;
-    border-color: rgba(142, 146, 151, 1);
-    */
 
     font-size: 12px;
     font-weight: 600;
@@ -30,9 +26,6 @@ QLineEdit {
 
     color: rgb(0, 0, 0);
     background: rgba(232, 240, 254, 1);
-
-    margin: 0px, 0px, 0px, 0px;
-    padding: 0px, 0px, 0px, 0px;
 
     border-width: 1px;
     border-radius: 5px;

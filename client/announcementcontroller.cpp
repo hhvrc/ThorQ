@@ -5,6 +5,11 @@ AnnouncementHandler::AnnouncementHandler(std::function<void (const std::span<uin
 
 }
 
+AnnouncementHandler::AnnouncementHandler()
+{
+
+}
+
 void AnnouncementHandler::ParseMessage(const void *message)
 {
 

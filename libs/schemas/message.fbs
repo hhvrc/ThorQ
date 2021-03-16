@@ -10,6 +10,7 @@ include "systemid.fbs";
 include "user.fbs";
 include "version.fbs";
 include "p2p.fbs";
+include "error.fbs";
 
 namespace ThorQ.Serialization;
 
@@ -25,7 +26,8 @@ union Body {
   system_id : SystemId.Message,
   user : User.Message,
   version : Version,
-  p2p : Peer2Peer.Message
+  p2p : Peer2Peer.Message,
+  error : Serialization.Error
 }
 
 table Message {

@@ -1,5 +1,9 @@
+QWidget {
+    background-color: rgba(33, 33, 33, 1);
+}
+
 ThorQ--LoginWidget {
-    background-color: #212121;
+    background-color: rgba(33, 33, 33, 1);
     font-family: 'Calibri';
 
     margin: 0px, 0px, 0px, 0px;

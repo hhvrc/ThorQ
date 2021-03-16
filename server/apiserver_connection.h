@@ -39,30 +39,56 @@ private:
 
     void onCryptoEstablished();
 
-    void handleMessage(const void* body);
+    struct HandlerContext {
+        std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
+        flatbuffers::FlatBufferBuilder fbsBuilder;
+        const void* body;
+        bool encrypt;
+    };
+    class MessageHandlingException : public std::exception {
+        const char* m_message;
+        std::uint64_t m_requestId;
+    public:
+        MessageHandlingException(const char* msg, std::uint64_t requestId) noexcept : std::exception(), m_message(msg), m_requestId(requestId){}
+        constexpr const char* what() const noexcept override { return m_message; }
+        constexpr std::uint64_t requestId() const noexcept { return m_requestId; }
+    };
 
-    void handleMessageAccount(const void* body);
-    void handleMessageAccount_GetAccountId(const void* body);
-    void handleMessageAccount_GetHashingParameters(const void* body);
-    void handleMessageAccount_LoginRequest(const void* body);
-    void handleMessageAccount_RegistrationRequest(const void* body);
+    void handleMessage(HandlerContext& context);
+    void createErrorMessage(HandlerContext& context, const char* error, std::uint64_t requestId);
+    bool sendContextData(HandlerContext& context);
 
-    void handleMessageAnnouncement(const void* body);
-    void handleMessageDevice(const void* body);
-    void handleMessageCrypto(const void* body);
-    void handleMessageFile(const void* body);
-    void handleMessageFriendRequest(const void* body);
-    void handleMessageGroup(const void* body);
-    void handleMessageModeration(const void* body);
-    void handleMessageSystemID(const void* body);
-    void handleMessageUser(const void* body);
-    void handleMessageVersion(const void *body);
-    void handleMessageP2P(const void* body);
+    void handleMessageAccount(HandlerContext& context);
+    void handleMessageAccount_GetAccountId(HandlerContext& context);
+    void handleMessageAccount_GetHashingSalt(HandlerContext& context);
+    void handleMessageAccount_GetHashingParameters(HandlerContext& context);
+    void handleMessageAccount_LoginRequest(HandlerContext& context);
+    void handleMessageAccount_RegistrationRequest(HandlerContext& context);
+    void handleMessageAccount_Recover(HandlerContext& context);
+    void handleMessageAccount_Delete(HandlerContext& context);
+    void handleMessageAccount_Logout(HandlerContext& context);
+    void handleMessageAccount_SetUserName(HandlerContext& context);
+    void handleMessageAccount_SetPassword(HandlerContext& context);
+    void handleMessageAccount_SetEmail(HandlerContext& context);
+    void handleMessageAccount_SetImage(HandlerContext& context);
+
+    void handleMessageAnnouncement(HandlerContext& context);
+    void handleMessageDevice(HandlerContext& context);
+    void handleMessageCrypto(HandlerContext& context);
+    void handleMessageFile(HandlerContext& context);
+    void handleMessageFriendRequest(HandlerContext& context);
+    void handleMessageGroup(HandlerContext& context);
+    void handleMessageModeration(HandlerContext& context);
+    void handleMessageSystemID(HandlerContext& context);
+    void handleMessageUser(HandlerContext& context);
+    void handleMessageVersion(HandlerContext& context);
+    void handleMessageP2P(HandlerContext& context);
 
     bool encodeAndSend(flatbuffers::span<std::uint8_t> buffer, bool encrypt);
 
     std::vector<std::uint8_t> m_buffer;
 
+    bool crypto_ok = false;
     ThorQ::Crypto::Encryption m_crypto;
 
     std::atomic_bool m_hasAccountID;

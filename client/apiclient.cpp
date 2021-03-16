@@ -209,7 +209,7 @@ void ThorQ::ApiClient::onMessage(std::shared_ptr<std::vector<std::uint8_t>> mess
 
 void ThorQ::ApiClient::establishCrypto()
 {
-    fmt::print("[MSG] Crypto\n");
+    fmt::print("EstablishCrypto\n");
 
     if (!m_crypto.generateKeyPair()) {
         fmt::print(stderr, "[CRYPTO] Failed to generate keypair!\n");
@@ -316,14 +316,14 @@ void ThorQ::ApiClient::handleMessage(const void* body)
 
 void ThorQ::ApiClient::handleMessageAnnouncement(const void* body)
 {
-    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Announcement::Message*>(body);
+    auto fbsAnnouncement = reinterpret_cast<const ThorQ::Serialization::Announcement::Message*>(body);
 
     fmt::print("[MSG] Announcement\n");
 }
 
 void ThorQ::ApiClient::handleMessageDevice(const void* body)
 {
-    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Device::Message*>(body);
+    auto fbsDevice = reinterpret_cast<const ThorQ::Serialization::Device::Message*>(body);
 
     fmt::print("[MSG] Device\n");
 }

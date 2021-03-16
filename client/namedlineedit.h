@@ -9,6 +9,7 @@
 class NamedLineEdit : public QWidget
 {
     Q_OBJECT
+    Q_DISABLE_COPY(NamedLineEdit)
 public:
     NamedLineEdit(QWidget* parent = nullptr);
     ~NamedLineEdit();

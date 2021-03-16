@@ -7,8 +7,10 @@ namespace ThorQ.Serialization.Account;
 struct AuthToken {
   token : [ ubyte : 64 ];
 }
-struct HashingParameters {
+struct HashingSalt {
   salt : [ ubyte : 16 ];
+}
+struct HashingParameters {
   ops_limit : long;
   mem_limit : long;
   algorithm : int;
@@ -25,6 +27,10 @@ table GetAccountId {
   username : string;
 }
 
+table GetHashingSalt {
+  account_id : Uuid;
+}
+
 table GetHashingParameters {
   account_id : Uuid;
 }
@@ -37,11 +43,12 @@ table LoginRequest {
 
 table LoginResponse {
   success : bool;
+  account_id : Uuid;
   auth_token : Account.AuthToken;
 }
 
 table RegistrationRequest {
-  username : string;
+  account_id : Uuid;
   email : string;
   password_hash : Account.HashNew;
 }
@@ -85,6 +92,9 @@ table SetImage {
 union Body {
   get_account_id : Account.GetAccountId,
   account_id : Uuid,
+
+  get_hashing_salt : Account.GetHashingSalt,
+  hashing_salt : Account.HashingSalt,
 
   get_hashing_parameters : Account.GetHashingParameters,
   hashing_parameters : Account.HashingParameters,

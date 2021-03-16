@@ -19,9 +19,11 @@ constexpr std::size_t HashLength = crypto_box_SEEDBYTES;
 static_assert (Hashing::SaltLength == 16, "PasswordHashing salt length changed");
 static_assert (Hashing::HashLength == 32, "PasswordHashing hash length changed");
 
-typedef std::array<std::uint8_t, Hashing::HashLength> CalculatedHash;
-struct HashingParameters {
-    std::array<std::uint8_t, Hashing::SaltLength> salt;
+typedef std::array<std::uint8_t, Hashing::HashLength> Hash;
+typedef std::span<std::uint8_t, Hashing::HashLength> HashRef;
+typedef std::array<std::uint8_t, Hashing::SaltLength> Salt;
+typedef std::span<std::uint8_t, Hashing::SaltLength> SaltRef;
+struct Parameters {
     std::int64_t ops_limit;
     std::int64_t mem_limit;
     std::int32_t algorithm;
@@ -32,9 +34,6 @@ struct HashingParameters {
         Sensitive
     };
 
-    inline void randomizeSeed() {
-        randombytes_buf(salt.data(), salt.size());
-    }
     constexpr void setPerformance(Performance perf) {
         switch (perf) {
         case Performance::Interactive:
@@ -55,25 +54,29 @@ struct HashingParameters {
         }
     }
 
-    inline bool operator == (const HashingParameters& other) const {
-        return (memcmp(salt.data(), other.salt.data(), Hashing::HashLength) == 0) &&
-               (ops_limit == other.ops_limit) &&
+    inline bool operator == (const Parameters& other) const {
+        return (ops_limit == other.ops_limit) &&
                (mem_limit == other.mem_limit) &&
                (algorithm == other.algorithm);
     }
-    inline bool operator != (const HashingParameters& other) const {
+    inline bool operator != (const Parameters& other) const {
         return !(*this == other);
     }
 };
 
-[[nodiscard]] inline bool Generate(const char* password, std::size_t passwordLen, const Hashing::HashingParameters& parameters, std::uint8_t* hashOut) {
-    return crypto_pwhash(hashOut, Hashing::HashLength, password, passwordLen, parameters.salt.data(), parameters.ops_limit, parameters.mem_limit, parameters.algorithm) == 0;
+inline void generateSalt(Hashing::Salt& salt)
+{
+    randombytes_buf(salt.data(), salt.size());
 }
-[[nodiscard]] inline bool Generate(const std::string& password, const Hashing::HashingParameters& parameters, std::uint8_t* hashOut) {
-    return Hashing::Generate(password.data(), password.size(), parameters, hashOut);
+
+[[nodiscard]] inline bool Generate(const char* password, std::size_t passwordLen, const std::uint8_t* salt, const Hashing::Parameters& parameters, std::uint8_t* hashOut) {
+    return crypto_pwhash(hashOut, Hashing::HashLength, password, passwordLen, salt, parameters.ops_limit, parameters.mem_limit, parameters.algorithm) == 0;
 }
-[[nodiscard]] inline bool Generate(const std::string& password, const Hashing::HashingParameters& parameters, std::span<std::uint8_t, Hashing::HashLength> hashOut) {
-    return Hashing::Generate(password, parameters, hashOut.data());
+[[nodiscard]] inline bool Generate(const std::string& password, const Hashing::Salt& salt, const Hashing::Parameters& parameters, std::uint8_t* hashOut) {
+    return Hashing::Generate(password.data(), password.size(), salt.data(), parameters, hashOut);
+}
+[[nodiscard]] inline bool Generate(const std::string& password, const Hashing::Salt& salt, const Hashing::Parameters& parameters, std::span<std::uint8_t, Hashing::HashLength> hashOut) {
+    return Hashing::Generate(password, salt, parameters, hashOut.data());
 }
 }
 }

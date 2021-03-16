@@ -12,6 +12,7 @@
 #include <schemas/announcement_generated.h>
 #include <schemas/crypto_generated.h>
 #include <schemas/device_generated.h>
+#include <schemas/error_generated.h>
 #include <schemas/file_generated.h>
 #include <schemas/friendrequest_generated.h>
 #include <schemas/group_generated.h>

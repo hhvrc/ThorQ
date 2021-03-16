@@ -3,26 +3,17 @@
 
 #include <QWidget>
 
-#include "enums.h"
+#include <enums.h>
 
-class QVBoxLayout;
-class QHBoxLayout;
-class QLabel;
-class QLineEdit;
-class QPushButton;
-class NamedLineEdit;
-class ClickableLabel;
+#include "typedefs_client.h"
 
 namespace ThorQ {
-class SecureString;
-class AccountController;
-class LoginWidget : public QWidget
+class AccountLoginWidget : public QWidget
 {
     Q_OBJECT
-    Q_DISABLE_COPY(LoginWidget)
 public:
-    LoginWidget(ThorQ::AccountController* accountController, QWidget* parent = nullptr);
-    ~LoginWidget();
+    AccountLoginWidget(ThorQ::AccountController* accountController, QWidget* parent = nullptr);
+    ~AccountLoginWidget();
 public slots:
     void setConnectionStatus(ConnectionStatus status);
 private slots:
@@ -35,12 +26,9 @@ private:
     NamedLineEdit* m_usernameInput;
     NamedLineEdit* m_passwordInput;
     QPushButton* m_loginButton;
-    QPushButton* m_forgotButton;
-    QPushButton* m_registerButton;
 
     QVBoxLayout* m_mainLayout;
     QHBoxLayout* m_headerLayout;
-    QHBoxLayout* m_belowLoginLayout;
 
     ThorQ::AccountController* m_accountController;
 };

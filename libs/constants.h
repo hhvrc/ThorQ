@@ -56,6 +56,11 @@ constexpr int THORQ_AUTHTOKEN_LEN = 256;
 constexpr int THORQ_PASSWORD_LEN_MIN = 6; ///< Minimum Password length
 constexpr int THORQ_PASSWORD_LEN_MAX = 128; ///< Maximum Password length
 
+/* Email address limits
+ */
+constexpr int THORQ_EMAIL_LEN_MIN = 6; ///< Minimum id length (x@y.zz)
+constexpr int THORQ_EMAIL_LEN_MAX = 254; ///< Maximum id length (https://web.archive.org/web/20130710170052/http://www.eph.co.uk/resources/email-address-length-faq/)
+
 /* Discord id limits
  */
 constexpr int THORQ_DISCORDID_LEN_MIN = 5; ///< Minimum id length (1 char + "#xxxx")
@@ -67,7 +72,7 @@ constexpr int THORQ_DISCORDID_LEN_MAX = 37; ///< Maximum id length (32 chars + "
 #define THORQ_ORGANIZATION_DOMAIN "exampledomain.com"
 #define THORQ_APPLICATION_NAME "ThorQ"
 #define THORQ_APPLICATION_DESCRIPTION "Software to control 3rd party collars across the internet"
-#define THORQ_SERVER_HOSTNAME "localhost"
+#define THORQ_SERVER_HOSTNAME "thorq.hentaiheaven.tech"
 #define THORQ_SERVER_PORT 12345
 #define THORQ_SERVER_MAX_CONNECTIONS 1024
 
