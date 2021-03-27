@@ -20,6 +20,11 @@
 #define OPENVR_APPLICATION_NAME THORQ_APPLICATION_NAME
 #define OPENVR_APPLICATION_KEY THORQ_ORGANIZATION_NAME "." THORQ_APPLICATION_NAME
 
+#include "ovrdevice.h"
+#include "ovroverlay.h"
+#include "ovraction.h"
+#include "ovractionset.h"
+
 namespace ThorQ {
 namespace VR {
 bool IsSteamVRInstalled();
@@ -30,11 +35,8 @@ bool Initialize();
 void Shutdown();
 
 bool IsManifestInstalled();
-bool CreateManifest();
 bool InstallManifest();
 bool RemoveManifest();
-}
-}
 
 /**
  * @brief The OpenVROverlayController class
@@ -47,6 +49,8 @@ public:
 public:
 	OpenVROverlayController(QObject* parent = nullptr);
 	~OpenVROverlayController() override;
+
+    bool isValid() const;
 
     enum class EHand : std::int8_t
     {
@@ -122,17 +126,6 @@ signals:
     void tintChanged(const QColor& color);
 public slots:
     /**
-	 * @brief init
-     * @return
-     */
-	bool init();
-
-    /**
-	 * @brief shutdown
-     */
-	void shutdown();
-
-    /**
 	 * @brief setWidget
      * @param widget
      */
@@ -162,27 +155,22 @@ public slots:
      */
     void setTint(const QColor& color);
 
-    bool triggerHapticFeedback(EHand hand, float secondsFromNow, float amplitude, float frequency, float duration );
-
     bool openBindingUI();
 protected:
+    void halt();
+
 	void update();
 
     bool pullEvents();
 
-	bool createOverlay();
-	void onSceneChanged();
-    bool overlayTransform();
+    void onSceneChanged();
 
     void setOverlayDevice(vr::TrackedDeviceIndex_t deviceIndex);
-    void setOverlayOffset(const QMatrix4x4& offset);
 
-
-
-    EHand getHandForSource(vr::VRInputValueHandle_t source);
+    EHand getHandForSource(ThorQ::VR::OVRDevice device);
     const QMatrix4x4& getOffsetForHand(EHand hand);
-    const QMatrix4x4& getOffsetForSource(vr::VRInputValueHandle_t source);
-    vr::VRInputValueHandle_t getOriginForHand(EHand hand);
+    const QMatrix4x4& getOffsetForDevice(ThorQ::VR::OVRDevice device);
+    ThorQ::VR::OVRDevice getOriginForHand(EHand hand);
     vr::TrackedDeviceIndex_t getDeviceForSource(vr::VRInputValueHandle_t source);
 private:
 	bool m_isVisible;
@@ -195,12 +183,12 @@ private:
     QTimer* m_updateLogicTimer;
 
     // Overlay stuff
-    vr::VROverlayHandle_t    m_overlayHandle;
-    vr::HmdMatrix34_t        m_overlayOffset;
-    vr::TrackedDeviceIndex_t m_overlayDevice;
+    ThorQ::VR::OVROverlay m_overlay;
+    QMatrix4x4 m_overlayOffset;
     QMatrix4x4 m_overlayDeviceOffsetL;
     QMatrix4x4 m_overlayDeviceOffsetR;
     QMatrix4x4 m_overlayDeviceOffsetC;
+    vr::TrackedDeviceIndex_t m_overlayDevice;
 
     // Controller stuff
     EHand m_mouseHand;
@@ -208,28 +196,28 @@ private:
     vr::TrackedDeviceIndex_t m_mouseDeviceIndex;
 
     // Action set stuff
-    vr::VRActiveActionSet_t  m_activeActionSet;
-    vr::VRActionSetHandle_t  m_handleActionSet;
-    vr::VRActionHandle_t     m_handleActionHapticsLeft;
-    vr::VRActionHandle_t     m_handleActionHapticsRight;
-    vr::VRActionHandle_t     m_handleActionInteract;
-    vr::VRActionHandle_t     m_handleActionShowOverlay;
-    vr::VRActionHandle_t     m_handleActionProxSensor;
+    vr::VRActiveActionSet_t m_activeActionSet;
+    ThorQ::VR::OVRActionSet m_actionSet;
+    ThorQ::VR::OVRAction    m_actionHaptics;
+    ThorQ::VR::OVRAction    m_actionInteract;
+    ThorQ::VR::OVRAction    m_actionShowOverlay;
+    ThorQ::VR::OVRAction    m_actionProxSensor;
 
-    vr::VRInputValueHandle_t m_sourceHMD;
-    vr::VRInputValueHandle_t m_sourceControllerLeft;
-    vr::VRInputValueHandle_t m_sourceControllerRight;
+    ThorQ::VR::OVRDevice m_hmd;
+    ThorQ::VR::OVRDevice m_controllerLeft;
+    ThorQ::VR::OVRDevice m_controllerRight;
 
-	// Graphics
-	QGraphicsScene *m_scene;
-	QOpenGLContext *m_glContext;
-	QOffscreenSurface *m_surface;
-	QOpenGLFramebufferObject *m_frameBuffer;
+    // Graphics
+    QGraphicsScene* m_scene;
+    QOpenGLContext* m_glContext;
+    QOffscreenSurface* m_surface;
+    QOpenGLFramebufferObject* m_frameBuffer;
 
     // Input handling
     QPointF m_lastMousePoint;
     Qt::MouseButtons m_lastMouseButtons;
 };
-
+}
+}
 
 #endif // OPENVROVERLAYCONTROLLER_H

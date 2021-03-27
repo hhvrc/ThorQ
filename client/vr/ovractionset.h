@@ -1,20 +1,21 @@
 #ifndef OVRACTIONSET_H
 #define OVRACTIONSET_H
 
-#include <QObject>
-
 #include "openvr.h"
 
 namespace ThorQ {
 namespace VR {
-class OVRActionSet : public QObject
+class OVRAction;
+class OVRActionSet
 {
-    Q_OBJECT
 public:
-    OVRActionSet(const char* actionSetName, QObject* parent);
+    OVRActionSet(const char* actionSetName);
     ~OVRActionSet();
 
-    vr::VRActionSetHandle_t handle() const { return m_handle; }
+    vr::VRActionSetHandle_t handle() const;
+    bool isValid() const;
+
+    bool openBindingUI(const ThorQ::VR::OVRAction& action);
 private:
     vr::VRActionSetHandle_t m_handle;
 };

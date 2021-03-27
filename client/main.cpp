@@ -158,11 +158,11 @@ int main(int argc, char** argv)
     QLabel lab;
     lab.setPixmap(pix);
 
-    OpenVROverlayController* ovr = new OpenVROverlayController(&app);
+    ThorQ::VR::OpenVROverlayController* ovr = new ThorQ::VR::OpenVROverlayController(&app);
 
-    ovr->init();
     ovr->setWidget(&lab);
-    QObject::connect(ovr, &OpenVROverlayController::vrQuit, ovr, &QObject::deleteLater);
+    QObject::connect(ovr, &ThorQ::VR::OpenVROverlayController::vrQuit, ovr, &QObject::deleteLater);
+    QObject::connect(ovr, &ThorQ::VR::OpenVROverlayController::vrQuit, &app, &QApplication::quit);
 #endif
 
     int retval = app.exec();

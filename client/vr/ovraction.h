@@ -1,28 +1,24 @@
 #ifndef OVRACTION_H
 #define OVRACTION_H
 
-#include <QObject>
-
 #include "openvr.h"
-
-#include "ovrdevice.h"
-#include "ovractionset.h"
 
 namespace ThorQ {
 namespace VR {
-class OVRAction : public QObject
+class OVRDevice;
+class OVRAction
 {
-    Q_OBJECT
 public:
-    OVRAction(const char* actionName, QObject* parent);
+    OVRAction(const char* actionName);
     ~OVRAction();
 
+    vr::VRActionHandle_t handle() const;
     bool isValid() const;
 
-    bool getDigitalData();
-    bool getAnalogData();
+    bool triggerHapticFeedback(float secondsFromNow, float amplitude, float frequency, float duration, vr::VRInputValueHandle_t restrictToDeviceHandle = vr::k_ulInvalidInputValueHandle);
 
-    vr::VRActionHandle_t handle() const { return m_handle; }
+    bool getDigitalData(vr::InputDigitalActionData_t& data, vr::VRInputValueHandle_t restrictToDeviceHandle = vr::k_ulInvalidInputValueHandle);
+    bool getAnalogData(vr::InputAnalogActionData_t& data, vr::VRInputValueHandle_t restrictToDeviceHandle = vr::k_ulInvalidInputValueHandle);
 private:
     vr::VRActionHandle_t m_handle;
 };

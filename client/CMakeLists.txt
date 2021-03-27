@@ -68,6 +68,7 @@ set(${project}_SOURCES
 
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrdevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovraction.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovroverlay.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrsettings.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovractionset.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/openvroverlaycontroller.cpp
@@ -99,8 +100,10 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/apiclient.h
     ${CMAKE_CURRENT_SOURCE_DIR}/apiclient_connection.h
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrhelpers.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrdevice.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovraction.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovroverlay.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrsettings.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovractionset.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/openvroverlaycontroller.h

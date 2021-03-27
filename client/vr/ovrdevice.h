@@ -1,8 +1,6 @@
 #ifndef OVRDEVICE_H
 #define OVRDEVICE_H
 
-#include <QObject>
-
 #include "openvr.h"
 
 namespace ThorQ {
@@ -11,13 +9,14 @@ class OVRDevice
 {
 public:
     OVRDevice(const char* devicePath);
+    OVRDevice(vr::VRInputValueHandle_t deviceHandle);
     ~OVRDevice();
 
-    bool isValid() const;
+    vr::VRInputValueHandle_t handle() const noexcept;
+    bool isValid() const noexcept;
 
-
-
-    vr::VRInputValueHandle_t handle() const { return m_handle; }
+    bool operator==(const OVRDevice& other) const noexcept;
+    bool operator!=(const OVRDevice& other) const noexcept;
 private:
     vr::VRInputValueHandle_t m_handle;
 };

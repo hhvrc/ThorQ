@@ -1,0 +1,90 @@
+{
+  "action_sets": [{
+    "name": "/actions/thorq",
+    "usage": "leftright"
+  }],
+  "actions": [
+    {
+      "name": "/actions/thorq/in/interact",
+      "requirement": "mandatory",
+      "type": "boolean"
+    },
+    {
+      "name": "/actions/thorq/in/show_overlay",
+      "requirement": "mandatory",
+      "type": "boolean"
+    },
+    {
+      "name": "/actions/thorq/in/prox_sensor",
+      "requirement": "suggested",
+      "type": "boolean"
+    },
+    {
+      "name" : "/actions/thorq/out/haptic",
+      "requirement": "suggested",
+      "type" : "vibration"
+    }
+  ],
+  "default_bindings": [
+    {
+      "controller_type": "vive_controller",
+      "binding_url": "bindings/controller_vive.json"
+    },
+    {
+      "controller_type": "oculus_touch",
+      "binding_url": "bindings/controller_oculus_touch.json"
+    },
+    {
+      "controller_type": "knuckles",
+      "binding_url": "bindings/controller_knuckles.json"
+    },
+    {
+      "controller_type": "knuckles_ev1",
+      "binding_url": "bindings/controller_knuckles_ev1.json"
+    },
+    {
+      "controller_type": "hpmotioncontroller",
+      "binding_url": "bindings/controller_hp_motion.json"
+    },
+    {
+      "controller_type": "holographic_controller",
+      "binding_url": "bindings/controller_holographic.json"
+    },
+    {
+      "controller_type": "vive_cosmos_controller",
+      "binding_url": "bindings/controller_vive_cosmos.json"
+    },
+    {
+      "controller_type": "vive_cosmos",
+      "binding_url": "bindings/hmd_vive_cosmos.json"
+    },
+    {
+      "controller_type": "vive",
+      "binding_url": "bindings/hmd_vive.json"
+    },
+    {
+      "controller_type": "indexhmd",
+      "binding_url": "bindings/hmd_index.json"
+    },
+    {
+      "controller_type": "vive_pro",
+      "binding_url": "bindings/hmd_vive_pro.json"
+    },
+    {
+      "controller_type": "rift",
+      "binding_url": "bindings/hmd_rift.json"
+    },
+    {
+      "controller_type": "holographic_hmd",
+      "binding_url": "bindings/hmd_holographic.json"
+    }
+  ],
+  "localization": [{
+    "/actions/thorq": "ThorQ Actions",
+    "/actions/thorq/in/interact": "Interact",
+    "/actions/thorq/in/show_overlay": "Show Overlay",
+    "/actions/thorq/out/haptic": "Haptic Feedback",
+    "/actions/thorq/in/prox_sensor": "HMD Proximity Sensor",
+    "language_tag": "en_US"
+  }]
+}

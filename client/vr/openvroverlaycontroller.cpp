@@ -25,34 +25,13 @@
 #define THORQ_MAX_PATH_LEN PATH_MAX
 #endif
 
-inline void ToQMatrix(const vr::HmdMatrix34_t& mat, QMatrix4x4& out)
-{
-    for (int i = 0; i < 3; i++)
-		out.setColumn(i, QVector4D(mat.m[i][0], mat.m[i][1], mat.m[i][2], mat.m[i][3]));
-}
-inline void ToHmdMatrix34(const QMatrix4x4& mat, vr::HmdMatrix34_t& out)
-{
-	for (int i = 0; i < 3; i++)
-	{
-		QVector4D col = mat.column(i);
-		out.m[i][0] = col.x();
-		out.m[i][1] = col.y();
-		out.m[i][2] = col.z();
-		out.m[i][3] = col.w();
-    }
-}
-
-// TODO: unused
-constexpr float deg2rad = (float)M_PI / 180.f;
-constexpr float rad2deg = 180.f / (float)M_PI;
-
 bool SetGlobalActionSetPriority(bool value)
 {
     vr::EVRSettingsError settingsError;
     vr::VRSettings()->SetBool(vr::k_pch_SteamVR_Section, vr::k_pch_SteamVR_AllowGlobalActionSetPriority, value, &settingsError);
 
     if (settingsError != vr::VRSettingsError_None) {
-        fmt::print(stderr, "Failed to set global actionset priority: {}\n", std::string(vr::VRSettings()->GetSettingsErrorNameFromEnum(settingsError)));
+        fmt::print(stderr, "Failed to set global actionset priority: {}\n", vr::VRSettings()->GetSettingsErrorNameFromEnum(settingsError));
         return false;
     }
     return true;
@@ -83,7 +62,7 @@ bool ThorQ::VR::Initialize()
     vr::VR_Init(&initErr, vr::VRApplication_Overlay);
 
     if (initErr != vr::VRInitError_None) {
-        fmt::print(stderr, "OpenVR error: {}\n", std::string(vr::VR_GetVRInitErrorAsEnglishDescription(initErr)));
+        fmt::print(stderr, "OpenVR error: {}\n", vr::VR_GetVRInitErrorAsEnglishDescription(initErr));
         return false;
     }
     else if (!vr::VR_IsInterfaceVersionValid(vr::IVRSystem_Version)) {
@@ -118,6 +97,44 @@ bool ThorQ::VR::Initialize()
         return false;
     }
 
+    QDir dir = QDir(QApplication::applicationDirPath());
+
+    QString manifestPath = dir.filePath("thorq.vrmanifest");
+    if (!QFile::exists(manifestPath) && !QFile::copy(":/vr/data/thorq.vrmanifest", manifestPath)) {
+        ;
+    }
+
+    QString actionsPath = dir.filePath("actions.json");
+    if (!QFile::exists(actionsPath) && !QFile::copy(":/vr/data/actions.json", actionsPath)) {
+        ;
+    }
+
+    QString bannerPath = dir.filePath("vr-banner.png");
+    if (!QFile::exists(bannerPath) && !QFile::copy(":/vr/data/banner.png", bannerPath)) {
+        ;
+    }
+
+    dir.mkdir("bindings");
+    if (!dir.cd("bindings")) {
+        fmt::print(stderr, "Cant create folder for vr bindings!\n");
+        return false;
+    }
+
+    QDirIterator it(":/vr/data/bindings/");
+    while (it.hasNext()) {
+        QString internalName = it.next();
+
+        QString externalName = dir.filePath(it.fileName());
+        if (!QFile::exists(externalName)) {
+            QFile::copy(internalName, externalName);
+        }
+    }
+
+    if (vr::VRInput()->SetActionManifestPath(actionsPath.toStdString().c_str()) != vr::VRInputError_None) {
+        fmt::print(stderr, "Failed to set action manifest path!\n");
+        return false;
+    }
+
     return true;
 }
 
@@ -136,41 +153,10 @@ bool ThorQ::VR::IsManifestInstalled()
     return vr::VRApplications()->IsApplicationInstalled(OPENVR_APPLICATION_KEY);
 }
 
-bool ThorQ::VR::CreateManifest()
-{
-    QDir dir = QDir(QApplication::applicationDirPath());
-    QString manifestPath = dir.filePath("manifest.json");
-
-    if (!QFile::exists(manifestPath))
-    {
-        QFile::copy(":/vr/action_manifest/manifest.json", manifestPath);
-    }
-
-    dir.mkdir("bindings");
-    if (!dir.cd("bindings"))
-    {
-        fmt::print(stderr, "Cant create folder for vr bindings!\n");
-        return false;
-    }
-
-    QDirIterator it(":/vr/action_manifest/bindings/");
-    while (it.hasNext())
-    {
-        QString internalName = it.next();
-        QString externalName = dir.filePath(it.fileName());
-        if (!QFile::exists(externalName))
-        {
-            QFile::copy(internalName, externalName);
-        }
-    }
-
-    return true;
-}
-
 bool ThorQ::VR::InstallManifest()
 {
     QDir dir = QDir(QApplication::applicationDirPath());
-    std::string manifestPath = dir.filePath("manifest.json").toStdString();
+    std::string manifestPath = dir.filePath("thorq.vrmanifest").toStdString();
 
     vr::EVRApplicationError err = vr::VRApplications()->AddApplicationManifest(manifestPath.c_str());
     if (err != vr::VRApplicationError_None)
@@ -205,7 +191,7 @@ bool ThorQ::VR::RemoveManifest()
     }
 
     directory.resize(len - 1);
-    directory += "/manifest.json";
+    directory += "/thorq.vrmanifest";
 
     // Remove manifest
     err = vr::VRApplications()->RemoveApplicationManifest(directory.c_str());
@@ -218,20 +204,21 @@ bool ThorQ::VR::RemoveManifest()
     return true;
 }
 
-OpenVROverlayController* s_pSharedVRController = nullptr;
+ThorQ::VR::OpenVROverlayController* s_pSharedVRController = nullptr;
 
 
-OpenVROverlayController::OpenVROverlayController(QObject* parent)
+ThorQ::VR::OpenVROverlayController::OpenVROverlayController(QObject* parent)
 	: QObject(parent)
 	, m_isVisible(false)
-	, m_alpha(0.f)
+    , m_alpha(0.9f)
 	, m_width(0.f)
     , m_tint()
 
 	, m_proxyWidget(nullptr)
     , m_updateLogicTimer(new QTimer(this))
 
-    , m_overlayHandle(vr::k_ulOverlayHandleInvalid)
+    , m_overlay(OPENVR_APPLICATION_KEY, OPENVR_APPLICATION_NAME)
+
     , m_overlayDevice(vr::k_unTrackedDeviceIndexInvalid)
     , m_overlayDeviceOffsetL()
     , m_overlayDeviceOffsetR()
@@ -242,15 +229,14 @@ OpenVROverlayController::OpenVROverlayController(QObject* parent)
     , m_mouseDeviceIndex(vr::k_unTrackedDeviceIndexInvalid)
 
     , m_activeActionSet()
-    , m_handleActionSet(vr::k_ulInvalidActionSetHandle)
-    , m_handleActionHapticsLeft(vr::k_ulInvalidActionHandle)
-    , m_handleActionHapticsRight(vr::k_ulInvalidActionHandle)
-    , m_handleActionInteract(vr::k_ulInvalidActionHandle)
-    , m_handleActionShowOverlay(vr::k_ulInvalidActionHandle)
-    , m_handleActionProxSensor(vr::k_ulInvalidActionHandle)
-    , m_sourceHMD(vr::k_ulInvalidInputValueHandle)
-    , m_sourceControllerLeft(vr::k_ulInvalidInputValueHandle)
-    , m_sourceControllerRight(vr::k_ulInvalidInputValueHandle)
+    , m_actionSet("/actions/thorq")
+    , m_actionHaptics("/actions/thorq/out/haptic")
+    , m_actionInteract("/actions/thorq/in/interact")
+    , m_actionShowOverlay("/actions/thorq/in/show_overlay")
+    , m_actionProxSensor("/actions/thorq/in/prox_sensor")
+    , m_hmd("/user/head")
+    , m_controllerLeft("/user/hand/left")
+    , m_controllerRight("/user/hand/right")
 
 	, m_scene(nullptr)
 	, m_glContext(nullptr)
@@ -260,6 +246,11 @@ OpenVROverlayController::OpenVROverlayController(QObject* parent)
 	, m_lastMousePoint()
     , m_lastMouseButtons(Qt::NoButton)
 {
+    // Overlay stuff
+    m_overlay.setAlpha(m_alpha);
+    m_overlay.setVisibility(m_isVisible);
+    m_overlay.setInputMethod(OVROverlay::InputMethod::Mouse);
+
     connect(m_updateLogicTimer, &QTimer::timeout, this, &OpenVROverlayController::update);
     m_updateLogicTimer->setInterval(20);
 
@@ -280,138 +271,59 @@ OpenVROverlayController::OpenVROverlayController(QObject* parent)
     m_overlayDeviceOffsetC.rotate(90.f, 1.f, 0.f, 0.f);
     m_overlayDeviceOffsetC.translate(0.f, -0.05f, 0.06f);
     m_overlayDeviceOffsetC.optimize();
+
+    // Init m_glContext
+    QSurfaceFormat format;
+    format.setMajorVersion(4);
+    format.setMinorVersion(1);
+    format.setProfile(QSurfaceFormat::CompatibilityProfile);
+    m_glContext = new QOpenGLContext(this);
+    m_glContext->setFormat(format);
+    if(!m_glContext->create())
+    {
+        delete m_glContext;
+        m_glContext = nullptr;
+        return;
+    }
+
+    // Init m_surface
+    // create an offscreen surface to attach the context and FBO to
+    m_surface = new QOffscreenSurface(nullptr, this);
+    m_surface->create();
+    m_glContext->makeCurrent(m_surface);
+
+    // Init m_scene
+    m_scene = new QGraphicsScene(this);
+    connect(m_scene, &QGraphicsScene::changed, this, &OpenVROverlayController::onSceneChanged);
+
+    // Start m_updateLogicTimer
+    if (!m_updateLogicTimer->isActive())
+    {
+        m_updateLogicTimer->start();
+    }
 }
 
-OpenVROverlayController::~OpenVROverlayController()
-{
-	shutdown();
-	delete m_frameBuffer;
-}
-
-bool OpenVROverlayController::init()
-{
-    // Get set handle
-    auto inputError = vr::VRInput()->GetActionSetHandle("/actions/ui", &m_handleActionSet);
-    if (inputError != vr::VRInputError_None)
-    {
-        fmt::print(stderr, "Failed to get actionSetHandle: {}\n", inputError);
-        return false;
-    }
-
-    // Get sources
-    vr::VRInput()->GetInputSourceHandle("/user/head", &m_sourceHMD);
-    if (inputError != vr::VRInputError_None)
-    {
-        fmt::print(stderr, "Failed to get head action handle: {}\n", inputError);
-        return false;
-    }
-    vr::VRInput()->GetInputSourceHandle("/user/hand/left", &m_sourceControllerLeft);
-    if (inputError != vr::VRInputError_None)
-    {
-        fmt::print(stderr, "Failed to get hand_left action handle: {}\n", inputError);
-        return false;
-    }
-    vr::VRInput()->GetInputSourceHandle("/user/hand/right", &m_sourceControllerRight);
-    if (inputError != vr::VRInputError_None)
-    {
-        fmt::print(stderr, "Failed to get hand_right action handle: {}\n", inputError);
-        return false;
-    }
-
-    // Get action handles
-    vr::VRInput()->GetActionHandle("/actions/ui/out/haptics_left", &m_handleActionHapticsLeft);
-    if (inputError != vr::VRInputError_None)
-    {
-        fmt::print(stderr, "Failed to get haptics_left action handle: {}\n", inputError);
-        return false;
-    }
-    vr::VRInput()->GetActionHandle("/actions/ui/out/haptics_right", &m_handleActionHapticsRight);
-    if (inputError != vr::VRInputError_None)
-    {
-        fmt::print(stderr, "Failed to get haptics_right action handle: {}\n", inputError);
-        return false;
-    }
-    vr::VRInput()->GetActionHandle("/actions/ui/in/interact", &m_handleActionInteract);
-    if (inputError != vr::VRInputError_None)
-    {
-        fmt::print(stderr, "Failed to get interact action handle: {}\n", inputError);
-        return false;
-    }
-    vr::VRInput()->GetActionHandle("/actions/ui/in/show_overlay", &m_handleActionShowOverlay);
-    if (inputError != vr::VRInputError_None)
-    {
-        fmt::print(stderr, "Failed to get show_overlay action handle: {}\n", inputError);
-        return false;
-    }
-    vr::VRInput()->GetActionHandle("/actions/ui/in/prox_sensor", &m_handleActionShowOverlay);
-    if (inputError != vr::VRInputError_None)
-    {
-        fmt::print(stderr, "Failed to get show_overlay action handle: {}\n", inputError);
-        return false;
-    }
-
-	if (!createOverlay())
-	{
-		return false;
-	}
-
-	if (m_glContext == nullptr)
-	{
-		QSurfaceFormat format;
-		format.setMajorVersion(4);
-		format.setMinorVersion(1);
-        format.setProfile(QSurfaceFormat::CompatibilityProfile);
-
-		m_glContext = new QOpenGLContext(this);
-		m_glContext->setFormat(format);
-		if(!m_glContext->create())
-		{
-			delete m_glContext;
-			m_glContext = nullptr;
-
-			return false;
-		}
-	}
-
-	if (m_surface == nullptr)
-	{
-		// create an offscreen surface to attach the context and FBO to
-		m_surface = new QOffscreenSurface();
-		m_surface->create();
-		m_glContext->makeCurrent(m_surface);
-	}
-
-	if (m_scene == nullptr)
-	{
-		m_scene = new QGraphicsScene(this);
-		connect(m_scene, &QGraphicsScene::changed, this, &OpenVROverlayController::onSceneChanged);
-	}
-
-	if (!m_updateLogicTimer->isActive())
-	{
-		m_updateLogicTimer->start();
-	}
-
-	return true;
-}
-void OpenVROverlayController::shutdown()
+ThorQ::VR::OpenVROverlayController::~OpenVROverlayController()
 {
     fmt::print("Stopping timers\n");
-	m_updateLogicTimer->stop();
+    m_updateLogicTimer->stop();
 
-	m_scene->deleteLater();
-	m_scene = nullptr;
-	m_proxyWidget = nullptr;
+    delete m_frameBuffer;
+}
 
-	delete m_surface;
-	m_surface = nullptr;
+bool ThorQ::VR::OpenVROverlayController::isValid() const
+{
+    return m_actionSet.isValid()         &&
+           m_actionHaptics.isValid()     &&
+           m_actionInteract.isValid()    &&
+           m_actionShowOverlay.isValid() &&
+           m_actionProxSensor.isValid()  &&
+           m_glContext != nullptr;
 
-	m_glContext->deleteLater();
-	m_glContext = nullptr;
 
 }
 
-bool OpenVROverlayController::setWidget(QWidget* widget)
+bool ThorQ::VR::OpenVROverlayController::setWidget(QWidget* widget)
 {
 	if (m_scene == nullptr)
 		return false;
@@ -444,167 +356,74 @@ bool OpenVROverlayController::setWidget(QWidget* widget)
 
 	return true;
 }
-QWidget* OpenVROverlayController::widget() const
+QWidget* ThorQ::VR::OpenVROverlayController::widget() const
 {
 	if (m_proxyWidget != nullptr)
 		return m_proxyWidget->widget();
 	return nullptr;
 }
 
-void OpenVROverlayController::setIsVisible(bool visible)
+void ThorQ::VR::OpenVROverlayController::setIsVisible(bool visible)
 {
-    if (m_overlayHandle == vr::k_ulOverlayHandleInvalid)
-		return;
-
-	if (m_isVisible != visible)
-	{
-		m_isVisible = visible;
-
-		vr::EVROverlayError err = vr::VROverlayError_None;
-
-		if (visible)
-		{
-            fmt::print("Show overlay\n");
-
-            err = vr::VROverlay()->ShowOverlay(m_overlayHandle);
-
-			if (err != vr::VROverlayError_None)
-			{
-                fmt::print(stderr, "Error showing overlay: {}\n", vr::VROverlay()->GetOverlayErrorNameFromEnum(err));
-				return;
-			}
-
-		}
-		else
-		{
-            fmt::print("Hide overlay");
-
-            err = vr::VROverlay()->HideOverlay(m_overlayHandle);
-
-			if (err != vr::VROverlayError_None)
-			{
-                fmt::print(stderr, "Error hiding overlay: {}\n", vr::VROverlay()->GetOverlayErrorNameFromEnum(err));
-				return;
-			}
-		}
-
-		emit isVisibleChanged(visible);
-	}
+    if (m_isVisible != visible && m_overlay.setVisibility(visible)) {
+        m_isVisible = visible;
+        emit isVisibleChanged(visible);
+    }
 }
-bool OpenVROverlayController::isVisible() const
+bool ThorQ::VR::OpenVROverlayController::isVisible() const
 {
 	return m_isVisible;
 }
 
-void OpenVROverlayController::setWidth(float width)
+void ThorQ::VR::OpenVROverlayController::setWidth(float width)
 {
-    if (m_overlayHandle == vr::k_ulOverlayHandleInvalid)
-		return;
-
-	if (m_width != width)
-	{
-		m_width = width;
-
-        vr::EVROverlayError err = vr::VROverlay()->SetOverlayWidthInMeters(m_overlayHandle, m_width);
-
-		if (err != vr::VROverlayError_None)
-		{
-            fmt::print(stderr, "Error setting overlay width: {}\n", vr::VROverlay()->GetOverlayErrorNameFromEnum(err));
-			return;
-		}
-
-		emit widthChanged(width);
-	}
+    if (m_width != width && m_overlay.setWidth(width)) {
+        m_width = width;
+        emit widthChanged(width);
+    }
 }
-float OpenVROverlayController::width() const
+float ThorQ::VR::OpenVROverlayController::width() const
 {
 	return m_width;
 }
 
-void OpenVROverlayController::setAlpha(float alpha)
+void ThorQ::VR::OpenVROverlayController::setAlpha(float alpha)
 {
-    if (m_overlayHandle == vr::k_ulOverlayHandleInvalid)
-		return;
-
-	if (m_alpha != alpha)
-	{
+    if (m_alpha != alpha && m_overlay.setAlpha(alpha)) {
 		m_alpha = alpha;
-
-        vr::EVROverlayError err = vr::VROverlay()->SetOverlayAlpha(m_overlayHandle, alpha);
-
-		if (err != vr::VROverlayError_None)
-		{
-            fmt::print(stderr, "Error setting overlay alpha: {}\n", vr::VROverlay()->GetOverlayErrorNameFromEnum(err));
-			return;
-		}
-
-		emit alphaChanged(alpha);
+        emit alphaChanged(alpha);
 	}
 }
-float OpenVROverlayController::alpha() const
+float ThorQ::VR::OpenVROverlayController::alpha() const
 {
 	return m_alpha;
 }
 
-void OpenVROverlayController::setTint(const QColor& tint)
+void ThorQ::VR::OpenVROverlayController::setTint(const QColor& tint)
 {
-    if (m_overlayHandle == vr::k_ulOverlayHandleInvalid)
-		return;
-
-	if (!tint.isValid())
-		return;
-
-	if (m_tint != tint)
-	{
-		m_tint = tint;
-
-        vr::EVROverlayError err = vr::VROverlay()->SetOverlayColor(m_overlayHandle, (float)m_tint.redF(), (float)m_tint.greenF(), (float)m_tint.blueF());
-
-		if (err != vr::VROverlayError_None)
-		{
-            fmt::print(stderr, "Error setting overlay tint: {}\n", vr::VROverlay()->GetOverlayErrorNameFromEnum(err));
-			return;
-		}
-
+    if (tint.isValid() && m_tint != tint && m_overlay.setTint(tint.redF(), tint.greenF(), tint.blueF())) {
+        m_tint = tint;
 		emit tintChanged(tint);
     }
 }
 
-bool OpenVROverlayController::openBindingUI()
+bool ThorQ::VR::OpenVROverlayController::openBindingUI()
 {
-    return vr::VRInput()->ShowActionOrigins(m_handleActionSet, m_handleActionInteract) == vr::VRInputError_None;
+    return m_actionSet.openBindingUI(m_actionInteract);
 }
 
-QColor OpenVROverlayController::tint() const
+void ThorQ::VR::OpenVROverlayController::halt()
+{
+    m_updateLogicTimer->stop();
+    m_overlay.destroy();
+}
+
+QColor ThorQ::VR::OpenVROverlayController::tint() const
 {
     return m_tint;
 }
 
-bool OpenVROverlayController::triggerHapticFeedback(OpenVROverlayController::EHand hand, float secondsFromNow, float amplitude, float frequency, float duration)
-{
-    vr::VRActionHandle_t action;
-
-    if (hand == EHand::Left) {
-        action = m_handleActionHapticsLeft;
-    }
-    else if (hand == EHand::Right) {
-        action = m_handleActionHapticsRight;
-    }
-    else {
-        return false;
-    }
-
-    vr::EVRInputError err = vr::VRInput()->TriggerHapticVibrationAction(action, secondsFromNow, duration, frequency, amplitude, vr::k_ulInvalidInputValueHandle);
-
-    if (err != vr::VRInputError_None) {
-        fmt::print(stderr, "Error triggering haptic vibration: {}\n", err);
-        return false;
-    }
-
-    return false;
-}
-
-void OpenVROverlayController::update()
+void ThorQ::VR::OpenVROverlayController::update()
 {
     if (!pullEvents()) {
         fmt::print(stderr, "Error pulling events!");
@@ -614,24 +433,25 @@ void OpenVROverlayController::update()
     setIsVisible(true);
 
     vr::InputDigitalActionData_t interactionState, showOverlayState, proxSensorState;
-    vr::VRInput()->GetDigitalActionData( m_handleActionInteract, &interactionState, sizeof(vr::InputDigitalActionData_t), vr::k_ulInvalidInputValueHandle );
-    vr::VRInput()->GetDigitalActionData( m_handleActionShowOverlay, &showOverlayState, sizeof(vr::InputDigitalActionData_t), vr::k_ulInvalidInputValueHandle );
-    vr::VRInput()->GetDigitalActionData( m_handleActionProxSensor, &proxSensorState, sizeof(vr::InputDigitalActionData_t), vr::k_ulInvalidInputValueHandle );
+    m_actionInteract.getDigitalData(interactionState);
+    m_actionShowOverlay.getDigitalData(showOverlayState);
+    m_actionProxSensor.getDigitalData(proxSensorState);
 
-    if (proxSensorState.bChanged) {
-        fmt::print("Proximity sensor: {}\n", proxSensorState.bState);
+    if (proxSensorState.bActive && proxSensorState.bChanged) {
+        fmt::print(stderr, "Proximity sensor: {}\n", proxSensorState.bState);
     }
 
-    if ( showOverlayState.bChanged )
+    if (/*showOverlayState.bActive && */showOverlayState.bChanged)
     {
-        if ( showOverlayState.bActive )
+        fmt::print(stderr, "show overlay changed: {}\n", showOverlayState.bChanged);
+        if (showOverlayState.bState)
         {
             auto device = getDeviceForSource( showOverlayState.activeOrigin );
 
             if ( device != vr::k_unTrackedDeviceIndexInvalid )
             {
                 setOverlayDevice( device );
-                setOverlayOffset( getOffsetForSource( showOverlayState.activeOrigin ) );
+                m_overlay.setDeviceRelativeTransform(showOverlayState.activeOrigin, getOffsetForDevice(showOverlayState.activeOrigin));
                 setIsVisible( true );
             }
         }
@@ -641,15 +461,16 @@ void OpenVROverlayController::update()
         }
     }
 
-    if (interactionState.bChanged)
+    if (/*interactionState.bActive && */interactionState.bChanged)
     {
-        if (interactionState.bActive)
+        fmt::print(stderr, "interaction changed: {}\n", interactionState.bState);
+        if (interactionState.bState)
         {
-            triggerHapticFeedback(getHandForSource(interactionState.activeOrigin), 0.f, 1.f, 500.f, 1.f);
+            m_actionHaptics.triggerHapticFeedback(0.f, 1.f, 500.f, 1.f, interactionState.activeOrigin);
         }
         else
         {
-            triggerHapticFeedback(getHandForSource(interactionState.activeOrigin), 0.f, 1.f, 250.f, 0.5f);
+            m_actionHaptics.triggerHapticFeedback(0.f, 1.f, 250.f, 0.5f, interactionState.activeOrigin);;
         }
     }
 
@@ -677,18 +498,22 @@ void OpenVROverlayController::update()
             case vr::VREvent_Input_ActionManifestLoadFailed:
             {
                 fmt::print("Manifest failed to load {}\n", event.data.actionManifest.pathAppKey);
+                break;
             }
             case vr::VREvent_Input_ActionManifestReloaded:
             {
                 fmt::print("Manifest reloaded {}\n", event.data.actionManifest.pathAppKey);
+                break;
             }
             case vr::VREvent_Input_BindingLoadFailed:
             {
                 fmt::print("Binding failed to load {}\n", event.data.inputBinding.pathMessage);
+                break;
             }
             case vr::VREvent_Input_BindingLoadSuccessful:
             {
                 fmt::print("Binding loaded {}\n", event.data.inputBinding.pathMessage);
+                break;
             }
             case vr::VREvent_TrackedDeviceDeactivated:
             {
@@ -718,15 +543,14 @@ void OpenVROverlayController::update()
             case vr::VREvent_Quit:
             {
                 emit vrQuit();
-                shutdown();
+                halt();
                 return;
             }
         }
     }
 
     // Poll overlay events
-    while(vr::VROverlay()->PollNextOverlayEvent(m_overlayHandle, &event, sizeof(event)))
-    {
+    while(m_overlay.pollEvent(event)) {
         switch(event.eventType)
         {
         case vr::VREvent_MouseMove:
@@ -805,9 +629,9 @@ void OpenVROverlayController::update()
     }
 }
 
-bool OpenVROverlayController::pullEvents()
+bool ThorQ::VR::OpenVROverlayController::pullEvents()
 {
-    m_activeActionSet.ulActionSet = m_handleActionSet;
+    m_activeActionSet.ulActionSet = m_actionSet.handle();
     m_activeActionSet.ulRestrictedToDevice = vr::k_ulInvalidInputValueHandle;
     m_activeActionSet.ulSecondaryActionSet = vr::k_ulInvalidInputValueHandle;
     m_activeActionSet.nPriority = vr::k_nActionSetOverlayGlobalPriorityMin + 1;
@@ -822,68 +646,9 @@ bool OpenVROverlayController::pullEvents()
     return true;
 }
 
-// Requires: m_vrOverlay
-bool OpenVROverlayController::createOverlay()
-{
-    if (m_overlayHandle != vr::k_ulOverlayHandleInvalid)
-    {
-        return true;
-    }
-
-    fmt::print("Finding overlay\n");
-    vr::EVROverlayError err = vr::VROverlay()->FindOverlay(OPENVR_APPLICATION_KEY, &m_overlayHandle);
-	if (err == vr::VROverlayError_None)
-	{
-        fmt::print("Found overlay\n");
-		return true;
-	}
-	else if (err != vr::VROverlayError_UnknownOverlay)
-	{
-        fmt::print(stderr, "Error finding overlay: {}\n", vr::VROverlay()->GetOverlayErrorNameFromEnum(err));
-        m_overlayHandle = vr::k_ulOverlayHandleInvalid;
-		return false;
-	}
-
-    fmt::print("Creating overlay\n");
-    err = vr::VROverlay()->CreateOverlay(OPENVR_APPLICATION_KEY, OPENVR_APPLICATION_NAME, &m_overlayHandle);
-	if (err != vr::VROverlayError_None)
-	{
-        fmt::print(stderr, "Error creating overlay: {}\n", vr::VROverlay()->GetOverlayErrorNameFromEnum(err));
-        m_overlayHandle = vr::k_ulOverlayHandleInvalid;
-		return false;
-	}
-
-	// Alpha
-	m_alpha = 0.9f;
-    err = vr::VROverlay()->SetOverlayAlpha(m_overlayHandle, m_alpha);
-    if (err != vr::VROverlayError_None) {
-        fmt::print(stderr, "Error setting overlay alpha: {}\n", vr::VROverlay()->GetOverlayErrorNameFromEnum(err));
-    }
-
-	// Visibility
-	m_isVisible = false;
-    err = vr::VROverlay()->HideOverlay(m_overlayHandle);
-    if (err != vr::VROverlayError_None) {
-        fmt::print(stderr, "Error setting overlay visibility: {}\n", vr::VROverlay()->GetOverlayErrorNameFromEnum(err));
-    }
-
-    // Set input method to simulate a mouse
-    err = vr::VROverlay()->SetOverlayInputMethod(m_overlayHandle, vr::VROverlayInputMethod_Mouse);
-    if (err != vr::VROverlayError_None) {
-        fmt::print(stderr, "Error setting overlay input method: {}\n", vr::VROverlay()->GetOverlayErrorNameFromEnum(err));
-    }
-
-	return true;
-}
-
 // Requires: m_glContext, m_surface, m_frameBuffer, m_scene, m_vrOverlay, m_overlay
-void OpenVROverlayController::onSceneChanged()
+void ThorQ::VR::OpenVROverlayController::onSceneChanged()
 {
-    if (!createOverlay() || m_frameBuffer == nullptr)
-    {
-        return;
-    }
-
     fmt::print("Drawing overlay\n");
 
     QWidget* widget = m_proxyWidget->widget();
@@ -909,65 +674,24 @@ void OpenVROverlayController::onSceneChanged()
 
 	m_scene->render(&painter);
 
-	m_frameBuffer->release();
-
-	// Get framebuffer id
-	GLuint glTexture = m_frameBuffer->texture();
-	if (glTexture != 0)
-	{
-		vr::Texture_t texture;
-
-		texture.handle = (void*)(std::uintptr_t)glTexture;
-		texture.eType = vr::TextureType_OpenGL;
-		texture.eColorSpace = vr::ColorSpace_Auto;
-
-		// Give framebuffer id to OpenVR
-        vr::EVROverlayError err = vr::VROverlay()->SetOverlayTexture(m_overlayHandle, &texture);
-        if (err != vr::VROverlayError_None) {
-            fmt::print(stderr, "Error setting overlay texture: {}\n", vr::VROverlay()->GetOverlayErrorNameFromEnum(err));
-        }
-	}
+    m_overlay.setTexture(m_frameBuffer->release());
 }
 
-// Requires: m_vrOverlay, m_overlay, m_primary_controller_index, m_overlay_offset
-bool OpenVROverlayController::overlayTransform()
-{
-    if (!createOverlay()) {
-        return false;
-    }
-
-    fmt::print("Transforming overlay\n");
-
-    // Position
-    vr::EVROverlayError err = vr::VROverlay()->SetOverlayTransformTrackedDeviceRelative(m_overlayHandle, m_overlayDevice, &m_overlayOffset);
-
-    if (err != vr::VROverlayError_None) {
-        fmt::print(stderr, "Error transforming overlay: {}\n", vr::VROverlay()->GetOverlayErrorNameFromEnum(err));
-        return false;
-    }
-
-    return true;
-}
-
-void OpenVROverlayController::setOverlayDevice(vr::TrackedDeviceIndex_t deviceIndex)
+void ThorQ::VR::OpenVROverlayController::setOverlayDevice(vr::TrackedDeviceIndex_t deviceIndex)
 {
     // Set current overlay device as mouse device, and set new device as overlay device
     m_mouseDeviceIndex = m_overlayDevice;
     m_overlayDevice = deviceIndex;
 }
-void OpenVROverlayController::setOverlayOffset(const QMatrix4x4 &offset)
-{
-    ToHmdMatrix34(offset, m_overlayOffset);
-}
 
-OpenVROverlayController::EHand OpenVROverlayController::getHandForSource(vr::VRInputValueHandle_t source)
+ThorQ::VR::OpenVROverlayController::EHand ThorQ::VR::OpenVROverlayController::getHandForSource(ThorQ::VR::OVRDevice device)
 {
-    if (source == m_sourceControllerLeft)
+    if (device == m_controllerLeft)
     {
         return EHand::Left;
     }
     else
-    if (source == m_sourceControllerRight)
+    if (device == m_controllerRight)
     {
         return EHand::Right;
     }
@@ -975,7 +699,7 @@ OpenVROverlayController::EHand OpenVROverlayController::getHandForSource(vr::VRI
     return EHand::Invalid;
 }
 
-const QMatrix4x4& OpenVROverlayController::getOffsetForHand(OpenVROverlayController::EHand hand)
+const QMatrix4x4& ThorQ::VR::OpenVROverlayController::getOffsetForHand(OpenVROverlayController::EHand hand)
 {
     switch (hand) {
     case EHand::Left:
@@ -987,13 +711,13 @@ const QMatrix4x4& OpenVROverlayController::getOffsetForHand(OpenVROverlayControl
     }
 }
 
-const QMatrix4x4 &OpenVROverlayController::getOffsetForSource(vr::VRInputValueHandle_t source)
+const QMatrix4x4& ThorQ::VR::OpenVROverlayController::getOffsetForDevice(ThorQ::VR::OVRDevice device)
 {
-    if (source == m_sourceControllerLeft)
+    if (device == m_controllerLeft)
     {
         return m_overlayDeviceOffsetL;
     }
-    else if (source == m_sourceControllerRight)
+    else if (device == m_controllerRight)
     {
         return m_overlayDeviceOffsetR;
     }
@@ -1003,19 +727,19 @@ const QMatrix4x4 &OpenVROverlayController::getOffsetForSource(vr::VRInputValueHa
     }
 }
 
-vr::VRInputValueHandle_t OpenVROverlayController::getOriginForHand(OpenVROverlayController::EHand hand)
+ThorQ::VR::OVRDevice ThorQ::VR::OpenVROverlayController::getOriginForHand(OpenVROverlayController::EHand hand)
 {
     switch (hand) {
     case EHand::Left:
-        return m_sourceControllerLeft;
+        return m_controllerLeft;
     case EHand::Right:
-        return m_sourceControllerRight;
+        return m_controllerRight;
     default:
-        return vr::k_ulInvalidInputValueHandle;
+        return ThorQ::VR::OVRDevice(nullptr);
     }
 }
 
-vr::TrackedDeviceIndex_t OpenVROverlayController::getDeviceForSource(vr::VRInputValueHandle_t source)
+vr::TrackedDeviceIndex_t ThorQ::VR::OpenVROverlayController::getDeviceForSource(vr::VRInputValueHandle_t source)
 {
     vr::EVRInputError err;
     vr::InputOriginInfo_t sourceInfo;

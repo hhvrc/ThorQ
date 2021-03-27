@@ -1,0 +1,22 @@
+{
+  "source": "builtin",
+  "applications": [{
+    "app_key": "HeavenVR.ThorQ",
+
+    "is_dashboard_overlay": true,
+    "image_path": "vr-banner.png",
+
+    "launch_type": "binary",
+    "binary_path_windows": "ThorQ.exe",
+    "arguments": "",
+
+    "action_manifest_path": "thorq_actions.json",
+
+    "strings": {
+      "en_US": {
+        "name": "ThorQ",
+        "description": "Application to control a shock-collar remotely from anywhere in the world."
+      }
+    }
+  }]
+}
