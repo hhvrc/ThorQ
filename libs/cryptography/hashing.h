@@ -24,9 +24,9 @@ typedef std::span<std::uint8_t, Hashing::HashLength> HashRef;
 typedef std::array<std::uint8_t, Hashing::SaltLength> Salt;
 typedef std::span<std::uint8_t, Hashing::SaltLength> SaltRef;
 struct Parameters {
-    std::int64_t ops_limit;
-    std::int64_t mem_limit;
-    std::int32_t algorithm;
+    std::uint64_t ops_limit;
+    std::uint64_t mem_limit;
+    std::int32_t  algorithm;
 
     enum class Performance {
         Interactive,
@@ -34,7 +34,8 @@ struct Parameters {
         Sensitive
     };
 
-    constexpr void setPerformance(Performance perf) {
+    constexpr void setPerformance(Performance perf)
+    {
         switch (perf) {
         case Performance::Interactive:
             ops_limit = crypto_pwhash_OPSLIMIT_INTERACTIVE;
@@ -54,12 +55,14 @@ struct Parameters {
         }
     }
 
-    inline bool operator == (const Parameters& other) const {
+    inline bool operator == (const Parameters& other) const
+    {
         return (ops_limit == other.ops_limit) &&
                (mem_limit == other.mem_limit) &&
                (algorithm == other.algorithm);
     }
-    inline bool operator != (const Parameters& other) const {
+    inline bool operator != (const Parameters& other) const
+    {
         return !(*this == other);
     }
 };

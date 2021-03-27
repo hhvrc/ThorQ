@@ -11,8 +11,8 @@ struct HashingSalt {
   salt : [ ubyte : 16 ];
 }
 struct HashingParameters {
-  ops_limit : long;
-  mem_limit : long;
+  ops_limit : ulong;
+  mem_limit : ulong;
   algorithm : int;
 }
 struct HashCalculated {
@@ -30,6 +30,7 @@ table GetAccountId {
 
 table GetHashingSalt {
   account_id : Uuid;
+  generate_new : bool;
 }
 
 table GetHashingParameters {
