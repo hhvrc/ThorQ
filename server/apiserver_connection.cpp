@@ -10,11 +10,13 @@
 
 #include <schemas_common.h>
 
-#include <lsql/transaction.h>
-#include <lsql/connection.h>
-#include <lsql/column.h>
-#include <lsql/query.h>
-#include <fmt/core.h>
+#include "database.h"
+
+#include "lsql/transaction.h"
+#include "lsql/connection.h"
+#include "lsql/column.h"
+#include "lsql/query.h"
+#include "fmt/core.h"
 
 #include <cstring>
 
@@ -275,6 +277,9 @@ void ThorQ::ApiServerConnection::handleMessageAccount(HandlerContext& context)
     case ThorQ::Serialization::Account::Body_login_request:
         handleMessageAccount_LoginRequest(context);
         break;
+    case ThorQ::Serialization::Account::Body_logout_request:
+        handleMessageAccount_Logout(context);
+        break;
     case ThorQ::Serialization::Account::Body_registration_request:
         handleMessageAccount_RegistrationRequest(context);
         break;
@@ -283,9 +288,6 @@ void ThorQ::ApiServerConnection::handleMessageAccount(HandlerContext& context)
         break;
     case ThorQ::Serialization::Account::Body_delete_:
         handleMessageAccount_Delete(context);
-        break;
-    case ThorQ::Serialization::Account::Body_logout:
-        handleMessageAccount_Logout(context);
         break;
     case ThorQ::Serialization::Account::Body_set_username:
         handleMessageAccount_SetUserName(context);
@@ -328,7 +330,7 @@ void ThorQ::ApiServerConnection::handleMessageAccount_GetAccountId(HandlerContex
         return;
     }
 
-    auto fbsRespAccountID = context.fbsBuilder.CreateStruct(ThorQ::Serialization::Uuid(account->id().toBytes())).Union();
+    auto fbsRespAccountID = context.fbsBuilder.CreateStruct(ThorQ::Serialization::Uuid(account->uuid().toBytes())).Union();
     auto fbsRespAccount   = ThorQ::Serialization::Account::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Account::Body_account_id, fbsRespAccountID).Union();
     auto fbsRespMessage   = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_account, fbsRespAccount);
     context.messages.push_back(fbsRespMessage);
@@ -355,7 +357,7 @@ void ThorQ::ApiServerConnection::handleMessageAccount_GetHashingSalt(ThorQ::ApiS
         randombytes_buf(salt.data(), ThorQ::Crypto::Hashing::SaltLength);
     }
     else {
-        salt = account->passwordSalt();
+        salt = account->currentPasswordSalt();
     }
 
     auto fbsRespSalt      = context.fbsBuilder.CreateStruct(ThorQ::Serialization::Account::HashingSalt(salt)).Union();
@@ -399,7 +401,7 @@ void ThorQ::ApiServerConnection::handleMessageAccount_GetHashingParameters(Handl
 void ThorQ::ApiServerConnection::handleMessageAccount_LoginRequest(HandlerContext& context)
 {
     auto fbsLoginRequest = reinterpret_cast<const ThorQ::Serialization::Account::LoginRequest*>(context.body);
-    if (fbsLoginRequest == nullptr || fbsLoginRequest->account_id() == nullptr || fbsLoginRequest->account_id()->data() == nullptr || fbsLoginRequest->password_hash() == nullptr || fbsLoginRequest->password_hash()->hash() == nullptr) {
+    if (fbsLoginRequest->account_id() == nullptr || fbsLoginRequest->account_id()->data() == nullptr || fbsLoginRequest->password_hash() == nullptr || fbsLoginRequest->password_hash()->hash() == nullptr) {
         disconnect();
         return;
     }
@@ -418,9 +420,10 @@ void ThorQ::ApiServerConnection::handleMessageAccount_LoginRequest(HandlerContex
     ThorQ::Serialization::Uuid fbsRespAccountID;
     ThorQ::Serialization::Account::AuthToken fbsRespAuthToken;
     if (account != nullptr && account->checkPasswordHash(passwordHash)) {
+        fmt::print("[ACCOUNT] Login request ACCEPTED\n");
         setAccount(account);
 
-        fbsRespAccountID = ThorQ::Serialization::Uuid(account->id().toBytes());
+        fbsRespAccountID = ThorQ::Serialization::Uuid(account->uuid().toBytes());
 
         // TODO: Create auth token
         if (fbsLoginRequest->get_auth_token()) {
@@ -440,6 +443,30 @@ void ThorQ::ApiServerConnection::handleMessageAccount_LoginRequest(HandlerContex
     auto fbsRespMessage = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_account, fbsRespAccount);
     context.messages.push_back(fbsRespMessage);
 }
+void ThorQ::ApiServerConnection::handleMessageAccount_Logout(HandlerContext& context)
+{
+    auto fbsLogoutRequest = reinterpret_cast<const ThorQ::Serialization::Account::LogoutRequest*>(context.body);
+
+    fmt::print("[ACCOUNT] LogoutRequest\n");
+
+    bool success = false;
+    auto account = m_account;
+    if (m_account != nullptr) {
+        // TODO notify of logout
+
+        if (fbsLogoutRequest->logout_all()) {
+            // TODO remove all instances, and all session keys
+        }
+
+        success = true;
+    }
+
+
+    auto fbsRespLogout  = ThorQ::Serialization::Account::CreateLogoutResponse(context.fbsBuilder, success).Union();
+    auto fbsRespAccount = ThorQ::Serialization::Account::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Account::Body_logout_response, fbsRespLogout).Union();
+    auto fbsRespMessage = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_account, fbsRespAccount);
+    context.messages.push_back(fbsRespMessage);
+}
 void ThorQ::ApiServerConnection::handleMessageAccount_RegistrationRequest(HandlerContext& context)
 {
     auto fbsRegistrationReq = reinterpret_cast<const ThorQ::Serialization::Account::RegistrationRequest*>(context.body);
@@ -452,6 +479,7 @@ void ThorQ::ApiServerConnection::handleMessageAccount_RegistrationRequest(Handle
     auto& fbsAccountId     = *fbsRegistrationReq->account_id()->data();
     auto& fbsEmail         = *fbsRegistrationReq->email();
     auto& fbsPasswordHash  = *fbsRegistrationReq->password_hash()->hash();
+    auto& fbsPasswordSalt  = *fbsRegistrationReq->password_hash()->salt();
     auto& fbsHashingParams =  fbsRegistrationReq->password_hash()->params();
 
     ThorQ::Uuid accountID(std::span<const std::uint8_t, 16>(fbsAccountId.data(), fbsAccountId.size()));
@@ -459,6 +487,9 @@ void ThorQ::ApiServerConnection::handleMessageAccount_RegistrationRequest(Handle
 
     ThorQ::Crypto::Hashing::Hash passwordHash;
     memcpy(passwordHash.data(), fbsPasswordHash.data(), ThorQ::Crypto::Hashing::HashLength);
+
+    ThorQ::Crypto::Hashing::Salt passwordSalt;
+    memcpy(passwordSalt.data(), fbsPasswordSalt.data(), ThorQ::Crypto::Hashing::SaltLength);
 
     ThorQ::Crypto::Hashing::Parameters hashingParams;
     hashingParams.mem_limit = fbsHashingParams.mem_limit();
@@ -472,7 +503,7 @@ void ThorQ::ApiServerConnection::handleMessageAccount_RegistrationRequest(Handle
         throw MessageHandlingException("AccountID not found", 1); // TODO implement requestID's
     }
 
-    if (!account->tryClaim(email, passwordHash, hashingParams)) {
+    if (!account->tryClaim(email, passwordHash, passwordSalt, hashingParams)) {
         fmt::print("[ACCOUNT] {} already taken!\n", account->username());
         // TODO respond with username/email taken
         return;
@@ -487,11 +518,6 @@ void ThorQ::ApiServerConnection::handleMessageAccount_Recover(HandlerContext& co
 }
 
 void ThorQ::ApiServerConnection::handleMessageAccount_Delete(HandlerContext& context)
-{
-
-}
-
-void ThorQ::ApiServerConnection::handleMessageAccount_Logout(HandlerContext& context)
 {
 
 }
@@ -827,15 +853,13 @@ void ThorQ::ApiServerConnection::handleMessageSystemID(HandlerContext& context)
 
     fmt::print("SystemID: {}\n", systemID);
 
-    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
+    auto dbConnection = openDatabaseConneciton(SQLite::Connection::READWRITE);
     if (dbConnection == nullptr)
     {
         // TODO: THORQ_DISCONNECT_REASON::SERVER_ERROR
         disconnect();
         return;
     }
-
-    dbConnection->setBusyTimeout(5000);
 
     auto dbInsertSystemId = dbConnection->makeQuery("INSERT OR IGNORE INTO systems(hardware_id) VALUES (?);"sv);
     dbInsertSystemId.bindText(1, systemID);

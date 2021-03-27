@@ -7,6 +7,7 @@
 #include "collar/serial.h"
 #include "apiclient.h"
 #include "vr/openvroverlaycontroller.h"
+#include "accountcontroller.h"
 
 #include <constants.h>
 #include <encoding.h>
@@ -65,11 +66,6 @@ int main(int argc, char** argv)
         ThorQ::VR::RemoveManifest();
     }
 
-    if (!ThorQ::VR::CreateManifest()) {
-        qDebug() << "Failed to create VR manifest files";
-        return EXIT_FAILURE;
-    }
-
     if (!ThorQ::VR::InstallManifest()) {
         qDebug() << "Failed to install VR manifest files";
         return EXIT_FAILURE;
@@ -101,9 +97,11 @@ int main(int argc, char** argv)
                 )
             );
     QVBoxLayout* mainLayout = new QVBoxLayout(&mainWindow);
-    ThorQ::AccountLoginWidget* loginWidget = new ThorQ::AccountLoginWidget(apiClient->accountController(), &mainWindow);
-    ThorQ::AccountRegisterWidget* registerWidget = new ThorQ::AccountRegisterWidget(apiClient->accountController(), &mainWindow);
-    ThorQ::AccountRecoverWidget* recoverWidget = new ThorQ::AccountRecoverWidget(apiClient->accountController(), &mainWindow);
+    auto accountController = apiClient->accountController();
+
+    ThorQ::AccountLoginWidget* loginWidget = new ThorQ::AccountLoginWidget(accountController, &mainWindow);
+    ThorQ::AccountRegisterWidget* registerWidget = new ThorQ::AccountRegisterWidget(accountController, &mainWindow);
+    ThorQ::AccountRecoverWidget* recoverWidget = new ThorQ::AccountRecoverWidget(accountController, &mainWindow);
     QHBoxLayout* buttonsLayout = new QHBoxLayout(&mainWindow);
     QPushButton* registerButton = new QPushButton(&mainWindow);
     QPushButton* recoverButton = new QPushButton(&mainWindow);
@@ -145,6 +143,9 @@ int main(int argc, char** argv)
     QObject::connect(recoverButton, &QPushButton::pressed, recoverButton, &QWidget::hide);
     QObject::connect(recoverButton, &QPushButton::pressed, registerButton, &QWidget::hide);
     QObject::connect(recoverButton, &QPushButton::pressed, recoverWidget, &QWidget::show);
+
+    QObject::connect(accountController, &ThorQ::AccountController::loggedIn, &mainWindow, &QWidget::hide);
+    QObject::connect(accountController, &ThorQ::AccountController::loggedOut, &mainWindow, &QWidget::show);
 
     ThorQ::MainWidget* mainWidget = new ThorQ::MainWidget(&mainWindow);
 

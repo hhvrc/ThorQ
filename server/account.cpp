@@ -14,6 +14,8 @@
 #include <memory>
 #include <atomic>
 
+#include "database.h"
+
 #include "apiserver_connection.h"
 
 using namespace std::literals;
@@ -23,12 +25,12 @@ std::unordered_map<ThorQ::Uuid, std::shared_ptr<ThorQ::Account>> g_accounts_by_u
 std::unordered_map<std::string, std::shared_ptr<ThorQ::Account>> g_accounts_by_username;
 
 ThorQ::Account::Account(std::int64_t dbId, std::int64_t passwordId, ThorQ::Uuid id, const std::string& username)
-    : m_id(id)
-    , m_dbId(dbId)
+    : m_uuid(id)
+    , m_dbRowId(dbId)
     , m_passwordId(passwordId)
     , l_basics()
     , m_username(username)
-    , m_temporaryHashingSalt{0}
+    , m_newPasswordSalt{0}
     , m_activityState(0)
     , l_master()
     , m_master()
@@ -56,14 +58,11 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const ThorQ::Uuid& uu
         }
     }
 
-    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READONLY);
-
+    auto dbConnection = openDatabaseConneciton(SQLite::Connection::READONLY);
     if (dbConnection == nullptr) {
         fmt::print(stderr, "Failed to open database\n");
         return nullptr;
     }
-
-    dbConnection->setBusyTimeout(5000);
 
     SQLite::Query query = dbConnection->makeQuery(
                 "SELECT "
@@ -120,14 +119,11 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& us
         }
     }
 
-    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READONLY);
-
+    auto dbConnection = openDatabaseConneciton(SQLite::Connection::READONLY);
     if (dbConnection == nullptr) {
         fmt::print(stderr, "Failed to open database\n");
         return nullptr;
     }
-
-    dbConnection->setBusyTimeout(5000);
 
     SQLite::Query query = dbConnection->makeQuery(
                 "SELECT "
@@ -137,8 +133,12 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::GetAccount(const std::string& us
                     "accounts.email_address,"
                     "images.uuid "
                 "FROM accounts "
-                    "INNER JOIN images ON images.image_id = accounts.image_id "
-                "WHERE accounts.username = ?"sv);
+                    "INNER JOIN "
+                        "images "
+                    "ON "
+                        "images.image_id = accounts.image_id "
+                "WHERE "
+                    "accounts.username = ?"sv);
 
     if (!query.bindText(1, username) ||
         !query.step()) {
@@ -197,14 +197,11 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
         }
     }
 
-    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
-
+    auto dbConnection = openDatabaseConneciton(SQLite::Connection::READWRITE);
     if (dbConnection == nullptr) {
         fmt::print(stderr, "Failed to open database\n");
         return nullptr;
     }
-
-    dbConnection->setBusyTimeout(5000);
 
     auto transaction = dbConnection->beginDeferredTransaction();
 
@@ -220,7 +217,7 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
     hashingParams.setPerformance(ThorQ::Crypto::Hashing::Parameters::Performance::Sensitive);
     randombytes_buf(hashingSalt.data(), ThorQ::Crypto::Hashing::SaltLength);
 
-    if (!passwordQuery.bindBlob(1, hashingSalt) ||
+    if (!passwordQuery.bindBlob(1, hashingSalt)              ||
         !passwordQuery.bindInt64(2, hashingParams.ops_limit) ||
         !passwordQuery.bindInt64(3, hashingParams.mem_limit) ||
         !passwordQuery.bindInt32(4, hashingParams.algorithm) ||
@@ -234,8 +231,8 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 
     ThorQ::Uuid uuid = ThorQ::Uuid::NewUuid();
     if (!accountQuery.bindText(1, uuid.toString()) ||
-        !accountQuery.bindText(2, username) ||
-        !accountQuery.bindInt64(3, passwordId) ||
+        !accountQuery.bindText(2, username)        ||
+        !accountQuery.bindInt64(3, passwordId)     ||
         !accountQuery.step()) {
         fmt::print(stderr, "SQL Failed to execute account query: {}\n", dbConnection->lastError());
         return nullptr;
@@ -255,8 +252,9 @@ std::shared_ptr<ThorQ::Account> ThorQ::Account::NewAccount(const std::string& us
 		return nullptr;
 	}
 
-    fmt::print(stderr, "[ACCOUNT] Created: {}\n", username);
+    fmt::print("[ACCOUNT] Created: {}\n", username);
     auto account = std::shared_ptr<ThorQ::Account>(new ThorQ::Account(dbId, passwordId, uuid, username));
+
     std::scoped_lock l(g_accounts_lock);
     g_accounts_by_uuid.insert({uuid, account});
     g_accounts_by_username.insert({username, account});
@@ -268,94 +266,108 @@ std::string ThorQ::Account::username() const
 	return m_username;
 }
 
-bool ThorQ::Account::setUsername(const std::string& username)
+bool ThorQ::Account::setUsername(const std::string& newUsername)
 {
-    if (m_username == username)
+    if (m_username == newUsername)
     {
         return true;
     }
 
-    if (m_dbId <= 0)
-    {
-        return false;
-    }
-
-    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
-
+    auto dbConnection = openDatabaseConneciton(SQLite::Connection::READWRITE);
     if (dbConnection == nullptr) {
         fmt::print(stderr, "Failed to open database\n");
         return false;
     }
 
-    dbConnection->setBusyTimeout(5000);
-
     auto transaction = dbConnection->beginDeferredTransaction();
-
     if (!transaction.isOpen())
     {
         fmt::print(stderr, "SQL Failed to start transaction: {}\n", dbConnection->lastError());
         return false;
     }
 
-    SQLite::Query query = dbConnection->makeQuery("UPDATE OR IGNORE accounts SET username = ?, updated_at = CURRENT_TIMESTAMP WHERE db_id = ?"sv);
+    SQLite::Query query = dbConnection->makeQuery(
+                "UPDATE "
+                    "accounts "
+                "SET "
+                    "username = ?,"
+                    "updated_at = CURRENT_TIMESTAMP "
+                "WHERE "
+                    "account_id = ?"sv);
 
-    if (!query.isValid())
-    {
-        fmt::print("Failed to create query: {}\n", dbConnection->lastError());
+    if (!query.isValid()               ||
+        !query.bindText(1, newUsername)   ||
+        !query.bindInt64(2, m_dbRowId) ||
+        !query.step()                  ||
+         dbConnection->changes() < 1
+         ) {
+        fmt::print("account name taken\n");
         return false;
     }
 
-    if (!query.bindText(1, username))
-    {
-        fmt::print("Failed to bind username: {}\n", dbConnection->lastError());
+    if (!transaction.commit()) {
         return false;
     }
 
-    if (!query.bindInt64(2, m_dbId))
-    {
-        fmt::print("Failed to bind dbID: {}\n", dbConnection->lastError());
+    std::unique_lock sl_basics(l_basics);
+    auto oldUsername = m_username;                                  // Get old username
+    m_username = newUsername;                                       // Set new username
+
+    std::shared_lock sl_accounts(g_accounts_lock);
+    auto node = g_accounts_by_username.extract(oldUsername);        // Find account node
+
+    if (node.empty()) {
         return false;
     }
 
-    if (!query.step())
-    {
-        fmt::print("Failed to execute username query: {}\n", dbConnection->lastError());
-        return false;
-    }
-
-    if (dbConnection->changes() < 1) {
-        fmt::print("account invalid/already used\n");
-        return false;
-    }
-
-    transaction.commit();
-
-    std::unique_lock l(l_basics);
-    m_username = username;
-    return true;
+    node.key() = newUsername;                                       // Set new key
+    return g_accounts_by_username.insert(std::move(node)).inserted; // Insert modified node
 }
 
 bool ThorQ::Account::isClaimed() const
 {
-    std::shared_lock l(const_cast<std::shared_mutex&>(l_basics));
-    return !m_emailAddress.empty();
-}
-
-bool ThorQ::Account::tryClaim(const std::string& emailAddress, const ThorQ::Crypto::Hashing::Hash& passwordHash, const ThorQ::Crypto::Hashing::Parameters& passwordHashingParameters)
-{
-    std::unique_lock l(l_basics);
-
-    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
-
+    auto dbConnection = openDatabaseConneciton(SQLite::Connection::READONLY);
     if (dbConnection == nullptr) {
         fmt::print(stderr, "Failed to open database\n");
         return false;
     }
 
-    dbConnection->setBusyTimeout(5000);
+    SQLite::Query query = dbConnection->makeQuery(
+                "SELECT "
+                    "account_id "
+                "FROM "
+                    "accounts "
+                "WHERE "
+                    "account_id = ? AND email_address IS NULL "
+                "LIMIT 1"sv);
+
+    if (!query.bindInt64(1, m_dbRowId) ||
+        !query.step()
+         ) {
+        fmt::print("SQL check account claimed failed: {}\n", dbConnection->lastError());
+        return false;
+    }
+
+    return query.columnCount() == 1;
+}
+
+bool ThorQ::Account::tryClaim(const std::string& emailAddress, const ThorQ::Crypto::Hashing::Hash& passwordHash, const ThorQ::Crypto::Hashing::Salt& passwordSalt, const ThorQ::Crypto::Hashing::Parameters& passwordHashingParameters)
+{
+    if (passwordHashingParameters.ops_limit <= 0 ||
+        passwordHashingParameters.mem_limit <= 0 ||
+        passwordHashingParameters.algorithm <= 0
+        ) {
+        fmt::print(stderr, "Invalid hashing parameters!\n");
+        return false;
+    }
+
+    auto dbConnection = openDatabaseConneciton(SQLite::Connection::READWRITE);
+    if (dbConnection == nullptr) {
+        fmt::print(stderr, "Failed to open database\n");
+        return false;
+    }
 
     auto transaction = dbConnection->beginDeferredTransaction();
-
     if (!transaction.isOpen())
     {
         fmt::print(stderr, "SQL Failed to start transaction: {}\n", dbConnection->lastError());
@@ -372,8 +384,9 @@ bool ThorQ::Account::tryClaim(const std::string& emailAddress, const ThorQ::Cryp
                     "account_id = ? AND email_address IS NULL"sv);
 
     if (!updateAccountQuery.bindText(1, emailAddress) ||
-        !updateAccountQuery.bindInt64(2, m_dbId) ||
-        !updateAccountQuery.step()
+        !updateAccountQuery.bindInt64(2, m_dbRowId)   ||
+        !updateAccountQuery.step()                    ||
+         dbConnection->changes() < 1
          ) {
         fmt::print("SQL claim account (update account) failed: {}\n", dbConnection->lastError());
         return false;
@@ -384,24 +397,32 @@ bool ThorQ::Account::tryClaim(const std::string& emailAddress, const ThorQ::Cryp
         return false;
     }
 
+    std::shared_lock l(l_basics);
+    if (passwordSalt != m_newPasswordSalt) {
+        fmt::print(stderr, "Invalid hashing salt\n");
+        return false;
+    }
+
     SQLite::Query updatePasswordQuery = dbConnection->makeQuery(
                 "UPDATE "
                     "passwords "
                 "SET "
+                    "salt = ?,"
                     "hash = ?,"
                     "ops_limit = ?,"
                     "mem_limit = ?,"
                     "algorithm = ? "
                 "WHERE "
-                    "password_id = ? AND salt = ?"sv);
+                    "password_id = ? AND hash IS NULL"sv);
 
-    if (!updatePasswordQuery.bindBlob(1, passwordHash)                         ||
-        !updatePasswordQuery.bindInt64(2, passwordHashingParameters.ops_limit) ||
-        !updatePasswordQuery.bindInt64(3, passwordHashingParameters.mem_limit) ||
-        !updatePasswordQuery.bindInt32(4, passwordHashingParameters.algorithm) ||
-        !updatePasswordQuery.bindInt64(5, m_passwordId)                        ||
-        !updatePasswordQuery.bindBlob(6, m_temporaryHashingSalt)               ||
-        !updatePasswordQuery.step()
+    if (!updatePasswordQuery.bindBlob(1, passwordSalt)                         ||
+        !updatePasswordQuery.bindBlob(2, passwordHash)                         ||
+        !updatePasswordQuery.bindInt64(3, passwordHashingParameters.ops_limit) ||
+        !updatePasswordQuery.bindInt64(4, passwordHashingParameters.mem_limit) ||
+        !updatePasswordQuery.bindInt32(5, passwordHashingParameters.algorithm) ||
+        !updatePasswordQuery.bindInt64(6, m_passwordId)                        ||
+        !updatePasswordQuery.step()                                            ||
+         dbConnection->changes() < 1
          ) {
         fmt::print("SQL claim account (update password) failed: {}\n", dbConnection->lastError());
         return false;
@@ -416,16 +437,18 @@ bool ThorQ::Account::tryClaim(const std::string& emailAddress, const ThorQ::Cryp
     return true;
 }
 
-ThorQ::Crypto::Hashing::Salt ThorQ::Account::passwordSalt() const
+ThorQ::Crypto::Hashing::Salt ThorQ::Account::newPasswordSalt()
 {
-    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
-
+    randombytes_buf(m_newPasswordSalt.data(), ThorQ::Crypto::Hashing::SaltLength);
+    return m_newPasswordSalt;
+}
+ThorQ::Crypto::Hashing::Salt ThorQ::Account::currentPasswordSalt() const
+{
+    auto dbConnection = openDatabaseConneciton(SQLite::Connection::READONLY);
     if (dbConnection == nullptr) {
         fmt::print(stderr, "Failed to open database\n");
         return {};
     }
-
-    dbConnection->setBusyTimeout(5000);
 
     SQLite::Query selectSaltQuery = dbConnection->makeQuery(
                 "SELECT "
@@ -436,8 +459,8 @@ ThorQ::Crypto::Hashing::Salt ThorQ::Account::passwordSalt() const
                     "password_id = ?"sv);
 
     if (!selectSaltQuery.bindInt64(1, m_passwordId) ||
-        !selectSaltQuery.step() ||
-         selectSaltQuery.columnCount() == 0
+        !selectSaltQuery.step()                     ||
+         selectSaltQuery.columnCount() < 1
          ) {
         fmt::print(stderr, "SQL get password salt failed: {}\n", dbConnection->lastError());
         return {};
@@ -453,21 +476,13 @@ ThorQ::Crypto::Hashing::Salt ThorQ::Account::passwordSalt() const
     memcpy(salt.data(), saltColumn.getDataBlob(), ThorQ::Crypto::Hashing::SaltLength);
     return salt;
 }
-ThorQ::Crypto::Hashing::Salt ThorQ::Account::generatePasswordSalt()
-{
-    randombytes_buf(m_temporaryHashingSalt.data(), ThorQ::Crypto::Hashing::SaltLength);
-    return m_temporaryHashingSalt;
-}
 ThorQ::Crypto::Hashing::Parameters ThorQ::Account::passwordHashParameters() const
 {
-    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
-
+    auto dbConnection = openDatabaseConneciton(SQLite::Connection::READONLY);
     if (dbConnection == nullptr) {
         fmt::print(stderr, "Failed to open database\n");
         return {};
     }
-
-    dbConnection->setBusyTimeout(5000);
 
     SQLite::Query selectParamsQuery = dbConnection->makeQuery(
                 "SELECT "
@@ -480,8 +495,8 @@ ThorQ::Crypto::Hashing::Parameters ThorQ::Account::passwordHashParameters() cons
                     "password_id = ?"sv);
 
     if (!selectParamsQuery.bindInt64(1, m_passwordId) ||
-        !selectParamsQuery.step() ||
-         selectParamsQuery.columnCount() == 0
+        !selectParamsQuery.step()                     ||
+         selectParamsQuery.columnCount() < 1
          ) {
         fmt::print(stderr, "SQL get password salt failed: {}\n", dbConnection->lastError());
         return {};
@@ -491,42 +506,30 @@ ThorQ::Crypto::Hashing::Parameters ThorQ::Account::passwordHashParameters() cons
     parameters.ops_limit = selectParamsQuery.column(0).getInt64();
     parameters.mem_limit = selectParamsQuery.column(1).getInt64();
     parameters.algorithm = selectParamsQuery.column(2).getInt32();
+
     return parameters;
 }
 
 bool ThorQ::Account::checkPasswordHash(ThorQ::Crypto::Hashing::HashRef hash)
 {
-    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READONLY);
-
+    auto dbConnection = openDatabaseConneciton(SQLite::Connection::READONLY);
     if (dbConnection == nullptr) {
         fmt::print(stderr, "Failed to open database\n");
         return false;
     }
 
-    dbConnection->setBusyTimeout(5000);
-
     auto checkPasswordQuery = dbConnection->makeQuery(
                 "SELECT "
-                    "COUNT(*) "
+                    "password_id "
                 "FROM "
                     "passwords "
-                "WHERE"
-                    "password_id IN"
-                    "("
-                        "SELECT "
-                            "password_id "
-                        "FROM "
-                            "accounts "
-                        "WHERE "
-                            "account_id = ?"
-                    ")"
-                    "AND hash = ? "
-                "LIMIT 1"sv);
+                "WHERE "
+                    "password_id = ? AND hash = ?"sv);
 
-    if (!checkPasswordQuery.isValid() ||
-        !checkPasswordQuery.bindInt64(1, m_dbId)               ||
-        !checkPasswordQuery.bindBlob(2, hash)                  ||
-         checkPasswordQuery.columnCount() == 0
+    if (!checkPasswordQuery.bindInt64(1, m_passwordId) ||
+        !checkPasswordQuery.bindBlob(2, hash)          ||
+        !checkPasswordQuery.step()                     ||
+         checkPasswordQuery.columnCount() != 1
          ) {
         fmt::print(stderr, "Failed to verify password match\n");
         return false;
@@ -540,7 +543,7 @@ bool ThorQ::Account::tryUpdatePassword(ThorQ::Crypto::Hashing::HashRef oldPwHash
     ThorQ::Crypto::Hashing::Salt newSalt;
     {
         std::shared_lock l(l_basics);
-        newSalt = m_temporaryHashingSalt;
+        newSalt = m_newPasswordSalt;
     }
 
     if (memcmp(newSalt.data(), expectedNewSalt.data(), ThorQ::Crypto::Hashing::SaltLength) != 0) {
@@ -548,17 +551,13 @@ bool ThorQ::Account::tryUpdatePassword(ThorQ::Crypto::Hashing::HashRef oldPwHash
         return false;
     }
 
-    auto dbConnection = SQLite::Connection::OpenConnection("database.db", SQLite::Connection::READWRITE);
-
+    auto dbConnection = openDatabaseConneciton(SQLite::Connection::READWRITE);
     if (dbConnection == nullptr) {
         fmt::print(stderr, "Failed to open database\n");
         return false;
     }
 
-    dbConnection->setBusyTimeout(5000);
-
     auto transaction = dbConnection->beginDeferredTransaction();
-
     if (!transaction.isOpen())
     {
         fmt::print(stderr, "SQL Failed to start transaction: {}\n", dbConnection->lastError());
@@ -566,7 +565,7 @@ bool ThorQ::Account::tryUpdatePassword(ThorQ::Crypto::Hashing::HashRef oldPwHash
     }
 
     auto updatePasswordQuery = dbConnection->makeQuery(
-                "UPDATE OR IGNORE "
+                "UPDATE "
                     "passwords "
                 "SET "
                     "hash = ?,"
@@ -575,16 +574,7 @@ bool ThorQ::Account::tryUpdatePassword(ThorQ::Crypto::Hashing::HashRef oldPwHash
                     "mem_limit = ?,"
                     "algorithm = ? "
                 "WHERE"
-                    "password_id IN"
-                    "("
-                        "SELECT "
-                            "password_id "
-                        "FROM "
-                            "accounts "
-                        "WHERE "
-                            "account_id = ?"
-                    ")"
-                    "AND hash = ?"sv);
+                    "password_id = ? AND hash = ?"sv);
 
     if (!updatePasswordQuery.isValid())
     {
@@ -597,7 +587,7 @@ bool ThorQ::Account::tryUpdatePassword(ThorQ::Crypto::Hashing::HashRef oldPwHash
         !updatePasswordQuery.bindInt64(3, newHashingParams.ops_limit) ||
         !updatePasswordQuery.bindInt64(4, newHashingParams.mem_limit) ||
         !updatePasswordQuery.bindInt32(5, newHashingParams.algorithm) ||
-        !updatePasswordQuery.bindInt64(6, m_dbId)                     ||
+        !updatePasswordQuery.bindInt64(6, m_passwordId)               ||
         !updatePasswordQuery.bindBlob(7, oldPwHash)                   ||
         !updatePasswordQuery.step())
     {
@@ -606,7 +596,7 @@ bool ThorQ::Account::tryUpdatePassword(ThorQ::Crypto::Hashing::HashRef oldPwHash
     }
 
     if (dbConnection->changes() < 1) {
-        fmt::print("account invalid/already used\n");
+        fmt::print("password invalid, will not update!\n");
         return false;
     }
 

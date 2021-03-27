@@ -9,7 +9,7 @@
 namespace ThorQ {
 class FriendShip
 {
-	// Stored as: db_id, uuid, source, target, allow_control_without_requests
+    // Stored as: friendship_id, uuid, source, target, allow_control_without_requests
 public:
 private:
 	int m_dbId;

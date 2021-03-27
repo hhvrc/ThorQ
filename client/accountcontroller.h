@@ -24,6 +24,9 @@ public:
     AccountController(std::function<void(const std::span<std::uint8_t>&, bool)> encodeAndSend, QObject* parent = nullptr);
 
     QString email();
+signals:
+    void loggedIn();
+    void loggedOut();
 public slots:
     void ParseMessage(const void* message);
     void login(const QString& username, const QString& password);
@@ -35,13 +38,14 @@ private:
     void handleMessageHashingSalt(const void* body);
     void handleMessageHashingParameters(const void* body);
     void handleMessageLoginResponse(const void* body);
+    void handleMessageLogoutResponse(const void* body);
     void handleMessageRegistrationResponse(const void* body);
 
     void requestAccountId();
     void requestHashingSalt();
     void requestHashingParameters();
     void requestLogin(bool getAuthToken);
-    void requestLogout();
+    void requestLogout(bool logoutAll);
     void requestRegistration();
     void requestRecovery();
 

@@ -20,6 +20,7 @@ struct HashCalculated {
 }
 struct HashNew {
   hash : [ ubyte : 32 ];
+  salt : [ ubyte : 16 ];
   params : Account.HashingParameters;
 }
 
@@ -47,6 +48,14 @@ table LoginResponse {
   auth_token : Account.AuthToken;
 }
 
+table LogoutRequest {
+  logout_all : bool;
+}
+
+table LogoutResponse {
+  success : bool;
+}
+
 table RegistrationRequest {
   account_id : Uuid;
   email : string;
@@ -64,10 +73,6 @@ table Recover {
 
 table Delete {
   password_hash : Account.HashCalculated;
-}
-
-table Logout {
-  logout_all : bool;
 }
 
 table SetUsername {
@@ -102,12 +107,14 @@ union Body {
   login_request : Account.LoginRequest,
   login_response : Account.LoginResponse,
 
+  logout_request : Account.LogoutRequest,
+  logout_response : Account.LogoutResponse,
+
   registration_request : Account.RegistrationRequest,
   registration_response : Account.RegistrationResponse,
 
   recover : Account.Recover,
   delete : Account.Delete,
-  logout : Account.Logout,
 
   set_username : Account.SetUsername,
   set_password : Account.SetPassword,

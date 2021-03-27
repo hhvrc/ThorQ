@@ -43,7 +43,7 @@ bool InitializeDB(const char* path) noexcept
                 ")"sv)
 
         && con->execute("CREATE TABLE IF NOT EXISTS passwords("
-                "password_id INTEGER PRIMARY KEY,"
+                "password_id INTEGER PRIMARY KEY AUTOINCREMENT,"
                 "salt BLOB NOT NULL,"
                 "hash BLOB,"
                 "ops_limit INTEGER NOT NULL DEFAULT 4,"

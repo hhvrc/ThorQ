@@ -26,8 +26,8 @@ public:
     static std::shared_ptr<ThorQ::Account> GetAccount(const std::string& username);
     static std::shared_ptr<ThorQ::Account> NewAccount(const std::string& username);
 public:
-    ThorQ::Uuid id() const { return m_id; }
-    std::int64_t dbId() const { return m_dbId; }
+    inline ThorQ::Uuid uuid() const noexcept { return m_uuid; }
+    inline std::int64_t dbRowId() const noexcept { return m_dbRowId; }
 
     std::string username() const;
     bool setUsername(const std::string& username);
@@ -36,10 +36,10 @@ public:
     bool setImageId(const ThorQ::Uuid& username);
 
     bool isClaimed() const;
-    bool tryClaim(const std::string& emailAddress, const ThorQ::Crypto::Hashing::Hash& passwordHash, const ThorQ::Crypto::Hashing::Parameters& passwordHashingParameters);
+    bool tryClaim(const std::string& emailAddress, const ThorQ::Crypto::Hashing::Hash& passwordHash, const ThorQ::Crypto::Hashing::Salt& passwordSalt, const ThorQ::Crypto::Hashing::Parameters& passwordHashingParameters);
 
-    ThorQ::Crypto::Hashing::Salt passwordSalt() const;
-    ThorQ::Crypto::Hashing::Salt generatePasswordSalt();
+    ThorQ::Crypto::Hashing::Salt newPasswordSalt();
+    ThorQ::Crypto::Hashing::Salt currentPasswordSalt() const;
     ThorQ::Crypto::Hashing::Parameters passwordHashParameters() const;
 
     bool checkPasswordHash(ThorQ::Crypto::Hashing::HashRef hash);
@@ -74,15 +74,15 @@ public:
 
     void ban();
 private:
-    const ThorQ::Uuid m_id;
-    const std::int64_t m_dbId;
+    const ThorQ::Uuid m_uuid;
+    const std::int64_t m_dbRowId;
     const std::int64_t m_passwordId;
 
     std::shared_mutex l_basics;
     std::string m_username;
     ThorQ::Uuid m_imageId;
     std::string m_emailAddress;
-    ThorQ::Crypto::Hashing::Salt m_temporaryHashingSalt;
+    ThorQ::Crypto::Hashing::Salt m_newPasswordSalt;
 
     std::uint16_t m_activityState; // enum: thorq_user_activity_flag
 

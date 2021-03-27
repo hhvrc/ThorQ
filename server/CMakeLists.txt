@@ -30,6 +30,7 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/apiserver.h
     ${CMAKE_CURRENT_SOURCE_DIR}/apiserver_connection.h
     #${CMAKE_CURRENT_SOURCE_DIR}/imagecache.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/database.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/config.h
     ${CMAKE_CURRENT_SOURCE_DIR}/singletons.h
