@@ -42,7 +42,7 @@ private:
     void handleMessageRegistrationResponse(const void* body);
 
     void requestAccountId();
-    void requestHashingSalt();
+    void requestHashingSalt(bool newPassword);
     void requestHashingParameters();
     void requestLogin(bool getAuthToken);
     void requestLogout(bool logoutAll);

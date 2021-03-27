@@ -30,7 +30,11 @@ table GetAccountId {
 
 table GetHashingSalt {
   account_id : Uuid;
-  generate_new : bool;
+  new_password : bool;
+}
+
+table GetNewHashingSalt {
+  account_id : Uuid;
 }
 
 table GetHashingParameters {

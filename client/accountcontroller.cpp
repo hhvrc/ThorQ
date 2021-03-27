@@ -113,11 +113,12 @@ void ThorQ::AccountController::handleMessageAccountId(const void* body)
 
     switch (m_lastRequest) {
     case LastRequest::Login:
-        requestHashingSalt();
+        requestHashingSalt(false);
         requestHashingParameters();
         return;
     case LastRequest::Register:
-        requestRegistration();
+        requestHashingSalt(true);
+        requestHashingParameters();
         return;
     default:
         break;
@@ -144,7 +145,9 @@ void ThorQ::AccountController::handleMessageHashingSalt(const void* body)
         }
         return;
     case LastRequest::Register:
-        requestRegistration();
+        if (m_gotHashingParameters) {
+            requestRegistration();
+        }
         return;
     default:
         break;
@@ -170,6 +173,11 @@ void ThorQ::AccountController::handleMessageHashingParameters(const void* body)
     case LastRequest::Login:
         if (m_gotHashingSalt) {
             requestLogin(true);
+        }
+        return;
+    case LastRequest::Register:
+        if (m_gotHashingSalt) {
+            requestRegistration();
         }
         return;
     default:
@@ -236,14 +244,14 @@ void ThorQ::AccountController::requestAccountId()
     fbsBuilder.Finish(ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &messages));
     f_encodeAndSend(fbsBuilder.GetBufferSpan(), true);
 }
-void ThorQ::AccountController::requestHashingSalt()
+void ThorQ::AccountController::requestHashingSalt(bool newPassword)
 {
     fmt::print("[ACCOUNT] requestHashingSalt()\n");
 
     ThorQ::Serialization::Uuid fbsAccountID(m_activeUser->id().toBytes());
 
     flatbuffers::FlatBufferBuilder fbsBuilder;
-    auto fbsGetSalt = ThorQ::Serialization::Account::CreateGetHashingSalt(fbsBuilder, &fbsAccountID).Union();
+    auto fbsGetSalt = ThorQ::Serialization::Account::CreateGetHashingSalt(fbsBuilder, &fbsAccountID, newPassword).Union();
     auto fbsAccount = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_get_hashing_salt, fbsGetSalt).Union();
 
     std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;

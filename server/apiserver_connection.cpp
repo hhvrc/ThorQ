@@ -357,7 +357,12 @@ void ThorQ::ApiServerConnection::handleMessageAccount_GetHashingSalt(ThorQ::ApiS
         randombytes_buf(salt.data(), ThorQ::Crypto::Hashing::SaltLength);
     }
     else {
-        salt = account->currentPasswordSalt();
+        if (fbsGetHashingParameters->new_password()) {
+            salt = account->newPasswordSalt();
+        }
+        else {
+            salt = account->currentPasswordSalt();
+        }
     }
 
     auto fbsRespSalt      = context.fbsBuilder.CreateStruct(ThorQ::Serialization::Account::HashingSalt(salt)).Union();
