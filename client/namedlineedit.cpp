@@ -58,9 +58,14 @@ void NamedLineEdit::setError(QString error)
     adjustSize();
 }
 
-void NamedLineEdit::clearError()
+void NamedLineEdit::showError()
 {
-    m_labelError->setText("");
+    m_labelError->show();
+    adjustSize();
+}
+
+void NamedLineEdit::hideError()
+{
     m_labelError->hide();
     adjustSize();
 }

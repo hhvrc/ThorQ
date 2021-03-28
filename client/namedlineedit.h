@@ -25,7 +25,8 @@ public slots:
     void clearText();
 
     void setError(QString error);
-    void clearError();
+    void showError();
+    void hideError();
 
     void setEchoMode(QLineEdit::EchoMode);
 private:

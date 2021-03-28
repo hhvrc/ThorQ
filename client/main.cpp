@@ -96,13 +96,16 @@ int main(int argc, char** argv)
                     QApplication::primaryScreen()->availableGeometry()
                 )
             );
+
     QVBoxLayout* mainLayout = new QVBoxLayout(&mainWindow);
+
     auto accountController = apiClient->accountController();
 
     ThorQ::AccountLoginWidget* loginWidget = new ThorQ::AccountLoginWidget(accountController, &mainWindow);
     ThorQ::AccountRegisterWidget* registerWidget = new ThorQ::AccountRegisterWidget(accountController, &mainWindow);
     ThorQ::AccountRecoverWidget* recoverWidget = new ThorQ::AccountRecoverWidget(accountController, &mainWindow);
-    QHBoxLayout* buttonsLayout = new QHBoxLayout(&mainWindow);
+    QHBoxLayout* buttonsLayout = new QHBoxLayout();
+
     QPushButton* registerButton = new QPushButton(&mainWindow);
     QPushButton* recoverButton = new QPushButton(&mainWindow);
 
@@ -144,10 +147,13 @@ int main(int argc, char** argv)
     QObject::connect(recoverButton, &QPushButton::pressed, registerButton, &QWidget::hide);
     QObject::connect(recoverButton, &QPushButton::pressed, recoverWidget, &QWidget::show);
 
-    QObject::connect(accountController, &ThorQ::AccountController::loggedIn, &mainWindow, &QWidget::hide);
-    QObject::connect(accountController, &ThorQ::AccountController::loggedOut, &mainWindow, &QWidget::show);
 
     ThorQ::MainWidget* mainWidget = new ThorQ::MainWidget(&mainWindow);
+
+    QObject::connect(accountController, &ThorQ::AccountController::loggedIn, &mainWindow, &QWidget::hide);
+    QObject::connect(accountController, &ThorQ::AccountController::loggedIn, mainWidget, &QWidget::show);
+    QObject::connect(accountController, &ThorQ::AccountController::loggedOut, &mainWindow, &QWidget::show);
+    QObject::connect(accountController, &ThorQ::AccountController::loggedOut, mainWidget, &QWidget::hide);
 
     QObject::connect(apiClient, &ThorQ::ApiClient::connectionStatusChanged, loginWidget, &ThorQ::AccountLoginWidget::setConnectionStatus);
 
