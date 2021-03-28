@@ -69,6 +69,11 @@ endforeach()
 add_subdirectory(concurrentqueue)
 # -------------------------
 
+# -- bad email providers --
+add_subdirectory(bad-emails)
+set (generated_bad_email_providers ${CMAKE_CURRENT_BINARY_DIR}/bad-emails/generated_providers.h)
+# -------------------------
+
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/uuid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
@@ -116,7 +121,9 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/enums.h
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_global.h
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.h
+
     ${${project}_SCHEMAS}
+    ${generated_bad_email_providers}
 )
 
 message("${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/${BUILD_OSL}-x${VPTR_BITS}")

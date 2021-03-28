@@ -1,6 +1,15 @@
 #include "verifyemailaddress.h"
 
+#include "bad-emails/generated_providers.h"
+
 #include "constants.h"
+
+#include <cctype>
+#include <string>
+#include <atomic>
+#include <istream>
+#include <fstream>
+#include <unordered_set>
 
 constexpr bool IsRecepientChar(char c)
 {
@@ -33,55 +42,93 @@ constexpr bool IsDomainChar(char c)
            (c >= '0' && c <= '9');
 }
 
-inline bool validateRecepientString(char*& ptr)
+inline bool validateRecepientString(char*& it)
 {
     do {
-        if (!IsRecepientChar(*ptr++)) {
+        if (!IsRecepientChar(*it++)) {
             return false;
         }
 
-        while (IsRecepientChar(*ptr)) { ptr++; }
+        while (IsRecepientChar(*it)) { it++; }
     }
-    while (*ptr++ == '.');
+    while (*it++ == '.');
 
-    return *(ptr - 1) == '@';
+    return *(it - 1) == '@';
 }
 
-inline bool validateDomainString(char*& ptr)
+inline bool validateDomainString(char*& it)
 {
     char c;
 
     do {
-        if (!IsDomainChar(*ptr++)) {
+        if (!IsDomainChar(*it++)) {
             return false;
         }
 
-        while (IsDomainChar(*ptr)) { ptr++; }
+        while (IsDomainChar(*it)) { it++; }
 
-        c = *ptr++;
+        c = *it++;
     }
     while (c == '-' || c == '.');
 
-    ptr--;
+    it--;
 
     return c == 0;
 }
 
-bool ThorQ::Utilities::IsEmailValid(const char* email, std::size_t emailLen)
+bool IsThrowawayProvider(const std::string& provider)
 {
-    char* it = (char*)email;
+    return bad_providers.find(provider) != bad_providers.end();
+}
 
+bool ThorQ::Utilities::IsEmailValid(std::string email)
+{
+    char* begin = email.data();
+    char* end = begin + email.length();
+
+    char* it = begin;
+
+    // Check email size
+    if (email.length() > THORQ_EMAIL_LEN_MAX || email.length() < THORQ_EMAIL_LEN_MIN) {
+        return false;
+    }
+
+    // Verify that email recepient section is valid
     if (!validateRecepientString(it)) {
         return false;
     }
 
+    // The domain section is case insensitive, so convert it to lowercase
+    std::transform(it, end, it, &tolower);
+
+    // Check against known throwaway email-provider domains
+    if (IsThrowawayProvider(std::string(it, end))) {
+        return false;
+    }
+
+    // Validate domain validity
     if (!validateDomainString(it)) {
         return false;
     }
 
-    std::size_t validatedLength = it - email;
+    // Check that the entire email has been checked
+    std::size_t validatedLength = it - begin;
+    return validatedLength == email.length();
+}
 
-    return validatedLength == emailLen &&
-           validatedLength <= THORQ_EMAIL_LEN_MAX &&
-           validatedLength >= THORQ_EMAIL_LEN_MIN;
+bool ThorQ::Utilities::NormalizeEmail(std::string& email)
+{
+    char* begin = email.data();
+    char* end = begin + email.length();
+
+    char* it = begin;
+
+    // Skip email receptient section
+    if (!validateRecepientString(it)) {
+        return false;
+    }
+
+    std::transform(it, end, it, &tolower);
+
+    return true;
 }

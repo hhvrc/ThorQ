@@ -22,3 +22,6 @@
 [submodule "libs/sodium"]
 	path = libs/sodium
 	url = https://github.com/hhvrc/libsodium-bin.git
+[submodule "libs/bad-emails"]
+	path = libs/bad-emails
+	url = https://github.com/hhvrc/bad-emails.git

@@ -39,6 +39,10 @@ set(CMAKE_AUTORCC ON)
 message("Found Qt ${Qt5Core_VERSION}")
 # -----------------------------
 
+# -- bad email providers --
+file(COPY ${BAD_EMAIL_PROVIDERS_FILE} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bad-providers.txt)
+# -------------------------
+
 # --- Build ---
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/user.cpp

@@ -16,6 +16,11 @@ set(CXXOPTS_BUILD_TESTS    OFF CACHE BOOL "Set to ON to build tests"    FORCE)
 set(CXXOPTS_ENABLE_INSTALL OFF CACHE BOOL "Generate the install target" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cxxopts)
 
+# -- bad email providers --
+message("bad email providers: ${BAD_EMAIL_PROVIDERS_FILE}")
+file(COPY ${BAD_EMAIL_PROVIDERS_FILE} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/bad-providers.txt)
+# -------------------------
+
 set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/apiserver.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/apiserver_connection.cpp
