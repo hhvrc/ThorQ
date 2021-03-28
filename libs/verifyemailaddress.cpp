@@ -81,7 +81,7 @@ bool IsThrowawayProvider(const std::string& provider)
     return bad_providers.find(provider) != bad_providers.end();
 }
 
-bool ThorQ::Utilities::IsEmailValid(std::string email)
+bool ThorQ::Utils::IsEmailValid(std::string email)
 {
     char* begin = email.data();
     char* end = begin + email.length();
@@ -116,7 +116,7 @@ bool ThorQ::Utilities::IsEmailValid(std::string email)
     return validatedLength == email.length();
 }
 
-bool ThorQ::Utilities::NormalizeEmail(std::string& email)
+bool ThorQ::Utils::NormalizeEmail(std::string& email)
 {
     char* begin = email.data();
     char* end = begin + email.length();

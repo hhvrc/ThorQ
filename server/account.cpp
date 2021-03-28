@@ -363,7 +363,7 @@ bool ThorQ::Account::tryClaim(const std::string& emailAddress, const ThorQ::Cryp
         return false;
     }
 
-    if (!ThorQ::Utilities::IsEmailValid(emailAddress)) {
+    if (!ThorQ::Utils::IsEmailValid(emailAddress)) {
         fmt::print(stderr, "Invalid/Throwaway email provided!\n");
         return false;
     }

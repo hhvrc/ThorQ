@@ -3,10 +3,9 @@
 
 #include <string>
 
-namespace ThorQ {
-namespace Utilities {
-bool IsEmailValid(std::string& email);
-}
+namespace ThorQ::Utils {
+bool IsEmailValid(std::string email);
+bool NormalizeEmail(std::string& email);
 }
 
 #endif // VERIFYEMAILADDRESS_H
