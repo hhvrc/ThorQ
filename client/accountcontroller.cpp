@@ -278,6 +278,9 @@ void ThorQ::AccountController::requestLogin(bool getAuthToken)
 {
     fmt::print("[ACCOUNT] requestLogin()\n");
 
+    m_gotHashingSalt = false;
+    m_gotHashingParameters = false;
+
     ThorQ::Serialization::Uuid fbsAccountID(m_activeUser->id().toBytes());
 
     ThorQ::Serialization::Account::HashCalculated hash;
@@ -299,6 +302,9 @@ void ThorQ::AccountController::requestLogout(bool logoutAll)
 {
     fmt::print("[ACCOUNT] requestLogout()\n");
 
+    m_gotHashingSalt = false;
+    m_gotHashingParameters = false;
+
     flatbuffers::FlatBufferBuilder fbsBuilder;
     auto fbsLogout  = ThorQ::Serialization::Account::CreateLogoutRequest(fbsBuilder, logoutAll).Union();
     auto fbsAccount = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_logout_request, fbsLogout).Union();
@@ -312,6 +318,9 @@ void ThorQ::AccountController::requestRegistration()
 {
     fmt::print("[ACCOUNT] requestRegistration()\n");
 
+    m_gotHashingSalt = false;
+    m_gotHashingParameters = false;
+
     ThorQ::Serialization::Uuid fbsAccountID(m_activeUser->id().toBytes());
 
     // TODO: make this adjustable from UI
@@ -323,8 +332,7 @@ void ThorQ::AccountController::requestRegistration()
     }
     m_requestPassword.clear();
 
-    ThorQ::Serialization::Account::HashingParameters fbsParams(m_hashingParameters.ops_limit, m_hashingParameters.mem_limit, m_hashingParameters.algorithm);
-    ThorQ::Serialization::Account::HashNew fbsHash(calculatedHash, m_hashingSalt, fbsParams);
+    ThorQ::Serialization::Account::HashNew fbsHash(calculatedHash, m_hashingSalt, m_hashingParameters.ops_limit, m_hashingParameters.mem_limit, m_hashingParameters.algorithm);
 
     flatbuffers::FlatBufferBuilder fbsBuilder;
     auto fbsEmail    = fbsBuilder.CreateString(m_requestEmail);

@@ -21,7 +21,9 @@ struct HashCalculated {
 struct HashNew {
   hash : [ ubyte : 32 ];
   salt : [ ubyte : 16 ];
-  params : Account.HashingParameters;
+  ops_limit : ulong;
+  mem_limit : ulong;
+  algorithm : int;
 }
 
 table GetAccountId {

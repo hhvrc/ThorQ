@@ -485,7 +485,9 @@ void ThorQ::ApiServerConnection::handleMessageAccount_RegistrationRequest(Handle
     auto& fbsEmail         = *fbsRegistrationReq->email();
     auto& fbsPasswordHash  = *fbsRegistrationReq->password_hash()->hash();
     auto& fbsPasswordSalt  = *fbsRegistrationReq->password_hash()->salt();
-    auto& fbsHashingParams =  fbsRegistrationReq->password_hash()->params();
+    auto  fbsHashingOpsLim =  fbsRegistrationReq->password_hash()->ops_limit();
+    auto  fbsHashingMemLim =  fbsRegistrationReq->password_hash()->mem_limit();
+    auto  fbsHashingAlgo   =  fbsRegistrationReq->password_hash()->algorithm();
 
     ThorQ::Uuid accountID(std::span<const std::uint8_t, 16>(fbsAccountId.data(), fbsAccountId.size()));
     std::string email(fbsEmail.data(), fbsEmail.size());
@@ -497,9 +499,9 @@ void ThorQ::ApiServerConnection::handleMessageAccount_RegistrationRequest(Handle
     memcpy(passwordSalt.data(), fbsPasswordSalt.data(), ThorQ::Crypto::Hashing::SaltLength);
 
     ThorQ::Crypto::Hashing::Parameters hashingParams;
-    hashingParams.mem_limit = fbsHashingParams.mem_limit();
-    hashingParams.ops_limit = fbsHashingParams.ops_limit();
-    hashingParams.algorithm = fbsHashingParams.algorithm();
+    hashingParams.ops_limit = fbsHashingOpsLim;
+    hashingParams.mem_limit = fbsHashingMemLim;
+    hashingParams.algorithm = fbsHashingAlgo;
 
     fmt::print("[ACCOUNT] Client requested account: {}\n", accountID.toString());
     auto account = ThorQ::Account::GetAccount(accountID);
