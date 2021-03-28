@@ -63,6 +63,7 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/announcementcontroller.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/stylesheets.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/errorlabel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/namedlineedit.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/collar/serial.cpp
@@ -97,6 +98,7 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/announcementcontroller.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/stylesheets.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/errorlabel.h
     ${CMAKE_CURRENT_SOURCE_DIR}/namedlineedit.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/collar/serial.h

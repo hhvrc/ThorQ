@@ -6,6 +6,7 @@
 #include <QLabel>
 #include <QWidget>
 
+class ErrorLabel;
 class NamedLineEdit : public QWidget
 {
     Q_OBJECT
@@ -19,11 +20,18 @@ signals:
     void editingFinished();
 public slots:
     void setName(QString name);
+
     void setText(QString text);
+    void clearText();
+
+    void setError(QString error);
+    void clearError();
+
     void setEchoMode(QLineEdit::EchoMode);
 private:
-    QLabel* m_label;
+    QLabel* m_labelTitle;
     QLineEdit* m_lineEdit;
+    ErrorLabel* m_labelError;
     QVBoxLayout* m_layout;
 };
 

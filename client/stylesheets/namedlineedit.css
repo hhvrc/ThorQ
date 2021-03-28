@@ -35,3 +35,15 @@ QLineEdit {
     font-size: 16px;
     font-weight: normal;
 }
+
+ErrorLabel {
+    height: 10px;
+    margin-top: 4px;
+
+    color: rgba(255, 0, 0, 1);
+
+    border-width: 0px;
+
+    font-size: 10px;
+    font-weight: 200;
+}
