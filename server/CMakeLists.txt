@@ -9,12 +9,16 @@ project(
 
 message("Configuring ${project}...")
 
+# --------- lsql ----------
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lsql)
+# -------------------------
 
+# -------- cxxopts --------
 set(CXXOPTS_BUILD_EXAMPLES OFF CACHE BOOL "Set to ON to build examples" FORCE)
 set(CXXOPTS_BUILD_TESTS    OFF CACHE BOOL "Set to ON to build tests"    FORCE)
 set(CXXOPTS_ENABLE_INSTALL OFF CACHE BOOL "Generate the install target" FORCE)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/cxxopts)
+# -------------------------
 
 # -- bad email providers --
 message("bad email providers: ${BAD_EMAIL_PROVIDERS_FILE}")

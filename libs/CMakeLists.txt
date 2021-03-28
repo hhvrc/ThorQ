@@ -126,8 +126,6 @@ set(${project}_HEADERS
     ${generated_bad_email_providers}
 )
 
-message("${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/${BUILD_OSL}-x${VPTR_BITS}")
-
 set(GLOB_LINK_DIRS
     ${SODIUM_LINK_DIR}
     CACHE PATH "List of library directories for link libraries"
