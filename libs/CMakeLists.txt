@@ -86,6 +86,8 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/detect_vmware.cpp
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/verifyemailaddress.cpp
+
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid_${BUILD_OSL}.cpp
 )
 set(${project}_HEADERS
@@ -105,6 +107,8 @@ set(${project}_HEADERS
 
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid.h
     ${CMAKE_CURRENT_SOURCE_DIR}/detect_vmware.h
+
+    ${CMAKE_CURRENT_SOURCE_DIR}/verifyemailaddress.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/asio_common.h
     ${CMAKE_CURRENT_SOURCE_DIR}/schemas_common.h
