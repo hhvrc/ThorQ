@@ -32,6 +32,7 @@ union Body {
 
 table Message {
   body : Serialization.Body;
+  request_id : ulong;
 }
 
 table MessageBuffer {

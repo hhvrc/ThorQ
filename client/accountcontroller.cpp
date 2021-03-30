@@ -7,7 +7,7 @@
 #include <QUuid>
 #include <QDebug>
 
-ThorQ::AccountController::AccountController(std::function<void(const std::span<std::uint8_t>&, bool)> onMessageGenerated, QObject *parent)
+ThorQ::AccountController::AccountController(std::function<bool(HandlerContext&)> sendContextData, QObject *parent)
     : QObject(parent)
     , m_activeUser(nullptr)
     , m_lastRequest(LastRequest::None)
@@ -18,35 +18,39 @@ ThorQ::AccountController::AccountController(std::function<void(const std::span<s
     , m_hashingSalt()
     , m_gotHashingParameters(false)
     , m_hashingParameters()
-    , f_encodeAndSend(onMessageGenerated)
+    , f_sendContextData(sendContextData)
 {
 }
 
-void ThorQ::AccountController::ParseMessage(const void* message)
+void ThorQ::AccountController::ParseMessage(HandlerContext& context)
 {
-    auto fbsAccount = reinterpret_cast<const ThorQ::Serialization::Account::Message*>(message);
+    auto fbsAccount = reinterpret_cast<const ThorQ::Serialization::Account::Message*>(context.body);
 
     fmt::print("[MSG] Account\n");
+    context.body = fbsAccount->body();
+    if (context.body == nullptr) {
+        return;
+    }
 
     switch (fbsAccount->body_type())
     {
     case ThorQ::Serialization::Account::Body_account_id:
-        handleMessageAccountId(fbsAccount->body());
+        handleMessageAccountId(context);
         break;
     case ThorQ::Serialization::Account::Body_hashing_salt:
-        handleMessageHashingSalt(fbsAccount->body());
+        handleMessageHashingSalt(context);
         break;
     case ThorQ::Serialization::Account::Body_hashing_parameters:
-        handleMessageHashingParameters(fbsAccount->body());
+        handleMessageHashingParameters(context);
         break;
     case ThorQ::Serialization::Account::Body_login_response:
-        handleMessageLoginResponse(fbsAccount->body());
+        handleMessageLoginResponse(context);
         break;
     case ThorQ::Serialization::Account::Body_logout_response:
-        handleMessageLogoutResponse(fbsAccount->body());
+        handleMessageLogoutResponse(context);
         break;
     case ThorQ::Serialization::Account::Body_registration_response:
-        handleMessageRegistrationResponse(fbsAccount->body());
+        handleMessageRegistrationResponse(context);
         break;
     default:
         break;
@@ -61,7 +65,9 @@ void ThorQ::AccountController::login(const QString& username, const QString& pas
 
     m_lastRequest = LastRequest::Login;
 
-    requestAccountId();
+    HandlerContext context;
+    requestAccountId(context);
+    f_sendContextData(context);
 }
 
 void ThorQ::AccountController::logout()
@@ -72,7 +78,9 @@ void ThorQ::AccountController::logout()
 
     m_lastRequest = LastRequest::Logout;
 
-    requestLogout(false);
+    HandlerContext context;
+    requestLogout(false, context);
+    f_sendContextData(context);
 
     qDebug() << "Logout";
 }
@@ -85,7 +93,9 @@ void ThorQ::AccountController::registerAccount(const QString& username, const QS
 
     m_lastRequest = LastRequest::Register;
 
-    requestAccountId();
+    HandlerContext context;
+    requestAccountId(context);
+    f_sendContextData(context);
 }
 
 void ThorQ::AccountController::recoverAccount(const QString& email)
@@ -96,12 +106,14 @@ void ThorQ::AccountController::recoverAccount(const QString& email)
 
     m_lastRequest = LastRequest::Recover;
 
-    requestRecovery();
+    HandlerContext context;
+    requestRecovery(context);
+    f_sendContextData(context);
 }
 
-void ThorQ::AccountController::handleMessageAccountId(const void* body)
+void ThorQ::AccountController::handleMessageAccountId(HandlerContext& context)
 {
-    auto fbsAccountId = reinterpret_cast<const ThorQ::Serialization::Uuid*>(body)->data();
+    auto fbsAccountId = reinterpret_cast<const ThorQ::Serialization::Uuid*>(context.body)->data();
     std::span<const std::uint8_t, 16> uuidBytes(
                 fbsAccountId->data(),
                 fbsAccountId->size()
@@ -113,12 +125,12 @@ void ThorQ::AccountController::handleMessageAccountId(const void* body)
 
     switch (m_lastRequest) {
     case LastRequest::Login:
-        requestHashingSalt(false);
-        requestHashingParameters();
+        requestHashingSalt(false, context);
+        requestHashingParameters(context);
         return;
     case LastRequest::Register:
-        requestHashingSalt(true);
-        requestHashingParameters();
+        requestHashingSalt(true, context);
+        requestHashingParameters(context);
         return;
     default:
         break;
@@ -129,9 +141,9 @@ void ThorQ::AccountController::handleMessageAccountId(const void* body)
     m_requestPassword.clear();
 }
 
-void ThorQ::AccountController::handleMessageHashingSalt(const void* body)
+void ThorQ::AccountController::handleMessageHashingSalt(HandlerContext& context)
 {
-    auto fbsHashingSalt = reinterpret_cast<const ThorQ::Serialization::Account::HashingSalt*>(body)->salt();
+    auto fbsHashingSalt = reinterpret_cast<const ThorQ::Serialization::Account::HashingSalt*>(context.body)->salt();
 
     memcpy(m_hashingSalt.data(), fbsHashingSalt->data(), ThorQ::Crypto::Hashing::SaltLength);
     m_gotHashingSalt = true;
@@ -141,12 +153,12 @@ void ThorQ::AccountController::handleMessageHashingSalt(const void* body)
     switch (m_lastRequest) {
     case LastRequest::Login:
         if (m_gotHashingParameters) {
-            requestLogin(true);
+            requestLogin(true, context);
         }
         return;
     case LastRequest::Register:
         if (m_gotHashingParameters) {
-            requestRegistration();
+            requestRegistration(context);
         }
         return;
     default:
@@ -158,13 +170,13 @@ void ThorQ::AccountController::handleMessageHashingSalt(const void* body)
     m_requestPassword.clear();
 }
 
-void ThorQ::AccountController::handleMessageHashingParameters(const void* body)
+void ThorQ::AccountController::handleMessageHashingParameters(HandlerContext& context)
 {
-    auto fbsHashingParameters = *reinterpret_cast<const ThorQ::Serialization::Account::HashingParameters*>(body);
+    auto fbsHashingParameters = reinterpret_cast<const ThorQ::Serialization::Account::HashingParameters*>(context.body);
 
-    m_hashingParameters.ops_limit = fbsHashingParameters.ops_limit();
-    m_hashingParameters.mem_limit = fbsHashingParameters.mem_limit();
-    m_hashingParameters.algorithm = fbsHashingParameters.algorithm();
+    m_hashingParameters.ops_limit = fbsHashingParameters->ops_limit();
+    m_hashingParameters.mem_limit = fbsHashingParameters->mem_limit();
+    m_hashingParameters.algorithm = fbsHashingParameters->algorithm();
     m_gotHashingParameters = true;
 
     fmt::print("[ACCOUNT] Got HashingParameters\n");
@@ -172,12 +184,12 @@ void ThorQ::AccountController::handleMessageHashingParameters(const void* body)
     switch (m_lastRequest) {
     case LastRequest::Login:
         if (m_gotHashingSalt) {
-            requestLogin(true);
+            requestLogin(true, context);
         }
         return;
     case LastRequest::Register:
         if (m_gotHashingSalt) {
-            requestRegistration();
+            requestRegistration(context);
         }
         return;
     default:
@@ -189,9 +201,9 @@ void ThorQ::AccountController::handleMessageHashingParameters(const void* body)
     m_requestPassword.clear();
 }
 
-void ThorQ::AccountController::handleMessageLoginResponse(const void* body)
+void ThorQ::AccountController::handleMessageLoginResponse(HandlerContext& context)
 {
-    auto fbsLoginResponse = reinterpret_cast<const ThorQ::Serialization::Account::LoginResponse*>(body);
+    auto fbsLoginResponse = reinterpret_cast<const ThorQ::Serialization::Account::LoginResponse*>(context.body);
 
     if (fbsLoginResponse->success()) {
         fmt::print("[ACCOUNT] Logged in!\n");
@@ -205,9 +217,9 @@ void ThorQ::AccountController::handleMessageLoginResponse(const void* body)
     }
 }
 
-void ThorQ::AccountController::handleMessageLogoutResponse(const void* body)
+void ThorQ::AccountController::handleMessageLogoutResponse(HandlerContext& context)
 {
-    auto fbsLogoutResponse = reinterpret_cast<const ThorQ::Serialization::Account::LogoutResponse*>(body);
+    auto fbsLogoutResponse = reinterpret_cast<const ThorQ::Serialization::Account::LogoutResponse*>(context.body);
 
     if (fbsLogoutResponse->success()) {
         fmt::print("[ACCOUNT] Logged out!\n");
@@ -218,9 +230,9 @@ void ThorQ::AccountController::handleMessageLogoutResponse(const void* body)
     }
 }
 
-void ThorQ::AccountController::handleMessageRegistrationResponse(const void* body)
+void ThorQ::AccountController::handleMessageRegistrationResponse(HandlerContext& context)
 {
-    auto fbsRegistrationResponse = reinterpret_cast<const ThorQ::Serialization::Account::RegistrationResponse*>(body);
+    auto fbsRegistrationResponse = reinterpret_cast<const ThorQ::Serialization::Account::RegistrationResponse*>(context.body);
 
     if (fbsRegistrationResponse->success()) {
         fmt::print("[ACCOUNT] Account created!\n");
@@ -230,51 +242,42 @@ void ThorQ::AccountController::handleMessageRegistrationResponse(const void* bod
     }
 }
 
-void ThorQ::AccountController::requestAccountId()
+void ThorQ::AccountController::requestAccountId(HandlerContext& context)
 {
     fmt::print("[ACCOUNT] requestAccountId()\n");
 
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-    auto fbsUsername = fbsBuilder.CreateString(m_requestUsername);
-    auto fbsGetID    = ThorQ::Serialization::Account::CreateGetAccountId(fbsBuilder, fbsUsername).Union();
-    auto fbsAccount  = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_get_account_id, fbsGetID).Union();
+    auto fbsUsername = context.fbsBuilder.CreateString(m_requestUsername);
+    auto fbsGetID    = ThorQ::Serialization::Account::CreateGetAccountId(context.fbsBuilder, fbsUsername).Union();
+    auto fbsAccount  = ThorQ::Serialization::Account::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Account::Body_get_account_id, fbsGetID).Union();
+    auto fbsMessage  = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount);
 
-    std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
-    messages.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount));
-    fbsBuilder.Finish(ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &messages));
-    f_encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+    context.messages.push_back(fbsMessage);
 }
-void ThorQ::AccountController::requestHashingSalt(bool newPassword)
+void ThorQ::AccountController::requestHashingSalt(bool newPassword, HandlerContext& context)
 {
     fmt::print("[ACCOUNT] requestHashingSalt()\n");
 
     ThorQ::Serialization::Uuid fbsAccountID(m_activeUser->id().toBytes());
 
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-    auto fbsGetSalt = ThorQ::Serialization::Account::CreateGetHashingSalt(fbsBuilder, &fbsAccountID, newPassword).Union();
-    auto fbsAccount = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_get_hashing_salt, fbsGetSalt).Union();
+    auto fbsGetSalt = ThorQ::Serialization::Account::CreateGetHashingSalt(context.fbsBuilder, &fbsAccountID, newPassword).Union();
+    auto fbsAccount = ThorQ::Serialization::Account::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Account::Body_get_hashing_salt, fbsGetSalt).Union();
+    auto fbsMessage = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount);
 
-    std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
-    messages.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount));
-    fbsBuilder.Finish(ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &messages));
-    f_encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+    context.messages.push_back(fbsMessage);
 }
-void ThorQ::AccountController::requestHashingParameters()
+void ThorQ::AccountController::requestHashingParameters(HandlerContext& context)
 {
     fmt::print("[ACCOUNT] requestHashingParameters()\n");
 
     ThorQ::Serialization::Uuid fbsAccountID(m_activeUser->id().toBytes());
 
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-    auto fbsGetParams = ThorQ::Serialization::Account::CreateGetHashingParameters(fbsBuilder, &fbsAccountID).Union();
-    auto fbsAccount   = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_get_hashing_parameters, fbsGetParams).Union();
+    auto fbsGetParams = ThorQ::Serialization::Account::CreateGetHashingParameters(context.fbsBuilder, &fbsAccountID).Union();
+    auto fbsAccount   = ThorQ::Serialization::Account::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Account::Body_get_hashing_parameters, fbsGetParams).Union();
+    auto fbsMessage   = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount);
 
-    std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
-    messages.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount));
-    fbsBuilder.Finish(ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &messages));
-    f_encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+    context.messages.push_back(fbsMessage);
 }
-void ThorQ::AccountController::requestLogin(bool getAuthToken)
+void ThorQ::AccountController::requestLogin(bool getAuthToken, HandlerContext& context)
 {
     fmt::print("[ACCOUNT] requestLogin()\n");
 
@@ -289,32 +292,26 @@ void ThorQ::AccountController::requestLogin(bool getAuthToken)
     }
     m_requestPassword.clear();
 
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-    auto fbsLogin   = ThorQ::Serialization::Account::CreateLoginRequest(fbsBuilder, &fbsAccountID, &hash, getAuthToken).Union();
-    auto fbsAccount = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_login_request, fbsLogin).Union();
+    auto fbsLogin   = ThorQ::Serialization::Account::CreateLoginRequest(context.fbsBuilder, &fbsAccountID, &hash, getAuthToken).Union();
+    auto fbsAccount = ThorQ::Serialization::Account::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Account::Body_login_request, fbsLogin).Union();
+    auto fbsMessage = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount);
 
-    std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
-    messages.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount));
-    fbsBuilder.Finish(ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &messages));
-    f_encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+    context.messages.push_back(fbsMessage);
 }
-void ThorQ::AccountController::requestLogout(bool logoutAll)
+void ThorQ::AccountController::requestLogout(bool logoutAll, HandlerContext& context)
 {
     fmt::print("[ACCOUNT] requestLogout()\n");
 
     m_gotHashingSalt = false;
     m_gotHashingParameters = false;
 
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-    auto fbsLogout  = ThorQ::Serialization::Account::CreateLogoutRequest(fbsBuilder, logoutAll).Union();
-    auto fbsAccount = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_logout_request, fbsLogout).Union();
+    auto fbsLogout  = ThorQ::Serialization::Account::CreateLogoutRequest(context.fbsBuilder, logoutAll).Union();
+    auto fbsAccount = ThorQ::Serialization::Account::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Account::Body_logout_request, fbsLogout).Union();
+    auto fbsMessage = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount);
 
-    std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
-    messages.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount));
-    fbsBuilder.Finish(ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &messages));
-    f_encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+    context.messages.push_back(fbsMessage);
 }
-void ThorQ::AccountController::requestRegistration()
+void ThorQ::AccountController::requestRegistration(HandlerContext& context)
 {
     fmt::print("[ACCOUNT] requestRegistration()\n");
 
@@ -334,18 +331,15 @@ void ThorQ::AccountController::requestRegistration()
 
     ThorQ::Serialization::Account::HashNew fbsHash(calculatedHash, m_hashingSalt, m_hashingParameters.ops_limit, m_hashingParameters.mem_limit, m_hashingParameters.algorithm);
 
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-    auto fbsEmail    = fbsBuilder.CreateString(m_requestEmail);
-    auto fbsRegister = ThorQ::Serialization::Account::CreateRegistrationRequest(fbsBuilder, &fbsAccountID, fbsEmail, &fbsHash).Union();
-    auto fbsAccount  = ThorQ::Serialization::Account::CreateMessage(fbsBuilder, ThorQ::Serialization::Account::Body_registration_request, fbsRegister).Union();
+    auto fbsEmail    = context.fbsBuilder.CreateString(m_requestEmail);
+    auto fbsRegister = ThorQ::Serialization::Account::CreateRegistrationRequest(context.fbsBuilder, &fbsAccountID, fbsEmail, &fbsHash).Union();
+    auto fbsAccount  = ThorQ::Serialization::Account::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Account::Body_registration_request, fbsRegister).Union();
+    auto fbsMessage  = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount);
 
-    std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
-    messages.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_account, fbsAccount));
-    fbsBuilder.Finish(ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &messages));
-    f_encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+    context.messages.push_back(fbsMessage);
 }
 
-void ThorQ::AccountController::requestRecovery()
+void ThorQ::AccountController::requestRecovery(HandlerContext& context)
 {
     fmt::print("[ACCOUNT] requestRecovery()\n");
 }

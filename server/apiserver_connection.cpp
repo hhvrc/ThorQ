@@ -42,7 +42,6 @@ ThorQ::ApiServerConnection::ApiServerConnection(ThorQ::ApiServerConnection&& oth
     , l_systemID()
     , m_systemID(std::move(other.m_systemID))
 {
-
 }
 
 ThorQ::ApiServerConnection::~ApiServerConnection()
@@ -165,7 +164,9 @@ void ThorQ::ApiServerConnection::onMessage(std::shared_ptr<std::vector<std::uint
     }
 
     // Send all the queued data to the user
-    sendContextData(context);
+    if (!context.messages.empty()) {
+        sendContextData(context);
+    }
 }
 
 void ThorQ::ApiServerConnection::onCryptoEstablished()
@@ -183,6 +184,10 @@ void ThorQ::ApiServerConnection::handleMessage(HandlerContext& context)
         disconnect();
         return;
     }
+
+    context.requestId = fbsMessage->request_id();
+
+    fmt::print("[MSG] {}\n", context.requestId);
 
     switch (fbsMessage->body_type()) {
     case ThorQ::Serialization::Body_account:
@@ -228,7 +233,7 @@ void ThorQ::ApiServerConnection::handleMessage(HandlerContext& context)
     }
 }
 
-bool ThorQ::ApiServerConnection::sendContextData(ThorQ::ApiServerConnection::HandlerContext &context)
+bool ThorQ::ApiServerConnection::sendContextData(HandlerContext &context)
 {
     auto fbsRespBuffer = ThorQ::Serialization::CreateMessageBufferDirect(context.fbsBuilder, &context.messages);
     context.fbsBuilder.Finish(fbsRespBuffer);
@@ -242,7 +247,7 @@ bool ThorQ::ApiServerConnection::sendContextData(ThorQ::ApiServerConnection::Han
     return result;
 }
 
-void ThorQ::ApiServerConnection::createErrorMessage(ThorQ::ApiServerConnection::HandlerContext& context, const char* error, std::uint64_t requestId)
+void ThorQ::ApiServerConnection::createErrorMessage(HandlerContext& context, const char* error, std::uint64_t requestId)
 {
     // Removes all other data
     context.messages.clear();
@@ -336,7 +341,7 @@ void ThorQ::ApiServerConnection::handleMessageAccount_GetAccountId(HandlerContex
     context.messages.push_back(fbsRespMessage);
 }
 
-void ThorQ::ApiServerConnection::handleMessageAccount_GetHashingSalt(ThorQ::ApiServerConnection::HandlerContext& context)
+void ThorQ::ApiServerConnection::handleMessageAccount_GetHashingSalt(HandlerContext& context)
 {
     auto fbsGetHashingParameters = reinterpret_cast<const ThorQ::Serialization::Account::GetHashingSalt*>(context.body);
     if (fbsGetHashingParameters->account_id() == nullptr || fbsGetHashingParameters->account_id()->data() == nullptr) {

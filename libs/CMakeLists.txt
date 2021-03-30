@@ -122,6 +122,8 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_global.h
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.h
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/messagehandlingcontext.h
+
     ${${project}_SCHEMAS}
     ${generated_bad_email_providers}
 )

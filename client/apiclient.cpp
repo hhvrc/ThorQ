@@ -27,7 +27,7 @@ ThorQ::ApiClient::ApiClient(QObject *parent)
     , m_signer()
     , m_crypto()
     , m_buffer(THORQ_PAYLOAD_LEN_MAX)
-    , m_accountController(new ThorQ::AccountController(std::bind(&ThorQ::ApiClient::encodeAndSend, this, std::placeholders::_1, std::placeholders::_2), this))
+    , m_accountController(new ThorQ::AccountController(std::bind(&ThorQ::ApiClient::sendContextData, this, std::placeholders::_1), this))
 {
     QObject::connect(m_pollTimer, &QTimer::timeout, this, &ApiClient::pollEvents);
     m_pollTimer->setInterval(0);
@@ -114,6 +114,7 @@ void ThorQ::ApiClient::pollEvents()
 
     std::shared_ptr<std::vector<std::uint8_t>> message;
     while (m_incomingMessages.try_dequeue(m_incomingMessagesToken, message)) {
+        fmt::print("POLL\n");
         onMessage(message);
     }
 
@@ -177,7 +178,12 @@ void ThorQ::ApiClient::onDisconnect()
 
 void ThorQ::ApiClient::onMessage(std::shared_ptr<std::vector<std::uint8_t>> message)
 {
-    fmt::print("[CLIENT] Message\n");
+    if (!ThorQ::Encoding::isMessageValid(message->data(), message->size()))
+    {
+        fmt::print(stderr, "Received packet is corrupted\n");
+        m_connection->disconnect();
+        return;
+    }
 
     m_buffer.resize(ThorQ::Encoding::calculateDataSize(message->data(), message->size()));
     if (!ThorQ::Encoding::messageDecode(message->data(), message->size(), m_buffer.data(), m_buffer.size(), m_crypto))
@@ -198,12 +204,29 @@ void ThorQ::ApiClient::onMessage(std::shared_ptr<std::vector<std::uint8_t>> mess
     }
 
     if (fbsMessageBuffer->body() == nullptr) {
-        disconnect();
+        fmt::print(stderr, "Body is nullptr\n");
+        m_connection->disconnect();
         return;
     }
 
-    for (const auto& fbsMessage : *fbsMessageBuffer->body()) {
-        handleMessage(fbsMessage);
+    auto& messages = *fbsMessageBuffer->body();
+
+    HandlerContext context;
+
+    // Message will be encrypted by default
+    context.encrypt = true;
+
+    for (const auto& fbsMessage : messages) {
+        context.body = fbsMessage;
+
+        if (context.body != nullptr) {
+            handleMessage(context);
+        }
+    }
+
+    // Send all the queued data to the server
+    if (!context.messages.empty()) {
+        sendContextData(context);
     }
 }
 
@@ -262,50 +285,57 @@ void ThorQ::ApiClient::onCryptoEstablished()
     encodeAndSend(fbsBuilder.GetBufferSpan(), true);
 }
 
-void ThorQ::ApiClient::handleMessage(const void* body)
+void ThorQ::ApiClient::handleMessage(HandlerContext& context)
 {
-    auto fbsMessage = reinterpret_cast<const ThorQ::Serialization::Message*>(body);
+    auto fbsMessage = reinterpret_cast<const ThorQ::Serialization::Message*>(context.body);
+
+    context.body = fbsMessage->body();
     if (fbsMessage == nullptr) {
+        fmt::print("[MSG] null\n");
         disconnect();
         return;
     }
 
+    context.requestId = fbsMessage->request_id();
+
+    fmt::print("[MSG] {}\n", context.requestId);
+
     switch (fbsMessage->body_type()) {
     case ThorQ::Serialization::Body_account:
-        m_accountController->ParseMessage(fbsMessage->body());
+        m_accountController->ParseMessage(context);
         break;
     case ThorQ::Serialization::Body_announcement:
-        handleMessageAnnouncement(fbsMessage->body());
+        handleMessageAnnouncement(context);
         break;
     case ThorQ::Serialization::Body_device:
-        handleMessageDevice(fbsMessage->body());
+        handleMessageDevice(context);
         break;
     case ThorQ::Serialization::Body_crypto:
-        handleMessageCrypto(fbsMessage->body());
+        handleMessageCrypto(context);
         break;
     case ThorQ::Serialization::Body_file:
-        handleMessageFile(fbsMessage->body());
+        handleMessageFile(context);
         break;
     case ThorQ::Serialization::Body_friend_request:
-        handleMessageFriendRequest(fbsMessage->body());
+        handleMessageFriendRequest(context);
         break;
     case ThorQ::Serialization::Body_group:
-        handleMessageGroup(fbsMessage->body());
+        handleMessageGroup(context);
         break;
     case ThorQ::Serialization::Body_moderation:
-        handleMessageModeration(fbsMessage->body());
+        handleMessageModeration(context);
         break;
     case ThorQ::Serialization::Body_system_id:
-        handleMessageSystemID(fbsMessage->body());
+        handleMessageSystemID(context);
         break;
     case ThorQ::Serialization::Body_user:
-        handleMessageUser(fbsMessage->body());
+        handleMessageUser(context);
         break;
     case ThorQ::Serialization::Body_version:
-        handleMessageVersion(fbsMessage->body());
+        handleMessageVersion(context);
         break;
     case ThorQ::Serialization::Body_p2p:
-        handleMessageP2P(fbsMessage->body());
+        handleMessageP2P(context);
         break;
     default:
         fmt::print("[MSG] Invalid\n");
@@ -314,23 +344,37 @@ void ThorQ::ApiClient::handleMessage(const void* body)
     }
 }
 
-void ThorQ::ApiClient::handleMessageAnnouncement(const void* body)
+bool ThorQ::ApiClient::sendContextData(HandlerContext &context)
 {
-    auto fbsAnnouncement = reinterpret_cast<const ThorQ::Serialization::Announcement::Message*>(body);
+    auto fbsRespBuffer = ThorQ::Serialization::CreateMessageBufferDirect(context.fbsBuilder, &context.messages);
+    context.fbsBuilder.Finish(fbsRespBuffer);
+
+    bool result = encodeAndSend(context.fbsBuilder.GetBufferSpan(), context.encrypt);
+
+    context.messages.clear();
+    context.fbsBuilder.Clear();
+    context.encrypt = true;
+
+    return result;
+}
+
+void ThorQ::ApiClient::handleMessageAnnouncement(HandlerContext& context)
+{
+    auto fbsAnnouncement = reinterpret_cast<const ThorQ::Serialization::Announcement::Message*>(context.body);
 
     fmt::print("[MSG] Announcement\n");
 }
 
-void ThorQ::ApiClient::handleMessageDevice(const void* body)
+void ThorQ::ApiClient::handleMessageDevice(HandlerContext& context)
 {
-    auto fbsDevice = reinterpret_cast<const ThorQ::Serialization::Device::Message*>(body);
+    auto fbsDevice = reinterpret_cast<const ThorQ::Serialization::Device::Message*>(context.body);
 
     fmt::print("[MSG] Device\n");
 }
 
-void ThorQ::ApiClient::handleMessageCrypto(const void* body)
+void ThorQ::ApiClient::handleMessageCrypto(HandlerContext& context)
 {
-    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Crypto::Message*>(body);
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Crypto::Message*>(context.body);
 
     fmt::print("[MSG] Crypto\n");
 
@@ -370,51 +414,51 @@ void ThorQ::ApiClient::handleMessageCrypto(const void* body)
     onCryptoEstablished();
 }
 
-void ThorQ::ApiClient::handleMessageFile(const void* body)
+void ThorQ::ApiClient::handleMessageFile(HandlerContext& context)
 {
-    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::File::Message*>(body);
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::File::Message*>(context.body);
 
     fmt::print("[MSG] File\n");
 }
 
-void ThorQ::ApiClient::handleMessageFriendRequest(const void* body)
+void ThorQ::ApiClient::handleMessageFriendRequest(HandlerContext& context)
 {
-    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::FriendRequest::Message*>(body);
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::FriendRequest::Message*>(context.body);
 
     fmt::print("[MSG] Friend request\n");
 }
 
-void ThorQ::ApiClient::handleMessageGroup(const void* body)
+void ThorQ::ApiClient::handleMessageGroup(HandlerContext& context)
 {
-    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Group::Message*>(body);
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Group::Message*>(context.body);
 
     fmt::print("[MSG] Group\n");
 }
 
-void ThorQ::ApiClient::handleMessageModeration(const void* body)
+void ThorQ::ApiClient::handleMessageModeration(HandlerContext& context)
 {
-    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Moderation::Message*>(body);
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::Moderation::Message*>(context.body);
 
     fmt::print("[MSG] Moderation\n");
 }
 
-void ThorQ::ApiClient::handleMessageSystemID(const void* body)
+void ThorQ::ApiClient::handleMessageSystemID(HandlerContext& context)
 {
-    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::SystemId::Message*>(body);
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::SystemId::Message*>(context.body);
 
     fmt::print("[MSG] Systemid\n");
 }
 
-void ThorQ::ApiClient::handleMessageUser(const void* body)
+void ThorQ::ApiClient::handleMessageUser(HandlerContext& context)
 {
-    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::User::Message*>(body);
+    auto fbsCrypto = reinterpret_cast<const ThorQ::Serialization::User::Message*>(context.body);
 
     fmt::print("[MSG] User\n");
 }
 
-void ThorQ::ApiClient::handleMessageVersion(const void* body)
+void ThorQ::ApiClient::handleMessageVersion(HandlerContext& context)
 {
-    auto fbsVersion = reinterpret_cast<const ThorQ::Serialization::Version*>(body);
+    auto fbsVersion = reinterpret_cast<const ThorQ::Serialization::Version*>(context.body);
 
     fmt::print("[MSG] version\n");
 
@@ -455,12 +499,12 @@ void ThorQ::ApiClient::handleMessageVersion(const void* body)
     }
 }
 
-void ThorQ::ApiClient::handleMessageP2P(const void* body)
+void ThorQ::ApiClient::handleMessageP2P(HandlerContext& context)
 {
-    auto fbsP2P = reinterpret_cast<const ThorQ::Serialization::Peer2Peer::Message*>(body);
+    auto fbsP2P = reinterpret_cast<const ThorQ::Serialization::Peer2Peer::Message*>(context.body);
 }
 
-void ThorQ::ApiClient::encodeAndSend(const std::span<std::uint8_t>& buffer, bool encrypt)
+bool ThorQ::ApiClient::encodeAndSend(const std::span<std::uint8_t>& buffer, bool encrypt)
 {
     auto message = std::make_shared<std::vector<std::uint8_t>>();
     message->resize(ThorQ::Encoding::calculateMessageSize(buffer.size(), encrypt));
@@ -468,15 +512,13 @@ void ThorQ::ApiClient::encodeAndSend(const std::span<std::uint8_t>& buffer, bool
     if (encrypt) {
         if (!ThorQ::Encoding::messageEncode(buffer.data(), buffer.size(), message->data(), message->size(), m_crypto)) {
             fmt::print(stderr, "Failed to encrypt message\n");
-            m_connection->disconnect();
-            return;
+            return false;
         }
     }
     else {
         if (!ThorQ::Encoding::messageEncode(buffer.data(), buffer.size(), message->data(), message->size())) {
             fmt::print(stderr, "Failed to encode message\n");
-            m_connection->disconnect();
-            return;
+            return false;
         }
     }
 
@@ -484,4 +526,6 @@ void ThorQ::ApiClient::encodeAndSend(const std::span<std::uint8_t>& buffer, bool
     if (connection != nullptr) {
         connection->messageSend(message);
     }
+
+    return true;
 }

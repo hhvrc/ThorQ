@@ -3,8 +3,10 @@
 
 #include "typedefs_client.h"
 
+
 #include <networking/tcpconnection.h>
 #include <cryptography/encryption.h>
+#include <messagehandlingcontext.h>
 #include <cryptography/signer.h>
 #include <concurrentqueue.h>
 #include <enums.h>
@@ -55,20 +57,22 @@ private:
     void establishCrypto();
     void onCryptoEstablished();
 
-    void handleMessage(const void* body);
-    void handleMessageAnnouncement(const void* body);
-    void handleMessageDevice(const void* body);
-    void handleMessageCrypto(const void* body);
-    void handleMessageFile(const void* body);
-    void handleMessageFriendRequest(const void* body);
-    void handleMessageGroup(const void* body);
-    void handleMessageModeration(const void* body);
-    void handleMessageSystemID(const void* body);
-    void handleMessageUser(const void* body);
-    void handleMessageVersion(const void *body);
-    void handleMessageP2P(const void* body);
+    void handleMessage(HandlerContext& context);
+    bool sendContextData(HandlerContext& context);
 
-    void encodeAndSend(const std::span<std::uint8_t>& buffer, bool encrypt);
+    void handleMessageAnnouncement(HandlerContext& context);
+    void handleMessageDevice(HandlerContext& context);
+    void handleMessageCrypto(HandlerContext& context);
+    void handleMessageFile(HandlerContext& context);
+    void handleMessageFriendRequest(HandlerContext& context);
+    void handleMessageGroup(HandlerContext& context);
+    void handleMessageModeration(HandlerContext& context);
+    void handleMessageSystemID(HandlerContext& context);
+    void handleMessageUser(HandlerContext& context);
+    void handleMessageVersion(HandlerContext& context);
+    void handleMessageP2P(HandlerContext& context);
+
+    bool encodeAndSend(const std::span<std::uint8_t>& buffer, bool encrypt);
 
     QTimer* m_pollTimer;
     QSettings m_settings;

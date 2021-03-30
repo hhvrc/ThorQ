@@ -5,6 +5,7 @@
 
 #include <networking/tcpconnection.h>
 #include <cryptography/encryption.h>
+#include <messagehandlingcontext.h>
 #include <typedefs_global.h>
 #include <constants.h>
 #include <enums.h>
@@ -38,21 +39,6 @@ private:
     void onMessage(std::shared_ptr<std::vector<std::uint8_t>> message) override;
 
     void onCryptoEstablished();
-
-    struct HandlerContext {
-        std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
-        flatbuffers::FlatBufferBuilder fbsBuilder;
-        const void* body;
-        bool encrypt;
-    };
-    class MessageHandlingException : public std::exception {
-        const char* m_message;
-        std::uint64_t m_requestId;
-    public:
-        MessageHandlingException(const char* msg, std::uint64_t requestId) noexcept : std::exception(), m_message(msg), m_requestId(requestId){}
-        constexpr const char* what() const noexcept override { return m_message; }
-        constexpr std::uint64_t requestId() const noexcept { return m_requestId; }
-    };
 
     void handleMessage(HandlerContext& context);
     void createErrorMessage(HandlerContext& context, const char* error, std::uint64_t requestId);
