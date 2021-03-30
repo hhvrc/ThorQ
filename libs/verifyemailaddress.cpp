@@ -1,6 +1,6 @@
 #include "verifyemailaddress.h"
 
-#include "bad-emails/generated_providers.h"
+#include "bad_email_providers/bad_email_providers/bad_providers_generated.h"
 
 #include "constants.h"
 
@@ -78,7 +78,7 @@ inline bool validateDomainString(char*& it)
 
 bool IsThrowawayProvider(const std::string& provider)
 {
-    return bad_providers.find(provider) != bad_providers.end();
+    return is_bad_provider(provider);
 }
 
 bool ThorQ::Utils::IsEmailValid(std::string email)

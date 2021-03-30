@@ -70,8 +70,8 @@ add_subdirectory(concurrentqueue)
 # -------------------------
 
 # -- bad email providers --
-add_subdirectory(bad-emails)
-set (generated_bad_email_providers ${CMAKE_CURRENT_BINARY_DIR}/bad-emails/generated_providers.h)
+add_subdirectory(bad_email_providers)
+set (generated_bad_email_providers ${CMAKE_CURRENT_BINARY_DIR}/bad_email_providers/bad_email_providers/bad_providers_generated.h)
 # -------------------------
 
 set(${project}_SOURCES
@@ -165,6 +165,7 @@ endif()
 # Link libraries
 target_link_libraries(${project}
     ${UNIX_LIBS}
+    BadEmailProviders
     concurrentqueue
     flatbuffers
     sodium
