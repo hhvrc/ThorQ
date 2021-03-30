@@ -54,8 +54,8 @@ private:
     void onDisconnect();
     void onMessage(std::shared_ptr<std::vector<std::uint8_t>> message);
 
-    void establishCrypto();
-    void onCryptoEstablished();
+    void establishCrypto(HandlerContext& context);
+    void onCryptoEstablished(HandlerContext& context);
 
     void handleMessage(HandlerContext& context);
     bool sendContextData(HandlerContext& context);

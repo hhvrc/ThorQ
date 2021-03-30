@@ -114,7 +114,6 @@ void ThorQ::ApiClient::pollEvents()
 
     std::shared_ptr<std::vector<std::uint8_t>> message;
     while (m_incomingMessages.try_dequeue(m_incomingMessagesToken, message)) {
-        fmt::print("POLL\n");
         onMessage(message);
     }
 
@@ -166,7 +165,10 @@ void ThorQ::ApiClient::onError(const std::error_code& ec)
 
 void ThorQ::ApiClient::onConnect()
 {
-    establishCrypto();
+    HandlerContext context;
+    establishCrypto(context);
+    sendContextData(context);
+
     emit netConnected();
 }
 
@@ -230,7 +232,7 @@ void ThorQ::ApiClient::onMessage(std::shared_ptr<std::vector<std::uint8_t>> mess
     }
 }
 
-void ThorQ::ApiClient::establishCrypto()
+void ThorQ::ApiClient::establishCrypto(HandlerContext& context)
 {
     fmt::print("EstablishCrypto\n");
 
@@ -242,47 +244,42 @@ void ThorQ::ApiClient::establishCrypto()
 
     auto myPk = m_crypto.publicKey();
 
-    flatbuffers::FlatBufferBuilder fbsBuilder;
-    auto fbsPublicKey = fbsBuilder.CreateVector(myPk.data(), myPk.size());
-    auto fbsCrypto    = ThorQ::Serialization::Crypto::CreateMessage(fbsBuilder, fbsPublicKey).Union();
+    auto fbsPublicKey = context.fbsBuilder.CreateVector(myPk.data(), myPk.size());
+    auto fbsCrypto    = ThorQ::Serialization::Crypto::CreateMessage(context.fbsBuilder, fbsPublicKey).Union();
+    auto fbsMessage   = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_crypto, fbsCrypto);
 
-    std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> messages;
-    messages.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_crypto, fbsCrypto));
-    fbsBuilder.Finish(ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &messages));
-    encodeAndSend(fbsBuilder.GetBufferSpan(), false);
+    context.messages.push_back(fbsMessage);
+
+    context.encrypt = false;
 }
 
-void ThorQ::ApiClient::onCryptoEstablished()
+void ThorQ::ApiClient::onCryptoEstablished(HandlerContext& context)
 {
     fmt::print("[CONNECTION] Crypto established!\n");
 
     std::vector<std::uint8_t> systemID = ThorQ::SystemID::systemid_generate();
     fmt::print("Sending SystemID: {}\n", ThorQ::SystemID::systemid_to_string(systemID));
 
-    flatbuffers::FlatBufferBuilder fbsBuilder;
     flatbuffers::Offset<ThorQ::Serialization::Version> fbsVersion;
-    std::vector<flatbuffers::Offset<ThorQ::Serialization::Message>> fbsMessageVector;
 
     // Link version
-    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::LINK, THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH);
-    fbsMessageVector.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union()));
+    fbsVersion = ThorQ::Serialization::CreateVersion(context.fbsBuilder, (std::uint8_t)THORQ_APP::LINK, THORQ_VERSION_LINK_MAJOR, THORQ_VERSION_LINK_MINOR, THORQ_VERSION_LINK_PATCH);
+    context.messages.push_back(ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union()));
 
     // Client version
-    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::CLIENT, THORQ_VERSION_CLIENT_MAJOR, THORQ_VERSION_CLIENT_MINOR, THORQ_VERSION_CLIENT_PATCH);
-    fbsMessageVector.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union()));
+    fbsVersion = ThorQ::Serialization::CreateVersion(context.fbsBuilder, (std::uint8_t)THORQ_APP::CLIENT, THORQ_VERSION_CLIENT_MAJOR, THORQ_VERSION_CLIENT_MINOR, THORQ_VERSION_CLIENT_PATCH);
+    context.messages.push_back(ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union()));
 
     // Server version
-    fbsVersion = ThorQ::Serialization::CreateVersion(fbsBuilder, (std::uint8_t)THORQ_APP::SERVER, THORQ_VERSION_SERVER_MAJOR, THORQ_VERSION_SERVER_MINOR, THORQ_VERSION_SERVER_PATCH);
-    fbsMessageVector.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union()));
+    fbsVersion = ThorQ::Serialization::CreateVersion(context.fbsBuilder, (std::uint8_t)THORQ_APP::SERVER, THORQ_VERSION_SERVER_MAJOR, THORQ_VERSION_SERVER_MINOR, THORQ_VERSION_SERVER_PATCH);
+    context.messages.push_back(ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_version, fbsVersion.Union()));
 
     // Hardware ID
-    auto fbsSystemID = ThorQ::Serialization::SystemId::CreateMessage(fbsBuilder, ThorQ::Serialization::SystemId::Command_Submit, fbsBuilder.CreateVector(systemID.data(), systemID.size())).Union();
-    fbsMessageVector.push_back(ThorQ::Serialization::CreateMessage(fbsBuilder, ThorQ::Serialization::Body_system_id, fbsSystemID));
+    auto fbsVector   = context.fbsBuilder.CreateVector(systemID.data(), systemID.size());
+    auto fbsSystemID = ThorQ::Serialization::SystemId::CreateMessage(context.fbsBuilder, ThorQ::Serialization::SystemId::Command_Submit, fbsVector).Union();
+    auto fbsMessage  = ThorQ::Serialization::CreateMessage(context.fbsBuilder, ThorQ::Serialization::Body_system_id, fbsSystemID);
 
-    auto fbsMessageBuffer = ThorQ::Serialization::CreateMessageBufferDirect(fbsBuilder, &fbsMessageVector);
-
-    fbsBuilder.Finish(fbsMessageBuffer);
-    encodeAndSend(fbsBuilder.GetBufferSpan(), true);
+    context.messages.push_back(fbsMessage);
 }
 
 void ThorQ::ApiClient::handleMessage(HandlerContext& context)
@@ -411,7 +408,7 @@ void ThorQ::ApiClient::handleMessageCrypto(HandlerContext& context)
         return;
     }
 
-    onCryptoEstablished();
+    onCryptoEstablished(context);
 }
 
 void ThorQ::ApiClient::handleMessageFile(HandlerContext& context)

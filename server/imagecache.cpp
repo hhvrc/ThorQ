@@ -56,7 +56,7 @@ ThorQ::ImageCache::ImageCache()
 {
 }
 
-bool ThorQ::ImageCache::add(ThorQ::Uuid id, std::shared_ptr<std::vector<uint8_t>> data)
+bool ThorQ::ImageCache::add(ThorQ::Uuid id, std::shared_ptr<std::vector<std::uint8_t>> data)
 {
     std::unique_lock lu_m(l_meta);
     std::unique_lock lu_c(l_cache);
@@ -67,7 +67,7 @@ bool ThorQ::ImageCache::add(ThorQ::Uuid id, std::shared_ptr<std::vector<uint8_t>
     return true;
 }
 
-bool ThorQ::ImageCache::get(ThorQ::Uuid id, std::shared_ptr<std::vector<uint8_t> > data)
+bool ThorQ::ImageCache::get(ThorQ::Uuid id, std::shared_ptr<std::vector<std::uint8_t>> data)
 {
     m_meta.
 }
@@ -164,7 +164,7 @@ void ThorQ::ImageCache::unCache()
     m_cache.clear();
 }
 
-bool ThorQ::ImageCache::noLock_saveImage(ThorQ::Uuid id, std::shared_ptr<std::vector<uint8_t>> data)
+bool ThorQ::ImageCache::noLock_saveImage(ThorQ::Uuid id, std::shared_ptr<std::vector<std::uint8_t>> data)
 {
     std::fstream file(m_directory / id.toString().append(".png"), std::ios::out | std::ios::binary | std::ios::ate);
 
