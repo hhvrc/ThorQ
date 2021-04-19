@@ -40,6 +40,10 @@ signals:
     void connectionStatusChanged(ConnectionStatus status);
 
     void errorOccured(QString error);
+
+    void gotShock(unsigned int i);
+    void gotVibrate(unsigned int i);
+    void gotBeep(unsigned int i);
 public slots:
     void netConnect();
     void netDisconnect();

@@ -258,7 +258,7 @@ void writeMessageChannel2(int cmd, int v1, int v2, int v3, int v4)
 
 void setup()
 {
-    Serial.begin(9600);
+    Serial.begin(115200);
     
     pinMode(13, OUTPUT);
     digitalWrite(13, HIGH);
@@ -296,7 +296,7 @@ void loop()
     char c = Serial.read();
     if (c == '>') // Clear
     {
-      Serial.write("clear\n");
+      Serial.write("clear");
       Serial.flush();
       pos = 0;
     }
@@ -314,24 +314,24 @@ void loop()
       {
       case Command::Shock:
           shockVal = prevShock = activeVal;
-          Serial.write("shock\n");
+          Serial.write("shock");
           Serial.flush();
           break;
       case Command::Vibrate:
           vibrateVal = prevVibrate = activeVal;
-          Serial.write("vibrate\n");
+          Serial.write("vibrate");
           Serial.flush();
           break;
       case Command::Beep:
           beepVal = prevBeep = activeVal;
-          Serial.write("beep\n");
+          Serial.write("beep");
           Serial.flush();
           break;
       case Command::Auto:
           shockVal = prevShock;
           vibrateVal = prevVibrate;
           beepVal = prevBeep;
-          Serial.write("auto\n");
+          Serial.write("auto");
           Serial.flush();
           break;
       case Command::Manual:
@@ -352,13 +352,17 @@ void loop()
     }
     else if (c == 'V')
     {
-      Serial.write("ThorQ-1.0\n");
+      Serial.write("ThorQ-1.0");
       Serial.flush();
       pos = 0;
     }
     else
     {
       buf[pos++] = c - '0';
+
+      if (pos >= 3) {
+        pos = 0;
+      }
     }
   }
 }

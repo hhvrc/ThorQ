@@ -5,47 +5,19 @@
 
 class QSerialPort;
 
-/**
- * @brief The Serial class
- */
-class Serial : public QObject
+class CollarSerial : public QObject
 {
 	Q_OBJECT
 public:
-    /**
-     * @brief Serial
-     */
-	Serial();
+    CollarSerial(QObject* parent = nullptr);
 
-    /**
-     * @brief FindCollar
-     */
+signals:
+    void FoundCollar();
+public slots:
     void FindCollar();
-
-    /**
-     * @brief SendShock
-     * @param strength
-     */
     void SendShock(unsigned int strength);
-
-    /**
-     * @brief SendVibration
-     * @param strength
-     */
     void SendVibration(unsigned int strength);
-
-    /**
-     * @brief SendBeep
-     * @param beeps
-     */
     void SendBeep(unsigned int beeps);
-
-    /**
-     * @brief SetAuto
-     * @param shock
-     * @param vibration
-     * @param beeps
-     */
     void SetAuto(unsigned int shock, unsigned int vibration, unsigned int beeps);
 private slots:
     /**

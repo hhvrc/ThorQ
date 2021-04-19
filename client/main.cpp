@@ -19,6 +19,7 @@
 #include <QStyle>
 #include <QLabel>
 #include <QIcon>
+#include <QSpinBox>
 #include <QInputDialog>
 #include <QRegExp>
 #include <QDebug>
@@ -84,6 +85,25 @@ int main(int argc, char** argv)
     QObject::connect(reconnectTimer, &QTimer::timeout, apiClient, &ThorQ::ApiClient::netConnect);
     QObject::connect(apiClient, &ThorQ::ApiClient::netDisconnected, [reconnectTimer](){ reconnectTimer->start(); });
 
+    CollarSerial* ser = new CollarSerial(&app);
+
+    QObject::connect(ser, &CollarSerial::FoundCollar, [ser](){
+        ser->SendBeep(1);
+        QThread::sleep(1);
+        ser->SendBeep(1);
+        QThread::sleep(1);
+        ser->SendBeep(1);
+        QThread::sleep(1);
+        ser->SendBeep(1);
+        QThread::sleep(1);
+        ser->SendBeep(1);
+    });
+
+    ser->FindCollar();
+    QObject::connect(apiClient, &ThorQ::ApiClient::gotShock, ser, &CollarSerial::SendShock);
+    QObject::connect(apiClient, &ThorQ::ApiClient::gotVibrate, ser, &CollarSerial::SendVibration);
+    QObject::connect(apiClient, &ThorQ::ApiClient::gotBeep, ser, &CollarSerial::SendBeep);
+
     QWidget mainWindow;
     mainWindow.setWindowTitle("ThorQ");
     mainWindow.setWindowFlags(Qt::MSWindowsFixedSizeDialogHint);
@@ -147,13 +167,52 @@ int main(int argc, char** argv)
     QObject::connect(recoverButton, &QPushButton::pressed, registerButton, &QWidget::hide);
     QObject::connect(recoverButton, &QPushButton::pressed, recoverWidget, &QWidget::show);
 
+    ThorQ::MainWidget mainWidget;
+    QGridLayout* l1 = new QGridLayout(&mainWidget);
+
+    QSpinBox* shockVal = new QSpinBox(&mainWidget);
+    QSpinBox* vibrateVal = new QSpinBox(&mainWidget);
+
+    QPushButton* shock = new QPushButton(&mainWidget);
+    shock->setText("Shock");
+
+    QPushButton* vibrate = new QPushButton(&mainWidget);
+    vibrate->setText("Vibrate");
+
+    QPushButton* beep = new QPushButton(&mainWidget);
+    beep->setText("Beep");
+
+    shockVal->setMaximum(7);
+    vibrateVal->setMaximum(7);
+
+    l1->addWidget(shockVal, 1, 1);
+    l1->addWidget(vibrateVal, 1, 3);
+
+    l1->addWidget(shock, 3, 1);
+    l1->addWidget(vibrate, 3, 3);
+    l1->addWidget(beep, 3, 5);
+
+    l1->setColumnMinimumWidth(15, 0);
+    l1->setColumnMinimumWidth(15, 2);
+    l1->setColumnMinimumWidth(15, 4);
+    l1->setColumnMinimumWidth(15, 6);
+
+    l1->setRowMinimumHeight(15, 0);
+    l1->setRowMinimumHeight(15, 2);
+    l1->setRowMinimumHeight(15, 4);
+    l1->setRowMinimumHeight(15, 6);
+
+    mainWidget.adjustSize();
 
     ThorQ::MainWidget* mainWidget = new ThorQ::MainWidget(&mainWindow);
+    QObject::connect(vibrate, &QPushButton::clicked, [](){ qDebug() << "Clicked!"; });
 
     QObject::connect(accountController, &ThorQ::AccountController::loggedIn, &mainWindow, &QWidget::hide);
     QObject::connect(accountController, &ThorQ::AccountController::loggedIn, mainWidget, &QWidget::show);
+    QObject::connect(accountController, &ThorQ::AccountController::loggedIn, &mainWidget, &QWidget::show);
     QObject::connect(accountController, &ThorQ::AccountController::loggedOut, &mainWindow, &QWidget::show);
     QObject::connect(accountController, &ThorQ::AccountController::loggedOut, mainWidget, &QWidget::hide);
+    QObject::connect(accountController, &ThorQ::AccountController::loggedOut, &mainWidget, &QWidget::hide);
 
     QObject::connect(apiClient, &ThorQ::ApiClient::connectionStatusChanged, loginWidget, &ThorQ::AccountLoginWidget::setConnectionStatus);
 
