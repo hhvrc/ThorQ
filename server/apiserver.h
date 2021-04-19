@@ -26,12 +26,12 @@ public:
     bool start(unsigned int nproc = std::thread::hardware_concurrency());
     void stop();
 
-    ProcessStatus status() const { return m_status; }
+    inline ProcessStatus status() const noexcept { return m_status.load(std::memory_order::relaxed); }
 
-    std::uint64_t totalDataSent() const { return m_totalSentData; }
-    std::uint64_t totalPacketsSent() const { return m_totalSentPackets; }
-    std::uint64_t totalDataReceived() const { return m_totalReceivedData; }
-    std::uint64_t totalPacketsReceived() const { return m_totalReceivedPackets; }
+    inline std::uint64_t totalDataSent() const noexcept { return m_totalSentData.load(std::memory_order::relaxed); }
+    inline std::uint64_t totalPacketsSent() const noexcept { return m_totalSentPackets.load(std::memory_order::relaxed); }
+    inline std::uint64_t totalDataReceived() const noexcept { return m_totalReceivedData.load(std::memory_order::relaxed); }
+    inline std::uint64_t totalPacketsReceived() const noexcept { return m_totalReceivedPackets.load(std::memory_order::relaxed); }
 
     void messageSend(std::shared_ptr<ThorQ::ApiServerConnection> client, std::shared_ptr<std::vector<std::uint8_t>> message);
     void messageBroadcast(std::shared_ptr<std::vector<std::uint8_t>> data, std::shared_ptr<ThorQ::ApiServerConnection> ignore);

@@ -146,16 +146,18 @@ void ThorQ::ApiServer::waitForClientConnection()
 
 // https://stackoverflow.com/questions/45507041/how-to-check-if-weak-ptr-is-empty-non-assigned
 template <typename T>
-constexpr bool is_uninitialized(const std::weak_ptr<T>& weak) {
+constexpr bool is_uninitialized(const std::weak_ptr<T>& weak)
+{
     using wt = std::weak_ptr<T>;
     return !weak.owner_before(wt{}) && !wt{}.owner_before(weak);
 }
 
-void ThorQ::ApiServer::cleanupConnections() {
+void ThorQ::ApiServer::cleanupConnections()
+{
     m_connections.erase(std::remove_if(m_connections.begin(), m_connections.end(), is_uninitialized<ThorQ::ApiServerConnection>), m_connections.end());
 }
 
-void ThorQ::ApiServer::acceptCompletionHandler(const std::error_code &ec, asio::ip::tcp::socket socket)
+void ThorQ::ApiServer::acceptCompletionHandler(const std::error_code& ec, asio::ip::tcp::socket socket)
 {
     if (!ec) {
         fmt::print("[SERVER] New connection: {}:{}\n", socket.remote_endpoint().address().to_string(), socket.remote_endpoint().port());

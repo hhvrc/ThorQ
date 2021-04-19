@@ -29,14 +29,14 @@ public:
     void connect(const asio::ip::tcp::resolver::results_type& endpoints);
     void disconnect();
 
-    inline ConnectionStatus status() const { return m_status.load(std::memory_order::relaxed); }
+    inline ConnectionStatus status() const noexcept { return m_status.load(std::memory_order::relaxed); }
 
     std::error_code latestErrorCode() const;
 
-    inline std::uint64_t totalDataSent() const { return m_totalSentData.load(std::memory_order::relaxed); }
-    inline std::uint64_t totalPacketsSent() const { return m_totalSentPackets.load(std::memory_order::relaxed); }
-    inline std::uint64_t totalDataReceived() const { return m_totalReceivedData.load(std::memory_order::relaxed); }
-    inline std::uint64_t totalPacketsReceived() const { return m_totalReceivedPackets.load(std::memory_order::relaxed); }
+    inline std::uint64_t totalDataSent() const noexcept { return m_totalSentData.load(std::memory_order::relaxed); }
+    inline std::uint64_t totalPacketsSent() const noexcept { return m_totalSentPackets.load(std::memory_order::relaxed); }
+    inline std::uint64_t totalDataReceived() const noexcept { return m_totalReceivedData.load(std::memory_order::relaxed); }
+    inline std::uint64_t totalPacketsReceived() const noexcept { return m_totalReceivedPackets.load(std::memory_order::relaxed); }
 
     void messageSend(std::shared_ptr<std::vector<std::uint8_t>> message);
 protected:
@@ -46,7 +46,7 @@ protected:
     virtual bool onHeader(const ThorQ::Encoding::MessageHeader* header) = 0;
     virtual void onMessage(std::shared_ptr<std::vector<std::uint8_t>> message) = 0;
 private:
-    inline void setStatus(ConnectionStatus status) { m_status.store(status, std::memory_order_relaxed); }
+    inline void setStatus(ConnectionStatus status) noexcept { m_status.store(status, std::memory_order_relaxed); }
     inline bool setStatusIf(ConnectionStatus& expected, ConnectionStatus newStatus) { return m_status.compare_exchange_strong(expected, newStatus, std::memory_order::relaxed, std::memory_order::acquire); }
 
     void setErrorCode(const std::error_code& ec);
