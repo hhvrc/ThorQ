@@ -1,6 +1,7 @@
 #include "ovroverlay.h"
 
 #include "ovrhelpers.h"
+#include "ovrtrackeddevice.h"
 
 #include <fmt/core.h>
 
@@ -30,16 +31,6 @@ ThorQ::VR::OVROverlay::OVROverlay(const char* overlayKey, const char* overlayNam
 ThorQ::VR::OVROverlay::~OVROverlay()
 {
     destroy();
-}
-
-vr::VROverlayHandle_t ThorQ::VR::OVROverlay::handle() const noexcept
-{
-    return m_handle;
-}
-
-bool ThorQ::VR::OVROverlay::isValid() const noexcept
-{
-    return m_handle != vr::k_ulOverlayHandleInvalid;
 }
 
 void ThorQ::VR::OVROverlay::destroy()
@@ -127,6 +118,22 @@ bool ThorQ::VR::OVROverlay::setTint(float r, float g, float b)
     return true;
 }
 
+bool ThorQ::VR::OVROverlay::setCurvature(float curvature)
+{
+    if (!isValid()) {
+        return false;
+    }
+
+    vr::EVROverlayError error = vr::VROverlay()->SetOverlayCurvature(m_handle, curvature);
+
+    if (error != vr::VROverlayError_None) {
+        fmt::print(stderr, "Error setting overlay curvature: {}\n", vr::VROverlay()->GetOverlayErrorNameFromEnum(error));
+        return false;
+    }
+
+    return true;
+}
+
 bool ThorQ::VR::OVROverlay::setInputMethod(ThorQ::VR::OVROverlay::InputMethod inputMethod)
 {
     if (!isValid()) {
@@ -168,7 +175,7 @@ bool ThorQ::VR::OVROverlay::setTexture(unsigned int glTextureId)
     return false;
 }
 
-bool ThorQ::VR::OVROverlay::setDeviceRelativeTransform(const ThorQ::VR::OVRDevice& device, const QMatrix4x4& offset)
+bool ThorQ::VR::OVROverlay::setDeviceRelativeTransform(const ThorQ::VR::OVRTrackedDevice& device, const QMatrix4x4& offset)
 {
     if (!isValid()) {
         return false;

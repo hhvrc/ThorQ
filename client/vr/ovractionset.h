@@ -3,23 +3,44 @@
 
 #include "openvr.h"
 
-namespace ThorQ {
-namespace VR {
-class OVRAction;
-class OVRActionSet
+namespace ThorQ::VR {
+struct OVRAction;
+struct OVRActionSet
 {
 public:
-    OVRActionSet(const char* actionSetName);
-    ~OVRActionSet();
+    static inline OVRActionSet Invalid()
+    {
+        return OVRActionSet(vr::k_ulInvalidActionSetHandle);
+    };
 
-    vr::VRActionSetHandle_t handle() const;
-    bool isValid() const;
+    OVRActionSet(const char* actionSetName);
+    OVRActionSet(vr::VRActionSetHandle_t actionSetHandle) : m_handle(actionSetHandle) {}
+    ~OVRActionSet() {}
+
+    inline vr::VRActionSetHandle_t handle() const noexcept
+    {
+        return m_handle;
+    }
+
+    inline bool isValid() const noexcept
+    {
+        return m_handle != vr::k_ulInvalidActionSetHandle;
+    }
 
     bool openBindingUI(const ThorQ::VR::OVRAction& action);
+
+    inline bool operator==(const OVRActionSet& other) const noexcept
+    {
+        return m_handle == other.m_handle;
+    }
+
+    inline bool operator!=(const OVRActionSet& other) const noexcept
+    {
+        return m_handle != other.m_handle;
+    }
 private:
     vr::VRActionSetHandle_t m_handle;
 };
-}
 }
 
 #endif // OVRACTIONSET_H

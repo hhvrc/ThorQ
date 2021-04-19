@@ -1,8 +1,6 @@
 #ifndef OVRHELPERS_H
 #define OVRHELPERS_H
 
-#include "ovrdevice.h"
-
 #include <QMatrix4x4>
 
 inline void ToQMatrix(const vr::HmdMatrix34_t& mat, QMatrix4x4& out)

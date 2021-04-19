@@ -10,21 +10,6 @@ ThorQ::VR::OVRActionSet::OVRActionSet(const char* actionSetName)
     vr::VRInput()->GetActionSetHandle(actionSetName, &m_handle);
 }
 
-ThorQ::VR::OVRActionSet::~OVRActionSet()
-{
-
-}
-
-vr::VRActionSetHandle_t ThorQ::VR::OVRActionSet::handle() const
-{
-    return m_handle;
-}
-
-bool ThorQ::VR::OVRActionSet::isValid() const
-{
-    return m_handle != vr::k_ulInvalidActionSetHandle;
-}
-
 bool ThorQ::VR::OVRActionSet::openBindingUI(const ThorQ::VR::OVRAction& action)
 {
     vr::EVRInputError error = vr::VRInput()->ShowActionOrigins(m_handle, action.handle());

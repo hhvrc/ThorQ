@@ -20,13 +20,14 @@
 #define OPENVR_APPLICATION_NAME THORQ_APPLICATION_NAME
 #define OPENVR_APPLICATION_KEY THORQ_ORGANIZATION_NAME "." THORQ_APPLICATION_NAME
 
-#include "ovrdevice.h"
+#include "ovrtrackeddevice.h"
+#include "ovrinputvalue.h"
 #include "ovroverlay.h"
 #include "ovraction.h"
 #include "ovractionset.h"
+#include "ovrsettings.h"
 
-namespace ThorQ {
-namespace VR {
+namespace ThorQ::VR {
 bool IsSteamVRInstalled();
 bool IsSteamVRRunning();
 bool IsHmdPresent();
@@ -52,108 +53,31 @@ public:
 
     bool isValid() const;
 
-    enum class EHand : std::int8_t
-    {
-        Invalid = -1,
-        Left,
-        Right,
-        Center
-    };
-
-	/**
-	 * @brief widget
-	 * @return
-	 */
 	QWidget* widget() const;
 
-	/**
-	 * @brief isVisible
-	 * @return
-	 */
-	bool isVisible() const;
-
-	/**
-	 * @brief width
-	 * @return
-	 */
-	float width() const;
-
-	/**
-	 * @brief alpha
-	 * @return
-	 */
-	float alpha() const;
-
-	/**
-	 * @brief tint
-	 * @return
-	 */
+    bool isVisible() const;
+    float width() const;
+    float alpha() const;
     QColor tint() const;
+    float curvature() const;
 signals:
-    /**
-	 * @brief vrQuit
-     */
 	void vrQuit();
 
-	/**
-	 * @brief widgetChanged
-	 * @param widget
-	 */
 	void widgetChanged(QWidget* widget);
 
-	/**
-	 * @brief isVisibleChanged
-	 * @param visible
-	 */
     void isVisibleChanged(bool visible);
-
-	/**
-	 * @brief widthChanged
-	 * @param width
-	 */
-	void widthChanged(float width);
-
-	/**
-	 * @brief alphaChanged
-	 * @param alpha
-	 */
-	void alphaChanged(float alpha);
-
-	/**
-	 * @brief tintChanged
-	 * @param color
-	 */
+    void widthChanged(float width);
+    void alphaChanged(float alpha);
     void tintChanged(const QColor& color);
+    void curvatureChanged(float curvature);
 public slots:
-    /**
-	 * @brief setWidget
-     * @param widget
-     */
 	bool setWidget(QWidget* widget);
 
-	/**
-	 * @brief setIsVisible
-	 * @param isVisible
-	 */
     void setIsVisible(bool isVisible);
-
-    /**
-	 * @brief setWidth
-     * @param width
-     */
-	void setWidth(float width);
-
-    /**
-	 * @brief setAlpha
-     * @param alpha
-     */
-	void setAlpha(float alpha);
-
-    /**
-	 * @brief setTint
-     * @param color
-     */
+    void setWidth(float width);
+    void setAlpha(float alpha);
     void setTint(const QColor& color);
+    void setCurvature(float curvature);
 
     bool openBindingUI();
 protected:
@@ -165,17 +89,16 @@ protected:
 
     void onSceneChanged();
 
-    void setOverlayDevice(vr::TrackedDeviceIndex_t deviceIndex);
+    void setOverlayDevice(ThorQ::VR::OVRTrackedDevice device);
 
-    EHand getHandForSource(ThorQ::VR::OVRDevice device);
-    const QMatrix4x4& getOffsetForHand(EHand hand);
-    const QMatrix4x4& getOffsetForDevice(ThorQ::VR::OVRDevice device);
-    ThorQ::VR::OVRDevice getOriginForHand(EHand hand);
-    vr::TrackedDeviceIndex_t getDeviceForSource(vr::VRInputValueHandle_t source);
+    const QMatrix4x4& getOffsetForControllerRole(vr::ETrackedControllerRole role) const;
+    const QMatrix4x4& getOffsetForTrackedDevice(ThorQ::VR::OVRTrackedDevice device) const;
+    const QMatrix4x4& getOffsetForInputSource(ThorQ::VR::OVRInputSource source) const;
 private:
 	bool m_isVisible;
 	float m_alpha;
 	float m_width;
+    float m_curvature;
     QColor m_tint;
 
 	// Widget
@@ -188,12 +111,12 @@ private:
     QMatrix4x4 m_overlayDeviceOffsetL;
     QMatrix4x4 m_overlayDeviceOffsetR;
     QMatrix4x4 m_overlayDeviceOffsetC;
-    vr::TrackedDeviceIndex_t m_overlayDevice;
 
     // Controller stuff
-    EHand m_mouseHand;
-    EHand m_overlayHand;
-    vr::TrackedDeviceIndex_t m_mouseDeviceIndex;
+    ThorQ::VR::OVRTrackedDevice m_mouseDevice;
+    ThorQ::VR::OVRTrackedDevice m_overlayDevice;
+    vr::ETrackedControllerRole m_mouseControllerRole;
+    vr::ETrackedControllerRole m_overlayControllerRole;
 
     // Action set stuff
     vr::VRActiveActionSet_t m_activeActionSet;
@@ -203,9 +126,9 @@ private:
     ThorQ::VR::OVRAction    m_actionShowOverlay;
     ThorQ::VR::OVRAction    m_actionProxSensor;
 
-    ThorQ::VR::OVRDevice m_hmd;
-    ThorQ::VR::OVRDevice m_controllerLeft;
-    ThorQ::VR::OVRDevice m_controllerRight;
+    ThorQ::VR::OVRInputSource m_hmd;
+    ThorQ::VR::OVRInputSource m_controllerLeft;
+    ThorQ::VR::OVRInputSource m_controllerRight;
 
     // Graphics
     QGraphicsScene* m_scene;
@@ -217,7 +140,6 @@ private:
     QPointF m_lastMousePoint;
     Qt::MouseButtons m_lastMouseButtons;
 };
-}
 }
 
 #endif // OPENVROVERLAYCONTROLLER_H

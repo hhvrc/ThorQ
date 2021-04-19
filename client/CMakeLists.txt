@@ -23,6 +23,8 @@ find_package(
         Gui
         OpenGL
         Widgets
+        Multimedia
+        MultimediaWidgets
         SerialPort
         Concurrent
         Network
@@ -67,11 +69,12 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/apiclient.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/apiclient_connection.cpp
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrdevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovraction.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovroverlay.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrsettings.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovractionset.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrinputvalue.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrtrackeddevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/openvroverlaycontroller.cpp
 )
 set(${project}_HEADERS
@@ -103,11 +106,12 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/apiclient_connection.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrhelpers.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrdevice.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovraction.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovroverlay.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrsettings.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovractionset.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrinputvalue.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrtrackeddevice.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/openvroverlaycontroller.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/declerations_qt.h
@@ -123,6 +127,8 @@ include_directories(
     ${Qt5Gui_INCLUDE_DIRS}
     ${Qt5OpenGL_INCLUDE_DIRS}
     ${Qt5Widgets_INCLUDE_DIRS}
+    ${Qt5Multimedia_INCLUDE_DIRS}
+    ${Qt5MultimediaWidgets_INCLUDE_DIRS}
     ${Qt5SerialPort_INCLUDE_DIRS}
     ${Qt5Concurrent_INCLUDE_DIRS}
     ${Qt5Network_INCLUDE_DIRS}
@@ -144,6 +150,8 @@ target_link_libraries(${project} PRIVATE
     ${Qt5Gui_LIBRARIES}
     ${Qt5OpenGL_LIBRARIES}
     ${Qt5Widgets_LIBRARIES}
+    ${Qt5Multimedia_LIBRARIES}
+    ${Qt5MultimediaWidgets_LIBRARIES}
     ${Qt5SerialPort_LIBRARIES}
     ${Qt5Concurrent_LIBRARIES}
     ${Qt5Network_LIBRARIES}
