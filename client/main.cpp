@@ -204,14 +204,13 @@ int main(int argc, char** argv)
 
     mainWidget.adjustSize();
 
-    ThorQ::MainWidget* mainWidget = new ThorQ::MainWidget(&mainWindow);
     QObject::connect(vibrate, &QPushButton::clicked, [](){ qDebug() << "Clicked!"; });
 
     QObject::connect(accountController, &ThorQ::AccountController::loggedIn, &mainWindow, &QWidget::hide);
-    QObject::connect(accountController, &ThorQ::AccountController::loggedIn, mainWidget, &QWidget::show);
+    QObject::connect(accountController, &ThorQ::AccountController::loggedIn, &mainWidget, &QWidget::show);
     QObject::connect(accountController, &ThorQ::AccountController::loggedIn, &mainWidget, &QWidget::show);
     QObject::connect(accountController, &ThorQ::AccountController::loggedOut, &mainWindow, &QWidget::show);
-    QObject::connect(accountController, &ThorQ::AccountController::loggedOut, mainWidget, &QWidget::hide);
+    QObject::connect(accountController, &ThorQ::AccountController::loggedOut, &mainWidget, &QWidget::hide);
     QObject::connect(accountController, &ThorQ::AccountController::loggedOut, &mainWidget, &QWidget::hide);
 
     QObject::connect(apiClient, &ThorQ::ApiClient::connectionStatusChanged, loginWidget, &ThorQ::AccountLoginWidget::setConnectionStatus);
