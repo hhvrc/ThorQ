@@ -1,22 +1,28 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required (VERSION 3.5)
 
-set(project ThorQ)
-project(
+set (project ThorQ)
+project (
     ${project}
     DESCRIPTION "Gui application"
     LANGUAGES CXX
 )
 
-message("Configuring ${project}...")
+message ("Configuring ${project}...")
 
 # --- OpenVR ---
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/vr/openvr/headers)
-link_directories(${CMAKE_CURRENT_SOURCE_DIR}/vr/openvr/lib/${BUILD_OS}${VPTR_BITS}) # eg. win64 / linux32
-file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/vr/openvr/bin/${BUILD_OS}${VPTR_BITS}/  DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+if (APPLE)
+    set (OPENVR_BUILD_NAME "${BUILD_OS}32") # OpenVR only has 32-bit for OSX
+else ()
+    set (OPENVR_BUILD_NAME "${BUILD_OS}${VPTR_BITS}")
+endif ()
+
+include_directories (${CMAKE_CURRENT_SOURCE_DIR}/vr/openvr/headers)
+link_directories (${CMAKE_CURRENT_SOURCE_DIR}/vr/openvr/lib/${OPENVR_BUILD_NAME}) # eg. win64 / linux32
+file (COPY ${CMAKE_CURRENT_SOURCE_DIR}/vr/openvr/bin/${OPENVR_BUILD_NAME}/ DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 # --------------
 
 # --- Find and configure Qt ---
-find_package(
+find_package (
     Qt5
     COMPONENTS
         Core
@@ -31,18 +37,18 @@ find_package(
     REQUIRED
 )
 if (NOT Qt5Core_FOUND)
-    message(FATAL_ERROR "No Qt installation found, aborting")
-endif()
+    message (FATAL_ERROR "No Qt installation found, aborting")
+endif ()
 
-set(CMAKE_AUTOUIC ON)
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
+set (CMAKE_AUTOUIC ON)
+set (CMAKE_AUTOMOC ON)
+set (CMAKE_AUTORCC ON)
 
-message("Found Qt ${Qt5Core_VERSION}")
+message ("Found Qt ${Qt5Core_VERSION}")
 # -----------------------------
 
 # --- Build ---
-set(${project}_SOURCES
+set (${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/user.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/image.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/procmon.cpp
@@ -77,7 +83,7 @@ set(${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrtrackeddevice.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/openvroverlaycontroller.cpp
 )
-set(${project}_HEADERS
+set (${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/user.h
     ${CMAKE_CURRENT_SOURCE_DIR}/image.h
     ${CMAKE_CURRENT_SOURCE_DIR}/procmon.h
@@ -114,15 +120,17 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/ovrtrackeddevice.h
     ${CMAKE_CURRENT_SOURCE_DIR}/vr/openvroverlaycontroller.h
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/messagecontext.h
+
     ${CMAKE_CURRENT_SOURCE_DIR}/declerations_qt.h
 )
-set(${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc)
+set (${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc)
 
 if (WIN32)
-    list(APPEND ${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
-endif()
+    list (APPEND ${project}_RESOURCES ${CMAKE_CURRENT_SOURCE_DIR}/resources.rc)
+endif ()
 
-include_directories(
+include_directories (
     ${Qt5Core_INCLUDE_DIRS}
     ${Qt5Gui_INCLUDE_DIRS}
     ${Qt5OpenGL_INCLUDE_DIRS}
@@ -136,14 +144,14 @@ include_directories(
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-add_executable(${project}
+add_executable (${project}
     main.cpp
     ${${project}_HEADERS}
     ${${project}_SOURCES}
     ${${project}_RESOURCES}
 )
 
-target_link_libraries(${project} PRIVATE
+target_link_libraries (${project} PRIVATE
     ThorQLib
     openvr_api
     ${Qt5Core_LIBRARIES}
@@ -158,5 +166,5 @@ target_link_libraries(${project} PRIVATE
 )
 
 if (CMAKE_BUILD_TYPE STREQUAL "Release")
-    set_property(TARGET ${project} PROPERTY WIN32_EXECUTABLE TRUE)
-endif()
+    set_property (TARGET ${project} PROPERTY WIN32_EXECUTABLE TRUE)
+endif ()

@@ -51,8 +51,7 @@ public:
      * @return Returns a copy of the public key
      */
     inline std::array<std::uint8_t, Signer::PublicKeyLen> publicKey() const { return m_pk; }
-    bool setPublicKey(const std::uint8_t* publicKey, std::size_t keySize);
-    inline bool setPublicKey(const std::span<const std::uint8_t, Signer::PublicKeyLen> publicKey) { return setPublicKey(publicKey.data(), publicKey.size()); }
+    void setPublicKey(std::span<const std::uint8_t, Signer::PublicKeyLen> publicKey);
 
     /*
      *

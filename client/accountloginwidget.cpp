@@ -47,7 +47,7 @@ ThorQ::AccountLoginWidget::AccountLoginWidget(ThorQ::AccountController* accountC
     , m_headerLayout(new QHBoxLayout())
     , m_accountController(accountController)
 {
-    m_title->setText("ThorQ");
+    m_title->setText(THORQ_APPLICATION_NAME);
     m_title->setStyleSheet("font-size: 72px; color: #FFFFFF");
 
     m_onlineStatus->setText(ConnectionStatusLabelParams[(int)ConnectionStatus::Disconnected].text);

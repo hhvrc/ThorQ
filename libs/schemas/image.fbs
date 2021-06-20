@@ -1,0 +1,70 @@
+include  "uuid.fbs";
+
+namespace ThorQ.Serialization.Image;
+
+enum FileType : uint8 {
+    BMP,
+    GIF,
+    JPG,
+    JPEG,
+    PNG,
+    PBM,
+    PGM,
+    PPM,
+    XBM,
+    XPM
+}
+
+enum Format : uint8 {
+    Invalid = 0,
+    Mono = 1,
+    MonoLSB = 2,
+    Indexed8 = 3,
+    RGB32 = 4,
+    ARGB32 = 5,
+    ARGB32_Premultiplied = 6,
+    RGB16 = 7,
+    ARGB8565_Premultiplied = 8,
+    RGB666 = 9,
+    ARGB6666_Premultiplied = 10,
+    RGB555 = 11,
+    ARGB8555_Premultiplied = 12,
+    RGB888 = 13,
+    RGB444 = 14,
+    ARGB4444_Premultiplied = 15,
+    RGBX8888 = 16,
+    RGBA8888 = 17,
+    RGBA8888_Premultiplied = 18,
+    BGR30 = 19,
+    A2BGR30_Premultiplied = 20,
+    RGB30 = 21,
+    A2RGB30_Premultiplied = 22,
+    Alpha8 = 23,
+    Grayscale8 = 24,
+    RGBX64 = 25,
+    RGBA64 = 26,
+    RGBA64_Premultiplied = 27,
+    Grayscale16 = 28,
+    BGR888 = 29
+}
+
+table Image {
+  height : uint16;
+  width : uint16;
+  filetype : Image.FileType;
+  format : Image.Format;
+  bytes : [ byte ];
+}
+
+/// Yada, yada...
+union Body {
+  /// [REQ] Get a image
+  get : Uuid,
+
+  /// [OBJ] Image object
+  image : Image.Image
+}
+
+table Message {
+  body : Image.Body;
+}

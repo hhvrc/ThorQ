@@ -12,8 +12,7 @@
 #include <atomic>
 #include <cstdint>
 
-namespace ThorQ {
-namespace Networking {
+namespace ThorQ::Networking {
 class UdpConnection : public std::enable_shared_from_this<TcpConnection>
 {
 public:
@@ -62,7 +61,6 @@ private:
     std::atomic_uint64_t m_totalReceivedData;
     std::atomic_uint64_t m_totalReceivedPackets;
 };
-}
 }
 
 #endif // UDPCONNECTION_H

@@ -1,6 +1,6 @@
 #include "tcpconnection.h"
 
-#include "fmt/core.h"
+#include <fmt/core.h>
 
 ThorQ::Networking::TcpConnection::TcpConnection(asio::io_context& asio, asio::ip::tcp::socket socket)
     : m_asio(asio)

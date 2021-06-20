@@ -1,6 +1,20 @@
 namespace ThorQ.Serialization.Crypto;
 
+struct ServerKey {
+  public_key : [ ubyte : 32 ];
+  signature : [ ubyte : 64 ];
+}
+
+struct ClientKey {
+  public_key : [ ubyte : 32 ];
+}
+
+/// Yada, yada...
+union Body {
+  server_key : Crypto.ServerKey,
+  client_key : Crypto.ClientKey
+}
+
 table Message {
-  public_key : [ ubyte ];
-  signature : [ ubyte ];
+  body : Crypto.Body;
 }

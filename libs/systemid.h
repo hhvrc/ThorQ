@@ -6,8 +6,7 @@
 #include <string>
 #include <cstdint>
 
-namespace ThorQ {
-namespace SystemID {
+namespace ThorQ::SystemID {
 
 /**
  * @brief systemid_generate
@@ -54,7 +53,6 @@ std::uint16_t getCpuHash();
  * @return
  */
 std::string getMachineName();
-}
 }
 }
 

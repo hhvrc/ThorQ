@@ -7,7 +7,7 @@
 #include <cstdint>
 
 namespace ThorQ {
-class Version
+struct Version
 {
 public:
     constexpr Version() noexcept

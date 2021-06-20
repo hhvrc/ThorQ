@@ -1,6 +1,6 @@
 #include "udpconnection.h"
 
-#include "fmt/core.h"
+#include <fmt/core.h>
 
 ThorQ::Networking::UdpConnection::UdpConnection(asio::io_context& asio, asio::ip::udp::socket socket)
     : m_asio(asio)

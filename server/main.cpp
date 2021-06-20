@@ -103,7 +103,14 @@ bool InitializeDB(const char* path) noexcept
                 "notify_online BOOLEAN NOT NULL,"
                 "created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
                 "PRIMARY KEY (source, target)"
-                ") WITHOUT ROWID"sv);
+                ") WITHOUT ROWID"sv)
+
+            && con->execute("CREATE TABLE IF NOT EXISTS friendrequests("
+                    "source INTEGER NOT NULL REFERENCES accounts,"
+                    "target INTEGER NOT NULL REFERENCES accounts,"
+                    "requested_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+                    "PRIMARY KEY (source, target)"
+                    ") WITHOUT ROWID"sv);
 }
 void exit_handler(int s)
 {

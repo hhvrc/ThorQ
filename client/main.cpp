@@ -31,7 +31,9 @@
 
 #include <filesystem>
 
-#define COMTEST 1
+#define TEST_VR     0
+#define TEST_COM    1
+#define TEST_COLLAR 0
 
 std::uint16_t i = 0;
 int main(int argc, char** argv)
@@ -56,8 +58,7 @@ int main(int argc, char** argv)
         settings.setValue("server/port", THORQ_SERVER_PORT);
     }
 
-#if COMTEST
-#else
+#if TEST_VR
     if (!ThorQ::VR::Initialize()) {
         qDebug() << "Failed to init VR";
         return EXIT_FAILURE;
@@ -71,12 +72,15 @@ int main(int argc, char** argv)
         qDebug() << "Failed to install VR manifest files";
         return EXIT_FAILURE;
     }
+
 #endif
+
     app.setStyleSheet(ThorQ::StyleSheets::tryGetStylesheet("main"));
     app.setDesktopFileName(THORQ_APPLICATION_NAME);
     app.setWindowIcon(QIcon(":/shockGrey.ico"));
     //app.setQuitOnLastWindowClosed(false);
-#if COMTEST
+
+#if TEST_COM
 
     ThorQ::ApiClient* apiClient = new ThorQ::ApiClient(&app);
     QTimer* reconnectTimer = new QTimer(&app);
@@ -84,6 +88,8 @@ int main(int argc, char** argv)
     reconnectTimer->setSingleShot(true);
     QObject::connect(reconnectTimer, &QTimer::timeout, apiClient, &ThorQ::ApiClient::netConnect);
     QObject::connect(apiClient, &ThorQ::ApiClient::netDisconnected, [reconnectTimer](){ reconnectTimer->start(); });
+
+#if TEST_COLLAR
 
     CollarSerial* ser = new CollarSerial(&app);
 
@@ -104,8 +110,10 @@ int main(int argc, char** argv)
     QObject::connect(apiClient, &ThorQ::ApiClient::gotVibrate, ser, &CollarSerial::SendVibration);
     QObject::connect(apiClient, &ThorQ::ApiClient::gotBeep, ser, &CollarSerial::SendBeep);
 
+#endif
+
     QWidget mainWindow;
-    mainWindow.setWindowTitle("ThorQ");
+    mainWindow.setWindowTitle(THORQ_APPLICATION_NAME);
     mainWindow.setWindowFlags(Qt::MSWindowsFixedSizeDialogHint);
     mainWindow.setFixedSize(350, 450);
     mainWindow.setGeometry(
@@ -217,7 +225,9 @@ int main(int argc, char** argv)
 
     apiClient->netConnect();
     mainWindow.show();
-#else
+#endif
+
+#if TEST_VR
     QPixmap pix(":/uwu.png");
     QLabel lab;
     lab.setPixmap(pix);
@@ -231,9 +241,9 @@ int main(int argc, char** argv)
 
     int retval = app.exec();
 
-#if COMTEST
-#else
+#if TEST_VR
     ThorQ::VR::Shutdown();
 #endif
+
     return retval;
 }

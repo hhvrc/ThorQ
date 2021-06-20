@@ -1,5 +1,7 @@
 #include "systemid.h"
 
+#include "cpuid.h"
+
 #include <unistd.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -99,32 +101,6 @@ std::uint16_t ThorQ::SystemID::Internal::getVolumeHash()
     {
         hash += ((std::uint8_t)sysname[i] << (( i & 1 ) * 8 ));
     }
-
-	return hash;
-}
-
-static inline void getCpuid( std::uint32_t* p, std::uint32_t ax )
-{
-    __asm __volatile(
-                "movl %%ebx, %%esi\n\t"
-                "cpuid\n\t"
-                "xchgl %%ebx, %%esi"
-                : "=a" (p[0])
-            , "=S" (p[1])
-            , "=c" (p[2])
-            , "=d" (p[3])
-        : "0" (ax)
-        );
-}
-
-std::uint16_t ThorQ::SystemID::Internal::getCpuHash()
-{
-    std::uint32_t cpuinfo[4]{0};
-    getCpuid(cpuinfo, 0);
-
-	std::uint16_t hash = 0;
-    for (int i = 0; i < 4; i++)
-        hash += (cpuinfo[i] & 0xFFFF) + (cpuinfo[i] >> 16);
 
 	return hash;
 }

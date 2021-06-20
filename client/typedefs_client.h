@@ -15,4 +15,6 @@ class ApiClientConnection;
 class AccountController;
 } // ThorQ
 
+struct MessageContext;
+
 #endif // TYPEDEFS_CLIENT_H

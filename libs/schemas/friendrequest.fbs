@@ -4,6 +4,9 @@ namespace ThorQ.Serialization.FriendRequest;
 
 /// Yada, yada...
 union Body {
+  /// [REQ] Get all friend incoming and outgoing friendrequests for current account
+  get_all : string, // Idk...
+
   /// [REQ] Send friend request
   request : string,
 

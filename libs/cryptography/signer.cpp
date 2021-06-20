@@ -93,14 +93,14 @@ bool ThorQ::Crypto::Signer::tryLoadFromFile(const char* path)
     }
 
     // Write the data to this
-    memcpy(m_pk.data(), data.data(), Signer::PublicKeyLen);
+    std::memcpy(m_pk.data(), data.data(), Signer::PublicKeyLen);
 
     if (keysSize == Signer::PublicKeyLen) {
         m_state = State::OnlyPublicKey;
     }
     else {
         m_state = State::BothKeys;
-        memcpy(m_sk.data(), data.data() + Signer::PublicKeyLen, Signer::SecretKeyLen);
+        std::memcpy(m_sk.data(), data.data() + Signer::PublicKeyLen, Signer::SecretKeyLen);
     }
 
     return true;
@@ -108,8 +108,8 @@ bool ThorQ::Crypto::Signer::tryLoadFromFile(const char* path)
 
 void ThorQ::Crypto::Signer::clear()
 {
-    memset(m_pk.data(), 0, ThorQ::Crypto::Signer::PublicKeyLen);
-    memset(m_sk.data(), 0, ThorQ::Crypto::Signer::SecretKeyLen);
+    std::memset(m_pk.data(), 0, ThorQ::Crypto::Signer::PublicKeyLen);
+    std::memset(m_sk.data(), 0, ThorQ::Crypto::Signer::SecretKeyLen);
     m_state = State::Uninitialized;
 }
 
@@ -122,16 +122,11 @@ bool ThorQ::Crypto::Signer::generateKeyPair()
     return true;
 }
 
-bool ThorQ::Crypto::Signer::setPublicKey(const std::uint8_t* publicKey, std::size_t keySize)
+void ThorQ::Crypto::Signer::setPublicKey(std::span<const std::uint8_t, Signer::PublicKeyLen> publicKey)
 {
-    if (keySize != Signer::PublicKeyLen) {
-        return false;
-    }
-
     clear();
-    memcpy(m_pk.data(), publicKey, keySize);
+    std::memcpy(m_pk.data(), publicKey.data(), Signer::PublicKeyLen);
     m_state = State::OnlyPublicKey;
-    return true;
 }
 
 bool ThorQ::Crypto::Signer::sign(const std::uint8_t* data, std::size_t dataSize, std::uint8_t* signature, std::size_t signatureSize) const

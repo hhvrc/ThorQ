@@ -48,7 +48,6 @@ table LoginRequest {
   password_hash : Account.HashCalculated;
   get_auth_token : bool;
 }
-
 table LoginResponse {
   success : bool;
   account_id : Uuid;
@@ -58,7 +57,6 @@ table LoginResponse {
 table LogoutRequest {
   logout_all : bool;
 }
-
 table LogoutResponse {
   success : bool;
 }
@@ -68,36 +66,47 @@ table RegistrationRequest {
   email : string;
   password_hash : Account.HashNew;
 }
-
 table RegistrationResponse {
   success : bool;
   account_id : Uuid;
 }
 
-table Recover {
+table RecoveryRequest {
   email : string;
 }
+table RecoveryResponse {
+  success : bool;
+}
 
-table Delete {
+table DeletionRequest {
   password_hash : Account.HashCalculated;
 }
-
-table SetUsername {
-  username : string;
-  password_hash : Account.HashCalculated;
+table DeletionResponse {
+  success : bool;
 }
 
-table SetPassword {
-  new_password_hash : Account.HashNew;
+table UpdateRequest {
+  old_password : Account.HashCalculated;
+  new_username : string;
+  new_password : Account.HashNew;
+  new_email : string;
+}
+table UpdateResponse {
+  success : bool;
 }
 
-table SetEmail {
-  email : string;
-  password_hash : Account.HashCalculated;
+table SetImageRequest {
+  new_image : [ ubyte ];
+}
+table SetImageResponse {
+  success : bool;
 }
 
-table SetImage {
-  image : [ ubyte ];
+struct GetImageRequest {
+  user_id : Uuid;
+}
+table GetImageResponse {
+  image_id : Uuid;
 }
 
 /// Yada, yada...
@@ -120,13 +129,20 @@ union Body {
   registration_request : Account.RegistrationRequest,
   registration_response : Account.RegistrationResponse,
 
-  recover : Account.Recover,
-  delete : Account.Delete,
+  recovery_request : Account.RecoveryRequest,
+  recovery_response : Account.RecoveryResponse,
 
-  set_username : Account.SetUsername,
-  set_password : Account.SetPassword,
-  set_email : Account.SetEmail,
-  set_image : Account.SetImage
+  deletion_request : Account.DeletionRequest,
+  deletion_response : Account.DeletionResponse,
+
+  update_request : Account.UpdateRequest,
+  update_response : Account.UpdateResponse,
+
+  set_image_request : Account.SetImageRequest,
+  set_image_response : Account.SetImageResponse,
+
+  get_image_request : Account.GetImageRequest,
+  get_image_response : Account.GetImageResponse
 }
 
 table Message {

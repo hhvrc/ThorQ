@@ -9,8 +9,7 @@
 #include <memory>
 #include <cstdint>
 
-namespace ThorQ {
-namespace Encoding {
+namespace ThorQ::Encoding {
 
 #pragma pack(push, 1)
 struct MessageHeader
@@ -35,7 +34,6 @@ std::uint32_t calculateDataSize(const std::uint8_t* data, std::uint32_t size);
 bool messageEncode(const std::uint8_t* dataIn, std::uint32_t sizeIn, std::uint8_t* dataOut, std::uint32_t sizeOut);
 bool messageEncode(const std::uint8_t* dataIn, std::uint32_t sizeIn, std::uint8_t* dataOut, std::uint32_t sizeOut, const ThorQ::Crypto::Encryption& encrypter);
 bool messageDecode(const std::uint8_t* dataIn, std::uint32_t sizeIn, std::uint8_t* dataOut, std::uint32_t sizeOut, const ThorQ::Crypto::Encryption& encrypter);
-}
 }
 
 #endif // ENCODING_H

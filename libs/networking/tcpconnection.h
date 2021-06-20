@@ -13,8 +13,7 @@
 #include <atomic>
 #include <cstdint>
 
-namespace ThorQ {
-namespace Networking {
+namespace ThorQ::Networking {
 class TcpConnection : public std::enable_shared_from_this<TcpConnection>
 {
     TcpConnection() = delete;
@@ -81,5 +80,5 @@ private:
     std::atomic_uint64_t m_totalReceivedPackets;
 };
 }
-}
+
 #endif // TCPCONNECTION_H

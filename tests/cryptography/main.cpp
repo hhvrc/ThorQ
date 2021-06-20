@@ -25,7 +25,7 @@ bool testEncryption(std::size_t testDataSize, std::size_t iterations)
         fmt::print("Encryption tryLoadFromFile failed!\n");
         return false;
     }
-    if (server.publicKey() != client.publicKey()) {
+    if (std::memcmp(server.publicKey().data(), client.publicKey().data(), ThorQ::Crypto::Encryption::PublicKeyLen) != 0) {
         fmt::print("Encryption loaded file invalid!\n");
         return false;
     }
@@ -41,9 +41,9 @@ bool testEncryption(std::size_t testDataSize, std::size_t iterations)
         client.clear();
         server.clear();
 
-        memset(org.data(), 0, org.size());
-        memset(enc.data(), 0, enc.size());
-        memset(dec.data(), 0, dec.size());
+        std::memset(org.data(), 0, org.size());
+        std::memset(enc.data(), 0, enc.size());
+        std::memset(dec.data(), 0, dec.size());
 
         // Generate keys
         if (!client.generateKeyPair() || !server.generateKeyPair())
@@ -52,16 +52,8 @@ bool testEncryption(std::size_t testDataSize, std::size_t iterations)
             return false;
         }
 
-        auto clientPk = client.publicKey();
-        auto serverPk = server.publicKey();
-
-        // Exchange the public keys
-        if (!client.setForeignKey(serverPk.data(), serverPk.size()) ||
-            !server.setForeignKey(clientPk.data(), clientPk.size()))
-        {
-            fmt::print("Encryption agree failed!\n");
-            return false;
-        }
+        client.setForeignKey(server.publicKey());
+        server.setForeignKey(client.publicKey());
 
         // Randomize input data
         randombytes_buf(org.data(), org.size());
@@ -74,7 +66,7 @@ bool testEncryption(std::size_t testDataSize, std::size_t iterations)
         }
 
         // Check if encryption changed the data
-        if (memcmp(org.data(), enc.data(), org.size()) == 0)
+        if (std::memcmp(org.data(), enc.data(), org.size()) == 0)
         {
             fmt::print("Encryption did nothing!\n");
             return false;
@@ -88,7 +80,7 @@ bool testEncryption(std::size_t testDataSize, std::size_t iterations)
         }
 
         // Check if original data and decrypted data is the same
-        if (memcmp(org.data(), dec.data(), org.size()) != 0)
+        if (std::memcmp(org.data(), dec.data(), org.size()) != 0)
         {
             fmt::print("Encryption result invalid!\n");
             return false;
@@ -199,14 +191,17 @@ bool testPasswordHashing()
 
 int main()
 {
+    fmt::print("Testing encryption...\n");
     if (!testEncryption(2048, 128)) {
         return EXIT_FAILURE;
     }
 
+    fmt::print("Testing signing...\n");
     if (!testSigning()) {
         return EXIT_FAILURE;
     }
 
+    fmt::print("Testing password hashing...\n");
     if (!testPasswordHashing()) {
         return EXIT_FAILURE;
     }

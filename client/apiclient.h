@@ -3,10 +3,8 @@
 
 #include "typedefs_client.h"
 
-
 #include <networking/tcpconnection.h>
 #include <cryptography/encryption.h>
-#include <messagehandlingcontext.h>
 #include <cryptography/signer.h>
 #include <concurrentqueue.h>
 #include <enums.h>
@@ -58,23 +56,23 @@ private:
     void onDisconnect();
     void onMessage(std::shared_ptr<std::vector<std::uint8_t>> message);
 
-    void establishCrypto(HandlerContext& context);
-    void onCryptoEstablished(HandlerContext& context);
+    void establishCrypto(MessageContext& context);
+    void onCryptoEstablished(MessageContext& context);
 
-    void handleMessage(HandlerContext& context);
-    bool sendContextData(HandlerContext& context);
+    void handleMessage(MessageContext& context);
+    bool sendContextData(MessageContext& context);
 
-    void handleMessageAnnouncement(HandlerContext& context);
-    void handleMessageDevice(HandlerContext& context);
-    void handleMessageCrypto(HandlerContext& context);
-    void handleMessageFile(HandlerContext& context);
-    void handleMessageFriendRequest(HandlerContext& context);
-    void handleMessageGroup(HandlerContext& context);
-    void handleMessageModeration(HandlerContext& context);
-    void handleMessageSystemID(HandlerContext& context);
-    void handleMessageUser(HandlerContext& context);
-    void handleMessageVersion(HandlerContext& context);
-    void handleMessageP2P(HandlerContext& context);
+    void handleMessageAnnouncement(MessageContext& context);
+    void handleMessageDevice(MessageContext& context);
+    void handleMessageCrypto(MessageContext& context);
+    void handleMessageFile(MessageContext& context);
+    void handleMessageFriendRequest(MessageContext& context);
+    void handleMessageGroup(MessageContext& context);
+    void handleMessageModeration(MessageContext& context);
+    void handleMessageSystemID(MessageContext& context);
+    void handleMessageUser(MessageContext& context);
+    void handleMessageVersion(MessageContext& context);
+    void handleMessageP2P(MessageContext& context);
 
     bool encodeAndSend(const std::span<std::uint8_t>& buffer, bool encrypt);
 
@@ -95,6 +93,8 @@ private:
     ThorQ::Crypto::Signer m_signer;
     ThorQ::Crypto::Encryption m_crypto;
     std::vector<std::uint8_t> m_buffer;
+
+    std::uint64_t m_requestCounter;
 
     ThorQ::AccountController* m_accountController;
 };

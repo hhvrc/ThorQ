@@ -1,5 +1,7 @@
 #include "accountcontroller.h"
 
+#include "messagecontext.h"
+
 #include <schemas_common.h>
 
 #include <fmt/core.h>
@@ -7,7 +9,7 @@
 #include <QUuid>
 #include <QDebug>
 
-ThorQ::AccountController::AccountController(std::function<bool(HandlerContext&)> sendContextData, QObject *parent)
+ThorQ::AccountController::AccountController(std::function<bool(MessageContext&)> sendContextData, QObject *parent)
     : QObject(parent)
     , m_activeUser(nullptr)
     , m_lastRequest(LastRequest::None)
@@ -22,7 +24,7 @@ ThorQ::AccountController::AccountController(std::function<bool(HandlerContext&)>
 {
 }
 
-void ThorQ::AccountController::ParseMessage(HandlerContext& context)
+void ThorQ::AccountController::ParseMessage(MessageContext& context)
 {
     auto fbsAccount = reinterpret_cast<const ThorQ::Serialization::Account::Message*>(context.body);
 
@@ -65,7 +67,7 @@ void ThorQ::AccountController::login(const QString& username, const QString& pas
 
     m_lastRequest = LastRequest::Login;
 
-    HandlerContext context;
+    MessageContext context;
     requestAccountId(context);
     f_sendContextData(context);
 }
@@ -78,7 +80,7 @@ void ThorQ::AccountController::logout()
 
     m_lastRequest = LastRequest::Logout;
 
-    HandlerContext context;
+    MessageContext context;
     requestLogout(false, context);
     f_sendContextData(context);
 
@@ -93,7 +95,7 @@ void ThorQ::AccountController::registerAccount(const QString& username, const QS
 
     m_lastRequest = LastRequest::Register;
 
-    HandlerContext context;
+    MessageContext context;
     requestAccountId(context);
     f_sendContextData(context);
 }
@@ -106,20 +108,16 @@ void ThorQ::AccountController::recoverAccount(const QString& email)
 
     m_lastRequest = LastRequest::Recover;
 
-    HandlerContext context;
+    MessageContext context;
     requestRecovery(context);
     f_sendContextData(context);
 }
 
-void ThorQ::AccountController::handleMessageAccountId(HandlerContext& context)
+void ThorQ::AccountController::handleMessageAccountId(MessageContext& context)
 {
-    auto fbsAccountId = reinterpret_cast<const ThorQ::Serialization::Uuid*>(context.body)->data();
-    std::span<const std::uint8_t, 16> uuidBytes(
-                fbsAccountId->data(),
-                fbsAccountId->size()
-                );
+    auto fbsAccountId = reinterpret_cast<const ThorQ::Serialization::Uuid*>(context.body);
 
-    m_activeUser = new ThorQ::User(ThorQ::Uuid(uuidBytes), this);
+    m_activeUser = new ThorQ::User(fromFbsUuid(fbsAccountId), this);
 
     fmt::print("[ACCOUNT] Got accountID: {}\n", m_activeUser->id().toString());
 
@@ -141,11 +139,11 @@ void ThorQ::AccountController::handleMessageAccountId(HandlerContext& context)
     m_requestPassword.clear();
 }
 
-void ThorQ::AccountController::handleMessageHashingSalt(HandlerContext& context)
+void ThorQ::AccountController::handleMessageHashingSalt(MessageContext& context)
 {
     auto fbsHashingSalt = reinterpret_cast<const ThorQ::Serialization::Account::HashingSalt*>(context.body)->salt();
 
-    memcpy(m_hashingSalt.data(), fbsHashingSalt->data(), ThorQ::Crypto::Hashing::SaltLength);
+    std::memcpy(m_hashingSalt.data(), fbsHashingSalt->Data(), ThorQ::Crypto::Hashing::SaltLength);
     m_gotHashingSalt = true;
 
     fmt::print("[ACCOUNT] Got HashingSalt!\n");
@@ -170,7 +168,7 @@ void ThorQ::AccountController::handleMessageHashingSalt(HandlerContext& context)
     m_requestPassword.clear();
 }
 
-void ThorQ::AccountController::handleMessageHashingParameters(HandlerContext& context)
+void ThorQ::AccountController::handleMessageHashingParameters(MessageContext& context)
 {
     auto fbsHashingParameters = reinterpret_cast<const ThorQ::Serialization::Account::HashingParameters*>(context.body);
 
@@ -201,14 +199,16 @@ void ThorQ::AccountController::handleMessageHashingParameters(HandlerContext& co
     m_requestPassword.clear();
 }
 
-void ThorQ::AccountController::handleMessageLoginResponse(HandlerContext& context)
+void ThorQ::AccountController::handleMessageLoginResponse(MessageContext& context)
 {
     auto fbsLoginResponse = reinterpret_cast<const ThorQ::Serialization::Account::LoginResponse*>(context.body);
 
     if (fbsLoginResponse->success()) {
         fmt::print("[ACCOUNT] Logged in!\n");
-        if (fbsLoginResponse->auth_token() != nullptr) {
-            memcpy(m_authToken.data(), fbsLoginResponse->auth_token()->token()->data(), 64);
+
+        auto authToken = fbsLoginResponse->auth_token();
+        if (authToken != nullptr || authToken->token() == nullptr) {
+            std::memcpy(m_authToken.data(), authToken->token()->Data(), 64);
         }
         emit loggedIn();
     }
@@ -217,7 +217,7 @@ void ThorQ::AccountController::handleMessageLoginResponse(HandlerContext& contex
     }
 }
 
-void ThorQ::AccountController::handleMessageLogoutResponse(HandlerContext& context)
+void ThorQ::AccountController::handleMessageLogoutResponse(MessageContext& context)
 {
     auto fbsLogoutResponse = reinterpret_cast<const ThorQ::Serialization::Account::LogoutResponse*>(context.body);
 
@@ -230,7 +230,7 @@ void ThorQ::AccountController::handleMessageLogoutResponse(HandlerContext& conte
     }
 }
 
-void ThorQ::AccountController::handleMessageRegistrationResponse(HandlerContext& context)
+void ThorQ::AccountController::handleMessageRegistrationResponse(MessageContext& context)
 {
     auto fbsRegistrationResponse = reinterpret_cast<const ThorQ::Serialization::Account::RegistrationResponse*>(context.body);
 
@@ -242,7 +242,7 @@ void ThorQ::AccountController::handleMessageRegistrationResponse(HandlerContext&
     }
 }
 
-void ThorQ::AccountController::requestAccountId(HandlerContext& context)
+void ThorQ::AccountController::requestAccountId(MessageContext& context)
 {
     fmt::print("[ACCOUNT] requestAccountId()\n");
 
@@ -253,7 +253,7 @@ void ThorQ::AccountController::requestAccountId(HandlerContext& context)
 
     context.messages.push_back(fbsMessage);
 }
-void ThorQ::AccountController::requestHashingSalt(bool newPassword, HandlerContext& context)
+void ThorQ::AccountController::requestHashingSalt(bool newPassword, MessageContext& context)
 {
     fmt::print("[ACCOUNT] requestHashingSalt()\n");
 
@@ -265,7 +265,7 @@ void ThorQ::AccountController::requestHashingSalt(bool newPassword, HandlerConte
 
     context.messages.push_back(fbsMessage);
 }
-void ThorQ::AccountController::requestHashingParameters(HandlerContext& context)
+void ThorQ::AccountController::requestHashingParameters(MessageContext& context)
 {
     fmt::print("[ACCOUNT] requestHashingParameters()\n");
 
@@ -277,7 +277,7 @@ void ThorQ::AccountController::requestHashingParameters(HandlerContext& context)
 
     context.messages.push_back(fbsMessage);
 }
-void ThorQ::AccountController::requestLogin(bool getAuthToken, HandlerContext& context)
+void ThorQ::AccountController::requestLogin(bool getAuthToken, MessageContext& context)
 {
     fmt::print("[ACCOUNT] requestLogin()\n");
 
@@ -287,7 +287,7 @@ void ThorQ::AccountController::requestLogin(bool getAuthToken, HandlerContext& c
     ThorQ::Serialization::Uuid fbsAccountID(m_activeUser->id().toBytes());
 
     ThorQ::Serialization::Account::HashCalculated hash;
-    if (!ThorQ::Crypto::Hashing::Generate(m_requestPassword, m_hashingSalt, m_hashingParameters, hash.mutable_hash()->data())) {
+    if (!ThorQ::Crypto::Hashing::Generate(m_requestPassword, m_hashingSalt, m_hashingParameters, hash.mutable_hash()->Data())) {
         return;
     }
     m_requestPassword.clear();
@@ -298,7 +298,7 @@ void ThorQ::AccountController::requestLogin(bool getAuthToken, HandlerContext& c
 
     context.messages.push_back(fbsMessage);
 }
-void ThorQ::AccountController::requestLogout(bool logoutAll, HandlerContext& context)
+void ThorQ::AccountController::requestLogout(bool logoutAll, MessageContext& context)
 {
     fmt::print("[ACCOUNT] requestLogout()\n");
 
@@ -311,7 +311,7 @@ void ThorQ::AccountController::requestLogout(bool logoutAll, HandlerContext& con
 
     context.messages.push_back(fbsMessage);
 }
-void ThorQ::AccountController::requestRegistration(HandlerContext& context)
+void ThorQ::AccountController::requestRegistration(MessageContext& context)
 {
     fmt::print("[ACCOUNT] requestRegistration()\n");
 
@@ -339,7 +339,7 @@ void ThorQ::AccountController::requestRegistration(HandlerContext& context)
     context.messages.push_back(fbsMessage);
 }
 
-void ThorQ::AccountController::requestRecovery(HandlerContext& context)
+void ThorQ::AccountController::requestRecovery(MessageContext& context)
 {
     fmt::print("[ACCOUNT] requestRecovery()\n");
 }

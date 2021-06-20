@@ -39,7 +39,7 @@ enum PREENCRYPTION_FLAG : std::uint16_t
 };
 
 bool isCorrupted(const ThorQ::Encoding::MessageHeader* header, const std::uint8_t* data, std::uint32_t size) {
-    return ntohl(header->checkSum) != ThorQ::Hashing::Crc32(data, size);
+    return ntohl(header->checkSum) != ThorQ::Hashing::Crc32c(data, size);
 }
 bool isEncrypted(const ThorQ::Encoding::MessageHeader* header) {
     return (ntohs(header->flags) & PREENCRYPTION_FLAG::ENCRYPTED) != 0;
@@ -82,7 +82,7 @@ std::uint32_t ThorQ::Encoding::calculateDataSize(const std::uint8_t* data, std::
 }
 
 bool ThorQ::Encoding::messageEncode(const std::uint8_t* dataIn, std::uint32_t sizeIn, std::uint8_t* dataOut, std::uint32_t sizeOut) {
-    std::size_t requiredSize = sizeIn + PacketOverhead(false);
+    std::uint32_t requiredSize = sizeIn + PacketOverhead(false);
 
     // Check output bounds
     if (sizeOut != requiredSize) {
@@ -96,14 +96,14 @@ bool ThorQ::Encoding::messageEncode(const std::uint8_t* dataIn, std::uint32_t si
     std::uint32_t bodySize   = requiredSize - headerSize;
 
     // Copy data
-    memcpy(bodyPtr, dataIn, bodySize);
+    std::memcpy(bodyPtr, dataIn, bodySize);
 
     // Get header
     MessageHeader& header = *reinterpret_cast<MessageHeader*>(dataOut);
 
     // Set header properties
     header.bodySize = htonl(bodySize);
-    header.checkSum = htonl(ThorQ::Hashing::Crc32(bodyPtr, bodySize));
+    header.checkSum = htonl(ThorQ::Hashing::Crc32c(bodyPtr, bodySize));
     header.flags    = htons(PREENCRYPTION_FLAG::NONE);
 
     return true;
@@ -131,7 +131,7 @@ bool ThorQ::Encoding::messageEncode(const std::uint8_t* dataIn, std::uint32_t si
 
     // Set header properties
     header.bodySize = htonl(bodySize);
-    header.checkSum = htonl(ThorQ::Hashing::Crc32(bodyPtr, bodySize));
+    header.checkSum = htonl(ThorQ::Hashing::Crc32c(bodyPtr, bodySize));
     header.flags    = htons(PREENCRYPTION_FLAG::ENCRYPTED);
 
     return true;
@@ -156,7 +156,7 @@ bool ThorQ::Encoding::messageDecode(const std::uint8_t* dataIn, std::uint32_t si
     const std::uint32_t payloadSize = sizeIn - sizeof(MessageHeader);
 
     if (!isEncrypted(header)) {
-        memcpy(dataOut, payloadPtr, payloadSize);
+        std::memcpy(dataOut, payloadPtr, payloadSize);
         return true;
     }
 

@@ -15,10 +15,10 @@ inline std::string errno_str(int err)
     char buf[512];
 #ifdef _WIN32
     strerror_s(buf, sizeof(buf), err);
-    return buf;
 #else
-    return strerror_r(err, buf, sizeof(buf));
+    strerror_r(err, buf, sizeof(buf));
 #endif
+    return buf;
 }
 
 #endif // UTILS_FILESYSTEM_H

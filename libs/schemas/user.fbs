@@ -39,6 +39,7 @@ table User {
   /// Devices online right now (Collar/Toy/etc...)
   devices : [ Uuid ];
 }
+
 table UserOther {
   user : User.User;
   nickname : string;
@@ -53,6 +54,12 @@ table UserSelf {
   user : User.User;
   email : string;
   relationships : [ Uuid ];
+  friendrequests_outgoing : [ Uuid ];
+  friendrequests_incoming : [ Uuid ];
+}
+
+table GetUser {
+  user_id : Uuid;
 }
 
 /// Yada, yada...

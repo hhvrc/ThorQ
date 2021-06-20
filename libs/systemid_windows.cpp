@@ -1,7 +1,8 @@
 #include "systemid.h"
 
+#include "cpuid.h"
+
 #include <windows.h>
-#include <intrin.h>
 #include <iphlpapi.h>
 
 // we just need this for purposes of unique machine id.
@@ -47,18 +48,6 @@ std::uint16_t ThorQ::SystemID::Internal::getVolumeHash()
 	// Determine if this volume uses an NTFS file system.
 	GetVolumeInformation( "c:\\", NULL, 0, &serialNum, NULL, NULL, NULL, 0 );
     std::uint16_t hash = (std::uint16_t)(( serialNum + ( serialNum >> 16 )) & 0xFFFF );
-
-	return hash;
-}
-
-std::uint16_t ThorQ::SystemID::Internal::getCpuHash()
-{
-	int cpuinfo[4] = { 0, 0, 0, 0 };
-	__cpuid( cpuinfo, 0 );
-    std::uint16_t hash = 0;
-    std::uint16_t* ptr = (std::uint16_t*)(&cpuinfo[0]);
-    for ( std::uint32_t i = 0; i < 8; i++ )
-		hash += ptr[i];
 
 	return hash;
 }

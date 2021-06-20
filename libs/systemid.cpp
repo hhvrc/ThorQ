@@ -11,6 +11,7 @@
 
 #include <fmt/core.h>
 #include <fmt/format.h>
+#include <fmt/compile.h>
 
 typedef std::uint16_t SysHID[5];
 
@@ -47,11 +48,11 @@ std::vector<std::uint8_t> ThorQ::SystemID::systemid_generate()
     std::vector<std::uint8_t> sys_id;
     sys_id.resize(machineName.size() + sizeof(SysHID));
 
-    memcpy(sys_id.data(), machineName.data(), machineName.size());
+    std::memcpy(sys_id.data(), machineName.data(), machineName.size());
 
     if (!computed)
 	{
-        memset(sysHid, 0, sizeof(SysHID));
+        std::memset(sysHid, 0, sizeof(SysHID));
 
         sysHid[0] = ThorQ::SystemID::Internal::getCpuHash();
         sysHid[1] = ThorQ::SystemID::Internal::getVolumeHash();
@@ -73,7 +74,7 @@ std::vector<std::uint8_t> ThorQ::SystemID::systemid_generate()
 		computed = true;
 	}
 
-    memcpy(sys_id.data() + machineName.size(), sysHid, sizeof(SysHID));
+    std::memcpy(sys_id.data() + machineName.size(), sysHid, sizeof(SysHID));
 
 	return sys_id;
 }
@@ -84,7 +85,7 @@ bool ThorQ::SystemID::systemid_validate(std::span<std::uint8_t> sys_id)
 		return false;
 
     SysHID hid;
-    memcpy(hid, sys_id.data() + sys_id.size() - sizeof(SysHID), sizeof(SysHID));
+    std::memcpy(hid, sys_id.data() + sys_id.size() - sizeof(SysHID), sizeof(SysHID));
 
     unsmear(hid);
 
@@ -108,7 +109,7 @@ std::string ThorQ::SystemID::systemid_to_string(std::span<std::uint8_t> bin_id)
         std::string name(nameLen, ' ');
         std::transform(bin_id.begin(), bin_id.begin() + nameLen, name.begin(), ::toupper);
 
-        str_id = fmt::format("{}-{:04X}-{:04X}-{:04X}-{:04X}-{:04X}", name, (*hid)[0], (*hid)[1], (*hid)[2], (*hid)[3], (*hid)[4]);
+        str_id = fmt::format(FMT_COMPILE("{}-{:04X}-{:04X}-{:04X}-{:04X}-{:04X}"), name, (*hid)[0], (*hid)[1], (*hid)[2], (*hid)[3], (*hid)[4]);
 	}
 	else
 	{
@@ -116,4 +117,16 @@ std::string ThorQ::SystemID::systemid_to_string(std::span<std::uint8_t> bin_id)
 	}
 
     return str_id;
+}
+
+std::uint16_t ThorQ::SystemID::Internal::getCpuHash()
+{
+    int cpuinfo[4] { 0, 0, 0, 0 };
+    __cpuid(cpuinfo, 0);
+    std::uint16_t hash = 0;
+    for (int i = 0; i < 4; i++) {
+        hash += (cpuinfo[i] & 0xFFFF) + (cpuinfo[i] >> 16);
+    }
+
+    return hash;
 }

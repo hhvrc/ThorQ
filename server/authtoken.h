@@ -11,6 +11,7 @@
 #include <chrono>
 #include <cstdint>
 
+namespace ThorQ {
 class AuthToken
 {
 public:
@@ -31,6 +32,7 @@ inline AuthToken AuthToken::CreateToken(const std::vector<uint8_t> &systemID)
     authToken.createdAt = std::chrono::system_clock::now();
 
     return authToken;
+}
 }
 
 #endif // AUTHTOKEN_H

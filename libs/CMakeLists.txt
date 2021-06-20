@@ -1,53 +1,53 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required (VERSION 3.5)
 
-set(project ThorQLib)
-project(
-        ${project}
-        DESCRIPTION "Files/Libraries that is used by both the server and the client"
-        LANGUAGES CXX
+set (project ThorQLib)
+project (
+    ${project}
+    DESCRIPTION "Files/Libraries that is used by both the server and the client"
+    LANGUAGES CXX
 )
 
-message("Configuring ${project}...")
+message ("Configuring ${project}...")
 
 # ---------- fmt ----------
-add_subdirectory(fmt)
+add_subdirectory (fmt)
 # -------------------------
 
 # ------- libsodium -------
-set(SODIUM_LINK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/${BUILD_OS}${VPTR_BITS}-${BUILD_TYPE})
+set (SODIUM_LINK_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sodium/lib/${BUILD_OS})
 # -------------------------
 
 # ------ flatbuffers ------
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFLATBUFFERS_USE_STD_SPAN") # C++20 :D
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DFLATBUFFERS_USE_STD_SPAN") # C++20 :D
 
 # Save flags
-set(PREV_FLAGS ${CMAKE_CXX_FLAGS})
+set (PREV_FLAGS ${CMAKE_CXX_FLAGS})
 
 # Remove warning flags
-string(REGEX REPLACE " ?-W.[a-zA-Z0-9=-]+| ?-pedantic" "" CMAKE_CXX_FLAGS ${PREV_FLAGS})
+string (REGEX REPLACE " ?-W.[a-zA-Z0-9=-]+| ?-pedantic" "" CMAKE_CXX_FLAGS ${PREV_FLAGS})
 
-set(FLATBUFFERS_INSTALL      OFF CACHE BOOL "Enable the installation of targets."          FORCE)
-set(FLATBUFFERS_BUILD_FLATC  OFF CACHE BOOL "Enable the build of the flatbuffers compiler" FORCE)
-set(FLATBUFFERS_STATIC_FLATC ON  CACHE BOOL "Build flatbuffers compiler with -static flag" FORCE)
-set(FLATBUFFERS_BUILD_TESTS  OFF CACHE BOOL "Enable the build of tests and samples."       FORCE)
-add_subdirectory(flatbuffers)
+set (FLATBUFFERS_INSTALL      OFF CACHE BOOL "Enable the installation of targets."          FORCE)
+set (FLATBUFFERS_BUILD_FLATC  OFF CACHE BOOL "Enable the build of the flatbuffers compiler" FORCE)
+set (FLATBUFFERS_STATIC_FLATC ON  CACHE BOOL "Build flatbuffers compiler with -static flag" FORCE)
+set (FLATBUFFERS_BUILD_TESTS  OFF CACHE BOOL "Enable the build of tests and samples."       FORCE)
+add_subdirectory (flatbuffers)
 
 # Restore flags
-set(CMAKE_CXX_FLAGS ${PREV_FLAGS})
+set (CMAKE_CXX_FLAGS ${PREV_FLAGS})
 
 find_program (FLATC_EXEC NAMES flatc)
 
-if(${FLATC_EXEC} STREQUAL "FLATC_EXEC-NOTFOUND")
-    message(FATAL_ERROR "Could not find flatbuffers compiler, please make sure it exists in path!")
-endif()
+if (${FLATC_EXEC} STREQUAL "FLATC_EXEC-NOTFOUND")
+    message (FATAL_ERROR "Could not find flatbuffers compiler, please make sure it exists in path!")
+endif ()
 
-file(GLOB ${project}_SCHEMAS "${CMAKE_CURRENT_SOURCE_DIR}/schemas/*.fbs")
-set(FLATC_OUTPUT_DIR  "${CMAKE_CURRENT_BINARY_DIR}/schemas")
-foreach(SCHEMA ${${project}_SCHEMAS})
-    get_filename_component(SCHEMA_FILE ${SCHEMA} NAME)
-    get_filename_component(SCHEMA_NAME ${SCHEMA} NAME_WE)
-    set(FLATC_OUTPUT_FILE "${FLATC_OUTPUT_DIR}/${SCHEMA_NAME}_generated.h")
-    add_custom_command(
+file (GLOB ${project}_SCHEMAS "${CMAKE_CURRENT_SOURCE_DIR}/schemas/*.fbs")
+set (FLATC_OUTPUT_DIR  "${CMAKE_CURRENT_BINARY_DIR}/schemas")
+foreach (SCHEMA ${${project}_SCHEMAS})
+    get_filename_component (SCHEMA_FILE ${SCHEMA} NAME)
+    get_filename_component (SCHEMA_NAME ${SCHEMA} NAME_WE)
+    set (FLATC_OUTPUT_FILE "${FLATC_OUTPUT_DIR}/${SCHEMA_NAME}_generated.h")
+    add_custom_command (
         OUTPUT ${FLATC_OUTPUT_FILE}
         COMMAND ${FLATC_EXEC}
         ARGS --cpp
@@ -60,16 +60,16 @@ foreach(SCHEMA ${${project}_SCHEMAS})
         DEPENDS ${SCHEMA}
         WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/schemas"
     )
-    set_property(SOURCE ${FLATC_OUTPUT_FILE} APPEND PROPERTY OBJECT_DEPENDS ${SCHEMA})
-    list(APPEND ${project}_SCHEMAS ${FLATC_OUTPUT_FILE})
-endforeach()
+    set_property (SOURCE ${FLATC_OUTPUT_FILE} APPEND PROPERTY OBJECT_DEPENDS ${SCHEMA})
+    list (APPEND ${project}_SCHEMAS ${FLATC_OUTPUT_FILE})
+endforeach ()
 # -------------------------
 
 # ---- concurrentqueue ----
-add_subdirectory(concurrentqueue)
+add_subdirectory (concurrentqueue)
 # -------------------------
 
-set(${project}_SOURCES
+set (${project}_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/uuid.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.cpp
 
@@ -90,8 +90,9 @@ set(${project}_SOURCES
 
     ${CMAKE_CURRENT_SOURCE_DIR}/systemid_${BUILD_OSL}.cpp
 )
-set(${project}_HEADERS
+set (${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/uuid.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/cpuid.h
     ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
 
     ${CMAKE_CURRENT_SOURCE_DIR}/encoding.h
@@ -117,22 +118,20 @@ set(${project}_HEADERS
     ${CMAKE_CURRENT_SOURCE_DIR}/typedefs_global.h
     ${CMAKE_CURRENT_SOURCE_DIR}/constants.h
 
-    ${CMAKE_CURRENT_SOURCE_DIR}/messagehandlingcontext.h
-
     ${${project}_SCHEMAS}
     ${generated_bad_email_providers}
 )
 
-set(GLOB_LINK_DIRS
+set (GLOB_LINK_DIRS
     ${SODIUM_LINK_DIR}
     CACHE PATH "List of library directories for link libraries"
-    )
+)
 
-link_directories(
+link_directories (
     ${GLOB_LINK_DIRS}
 )
 
-set(GLOB_INCLUDE_DIRS
+set (GLOB_INCLUDE_DIRS
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/fmt/include
@@ -143,18 +142,18 @@ set(GLOB_INCLUDE_DIRS
     CACHE PATH "List of library directories for header includes"
 )
 
-include_directories(
+include_directories (
     ${GLOB_INCLUDE_DIRS}
     ${CMAKE_CURRENT_SOURCE_DIR}/concurrentqueue
 )
 
-add_library(${project} STATIC
+add_library (${project} STATIC
     ${${project}_SOURCES}
     ${${project}_HEADERS}
 )
 
 # Link libraries
-target_link_libraries(${project}
+target_link_libraries (${project}
     concurrentqueue
     flatbuffers
     sodium

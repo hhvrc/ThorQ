@@ -32,11 +32,10 @@ public:
 
     bool generateKeyPair();
 
-    inline std::array<std::uint8_t, Encryption::PublicKeyLen> publicKey() const { return m_pk; }
-    inline std::array<std::uint8_t, Encryption::PublicKeyLen> foreignKey() const { return m_fk; }
+    constexpr std::span<const std::uint8_t, Encryption::PublicKeyLen> publicKey() const { return m_pk; }
+    constexpr std::span<const std::uint8_t, Encryption::PublicKeyLen> foreignKey() const { return m_fk; }
 
-    bool setForeignKey(const std::uint8_t* publicKey, std::size_t keySize);
-    inline bool setForeignKey(const std::span<const std::uint8_t, Encryption::PublicKeyLen> publicKey) { return setForeignKey(publicKey.data(), publicKey.size()); }
+    void setForeignKey(std::span<const std::uint8_t, Encryption::PublicKeyLen> foreignKey);
 
     bool encrypt(const std::uint8_t* dataIn, std::size_t dataInSize, std::uint8_t* dataOut, std::size_t dataOutSize) const;
     inline bool encrypt(std::span<const std::uint8_t> dataIn, std::uint8_t* dataOut, std::size_t dataOutSize) const { return encrypt(dataIn.data(), dataIn.size(), dataOut, dataOutSize); }

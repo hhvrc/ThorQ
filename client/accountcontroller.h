@@ -22,11 +22,11 @@ class AccountController : public QObject
 {
     Q_OBJECT
 public:
-    AccountController(std::function<bool(HandlerContext&)> sendContextData, QObject* parent = nullptr);
+    AccountController(std::function<bool(MessageContext&)> sendContextData, QObject* parent = nullptr);
 
     QString email();
 
-    void ParseMessage(HandlerContext& context);
+    void ParseMessage(MessageContext& context);
 signals:
     void loggedIn();
     void loggedOut();
@@ -36,20 +36,20 @@ public slots:
     void registerAccount(const QString& username, const QString& email, const QString& password);
     void recoverAccount(const QString& email);
 private:
-    void handleMessageAccountId(HandlerContext& context);
-    void handleMessageHashingSalt(HandlerContext& context);
-    void handleMessageHashingParameters(HandlerContext& context);
-    void handleMessageLoginResponse(HandlerContext& context);
-    void handleMessageLogoutResponse(HandlerContext& context);
-    void handleMessageRegistrationResponse(HandlerContext& context);
+    void handleMessageAccountId(MessageContext& context);
+    void handleMessageHashingSalt(MessageContext& context);
+    void handleMessageHashingParameters(MessageContext& context);
+    void handleMessageLoginResponse(MessageContext& context);
+    void handleMessageLogoutResponse(MessageContext& context);
+    void handleMessageRegistrationResponse(MessageContext& context);
 
-    void requestAccountId(HandlerContext& context);
-    void requestHashingSalt(bool newPassword, HandlerContext& context);
-    void requestHashingParameters(HandlerContext& context);
-    void requestLogin(bool getAuthToken, HandlerContext& context);
-    void requestLogout(bool logoutAll, HandlerContext& context);
-    void requestRegistration(HandlerContext& context);
-    void requestRecovery(HandlerContext& context);
+    void requestAccountId(MessageContext& context);
+    void requestHashingSalt(bool newPassword, MessageContext& context);
+    void requestHashingParameters(MessageContext& context);
+    void requestLogin(bool getAuthToken, MessageContext& context);
+    void requestLogout(bool logoutAll, MessageContext& context);
+    void requestRegistration(MessageContext& context);
+    void requestRecovery(MessageContext& context);
 
     ThorQ::User* m_activeUser;
 
@@ -72,7 +72,7 @@ private:
     bool m_gotHashingParameters;
     ThorQ::Crypto::Hashing::Parameters m_hashingParameters;
 
-    std::function<bool(HandlerContext&)> f_sendContextData;
+    std::function<bool(MessageContext&)> f_sendContextData;
 };
 }
 

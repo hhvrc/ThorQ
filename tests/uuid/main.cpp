@@ -8,21 +8,26 @@
 
 int main()
 {
-    ThorQ::Uuid uuid = ThorQ::Uuid::NewUuid();
+    for (int i = 0; i < 1000; i++) {
+        ThorQ::Uuid uuid = ThorQ::Uuid::NewUuid();
+        std::string uuidStr = uuid.toString();
 
-    ThorQ::Uuid fromBytes(uuid.toBytes());
-    if (uuid != fromBytes) {
-        fmt::print("FromBytes failed!\n");
-        return EXIT_FAILURE;
+        fmt::print("{}\n", uuidStr);
+
+        ThorQ::Uuid fromBytes(uuid.toBytes());
+        if (uuid != fromBytes) {
+            fmt::print("FromBytes failed!\n");
+            return EXIT_FAILURE;
+        }
+
+        ThorQ::Uuid fromString;
+        ThorQ::Uuid::TryParse(uuid.toString().c_str(), fromString);
+        if (uuid != fromString) {
+            fmt::print("FromString failed!\n");
+            return EXIT_FAILURE;
+        }
     }
 
-    ThorQ::Uuid fromString;
-    ThorQ::Uuid::TryParse(uuid.toString().c_str(), fromString);
-    if (uuid != fromString) {
-        fmt::print("FromString failed!\n");
-        return EXIT_FAILURE;
-    }
-
-    fmt::print("Success\n");
+    fmt::print("OK\n");
     return EXIT_SUCCESS;
 }

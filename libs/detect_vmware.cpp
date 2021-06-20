@@ -1,42 +1,52 @@
 #include "detect_vmware.h"
 
+#include "cpuid.h"
+
+#include <set>
+#include <string_view>
 #include <cstring>
 #include <cstdint>
-/*
-//#ifdef __WIN32
-//#define cpuId()
 
-bool cpuid_check() {
-    std::uint32_t eax, ebx, ecx, edx;
+using namespace std::literals;
+std::set<std::string_view> hyperv_vm_ids {
+    "bhyve bhyve "sv,
+    "KVMKVMKVM"sv,
+    "Microsoft Hv"sv,
+    "VMwareVMware"sv,
+    "XenVMMXenVMM"sv
+};
 
-    char hyper_vendor_id[13];
+inline bool cpuid_check()
+{
+    int cpuid[4] { 0, 0, 0, 0 };
 
-    cpuid(0x1, &eax, &ebx, &ecx, &edx);
+    __cpuid(cpuid, 1);
 
-    if ((ecx & 0x00000001) != 0) {
-        cpuid(0x40000000, &eax, &ebx, &ecx, &edx);
-        memcpy(hyper_vendor_id + 0, &ebx, 4);
-        memcpy(hyper_vendor_id + 4, &ecx, 4);
-        memcpy(hyper_vendor_id + 8, &edx, 4);
-        hyper_vendor_id[12] = '\0';
+    char hyperv_id[13];
 
-        if (!strcmp(hyper_vendor_id, "VMwareVMware")) {
+    if ((cpuid[2] & 1) != 0) {
+        __cpuid(cpuid, 0x40000000);
+        std::memcpy(hyperv_id + 0, cpuid + 1, 4);
+        std::memcpy(hyperv_id + 4, cpuid + 2, 4);
+        std::memcpy(hyperv_id + 8, cpuid + 3, 4);
+        hyperv_id[12] = '\0';
+
+        if (hyperv_vm_ids.contains(hyperv_id)) {
             return true; // Success - running under VMware
         }
     }
 
     return false;
 }
-
-int dmi_check() {
+/*
+inline bool dmi_check() {
     char string[10];
     GET_BIOS_SERIAL(string);
-    if (!memcmp(string, "VMware-", 7) || !memcmp(string, "VMW", 3)) {
-        return 1;
+    if (!std::memcmp(string, "VMware-", 7) || !std::memcmp(string, "VMW", 3)) {
+        return true;
     }
-    // DMI contains VMware specific string.
 
-    return 0;
+    return false;
 }
 
 #define VMWARE_HYPERVISOR_MAGIC 0x564D5868
@@ -54,29 +64,21 @@ int hypervisor_port_check(void) {
     std::uint32_t eax, ebx, ecx, edx;
     VMWARE_PORT(GETVERSION, eax, ebx, ecx, edx);
     if (ebx == VMWARE_HYPERVISOR_MAGIC) {
-        return 1; // Success - running under VMware
+        return true;
     }
 
-    return 0;
-}
-
-int Detect_VMware(void) {
-    if (cpuid_check()) {
-        return 1; // Success running under VMware.
-    }
-    else if (dmi_check() && hypervisor_port_check()) {
-        return 1;
-    }
-
-    return 0;
+    return false;
 }
 */
-bool ThorQ::Security::IsInsideVMPc()
-{
-
-}
-
 bool ThorQ::Security::IsInsideVMWare()
 {
-
+    if (cpuid_check()) {
+        return true;
+    }
+/*
+    if (dmi_check() && hypervisor_port_check()) {
+        return true;
+    }
+*/
+    return false;
 }

@@ -6,11 +6,9 @@
 
 #include <memory>
 
-namespace ThorQ {
-namespace Singletons {
+namespace ThorQ::Singletons {
 bool Init();
 std::shared_ptr<ThorQ::Crypto::Signer> rootSigner();
-}
 }
 
 #endif // SINGLETONS_H

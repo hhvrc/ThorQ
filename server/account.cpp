@@ -480,7 +480,7 @@ ThorQ::Crypto::Hashing::Salt ThorQ::Account::currentPasswordSalt() const
     }
 
     ThorQ::Crypto::Hashing::Salt salt;
-    memcpy(salt.data(), saltColumn.getDataBlob(), ThorQ::Crypto::Hashing::SaltLength);
+    std::memcpy(salt.data(), saltColumn.getDataBlob(), ThorQ::Crypto::Hashing::SaltLength);
     return salt;
 }
 ThorQ::Crypto::Hashing::Parameters ThorQ::Account::passwordHashParameters() const
@@ -553,7 +553,7 @@ bool ThorQ::Account::tryUpdatePassword(ThorQ::Crypto::Hashing::HashRef oldPwHash
         newSalt = m_newPasswordSalt;
     }
 
-    if (memcmp(newSalt.data(), expectedNewSalt.data(), ThorQ::Crypto::Hashing::SaltLength) != 0) {
+    if (std::memcmp(newSalt.data(), expectedNewSalt.data(), ThorQ::Crypto::Hashing::SaltLength) != 0) {
         // TODO password cahnged
         return false;
     }

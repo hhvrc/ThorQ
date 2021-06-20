@@ -55,11 +55,11 @@ bool ThorQ::Crypto::Encryption::tryLoadFromFile(const char *path)
 
     // Check if the file size is valid (one of the two)
     if (data.size() == MinFileSize) {
-        memcpy(m_pk.data(), data.data(), Encryption::PublicKeyLen);
+        std::memcpy(m_pk.data(), data.data(), Encryption::PublicKeyLen);
     }
     else if (data.size() == MaxFileSize) {
-        memcpy(m_pk.data(), data.data(), Encryption::PublicKeyLen);
-        memcpy(m_sk.data(), data.data() + Encryption::PublicKeyLen, Encryption::SecretKeyLen);
+        std::memcpy(m_pk.data(), data.data(),                            Encryption::PublicKeyLen);
+        std::memcpy(m_sk.data(), data.data() + Encryption::PublicKeyLen, Encryption::SecretKeyLen);
     }
     else {
         return false;
@@ -93,15 +93,9 @@ bool ThorQ::Crypto::Encryption::generateKeyPair()
     return true;
 }
 
-bool ThorQ::Crypto::Encryption::setForeignKey(const std::uint8_t* publicKey, std::size_t keySize)
+void ThorQ::Crypto::Encryption::setForeignKey(std::span<const std::uint8_t, Encryption::PublicKeyLen> foreignKey)
 {
-    if (keySize != Encryption::PublicKeyLen) {
-        return false;
-    }
-
-    memcpy(m_fk.data(), publicKey, Encryption::PublicKeyLen);
-
-    return true;
+    std::memcpy(m_fk.data(), foreignKey.data(), Encryption::PublicKeyLen);
 }
 
 bool ThorQ::Crypto::Encryption::encrypt(const std::uint8_t* inData, std::size_t inSize, std::uint8_t* outData, std::size_t outSize) const
