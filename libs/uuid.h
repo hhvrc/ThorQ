@@ -1,9 +1,7 @@
 #ifndef UUID_H
 #define UUID_H
 
-#define GUID_STRUCT_EXISTS defined(QT_VERSION) && defined(WIN32)
-
-#if GUID_STRUCT_EXISTS
+#ifdef QT_VERSION
 #include <QUuid>
 #endif
 
@@ -12,8 +10,9 @@
 #include <string>
 
 namespace ThorQ {
-class Uuid
+struct Uuid
 {
+private:
     friend std::hash<ThorQ::Uuid>;
 public:
     static ThorQ::Uuid NewUuid();
@@ -21,10 +20,10 @@ public:
     static const ThorQ::Uuid Empty();
 
     Uuid() noexcept;
-#if GUID_STRUCT_EXISTS
+#ifdef QT_VERSION
     Uuid(const QUuid& other) {
         auto rfc4122 = other.toRfc4122();
-        memcpy(m_data.data(), rfc4122.data(), 16);
+        std::memcpy(m_data.data(), rfc4122.data(), 16);
     }
 #endif
     Uuid(const ThorQ::Uuid& other) noexcept;
@@ -34,8 +33,8 @@ public:
     bool isEmpty() const noexcept;
 
     std::string toString() const;
-    std::array<std::uint8_t, 16> toBytes() const;
-#if GUID_STRUCT_EXISTS
+    std::span<const std::uint8_t, 16> toBytes() const;
+#ifdef QT_VERSION
     QUuid toQUuid() const {
         return QUuid(*(GUID*)m_data.data());
     }

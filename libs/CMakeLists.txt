@@ -158,13 +158,8 @@ add_library(${project} STATIC
     ${${project}_HEADERS}
 )
 
-if(UNIX)
-    set(UNIX_LIBS uuid)
-endif()
-
 # Link libraries
 target_link_libraries(${project}
-    ${UNIX_LIBS}
     BadEmailProviders
     concurrentqueue
     flatbuffers
