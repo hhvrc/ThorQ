@@ -1,7 +1,5 @@
 #include "verifyemailaddress.h"
 
-#include "bad_email_providers/bad_email_providers/bad_providers_generated.h"
-
 #include "constants.h"
 
 #include <cctype>
@@ -76,11 +74,6 @@ inline bool validateDomainString(char*& it)
     return c == 0;
 }
 
-bool IsThrowawayProvider(const std::string& provider)
-{
-    return is_bad_provider(provider);
-}
-
 bool ThorQ::Utils::IsEmailValid(std::string email)
 {
     char* begin = email.data();
@@ -100,11 +93,6 @@ bool ThorQ::Utils::IsEmailValid(std::string email)
 
     // The domain section is case insensitive, so convert it to lowercase
     std::transform(it, end, it, &tolower);
-
-    // Check against known throwaway email-provider domains
-    if (IsThrowawayProvider(std::string(it, end))) {
-        return false;
-    }
 
     // Validate domain validity
     if (!validateDomainString(it)) {
