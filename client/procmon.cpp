@@ -2,7 +2,7 @@
 
 #include <iterator>
 
-#if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
+#ifdef _WIN32
 #include <WinSock2.h>
 #include <tlhelp32.h>
 #elif __linux__
@@ -13,7 +13,7 @@
 
 bool ProcessIsRuning(const char* processName)
 {
-#if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
+#ifdef _WIN32
     const char* p = strrchr(processName, '\\');
 
 	if(p)

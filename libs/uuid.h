@@ -1,7 +1,8 @@
 #ifndef UUID_H
 #define UUID_H
 
-#ifdef QT_VERSION
+#if defined(_WIN32) && defined(QT_VERSION)
+#define GUID_STRUCT_EXISTS
 #include <QUuid>
 #endif
 
@@ -20,7 +21,7 @@ public:
     static const ThorQ::Uuid Empty();
 
     Uuid() noexcept;
-#ifdef QT_VERSION
+#ifdef GUID_STRUCT_EXISTS
     Uuid(const QUuid& other) {
         auto rfc4122 = other.toRfc4122();
         std::memcpy(m_data.data(), rfc4122.data(), 16);
@@ -34,7 +35,7 @@ public:
 
     std::string toString() const;
     std::span<const std::uint8_t, 16> toBytes() const;
-#ifdef QT_VERSION
+#ifdef GUID_STRUCT_EXISTS
     QUuid toQUuid() const {
         return QUuid(*(GUID*)m_data.data());
     }

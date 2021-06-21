@@ -1,6 +1,6 @@
 #include "uuid.h"
 
-#if defined(_WIN32) || defined(__WINDOWS__) || defined(__WIN32__)
+#ifdef _WIN32
 #include <WinSock2.h>
 #elif __linux__
 #include <arpa/inet.h>
