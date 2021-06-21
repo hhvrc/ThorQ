@@ -2,10 +2,10 @@
 #define CPUID_H
 
 #ifdef _MSC_VER
-#include <intrin.h>
-#endif
 
-#ifdef __GNUC__
+#include <intrin.h>
+
+#elif !defined(__cpuid) && defined(__GNUC__)
 
 void __cpuid(int* cpuinfo, int info)
 {

@@ -1,5 +1,7 @@
 #include "systemid.h"
 
+#include "cpuid.h"
+
 #include <cstring>
 #include <algorithm>
 
