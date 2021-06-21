@@ -2,7 +2,6 @@
 
 #include <fmt/core.h>
 
-#include <vector>
 #include <cstring>
 #include <cstdint>
 
