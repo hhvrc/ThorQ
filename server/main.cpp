@@ -153,7 +153,7 @@ int main(int argc, char** argv)
 
     if (result["help"].count() != 0)
     {
-        fmt::print(options.help());
+        fmt::print("{}\n", options.help());
         return EXIT_SUCCESS;
     }
 
