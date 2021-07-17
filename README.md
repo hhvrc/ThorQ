@@ -32,7 +32,7 @@ $ make -j$((`nproc`+1))
 > git clone https://github.com/google/flatbuffers.git flatbuffers
 > cd flatbuffers
 > cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release .
-> sudo cmake --build . --target install --config Release
+> cmake --build . --target install --config Release
 > cd ..
 > git clone https://github.com/hhvrc/ThorQ.git
 > cd ThorQ
