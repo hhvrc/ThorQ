@@ -1,0 +1,28 @@
+name: Windows
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: git clone
+        uses: actions/checkout@v2
+        with: 
+          submodules: true
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v2
+        with:
+          install-deps: 'true'
+          modules: 'qtcore qtgui qtopengl qtwidgets qtserialport qtconcurrent qtnetwork'
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v1.0.2
+      - name: cmake
+        run: |
+          cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release .
+      - name: build
+        run: |
+          cmake --build . --target BUILD_ALL --parallel --config Release

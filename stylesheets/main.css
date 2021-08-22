@@ -1,0 +1,56 @@
+QWidget {
+    background-color: rgba(33, 33, 33, 1);
+}
+
+ThorQ--LoginWidget {
+    background-color: rgba(33, 33, 33, 1);
+    font-family: 'Calibri';
+
+    margin: 0px, 0px, 0px, 0px;
+    padding: 0px, 0px, 0px, 0px;
+}
+
+QPushButton {
+    height: 34px;
+
+    color: rgba(255, 255, 255, 1);
+    background: rgba(0, 123, 255, 1);
+
+    margin: 0px, 0px, 0px, 0px;
+    padding: 8px, 8px, 0px, 8px;
+
+    border-width: 1px;
+    border-radius: 4px;
+
+    font-size: 16px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+QPushButton:hover {
+    background-color: rgba(0, 143, 255, 1);
+}
+QPushButton:pressed {
+    background-color: rgba(29, 173, 255, 1);
+}
+
+QLineEdit {
+    height: 36px;
+
+    color: rgba(128, 128, 128, 1);
+    background-color: transparent;
+
+    margin: 0px, 0px, 0px, 0px;
+    padding: 0px, 8px, 0px, 8px;
+	
+    border-width: 1px;
+    border-radius: 4px;
+    border-style: solid;
+    border-color: rgba(128, 128, 128, 1);
+
+    font-size: 16px;
+    font-weight: normal;
+}
+
+QLabel {
+        font: 36px;
+}

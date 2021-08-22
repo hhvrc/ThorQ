@@ -1,0 +1,24 @@
+<RCC>
+    <qresource prefix="/">
+        <file>uwu.png</file>
+        <file>shockGrey.ico</file>
+        <file>stylesheets/main.css</file>
+        <file>stylesheets/namedlineedit.css</file>
+        <file>vr/data/banner.png</file>
+        <file>vr/data/thorq.vrmanifest</file>
+        <file>vr/data/actions.json</file>
+        <file>vr/data/bindings/controller_holographic.json</file>
+        <file>vr/data/bindings/controller_hp_motion.json</file>
+        <file>vr/data/bindings/controller_knuckles.json</file>
+        <file>vr/data/bindings/controller_knuckles_ev1.json</file>
+        <file>vr/data/bindings/controller_oculus_touch.json</file>
+        <file>vr/data/bindings/controller_vive.json</file>
+        <file>vr/data/bindings/controller_vive_cosmos.json</file>
+        <file>vr/data/bindings/hmd_holographic.json</file>
+        <file>vr/data/bindings/hmd_index.json</file>
+        <file>vr/data/bindings/hmd_rift.json</file>
+        <file>vr/data/bindings/hmd_vive.json</file>
+        <file>vr/data/bindings/hmd_vive_cosmos.json</file>
+        <file>vr/data/bindings/hmd_vive_pro.json</file>
+    </qresource>
+</RCC>

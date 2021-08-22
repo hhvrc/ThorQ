@@ -1,0 +1,7 @@
+/*
+    resources.Rc
+
+    Contains the resource definitions for the application.
+*/
+
+exeIcon ICON "shockGrey.ico"

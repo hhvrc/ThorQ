@@ -1,0 +1,35 @@
+name: Ubuntu
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: git clone
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v2
+        with:
+          install-deps: 'true'
+          modules: 'qtcore qtgui qtopengl qtwidgets qtserialport qtconcurrent qtnetwork'
+      - name: Install apt packages
+        run: |
+          sudo apt update
+          sudo apt install cmake build-essential libsodium-dev gcc-10 g++-10 libstdc++-10-dev libstdc++-10-doc libc6 libc6-dev
+      - name: cmake
+        shell: bash
+        env:
+          CC:  gcc-10
+          CXX: g++-10
+        run: |
+          cmake -DCMAKE_BUILD_TYPE=Release .
+      - name: build
+        shell: bash
+        run: |
+          make -j16

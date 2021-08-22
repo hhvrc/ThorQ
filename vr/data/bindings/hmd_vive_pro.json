@@ -1,0 +1,17 @@
+{
+  "action_manifest_version": 0,
+  "alias_info": {},
+  "app_key": "HeavenVR.ThorQ",
+  "bindings": {
+    "/actions/thorq": {
+      "chords": [],
+      "poses": [],
+      "haptics": [],
+      "sources": [],
+      "skeleton": []
+    }
+  },
+  "controller_type": "vive_pro",
+  "description": "",
+  "name": "Vive Pro defaults"
+}
